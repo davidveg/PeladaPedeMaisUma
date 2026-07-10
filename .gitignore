@@ -31,9 +31,16 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.docker.example
 /.npm-cache/
 /.dev-output.log
 /.dev-error.log
+/.container-test-data/
+/.wrangler-config/
+/.wrangler-dry-run/
+/.docker-config/
+/.container-*.log
+/.feature-test.log
 
 # vercel
 .vercel

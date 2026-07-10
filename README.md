@@ -91,6 +91,58 @@ A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidad
 
 Use HTTPS, mantenha cookies `Secure` no ambiente de produção, aplique rate limiting no gateway às rotas `/api/auth` e de recuperação, configure política de acesso administrativo, monitore auditoria e faça rotação de segredos. Fotos aceitam somente JPEG, PNG e WebP até 5 MB e recebem nomes aleatórios. A aplicação não retorna hashes nem tokens em APIs.
 
-## Contêiner
+## Contêineres
 
-`Dockerfile` e `docker-compose.yml` oferecem uma embalagem de build/execução. Para hospedagem oficial, use as vinculações D1/R2 descritas em `.openai/hosting.json`.
+A imagem de produção executa o Worker com D1 e R2 locais. Banco, sessões e uploads ficam no volume persistente `/data`, portanto sobrevivem à substituição do container.
+
+### Produção com Docker Compose
+
+```bash
+cp .env.docker.example .env
+docker compose up -d --build
+docker compose ps
+```
+
+Acesse `http://localhost:3000`. O primeiro login administrativo continua sendo `admin` / `admin`, com troca obrigatória no primeiro acesso.
+
+Para acompanhar ou encerrar:
+
+```bash
+docker compose logs -f app
+docker compose down
+```
+
+`docker compose down` preserva o volume. Use `docker compose down -v` somente quando quiser apagar definitivamente banco, sessões e uploads.
+
+### Desenvolvimento com recarga automática
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+O código-fonte é montado no container, enquanto dependências e estado local ficam em volumes nomeados.
+
+### Imagem sem Compose
+
+```bash
+docker build -t pelada-pede-mais-uma:latest .
+docker volume create pelada-pede-mais-uma-data
+docker run -d --name pelada \
+  -p 3000:3000 \
+  -v pelada-pede-mais-uma-data:/data \
+  --restart unless-stopped \
+  pelada-pede-mais-uma:latest
+```
+
+### Publicação em qualquer plataforma de containers
+
+Faça push da imagem para Docker Hub, GHCR, ECR, GCR ou outro registry e configure na plataforma:
+
+- Porta HTTP: `3000` ou o valor informado em `PORT`.
+- Healthcheck: `GET /api/health`.
+- Volume persistente montado em `/data`.
+- Variáveis SMTP somente quando o envio de e-mails estiver configurado.
+- HTTPS no proxy ou balanceador da plataforma.
+- Uma única réplica quando usar o armazenamento D1/R2 local do container. Para várias réplicas, use o deploy nativo Cloudflare/Sites ou migre o armazenamento para serviços externos compartilhados.
+
+O processo roda como usuário sem privilégios, possui healthcheck, recebe encerramento gracioso e não requer recursos Cloudflare externos para a execução em container.

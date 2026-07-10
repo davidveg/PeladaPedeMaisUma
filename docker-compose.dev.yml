@@ -1,0 +1,24 @@
+name: pelada-pede-mais-uma-dev
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_VERSION: ${NODE_VERSION:-22.19.0}
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      - dev_node_modules:/app/node_modules
+      - dev_worker_state:/app/.wrangler
+    init: true
+    restart: unless-stopped
+
+volumes:
+  dev_node_modules:
+  dev_worker_state:
