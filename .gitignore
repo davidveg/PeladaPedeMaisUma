@@ -41,6 +41,7 @@ yarn-error.log*
 /.docker-config/
 /.container-*.log
 /.feature-test.log
+/.audit-feature-test.log
 
 # vercel
 .vercel
