@@ -10,6 +10,7 @@ import {
   score,
   type Player,
 } from "../lib/football";
+import { PlayerPhoto } from "./components/PlayerPhoto";
 
 const sample = `PELADA - 12/07 - BATISTA
 
@@ -48,7 +49,7 @@ export default function FootballApp() {
 
   const load = async () => {
     const [p, c, h] = await Promise.all([
-      fetch("/api/players").then((response) => response.json()),
+      fetch("/api/players", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/config").then((response) => response.json()),
       fetch("/api/separations").then((response) => response.json()),
     ]);
@@ -57,14 +58,27 @@ export default function FootballApp() {
     setHistory(h.separations || []);
   };
 
-  useEffect(() => { load().catch(() => setToast("Não foi possível carregar os dados.")); }, []);
+  useEffect(() => {
+    load().catch(() => setToast("Não foi possível carregar os dados."));
+    const refresh = () => load().catch(() => undefined);
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    window.addEventListener("pageshow", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => { window.removeEventListener("pageshow", refresh); document.removeEventListener("visibilitychange", refreshWhenVisible); };
+  }, []);
   const matches = useMemo(() => parsed ? matchPlayers(parsed.confirmed, players) : [], [parsed, players]);
   const missing = matches.filter((match) => match.status !== "found");
 
-  function process() {
+  async function process() {
     const next = parseWhatsApp(text);
+    let currentPlayers = players;
+    try {
+      const response = await fetch(`/api/players?refresh=${Date.now()}`, { cache: "no-store" });
+      const payload = await response.json();
+      if (response.ok && payload.players) { currentPlayers = payload.players; setPlayers(currentPlayers); }
+    } catch { /* Continue with the most recent in-memory list. */ }
     setParsed(next);
-    setSelected(next.confirmed.map((name) => matchPlayers([name], players)[0]).filter((match) => match.status === "found").map((match: any) => match.player));
+    setSelected(next.confirmed.map((name) => matchPlayers([name], currentPlayers)[0]).filter((match) => match.status === "found").map((match: any) => match.player));
     setStage("review");
   }
 
@@ -161,8 +175,8 @@ function BalanceMetrics({ delta }: any) { return <div className="metrics"><h3>Di
 function PlayerRow({ player, onClick }: { player: Player; onClick: () => void }) { return <button className="player-row" onClick={onClick}><PlayerAvatar player={player} /><div><b>{player.displayName}</b><small>{player.primaryPosition}</small></div><span className="rating">{score(player).toFixed(1)}</span><i>›</i></button>; }
 function Team({ color, title, players, metrics, extraId, scoringConfig, onPlayer, onMove }: any) { return <article className={`team ${color}`}><div className="team-head"><div><span className="shirt">{color === "blue" ? "🔵" : "🟡"}</span><h3>{title}</h3></div><b>{players.length} jogadores</b></div><div className="team-summary"><span>DEF <b>{metrics?.positions.Defesa || 0}</b></span><span>MEI <b>{metrics?.positions["Meio-campo"] || 0}</b></span><span>ATA <b>{metrics?.positions.Ataque || 0}</b></span><span>MÉDIA <b>{metrics?.scoreAvg?.toFixed(2) || "—"}</b></span></div>{players.map((player: Player) => <div className="team-player" key={player.id}><button onClick={() => onPlayer(player)}><PlayerAvatar player={player} /><div><b>{player.displayName}</b><small>{player.primaryPosition}{player.id === extraId ? " · Jogador adicional" : ""}</small></div></button><span>{score(player, scoringConfig).toFixed(1)}</span>{onMove && <button className="swap" title="Mover para o outro time" onClick={() => onMove(player.id)}>⇄</button>}</div>)}</article>; }
 
-function PlayerAvatar({ player, name }: { player?: Player; name?: string }) { const label = player?.displayName || name || "Jogador"; return <span className="player-photo">{player?.photoUrl ? <img src={player.photoUrl} alt={`Foto de ${label}`} /> : <span className="player-placeholder" role="img" aria-label={`Foto padrão de ${label}`}>👤</span>}</span>; }
-function PlayerDetail({ player, config, onClose }: any) { return <div className="modal-back" onClick={onClose}><div className="modal" onClick={(event) => event.stopPropagation()}><button className="close" onClick={onClose}>×</button><div className="big-avatar">{player.photoUrl ? <img src={player.photoUrl} alt={`Foto de ${player.displayName}`} /> : <span className="player-placeholder">👤</span>}</div><h2>{player.fullName}</h2><p>{player.nickname || player.displayName}</p><div className="detail-grid"><Metric label="Tipo" value={player.type === "guest" ? "Convidado" : player.type === "goalkeeper" ? "Goleiro" : "Mensalista"} /><Metric label="Posição" value={player.primaryPosition} /><Metric label="Velocidade" value={player.speed.toFixed(1)} /><Metric label="Habilidade" value={player.skill.toFixed(1)} /><Metric label="Pontuação" value={score(player, config).toFixed(2)} /></div>{player.notes && <blockquote>{player.notes}</blockquote>}</div></div>; }
+function PlayerAvatar({ player, name }: { player?: Player; name?: string }) { const label = player?.displayName || name || "Jogador"; return <PlayerPhoto photoUrl={player?.photoUrl} name={label} />; }
+function PlayerDetail({ player, config, onClose }: any) { return <div className="modal-back" onClick={onClose}><div className="modal player-detail-modal" onClick={(event) => event.stopPropagation()}><button className="close" onClick={onClose}>×</button><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} large /><h2>{player.fullName}</h2><p>{player.nickname || player.displayName}</p><div className="detail-grid"><Metric label="Tipo" value={player.type === "guest" ? "Convidado" : player.type === "goalkeeper" ? "Goleiro" : "Mensalista"} /><Metric label="Posição" value={player.primaryPosition} /><Metric label="Velocidade" value={player.speed.toFixed(1)} /><Metric label="Habilidade" value={player.skill.toFixed(1)} /><Metric label="Pontuação" value={score(player, config).toFixed(2)} /></div>{player.notes && <blockquote>{player.notes}</blockquote>}</div></div>; }
 
 function GuestForm({ draft, onClose, onSave }: { draft: GuestDraft; onClose: () => void; onSave: (draft: GuestDraft) => void }) {
   const [value, setValue] = useState(draft); const update = (key: keyof GuestDraft, next: any) => setValue((current) => ({ ...current, [key]: next }));

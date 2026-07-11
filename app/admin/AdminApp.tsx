@@ -1,11 +1,12 @@
 "use client";
 import { useEffect,useMemo,useState } from "react";
 import type { Player } from "../../lib/football";
+import { PlayerPhoto } from "../components/PlayerPhoto";
 type Tab="overview"|"players"|"separations"|"admins"|"config"|"audit";
 const empty={displayName:"",fullName:"",nickname:"",aliases:[],type:"monthly",primaryPosition:"Defesa",speed:3,skill:3,active:true,notes:""};
 export default function AdminApp(){const [admin,setAdmin]=useState<any>(undefined),[error,setError]=useState(""),[notice,setNotice]=useState(""),[tab,setTab]=useState<Tab>("overview"),[players,setPlayers]=useState<Player[]>([]),[seps,setSeps]=useState<any[]>([]),[admins,setAdmins]=useState<any[]>([]),[auditLogs,setAuditLogs]=useState<any[]>([]),[config,setConfig]=useState<any>(null),[edit,setEdit]=useState<any>(null),[search,setSearch]=useState("");
  const api=async(url:string,opts?:RequestInit)=>{const r=await fetch(url,opts);const j=await r.json();if(!r.ok)throw new Error(j.error||"Não foi possível concluir.");return j};
- const load=async()=>{const a=await api('/api/auth');setAdmin(a.admin);if(a.admin){const [p,s,c,ad,logs]=await Promise.all([api('/api/players'),api('/api/separations'),api('/api/config'),api('/api/administrators'),api('/api/audit')]);setPlayers(p.players);setSeps(s.separations);setConfig(c.config);setAdmins(ad.administrators);setAuditLogs(logs.logs||[])}};
+ const load=async()=>{const a=await api('/api/auth');setAdmin(a.admin);if(a.admin){const [p,s,c,ad,logs]=await Promise.all([fetch('/api/players',{cache:'no-store'}).then(r=>r.json()),api('/api/separations'),api('/api/config'),api('/api/administrators'),api('/api/audit')]);setPlayers(p.players);setSeps(s.separations);setConfig(c.config);setAdmins(ad.administrators);setAuditLogs(logs.logs||[])}};
  useEffect(()=>{load().catch(e=>setError(e.message))},[]);
  if(admin===undefined)return <div className="admin-loading">Carregando painel…</div>;
  if(!admin)return <Login onLogin={load} error={error} setError={setError}/>;
@@ -31,5 +32,5 @@ function entityLabel(entity:string){return({player:'Jogador',configuration:'Conf
 function actionIcon(action:string){return({CREATE:'＋',UPDATE:'✎',DELETE:'×',ACTIVATE:'✓',DEACTIVATE:'−',LOGIN:'→',LOGOUT:'←',CHANGE_PASSWORD:'●'} as Record<string,string>)[action]||'•'}
 function auditSubject(log:any){const data=log.newData||log.previousData||{};if(log.entityType==='player')return data.displayName||data.display_name||`Jogador ${log.entityId?.slice(0,8)||''}`;if(log.entityType==='administrator')return data.email||log.administratorEmail;if(log.entityType==='configuration')return 'Critérios de equilíbrio do sistema';if(log.entityType==='separation')return data.matchTitle||`Separação ${log.entityId?.slice(0,8)||''}`;return log.entityId||'Registro do sistema'}
 function Stat({label,value,note}:any){return <article className="stat"><small>{label}</small><b>{value}</b><span>{note}</span></article>}
-function AdminAvatar({player}:{player:Player}){return <span className="player-photo admin-photo">{player.photoUrl?<img src={player.photoUrl} alt={`Foto de ${player.displayName}`}/>:<span className="player-placeholder" role="img" aria-label={`Foto padrão de ${player.displayName}`}>👤</span>}</span>}
+function AdminAvatar({player}:{player:Player}){return <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="admin-photo"/>}
 function RatingSlider({label,value,onChange}:{label:string,value:number,onChange:(value:number)=>void}){return <label className="rating-slider"><span>{label}</span><input type="range" min="1" max="5" step="0.1" value={value} onChange={event=>onChange(Math.round(Number(event.target.value)*10)/10)}/><output>{Number(value).toFixed(1)}</output><small><span>1</span><span>5</span></small></label>}
