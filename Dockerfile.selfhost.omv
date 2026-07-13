@@ -23,7 +23,7 @@ ENV NODE_ENV=production \
     PORT=3000 \
     DATA_DIR=/data
 
-RUN mkdir -p /data/uploads && chown -R node:node /app /data
+RUN --security=insecure mkdir -p /data/uploads && chown -R node:node /app /data
 
 COPY --from=build --chown=node:node /app/dist/standalone/ ./
 COPY --from=build --chown=node:node /app/server/selfhost-runtime.mjs ./selfhost-runtime.mjs
