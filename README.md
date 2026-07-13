@@ -97,6 +97,8 @@ A imagem de produção executa o Worker com D1 e R2 locais. Banco, sessões e up
 
 ### Produção com Docker Compose
 
+O Compose principal usa `Dockerfile.multiarch` e seleciona automaticamente uma imagem nativa para `linux/amd64` (PCs e servidores Intel/AMD) ou `linux/arm64` (Raspberry Pi com sistema operacional de 64 bits). O `Dockerfile` original foi mantido como alternativa legada.
+
 ```bash
 cp .env.docker.example .env
 docker compose up -d --build
@@ -113,6 +115,43 @@ docker compose down
 ```
 
 `docker compose down` preserva o volume. Use `docker compose down -v` somente quando quiser apagar definitivamente banco, sessões e uploads.
+
+### Raspberry Pi, ARM64 e OMV 7
+
+No terminal do Raspberry Pi, confirme primeiro que o OMV está executando em 64 bits:
+
+```bash
+uname -m
+```
+
+O resultado deve ser `aarch64` ou `arm64`. `armv7l` indica um sistema de 32 bits e não é compatível com o runtime; nesse caso é necessário instalar uma versão ARM64 do Raspberry Pi OS/OMV.
+
+No plugin Compose do OMV 7, use o `docker-compose.yml` principal sem adicionar `platform: linux/amd64`. Assim a imagem e o `workerd` serão construídos nativamente para o processador ARM64:
+
+```bash
+cp .env.docker.example .env
+docker compose build --pull --no-cache app
+docker compose up -d
+docker compose logs -f app
+```
+
+Durante o build, as linhas de versão do Wrangler e do workerd confirmam que o binário ARM64 correto foi instalado. O primeiro build pode demorar alguns minutos no Raspberry Pi. Banco e fotos continuam persistidos no volume configurado.
+
+Para usar explicitamente o Dockerfile antigo em um PC, execute:
+
+```bash
+docker build -f Dockerfile -t pelada-pede-mais-uma:legacy .
+```
+
+Para publicar uma única tag multi-arquitetura em um registry a partir de uma máquina com Buildx:
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -f Dockerfile.multiarch \
+  -t SEU_REGISTRY/pelada-pede-mais-uma:latest \
+  --push .
+```
 
 ### Desenvolvimento com recarga automática
 

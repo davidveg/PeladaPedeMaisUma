@@ -5,11 +5,12 @@ services:
     image: ${APP_IMAGE:-pelada-pede-mais-uma:latest}
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.multiarch
       target: runtime
       args:
         NODE_VERSION: ${NODE_VERSION:-22.19.0}
         WRANGLER_VERSION: ${WRANGLER_VERSION:-4.92.0}
+        WORKERD_VERSION: ${WORKERD_VERSION:-1.20260515.1}
     environment:
       NODE_ENV: production
       PORT: ${PORT:-3000}

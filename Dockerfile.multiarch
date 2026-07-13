@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.7
+
+# Imagem nativa para Linux amd64 e arm64. O Dockerfile original permanece
+# disponível como alternativa legada.
+ARG NODE_VERSION=22.19.0
+ARG WRANGLER_VERSION=4.92.0
+ARG WORKERD_VERSION=1.20260515.1
+
+FROM node:${NODE_VERSION}-bookworm-slim AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts --no-audit --no-fund
+
+FROM node:${NODE_VERSION}-bookworm-slim AS build
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
+RUN npm run build && npm test
+
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime
+ARG TARGETARCH
+ARG WRANGLER_VERSION
+ARG WORKERD_VERSION
+WORKDIR /app
+
+# O pacote workerd usa "linux-64" para amd64 e "linux-arm64" para ARM64.
+# A instalação explícita evita que npm/Compose descarte a dependência opcional
+# correspondente à arquitetura do Raspberry Pi.
+RUN --mount=type=cache,target=/root/.npm \
+    set -eu; \
+    architecture="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+    case "${architecture}" in \
+      amd64) workerd_package="@cloudflare/workerd-linux-64" ;; \
+      arm64) workerd_package="@cloudflare/workerd-linux-arm64" ;; \
+      *) echo "Arquitetura não suportada: ${architecture}. Use linux/amd64 ou linux/arm64." >&2; exit 1 ;; \
+    esac; \
+    npm install --prefix /opt/cloudflare-runtime --no-save --include=optional --no-audit --no-fund \
+      "wrangler@${WRANGLER_VERSION}" \
+      "${workerd_package}@${WORKERD_VERSION}"; \
+    /opt/cloudflare-runtime/node_modules/.bin/wrangler --version; \
+    /opt/cloudflare-runtime/node_modules/.bin/workerd --version; \
+    mkdir -p /data /home/node/.config /home/node/.wrangler; \
+    chown -R node:node /app /data /home/node
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    WRANGLER_LOG=error \
+    WRANGLER_HOME=/home/node/.wrangler \
+    XDG_CONFIG_HOME=/home/node/.config \
+    PATH=/opt/cloudflare-runtime/node_modules/.bin:$PATH
+
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
+COPY --chown=node:node wrangler.container.jsonc ./wrangler.container.jsonc
+
+USER node
+EXPOSE 3000
+VOLUME ["/data"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+
+CMD ["sh", "-c", "wrangler dev --config wrangler.container.jsonc --local --ip 0.0.0.0 --port ${PORT:-3000} --persist-to /data"]
