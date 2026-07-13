@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1-labs
 
 # Imagem nativa para Linux amd64 e arm64. O Dockerfile original permanece
 # disponível como alternativa legada.
@@ -9,7 +9,7 @@ ARG WORKERD_VERSION=1.20260515.1
 FROM node:${NODE_VERSION}-bookworm-slim AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
+RUN --security=insecure --mount=type=cache,target=/root/.npm \
     npm ci --ignore-scripts --no-audit --no-fund
 
 FROM node:${NODE_VERSION}-bookworm-slim AS build
@@ -18,7 +18,7 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-RUN npm run build && npm test
+RUN --security=insecure npm run build && npm test
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 ARG TARGETARCH
@@ -29,7 +29,7 @@ WORKDIR /app
 # O pacote workerd usa "linux-64" para amd64 e "linux-arm64" para ARM64.
 # A instalação explícita evita que npm/Compose descarte a dependência opcional
 # correspondente à arquitetura do Raspberry Pi.
-RUN --mount=type=cache,target=/root/.npm \
+RUN --security=insecure --mount=type=cache,target=/root/.npm \
     set -eu; \
     architecture="${TARGETARCH:-$(dpkg --print-architecture)}"; \
     case "${architecture}" in \
@@ -40,7 +40,6 @@ RUN --mount=type=cache,target=/root/.npm \
     npm install --prefix /opt/cloudflare-runtime --no-save --include=optional --no-audit --no-fund \
       "wrangler@${WRANGLER_VERSION}" \
       "${workerd_package}@${WORKERD_VERSION}"; \
-    /opt/cloudflare-runtime/node_modules/.bin/wrangler --version; \
     test -x "/opt/cloudflare-runtime/node_modules/${workerd_package}/bin/workerd"; \
     echo "Pacote ${workerd_package}@${WORKERD_VERSION} instalado para ${architecture}"; \
     mkdir -p /data /home/node/.config /home/node/.wrangler; \

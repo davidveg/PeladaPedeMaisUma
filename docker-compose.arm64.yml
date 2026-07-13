@@ -1,5 +1,10 @@
 services:
   app:
     platform: linux/arm64
+    build:
+      # Autoriza somente as etapas RUN marcadas com --security=insecure no
+      # Dockerfile. Necessário em alguns kernels ARM64/OMV que encerram o npm
+      # com SIGSYS (exit 159) dentro do sandbox padrão do BuildKit.
+      privileged: true
     security_opt:
       - seccomp:unconfined

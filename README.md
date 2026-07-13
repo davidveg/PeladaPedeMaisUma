@@ -126,7 +126,7 @@ uname -m
 
 O resultado deve ser `aarch64` ou `arm64`. `armv7l` indica um sistema de 32 bits e não é compatível com o runtime; nesse caso é necessário instalar uma versão ARM64 do Raspberry Pi OS/OMV.
 
-No plugin Compose do OMV 7, use `platform: linux/arm64` e `security_opt: [seccomp:unconfined]`. O perfil é necessário em alguns kernels de Raspberry Pi porque o perfil seccomp padrão pode bloquear uma syscall do workerd com código de saída 159. Fora do plugin, o arquivo `docker-compose.arm64.yml` já fornece esse ajuste:
+No plugin Compose do OMV 7, use `platform: linux/arm64`, `build.privileged: true` e `security_opt: [seccomp:unconfined]`. Em alguns kernels de Raspberry Pi, o sandbox padrão do BuildKit encerra até mesmo o Node/npm com `SIGSYS` (código de saída 159). A permissão de build libera somente as instruções `RUN --security=insecure` deste Dockerfile; ela não torna o container final privilegiado. O `security_opt` é mantido para o workerd durante a execução. Fora do plugin, o arquivo `docker-compose.arm64.yml` já fornece esses ajustes:
 
 ```bash
 cp .env.docker.example .env
@@ -135,7 +135,7 @@ docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d
 docker compose -f docker-compose.yml -f docker-compose.arm64.yml logs -f app
 ```
 
-Durante o build, a mensagem `Pacote @cloudflare/workerd-linux-arm64 ... instalado` confirma que o binário correto foi encontrado. Ele não é iniciado durante o build para evitar o bloqueio seccomp dessa etapa. O primeiro build pode demorar alguns minutos no Raspberry Pi. Banco e fotos continuam persistidos no volume configurado.
+Durante o build, a mensagem `Pacote @cloudflare/workerd-linux-arm64 ... instalado` confirma que o binário correto foi encontrado. Ele não é iniciado durante o build. O primeiro build pode demorar alguns minutos no Raspberry Pi. Banco e fotos continuam persistidos no volume configurado.
 
 Para usar explicitamente o Dockerfile antigo em um PC, execute:
 
