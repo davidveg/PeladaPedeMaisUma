@@ -7,7 +7,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Parser de listas do WhatsApp: reconhece ✅, ❌, campos vazios, caracteres invisíveis, data, título, ausentes e duplicidades.
 - Correspondência por nome de exibição, nome completo, apelido e aliases; sugestões ambíguas nunca são vinculadas automaticamente.
 - Cadastro reutilizável de mensalistas, convidados e goleiros, com notas decimais de 1 a 5.
-- Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, médias e proteção do quartil superior no caso ímpar.
+- Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, marcação, médias e proteção do quartil superior no caso ímpar.
 - Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
 - Compartilhamento pelo clipboard em formato simples ou com pontuações.
 - Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
@@ -85,7 +85,7 @@ Exemplo de criação de jogador:
 
 ## Algoritmo
 
-A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade` (60/40 por padrão). Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e alta para velocidade e pontuação. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
+A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade + marcação × pesoMarcação`. Os padrões são 48%, 32% e 20%, preservando a proporção anterior entre velocidade e habilidade ao incluir marcação. Os três pesos podem ser ajustados na área administrativa e sempre somam 100%. Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e ponderada pelos três atributos. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
 
 ## Segurança e produção
 

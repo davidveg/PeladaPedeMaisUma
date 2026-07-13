@@ -120,15 +120,16 @@ export default function FootballApp() {
 
   async function confirmSeparation() {
     if (!confirm("Deseja confirmar esta separação? Os times serão salvos no histórico.")) return;
-    const snapshot = { ...result, speedWeight: config.speedWeight, skillWeight: config.skillWeight };
+    const snapshot = { ...result, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight };
     const response = await fetch("/api/separations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: parsed?.title, date: parsed?.date, originalText: text, result: snapshot, manuallyAdjusted: manual }) });
     if (response.ok) { setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history"); }
   }
 
   async function copyTeams(source = result, withScores = false, titleOverride?: string) {
     const title = titleOverride || source?.matchTitle || parsed?.title || "PELADA";
+    const weights = resultConfig(source);
     const format = (player: Player, index: number) => `${index + 1}. ${player.displayName}${withScores ? ` — ${player.primaryPosition} · Vel ${player.speed.toFixed(1)} · Hab ${player.skill.toFixed(1)} · Mar ${(player.marking??3).toFixed(1)}` : ""}`;
-    const output = `⚽ ${title}\n\n🔵 TIME AZUL\n${source.blue.map(format).join("\n")}\n\n🟡 TIME AMARELO\n${source.yellow.map(format).join("\n")}\n\n📊 ${source.rating || source.balanceClassification}\nVelocidade: peso de ${Math.round(config.speedWeight * 100)}%\nHabilidade: peso de ${Math.round(config.skillWeight * 100)}%`;
+    const output = `⚽ ${title}\n\n🔵 TIME AZUL\n${source.blue.map(format).join("\n")}\n\n🟡 TIME AMARELO\n${source.yellow.map(format).join("\n")}\n\n📊 ${source.rating || source.balanceClassification}\nVelocidade: peso de ${Math.round(weights.speedWeight * 100)}%\nHabilidade: peso de ${Math.round(weights.skillWeight * 100)}%\nMarcação: peso de ${Math.round(weights.markingWeight * 100)}%`;
     await navigator.clipboard.writeText(output);
     setToast("Times copiados com sucesso.");
   }
@@ -161,16 +162,22 @@ function ResultPresentation({ result, manuallyAdjusted, onPlayer, onMove, onNew,
 
 function SavedSeparation({ item, onBack, onPlayer, onCopy }: any) {
   const result = item.snapshot;
-  return <section className="content saved-detail"><div className="section-head"><div><div className="eyebrow">SEPARAÇÃO CONFIRMADA</div><h2>{item.matchTitle}</h2><p>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"} · confirmada em {new Date(item.confirmedAt).toLocaleString("pt-BR")}{item.manuallyAdjusted ? " · ajustada manualmente" : ""}</p></div><BalanceBadge rating={result.rating || item.balanceClassification} /></div><TeamGrid result={result} onPlayer={onPlayer} /><BalanceMetrics delta={result.delta} /><div className="saved-meta"><span><small>Proposta utilizada</small><b>{result.proposal || 1}</b></span><span><small>Peso da velocidade</small><b>{Math.round((result.speedWeight || .6) * 100)}%</b></span><span><small>Peso da habilidade</small><b>{Math.round((result.skillWeight || .4) * 100)}%</b></span><span><small>Ajuste manual</small><b>{item.manuallyAdjusted ? "Sim" : "Não"}</b></span></div><div className="result-actions"><button className="ghost" onClick={onBack}>← Voltar ao histórico</button><button className="ghost" onClick={() => onCopy(false)}>Copiar para WhatsApp</button><button className="primary" onClick={() => onCopy(true)}>Copiar com pontuações</button></div></section>;
+  const weights = resultConfig(result);
+  return <section className="content saved-detail"><div className="section-head"><div><div className="eyebrow">SEPARAÇÃO CONFIRMADA</div><h2>{item.matchTitle}</h2><p>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"} · confirmada em {new Date(item.confirmedAt).toLocaleString("pt-BR")}{item.manuallyAdjusted ? " · ajustada manualmente" : ""}</p></div><BalanceBadge rating={result.rating || item.balanceClassification} /></div><TeamGrid result={result} onPlayer={onPlayer} /><BalanceMetrics delta={result.delta} /><div className="saved-meta"><span><small>Proposta utilizada</small><b>{result.proposal || 1}</b></span><span><small>Peso da velocidade</small><b>{Math.round(weights.speedWeight * 100)}%</b></span><span><small>Peso da habilidade</small><b>{Math.round(weights.skillWeight * 100)}%</b></span><span><small>Peso da marcação</small><b>{Math.round(weights.markingWeight * 100)}%</b></span><span><small>Ajuste manual</small><b>{item.manuallyAdjusted ? "Sim" : "Não"}</b></span></div><div className="result-actions"><button className="ghost" onClick={onBack}>← Voltar ao histórico</button><button className="ghost" onClick={() => onCopy(false)}>Copiar para WhatsApp</button><button className="primary" onClick={() => onCopy(true)}>Copiar com pontuações</button></div></section>;
+}
+
+function resultConfig(result: any) {
+  const legacySnapshot = result?.markingWeight == null && result?.speedWeight != null && result?.skillWeight != null;
+  return { ...defaultConfig, speedWeight: result?.speedWeight ?? defaultConfig.speedWeight, skillWeight: result?.skillWeight ?? defaultConfig.skillWeight, markingWeight: result?.markingWeight ?? (legacySnapshot ? 0 : defaultConfig.markingWeight) };
 }
 
 function TeamGrid({ result, onPlayer, onMove }: any) {
-  const scoringConfig = { ...defaultConfig, speedWeight: result.speedWeight ?? .6, skillWeight: result.skillWeight ?? .4 };
+  const scoringConfig = resultConfig(result);
   return <div className="teams"><Team color="blue" title="Time Azul" players={result.blue} metrics={result.blueMetrics} extraId={result.extraId} scoringConfig={scoringConfig} onPlayer={onPlayer} onMove={onMove ? (id: string) => onMove(id, "blue") : undefined} /><Team color="yellow" title="Time Amarelo" players={result.yellow} metrics={result.yellowMetrics} extraId={result.extraId} scoringConfig={scoringConfig} onPlayer={onPlayer} onMove={onMove ? (id: string) => onMove(id, "yellow") : undefined} /></div>;
 }
 
 function BalanceBadge({ rating }: { rating: string }) { return <div className={`balance ${rating?.startsWith("Excelente") ? "great" : ""}`}><span>●</span><div><small>INDICADOR</small><b>{rating}</b></div></div>; }
-function BalanceMetrics({ delta }: any) { return <div className="metrics"><h3>Diferenças entre os times</h3><div><Metric label="Jogadores" value={delta?.players ?? 0} /><Metric label="Defensores" value={delta?.defenders ?? 0} /><Metric label="Meio-campistas" value={delta?.midfielders ?? 0} /><Metric label="Atacantes" value={delta?.attackers ?? 0} /><Metric label="Velocidade" value={(delta?.speed ?? 0).toFixed(1)} /><Metric label="Habilidade" value={(delta?.skill ?? 0).toFixed(1)} /><Metric label="Pontuação" value={(delta?.score ?? 0).toFixed(2)} /></div></div>; }
+function BalanceMetrics({ delta }: any) { return <div className="metrics"><h3>Diferenças entre os times</h3><div><Metric label="Jogadores" value={delta?.players ?? 0} /><Metric label="Defensores" value={delta?.defenders ?? 0} /><Metric label="Meio-campistas" value={delta?.midfielders ?? 0} /><Metric label="Atacantes" value={delta?.attackers ?? 0} /><Metric label="Velocidade" value={(delta?.speed ?? 0).toFixed(1)} /><Metric label="Habilidade" value={(delta?.skill ?? 0).toFixed(1)} /><Metric label="Marcação" value={(delta?.marking ?? 0).toFixed(1)} /><Metric label="Pontuação" value={(delta?.score ?? 0).toFixed(2)} /></div></div>; }
 
 function PlayerRow({ player, onClick }: { player: Player; onClick: () => void }) { return <button className="player-row" onClick={onClick}><PlayerAvatar player={player} /><div><b>{player.displayName}</b><small>{player.primaryPosition}</small></div><span className="rating">{score(player).toFixed(1)}</span><i>›</i></button>; }
 function Team({ color, title, players, metrics, extraId, scoringConfig, onPlayer, onMove }: any) { return <article className={`team ${color}`}><div className="team-head"><div><span className="shirt">{color === "blue" ? "🔵" : "🟡"}</span><h3>{title}</h3></div><b>{players.length} jogadores</b></div><div className="team-summary"><span>DEF <b>{metrics?.positions.Defesa || 0}</b></span><span>MEI <b>{metrics?.positions["Meio-campo"] || 0}</b></span><span>ATA <b>{metrics?.positions.Ataque || 0}</b></span><span>MÉDIA <b>{metrics?.scoreAvg?.toFixed(2) || "—"}</b></span></div>{players.map((player: Player) => <div className="team-player" key={player.id}><button onClick={() => onPlayer(player)}><PlayerAvatar player={player} /><div><b>{player.displayName}</b><small>{player.primaryPosition}{player.id === extraId ? " · Jogador adicional" : ""}</small></div></button><span>{score(player, scoringConfig).toFixed(1)}</span>{onMove && <button className="swap" title="Mover para o outro time" onClick={() => onMove(player.id)}>⇄</button>}</div>)}</article>; }

@@ -30,7 +30,7 @@ export const separations = sqliteTable("team_separations", {
 
 export const configurations = sqliteTable("system_configuration", {
   id: integer("id").primaryKey().default(1), defaultPlayerCount: integer("default_player_count").notNull().default(22), minimumRecommendedPlayers: integer("minimum_recommended_players").notNull().default(14),
-  maximumRecommendedPlayers: integer("maximum_recommended_players").notNull().default(30), speedWeight: real("speed_weight").notNull().default(.6), skillWeight: real("skill_weight").notNull().default(.4),
+  maximumRecommendedPlayers: integer("maximum_recommended_players").notNull().default(30), speedWeight: real("speed_weight").notNull().default(.48), skillWeight: real("skill_weight").notNull().default(.32), markingWeight: real("marking_weight").notNull().default(.2),
   maximumPositionDifference: integer("maximum_position_difference").notNull().default(1), protectedTopPlayersPercentage: real("protected_top_players_percentage").notNull().default(.25),
   defaultReserveCount: integer("default_reserve_count").notNull().default(0), algorithmAttempts: integer("algorithm_attempts").notNull().default(2500), updatedAt: text("updated_at").notNull(),
 });

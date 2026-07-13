@@ -1,9 +1,9 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
 export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
-export type Config = { speedWeight: number; skillWeight: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
+export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
-export const defaultConfig: Config = { speedWeight: .6, skillWeight: .4, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
-export const score = (p: Player, c = defaultConfig) => p.speed * c.speedWeight + p.skill * c.skillWeight;
+export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
+export const score = (p: Player, c = defaultConfig) => p.speed * c.speedWeight + p.skill * c.skillWeight + (p.marking ?? 3) * c.markingWeight;
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
 export function parseWhatsApp(text: string) {
@@ -45,8 +45,8 @@ export function matchPlayers(names: string[], players: Player[]) {
 export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig) {
   const positions = { Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 };
   team.forEach(p => positions[p.primaryPosition]++);
-  const speed = team.reduce((s,p)=>s+p.speed,0), skill = team.reduce((s,p)=>s+p.skill,0), total = team.reduce((s,p)=>s+score(p,c),0);
-  return { count: team.length, positions, speed, skill, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, scoreAvg: total/team.length||0 };
+  const speed = team.reduce((s,p)=>s+p.speed,0), skill = team.reduce((s,p)=>s+p.skill,0), marking = team.reduce((s,p)=>s+(p.marking??3),0), total = team.reduce((s,p)=>s+score(p,c),0);
+  return { count: team.length, positions, speed, skill, marking, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, scoreAvg: total/team.length||0 };
 }
 
 export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config = defaultConfig) {
@@ -58,6 +58,7 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
     attackers: Math.abs(blueMetrics.positions.Ataque-yellowMetrics.positions.Ataque),
     speed: Math.abs(blueMetrics.speed-yellowMetrics.speed),
     skill: Math.abs(blueMetrics.skill-yellowMetrics.skill),
+    marking: Math.abs(blueMetrics.marking-yellowMetrics.marking),
     score: Math.abs(blueMetrics.total-yellowMetrics.total),
   };
   return { blueMetrics, yellowMetrics, delta };
@@ -76,10 +77,11 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
     if (goalkeepers[0]) blue.push(goalkeepers[0]); if (goalkeepers[1]) yellow.push(goalkeepers[1]); goalkeepers.slice(2).forEach((p,i)=>(i%2?yellow:blue).push(p));
     const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDiff = ["Defesa","Meio-campo","Ataque"].reduce((s,k)=>s+Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions]),0);
     const larger = blue.length>yellow.length?blue:yellow; const extra = input.length%2 ? [...larger].sort((a,b)=>score(a,config)-score(b,config)).find(p=>!protectedIds.has(p.id) && p.primaryPosition!=="Goleiro") : undefined;
-    const cost = Math.abs(blue.length-yellow.length)*1000 + positionDiff*120 + Math.abs(bm.speed-ym.speed)*8 + Math.abs(bm.skill-ym.skill)*6 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
+    const attributeDifference = Math.abs(bm.speed-ym.speed)*config.speedWeight + Math.abs(bm.skill-ym.skill)*config.skillWeight + Math.abs(bm.marking-ym.marking)*config.markingWeight;
+    const cost = Math.abs(blue.length-yellow.length)*1000 + positionDiff*120 + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
     if (!best || cost < best.cost) best={blue,yellow,cost,extraId:extra?.id};
   }
   const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight };
+  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight };
 }

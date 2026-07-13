@@ -37,3 +37,22 @@ test("adaptador de uploads persiste bytes e metadados", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração adiciona marcação e preserva proporcionalmente os pesos existentes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-marking-weight-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE system_configuration (id INTEGER PRIMARY KEY, speed_weight REAL NOT NULL, skill_weight REAL NOT NULL)").run();
+    await bindings.DB.prepare("INSERT INTO system_configuration VALUES (1, 0.7, 0.3)").run();
+    const migration = await readFile(new URL("../drizzle/0002_add_marking_weight.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const row = await bindings.DB.prepare("SELECT speed_weight, skill_weight, marking_weight FROM system_configuration WHERE id=1").first();
+    assert.ok(Math.abs(row.speed_weight - .56) < 1e-9);
+    assert.ok(Math.abs(row.skill_weight - .24) < 1e-9);
+    assert.equal(row.marking_weight, .2);
+    assert.ok(Math.abs(row.speed_weight + row.skill_weight + row.marking_weight - 1) < 1e-9);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -6,13 +6,26 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS password_reset_tokens (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS team_separations (id TEXT PRIMARY KEY, match_title TEXT NOT NULL, match_date TEXT, location TEXT, original_text TEXT NOT NULL, snapshot TEXT NOT NULL, manually_adjusted INTEGER NOT NULL DEFAULT 0, balance_score REAL NOT NULL, balance_classification TEXT NOT NULL, confirmed_at TEXT NOT NULL, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS system_configuration (id INTEGER PRIMARY KEY, default_player_count INTEGER NOT NULL, minimum_recommended_players INTEGER NOT NULL, maximum_recommended_players INTEGER NOT NULL, speed_weight REAL NOT NULL, skill_weight REAL NOT NULL, maximum_position_difference INTEGER NOT NULL, protected_top_players_percentage REAL NOT NULL, default_reserve_count INTEGER NOT NULL, algorithm_attempts INTEGER NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS system_configuration (id INTEGER PRIMARY KEY, default_player_count INTEGER NOT NULL, minimum_recommended_players INTEGER NOT NULL, maximum_recommended_players INTEGER NOT NULL, speed_weight REAL NOT NULL, skill_weight REAL NOT NULL, marking_weight REAL NOT NULL, maximum_position_difference INTEGER NOT NULL, protected_top_players_percentage REAL NOT NULL, default_reserve_count INTEGER NOT NULL, algorithm_attempts INTEGER NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS audit_logs (id TEXT PRIMARY KEY, administrator_id TEXT, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT, previous_data TEXT, new_data TEXT, created_at TEXT NOT NULL)`,
 ];
 let ready: Promise<void> | undefined;
 export function db() { return getRuntimeBindings().DB; }
 export async function ensureDb() {
-  if (!ready) ready=(async()=>{ const d=db(); for(const sql of statements) await d.prepare(sql).run(); const columns=await d.prepare(`PRAGMA table_info(players)`).all(); if(!columns.results.some((column:any)=>column.name==="marking")) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run(); const now=new Date().toISOString(); await d.prepare(`INSERT OR IGNORE INTO system_configuration VALUES (1,22,14,30,.6,.4,1,.25,0,2500,?)`).bind(now).run(); await seed(d,now); })();
+  if (!ready) ready=(async()=>{
+    const d=db();
+    for(const sql of statements) await d.prepare(sql).run();
+    const playerColumns=await d.prepare(`PRAGMA table_info(players)`).all();
+    if(!playerColumns.results.some((column:any)=>column.name==="marking")) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run();
+    const configurationColumns=await d.prepare(`PRAGMA table_info(system_configuration)`).all();
+    if(!configurationColumns.results.some((column:any)=>column.name==="marking_weight")) {
+      await d.prepare(`ALTER TABLE system_configuration ADD COLUMN marking_weight REAL NOT NULL DEFAULT 0.2`).run();
+      await d.prepare(`UPDATE system_configuration SET speed_weight=speed_weight*0.8, skill_weight=skill_weight*0.8`).run();
+    }
+    const now=new Date().toISOString();
+    await d.prepare(`INSERT OR IGNORE INTO system_configuration (id,default_player_count,minimum_recommended_players,maximum_recommended_players,speed_weight,skill_weight,marking_weight,maximum_position_difference,protected_top_players_percentage,default_reserve_count,algorithm_attempts,updated_at) VALUES (1,22,14,30,.48,.32,.2,1,.25,0,2500,?)`).bind(now).run();
+    await seed(d,now);
+  })();
   return ready;
 }
 async function seed(d:D1Database, now:string){
