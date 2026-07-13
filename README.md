@@ -93,32 +93,39 @@ Use HTTPS, mantenha cookies `Secure` no ambiente de produção, aplique rate lim
 
 ## Contêineres
 
-Existem dois modos independentes. Ambos mantêm banco, sessões e fotos no volume persistente `/data`.
+O projeto mantém somente três arquivos Compose, um para cada cenário suportado:
 
-| Modo | Servidor | Persistência | Arquivos principais |
-| --- | --- | --- | --- |
-| Cloudflare compatível | Wrangler + workerd | D1/R2 locais | `Dockerfile.multiarch`, `docker-compose.yml` |
-| Self-hosted recomendado | Node 22 | SQLite + filesystem | `Dockerfile.selfhost`, `docker-compose.selfhost.yml` |
+| Arquivo | Uso | Runtime e persistência |
+| --- | --- | --- |
+| `docker-compose.yml` | Execução padrão em PC/servidor compatível | Wrangler/workerd com D1 e R2 locais |
+| `docker-compose.dev.yml` | Desenvolvimento com recarga automática | Vinext, código montado e volumes de desenvolvimento |
+| `docker-compose.omv.yml` | Raspberry Pi ARM64 com OMV 7 | Node 22, SQLite e fotos no filesystem |
 
-### Self-hosted em PCs e servidores convencionais
-
-Este modo não usa Wrangler, workerd ou recursos externos da Cloudflare. A imagem é nativa tanto em `linux/amd64` quanto em `linux/arm64`.
-
-```bash
-docker compose -f docker-compose.selfhost.yml up -d --build
-docker compose -f docker-compose.selfhost.yml ps
-```
-
-Acesse `http://localhost:3000`. O primeiro login administrativo continua sendo `admin` / `admin`, com troca obrigatória no primeiro acesso.
-
-Para acompanhar ou encerrar:
+### Execução padrão
 
 ```bash
-docker compose -f docker-compose.selfhost.yml logs -f app
-docker compose -f docker-compose.selfhost.yml down
+cp .env.docker.example .env
+docker compose up -d --build
+docker compose logs -f app
 ```
 
-`docker compose down` preserva o volume. Use `docker compose down -v` somente quando quiser apagar definitivamente banco, sessões e uploads.
+Acesse `http://localhost:3000`. O Compose padrão usa `Dockerfile.multiarch` e requer um kernel compatível com workerd. O binário ARM64 oficial exige `crc32` e espaço virtual de 48 bits; no Raspberry/OMV com espaço virtual de 39 bits, use exclusivamente o Compose do OMV.
+
+Para encerrar sem apagar os dados:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down -v` somente quando quiser apagar definitivamente o volume persistente.
+
+### Desenvolvimento com recarga automática
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+O código-fonte é montado no container, enquanto dependências e estado local ficam em volumes nomeados.
 
 ### Raspberry Pi ARM64 com OMV 7
 
@@ -146,7 +153,7 @@ docker buildx use --global pelada-arm64
 docker buildx inspect pelada-arm64 --bootstrap
 ```
 
-Na saída, `Flags` deve conter `--allow-insecure-entitlement security.insecure`. Essa autorização vale para o builder; o container final continua como usuário `1000:100`, sem capabilities e com `no-new-privileges`.
+Na saída, `Flags` deve conter `--allow-insecure-entitlement security.insecure`. Essa autorização vale para o builder. No runtime, o modelo do OMV mantém o usuário `1000:100`, remove todas as capabilities e ativa `no-new-privileges`; ele também usa `seccomp:unconfined` porque o perfil seccomp desse Docker/OMV encerra o Node no Raspberry com `SIGSYS` (código 159), antes da emissão de logs.
 
 Antes de subir o serviço, crie o diretório persistente usando o caminho real do compartilhamento `DockerData` configurado no OMV:
 
@@ -166,66 +173,8 @@ pelada-pede-mais-uma/
     └── ...
 ```
 
-No OMV, execute **Check**, **Build** e **Up**. Acesse `http://IP_DO_RASPBERRY:3000`. Os logs devem mostrar `[selfhost] Servidor` e depois `[vinext] Production server running`, sem mensagens do workerd.
+No OMV, execute **Check**, **Build** e **Up**, nessa ordem. Não use **Pull**: a imagem `pelada-pede-mais-uma:selfhost-arm64` é construída localmente e não existe em um registry. Acesse `http://IP_DO_RASPBERRY:3000`. Os logs devem mostrar `[selfhost] Servidor` e depois `[vinext] Production server running`, sem mensagens do workerd.
 
 Para backup, pare o serviço e copie a pasta `pelada-pede-mais-uma` dentro de `DockerData`. Para restaurar, devolva a pasta ao mesmo caminho, confirme o proprietário `1000:100` e inicie o serviço.
 
-### Modo Cloudflare/workerd legado
-
-O Compose principal continua disponível para PCs e kernels compatíveis com workerd:
-
-```bash
-cp .env.docker.example .env
-docker compose up -d --build
-```
-
-O binário ARM64 oficial do `workerd` exige `crc32` e kernel com espaço virtual de 48 bits. Com `CONFIG_ARM64_VA_BITS_39=y`, o TCMalloc aborta com `MmapAligned() failed` e código 134; o Wrangler mostra o erro secundário `write EPIPE`. Mais RAM, swap ou `seccomp` não alteram essa limitação. Para Raspberry com esse kernel, use a edição self-hosted.
-
-Para usar explicitamente o Dockerfile antigo em um PC, execute:
-
-```bash
-docker build -f Dockerfile -t pelada-pede-mais-uma:legacy .
-```
-
-Para publicar uma única tag multi-arquitetura em um registry a partir de uma máquina com Buildx:
-
-```bash
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -f Dockerfile.multiarch \
-  -t SEU_REGISTRY/pelada-pede-mais-uma:latest \
-  --push .
-```
-
-### Desenvolvimento com recarga automática
-
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-O código-fonte é montado no container, enquanto dependências e estado local ficam em volumes nomeados.
-
-### Imagem sem Compose
-
-```bash
-docker build -t pelada-pede-mais-uma:latest .
-docker volume create pelada-pede-mais-uma-data
-docker run -d --name pelada \
-  -p 3000:3000 \
-  -v pelada-pede-mais-uma-data:/data \
-  --restart unless-stopped \
-  pelada-pede-mais-uma:latest
-```
-
-### Publicação em qualquer plataforma de containers
-
-Faça push da imagem para Docker Hub, GHCR, ECR, GCR ou outro registry e configure na plataforma:
-
-- Porta HTTP: `3000` ou o valor informado em `PORT`.
-- Healthcheck: `GET /api/health`.
-- Volume persistente montado em `/data`.
-- Variáveis SMTP somente quando o envio de e-mails estiver configurado.
-- HTTPS no proxy ou balanceador da plataforma.
-- Uma única réplica quando usar o armazenamento D1/R2 local do container. Para várias réplicas, use o deploy nativo Cloudflare/Sites ou migre o armazenamento para serviços externos compartilhados.
-
-O processo roda como usuário sem privilégios, possui healthcheck, recebe encerramento gracioso e não requer recursos Cloudflare externos para a execução em container.
+O primeiro login administrativo continua sendo `admin` / `admin`, com troca obrigatória no primeiro acesso. Para backup, pare o serviço e copie a pasta `pelada-pede-mais-uma` dentro de `DockerData`. Para restaurar, devolva a pasta ao mesmo caminho, confirme o proprietário `1000:100` e inicie o serviço.
