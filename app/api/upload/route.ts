@@ -1,5 +1,5 @@
-import { env } from "cloudflare:workers";
 import { adminRequired } from "../../../lib/database";
+import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 
 const MAX_FILE_SIZE = 5_000_000;
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (!detected) return Response.json({ error: "O arquivo não é uma imagem PNG, JPEG ou WebP válida." }, { status: 400 });
 
     const key = `players/${crypto.randomUUID()}.${detected.extension}`;
-    await (env.UPLOADS as R2Bucket).put(key, buffer, { httpMetadata: { contentType: detected.contentType } });
+    await getRuntimeBindings().UPLOADS.put(key, buffer, { httpMetadata: { contentType: detected.contentType } });
     return Response.json({ url: `/api/upload?key=${encodeURIComponent(key)}` });
   } catch (error) {
     console.error("Player photo upload failed", error);
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const key = new URL(request.url).searchParams.get("key");
   if (!key?.startsWith("players/")) return new Response("Not found", { status: 404 });
-  const object = await (env.UPLOADS as R2Bucket).get(key);
+  const object = await getRuntimeBindings().UPLOADS.get(key);
   if (!object) return new Response("Not found", { status: 404 });
   return new Response(object.body, { headers: { "content-type": object.httpMetadata?.contentType || "application/octet-stream", "cache-control": "public,max-age=86400" } });
 }

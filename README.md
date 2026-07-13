@@ -10,7 +10,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, médias e proteção do quartil superior no caso ímpar.
 - Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
 - Compartilhamento pelo clipboard em formato simples ou com pontuações.
-- Banco D1 (SQLite compatível) para dados relacionais e R2 para fotos.
+- Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
 - Painel administrativo com jogadores, administradores, configurações e exclusão lógica.
 - Primeiro administrador `admin` / `admin`, com troca obrigatória por e-mail válido e senha de 8+ caracteres.
 - Senhas com PBKDF2-SHA-256, salt aleatório e 210 mil iterações; sessão em cookie HTTP-only/SameSite.
@@ -46,7 +46,7 @@ O uso de consultas preparadas protege contra injeção SQL. Separações salvam 
 
 ### Backup
 
-No ambiente hospedado, exporte o banco D1 com as ferramentas de backup/exportação da plataforma antes de mudanças estruturais. Em uma instalação SQLite alternativa, pare gravações e copie o arquivo `.sqlite` junto com as imagens; prefira `sqlite3 banco.sqlite ".backup backup.sqlite"` para cópia consistente.
+No ambiente hospedado, exporte o banco D1 com as ferramentas de backup/exportação da plataforma antes de mudanças estruturais. Na edição self-hosted, pare o container e copie todo o conteúdo de `/data`: o banco fica em `/data/pelada.sqlite` e as fotos em `/data/uploads`. Copiar o diretório com o serviço parado também preserva corretamente os arquivos auxiliares WAL do SQLite.
 
 ### Evolução para PostgreSQL
 
@@ -93,16 +93,20 @@ Use HTTPS, mantenha cookies `Secure` no ambiente de produção, aplique rate lim
 
 ## Contêineres
 
-A imagem de produção executa o Worker com D1 e R2 locais. Banco, sessões e uploads ficam no volume persistente `/data`, portanto sobrevivem à substituição do container.
+Existem dois modos independentes. Ambos mantêm banco, sessões e fotos no volume persistente `/data`.
 
-### Produção com Docker Compose
+| Modo | Servidor | Persistência | Arquivos principais |
+| --- | --- | --- | --- |
+| Cloudflare compatível | Wrangler + workerd | D1/R2 locais | `Dockerfile.multiarch`, `docker-compose.yml` |
+| Self-hosted recomendado | Node 22 | SQLite + filesystem | `Dockerfile.selfhost`, `docker-compose.selfhost.yml` |
 
-O Compose principal usa `Dockerfile.multiarch` e seleciona automaticamente uma imagem nativa para `linux/amd64` (PCs e servidores Intel/AMD) ou `linux/arm64` (Raspberry Pi com sistema operacional de 64 bits). O `Dockerfile` original foi mantido como alternativa legada.
+### Self-hosted em PCs e servidores convencionais
+
+Este modo não usa Wrangler, workerd ou recursos externos da Cloudflare. A imagem é nativa tanto em `linux/amd64` quanto em `linux/arm64`.
 
 ```bash
-cp .env.docker.example .env
-docker compose up -d --build
-docker compose ps
+docker compose -f docker-compose.selfhost.yml up -d --build
+docker compose -f docker-compose.selfhost.yml ps
 ```
 
 Acesse `http://localhost:3000`. O primeiro login administrativo continua sendo `admin` / `admin`, com troca obrigatória no primeiro acesso.
@@ -110,13 +114,13 @@ Acesse `http://localhost:3000`. O primeiro login administrativo continua sendo `
 Para acompanhar ou encerrar:
 
 ```bash
-docker compose logs -f app
-docker compose down
+docker compose -f docker-compose.selfhost.yml logs -f app
+docker compose -f docker-compose.selfhost.yml down
 ```
 
 `docker compose down` preserva o volume. Use `docker compose down -v` somente quando quiser apagar definitivamente banco, sessões e uploads.
 
-### Raspberry Pi, ARM64 e OMV 7
+### Raspberry Pi ARM64 com OMV 7
 
 No terminal do Raspberry Pi, confirme primeiro que o OMV está executando em 64 bits:
 
@@ -126,9 +130,9 @@ uname -m
 
 O resultado deve ser `aarch64` ou `arm64`. `armv7l` indica um sistema de 32 bits e não é compatível com o runtime; nesse caso é necessário instalar uma versão ARM64 do Raspberry Pi OS/OMV.
 
-No plugin Compose do OMV 7, use `platform: linux/arm64`, `build.privileged: true` e `security_opt: [seccomp:unconfined]`. Em alguns kernels de Raspberry Pi, o sandbox padrão do BuildKit encerra até mesmo o Node/npm com `SIGSYS` (código de saída 159). A permissão de build libera somente as instruções `RUN --security=insecure` deste Dockerfile; ela não torna o container final privilegiado. O `security_opt` é mantido para o workerd durante a execução. Fora do plugin, o arquivo `docker-compose.arm64.yml` já fornece esses ajustes:
+Use `Dockerfile.selfhost.omv` e o modelo completo `docker-compose.omv.yml`. A execução usa somente Node, portanto funciona também no kernel Raspberry com espaço virtual de 39 bits.
 
-Antes do primeiro build no OMV, crie uma única vez um builder dedicado que aceite essa permissão. Execute como `root` no terminal do servidor:
+O sandbox padrão do BuildKit desse OMV encerra o npm com `SIGSYS` durante o build. Antes do primeiro build, crie uma única vez o builder dedicado abaixo como `root`:
 
 ```bash
 docker buildx create \
@@ -142,16 +146,40 @@ docker buildx use --global pelada-arm64
 docker buildx inspect pelada-arm64 --bootstrap
 ```
 
-Na saída da inspeção, a linha `Flags` deve conter `--allow-insecure-entitlement security.insecure`. O builder é isolado e usado somente para builds; o daemon principal e o container final permanecem com as restrições normais.
+Na saída, `Flags` deve conter `--allow-insecure-entitlement security.insecure`. Essa autorização vale para o builder; o container final continua como usuário `1000:100`, sem capabilities e com `no-new-privileges`.
+
+Antes de subir o serviço, crie o diretório persistente usando o caminho real do compartilhamento `DockerData` configurado no OMV:
+
+```bash
+mkdir -p /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
+chown -R 1000:100 /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
+chmod 750 /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
+```
+
+No plugin Compose, mantenha o arquivo da pilha um nível acima do checkout:
+
+```text
+pelada-pede-mais-uma/
+├── docker-compose.yml       # conteúdo de docker-compose.omv.yml
+└── source/                  # checkout do repositório
+    ├── Dockerfile.selfhost.omv
+    └── ...
+```
+
+No OMV, execute **Check**, **Build** e **Up**. Acesse `http://IP_DO_RASPBERRY:3000`. Os logs devem mostrar `[selfhost] Servidor` e depois `[vinext] Production server running`, sem mensagens do workerd.
+
+Para backup, pare o serviço e copie a pasta `pelada-pede-mais-uma` dentro de `DockerData`. Para restaurar, devolva a pasta ao mesmo caminho, confirme o proprietário `1000:100` e inicie o serviço.
+
+### Modo Cloudflare/workerd legado
+
+O Compose principal continua disponível para PCs e kernels compatíveis com workerd:
 
 ```bash
 cp .env.docker.example .env
-docker compose -f docker-compose.yml -f docker-compose.arm64.yml build --pull --no-cache app
-docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d
-docker compose -f docker-compose.yml -f docker-compose.arm64.yml logs -f app
+docker compose up -d --build
 ```
 
-Durante o build, a mensagem `Pacote @cloudflare/workerd-linux-arm64 ... instalado` confirma que o binário correto foi encontrado. Ele não é iniciado durante o build. O primeiro build pode demorar alguns minutos no Raspberry Pi. Banco e fotos continuam persistidos no volume configurado.
+O binário ARM64 oficial do `workerd` exige `crc32` e kernel com espaço virtual de 48 bits. Com `CONFIG_ARM64_VA_BITS_39=y`, o TCMalloc aborta com `MmapAligned() failed` e código 134; o Wrangler mostra o erro secundário `write EPIPE`. Mais RAM, swap ou `seccomp` não alteram essa limitação. Para Raspberry com esse kernel, use a edição self-hosted.
 
 Para usar explicitamente o Dockerfile antigo em um PC, execute:
 

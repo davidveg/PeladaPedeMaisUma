@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".wrangler/**",
+    ".wrangler-*/**",
+    ".container-test-data/**",
+    ".docker-config/**",
   ]),
 ]);
 

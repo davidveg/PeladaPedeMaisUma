@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { getRuntimeBindings } from "./runtime-bindings";
 
 const statements = [
   `CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, full_name TEXT NOT NULL, display_name TEXT NOT NULL, nickname TEXT, aliases TEXT NOT NULL DEFAULT '[]', type TEXT NOT NULL DEFAULT 'monthly', primary_position TEXT NOT NULL, speed REAL NOT NULL, skill REAL NOT NULL, marking REAL NOT NULL DEFAULT 3, photo_url TEXT, active INTEGER NOT NULL DEFAULT 1, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
@@ -10,7 +10,7 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS audit_logs (id TEXT PRIMARY KEY, administrator_id TEXT, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT, previous_data TEXT, new_data TEXT, created_at TEXT NOT NULL)`,
 ];
 let ready: Promise<void> | undefined;
-export function db() { return env.DB as D1Database; }
+export function db() { return getRuntimeBindings().DB; }
 export async function ensureDb() {
   if (!ready) ready=(async()=>{ const d=db(); for(const sql of statements) await d.prepare(sql).run(); const columns=await d.prepare(`PRAGMA table_info(players)`).all(); if(!columns.results.some((column:any)=>column.name==="marking")) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run(); const now=new Date().toISOString(); await d.prepare(`INSERT OR IGNORE INTO system_configuration VALUES (1,22,14,30,.6,.4,1,.25,0,2500,?)`).bind(now).run(); await seed(d,now); })();
   return ready;

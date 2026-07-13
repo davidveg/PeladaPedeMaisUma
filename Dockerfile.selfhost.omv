@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1-labs
+
+# Variante do build para kernels OMV/Raspberry que bloqueiam o npm no sandbox
+# padrão do BuildKit. O container final continua sem privilégios e sem workerd.
+ARG NODE_VERSION=22.19.0
+
+FROM node:${NODE_VERSION}-bookworm-slim AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --security=insecure --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts --no-audit --no-fund
+
+FROM dependencies AS build
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+COPY . .
+RUN --security=insecure npm run build && npm test
+
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=3000 \
+    DATA_DIR=/data
+
+RUN mkdir -p /data/uploads && chown -R node:node /app /data
+
+COPY --from=build --chown=node:node /app/dist/standalone/ ./
+COPY --from=build --chown=node:node /app/server/selfhost-runtime.mjs ./selfhost-runtime.mjs
+COPY --from=build --chown=node:node /app/server/selfhost-server.mjs ./selfhost-server.mjs
+
+USER node
+EXPOSE 3000
+VOLUME ["/data"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+
+CMD ["node", "selfhost-server.mjs"]
