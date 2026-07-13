@@ -1,6 +1,10 @@
 export interface PeladaRuntimeBindings {
   DB: D1Database;
   UPLOADS: R2Bucket;
+  MAILER?: {
+    configured: boolean;
+    sendPasswordReset(message: { to: string; token: string }): Promise<{ messageId?: string }>;
+  };
 }
 
 const runtimeGlobal = globalThis as typeof globalThis & {

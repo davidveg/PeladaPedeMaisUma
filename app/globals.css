@@ -25,3 +25,4 @@
 .saved-meta{grid-template-columns:repeat(5,1fr)}
 .weight-total{display:flex;align-items:center;justify-content:space-between;background:#f3f6f4;border:1px solid #e0e7e2;border-radius:10px;padding:10px 12px;margin:4px 0 17px;font-size:11px;color:var(--muted)}.weight-total b{color:var(--green);font-size:15px}
 @media(max-width:760px){.metrics>div,.saved-meta{grid-template-columns:repeat(2,1fr)}}
+.login-card .login-back{align-self:center;margin:16px 0 0}.login-card .admin-notice{margin-bottom:18px}.login-card label small{font-weight:400;color:var(--muted)}

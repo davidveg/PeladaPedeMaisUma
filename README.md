@@ -54,7 +54,38 @@ As entidades e o acesso estão isolados em `db/` e `lib/database.ts`. Para migra
 
 ## SMTP e recuperação de senha
 
-Copie `.env.example` para `.env.local` e configure host, porta, usuário, senha e remetente. Segredos devem ser configurados no ambiente de hospedagem e nunca versionados. A estrutura `password_reset_tokens` já prevê hash, expiração e uso único; o provedor SMTP deve ser ligado à rota de recuperação antes de uso em produção.
+No OMV, a recuperação envia um link de uso único para o e-mail do administrador. O token é armazenado somente como hash, expira em 30 minutos, invalida todas as sessões após a troca e limita novas solicitações a uma por minuto e cinco por hora por conta.
+
+Para enviar pela conta `peladapedemaisuma@gmail.com`:
+
+1. Ative a verificação em duas etapas na conta Google.
+2. Gere uma [senha de app do Google](https://support.google.com/mail/answer/185833?hl=pt-BR) com um nome como `Pelada OMV`.
+3. No arquivo de ambiente da pilha do OMV, configure apenas o segredo e a URL pública real:
+
+```dotenv
+APP_BASE_URL=https://pelada.seudominio.com
+SMTP_PASSWORD=senha-de-app-de-16-caracteres
+```
+
+O `docker-compose.omv.yml` já define `smtp.gmail.com`, porta `465`, TLS, usuário e remetente. Não use a senha normal da conta Google e nunca versione a senha de app. Caso a senha principal da conta seja alterada, o Google revoga as senhas de app e será necessário gerar outra.
+
+## Logs operacionais
+
+A aplicação escreve eventos em JSON, uma linha por evento, diretamente em stdout/stderr. Os campos principais são `timestamp`, `level`, `service`, `event`, `requestId`, `method`, `path`, `status` e `durationMs`; exceções incluem nome, mensagem e stack. E-mails, senhas, tokens, cookies, corpos e query strings não são registrados.
+
+No OMV, `LOG_LEVEL` aceita `debug`, `info`, `warn` ou `error` e usa `info` por padrão. O Compose mantém cinco arquivos de log de até 10 MB cada e adiciona labels para descoberta por Promtail ou Grafana Alloy. Com os logs enviados ao Loki, uma consulta LogQL inicial é:
+
+```logql
+{container="pelada-pede-mais-uma"} | json
+```
+
+Para mostrar apenas falhas:
+
+```logql
+{container="pelada-pede-mais-uma"} | json | level="error"
+```
+
+O nome exato do label `container` depende das regras configuradas no coletor. O endpoint `/api/health` informa a situação do banco e se o SMTP está configurado, mas a ausência de SMTP não torna o serviço indisponível.
 
 ## API
 
@@ -64,6 +95,7 @@ As rotas retornam JSON:
 - `GET/POST/DELETE /api/separations` — histórico e confirmação.
 - `GET/PUT /api/config` — critérios de equilíbrio.
 - `GET/POST/PUT/DELETE /api/auth` — sessão, login, primeiro acesso e logout.
+- `POST/PUT /api/password-reset` — solicitação e conclusão da redefinição de senha.
 - `GET/POST/PUT /api/administrators` — administração de contas.
 - `GET/POST /api/upload` — leitura e envio validado de fotos ao R2.
 
@@ -173,8 +205,6 @@ pelada-pede-mais-uma/
     └── ...
 ```
 
-No OMV, execute **Check**, **Build** e **Up**, nessa ordem. Não use **Pull**: a imagem `pelada-pede-mais-uma:selfhost-arm64` é construída localmente e não existe em um registry. Acesse `http://IP_DO_RASPBERRY:3000`. Os logs devem mostrar `[selfhost] Servidor` e depois `[vinext] Production server running`, sem mensagens do workerd.
-
-Para backup, pare o serviço e copie a pasta `pelada-pede-mais-uma` dentro de `DockerData`. Para restaurar, devolva a pasta ao mesmo caminho, confirme o proprietário `1000:100` e inicie o serviço.
+No OMV, execute **Check**, **Build** e **Up**, nessa ordem. Não use **Pull**: a imagem `pelada-pede-mais-uma:selfhost-arm64` é construída localmente e não existe em um registry. Acesse `http://IP_DO_RASPBERRY:3000`. Na inicialização, os logs JSON devem mostrar os eventos `application_starting` e `database_ready`.
 
 O primeiro login administrativo continua sendo `admin` / `admin`, com troca obrigatória no primeiro acesso. Para backup, pare o serviço e copie a pasta `pelada-pede-mais-uma` dentro de `DockerData`. Para restaurar, devolva a pasta ao mesmo caminho, confirme o proprietário `1000:100` e inicie o serviço.

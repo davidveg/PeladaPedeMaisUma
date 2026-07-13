@@ -1,4 +1,5 @@
 import { getRuntimeBindings } from "./runtime-bindings";
+import { logEvent } from "./logger";
 
 const statements = [
   `CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, full_name TEXT NOT NULL, display_name TEXT NOT NULL, nickname TEXT, aliases TEXT NOT NULL DEFAULT '[]', type TEXT NOT NULL DEFAULT 'monthly', primary_position TEXT NOT NULL, speed REAL NOT NULL, skill REAL NOT NULL, marking REAL NOT NULL DEFAULT 3, photo_url TEXT, active INTEGER NOT NULL DEFAULT 1, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
@@ -16,15 +17,18 @@ export async function ensureDb() {
     const d=db();
     for(const sql of statements) await d.prepare(sql).run();
     const playerColumns=await d.prepare(`PRAGMA table_info(players)`).all();
-    if(!playerColumns.results.some((column:any)=>column.name==="marking")) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run();
+    const migratedPlayerMarking=!playerColumns.results.some((column:any)=>column.name==="marking");
+    if(migratedPlayerMarking) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run();
     const configurationColumns=await d.prepare(`PRAGMA table_info(system_configuration)`).all();
-    if(!configurationColumns.results.some((column:any)=>column.name==="marking_weight")) {
+    const migratedMarkingWeight=!configurationColumns.results.some((column:any)=>column.name==="marking_weight");
+    if(migratedMarkingWeight) {
       await d.prepare(`ALTER TABLE system_configuration ADD COLUMN marking_weight REAL NOT NULL DEFAULT 0.2`).run();
       await d.prepare(`UPDATE system_configuration SET speed_weight=speed_weight*0.8, skill_weight=skill_weight*0.8`).run();
     }
     const now=new Date().toISOString();
     await d.prepare(`INSERT OR IGNORE INTO system_configuration (id,default_player_count,minimum_recommended_players,maximum_recommended_players,speed_weight,skill_weight,marking_weight,maximum_position_difference,protected_top_players_percentage,default_reserve_count,algorithm_attempts,updated_at) VALUES (1,22,14,30,.48,.32,.2,1,.25,0,2500,?)`).bind(now).run();
     await seed(d,now);
+    logEvent("info","database_ready",{migratedPlayerMarking,migratedMarkingWeight});
   })();
   return ready;
 }

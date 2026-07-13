@@ -26,8 +26,11 @@ ENV NODE_ENV=production \
 RUN --security=insecure mkdir -p /data/uploads && chown -R node:node /app /data
 
 COPY --from=build --chown=node:node /app/dist/standalone/ ./
+COPY --from=dependencies --chown=node:node /app/node_modules/nodemailer ./node_modules/nodemailer
 COPY --from=build --chown=node:node /app/server/selfhost-runtime.mjs ./selfhost-runtime.mjs
 COPY --from=build --chown=node:node /app/server/selfhost-server.mjs ./selfhost-server.mjs
+COPY --from=build --chown=node:node /app/server/selfhost-mailer.mjs ./selfhost-mailer.mjs
+COPY --from=build --chown=node:node /app/server/selfhost-logger.mjs ./selfhost-logger.mjs
 
 USER node
 EXPOSE 3000
