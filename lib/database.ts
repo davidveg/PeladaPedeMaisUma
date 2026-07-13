@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 
 const statements = [
-  `CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, full_name TEXT NOT NULL, display_name TEXT NOT NULL, nickname TEXT, aliases TEXT NOT NULL DEFAULT '[]', type TEXT NOT NULL DEFAULT 'monthly', primary_position TEXT NOT NULL, speed REAL NOT NULL, skill REAL NOT NULL, photo_url TEXT, active INTEGER NOT NULL DEFAULT 1, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, full_name TEXT NOT NULL, display_name TEXT NOT NULL, nickname TEXT, aliases TEXT NOT NULL DEFAULT '[]', type TEXT NOT NULL DEFAULT 'monthly', primary_position TEXT NOT NULL, speed REAL NOT NULL, skill REAL NOT NULL, marking REAL NOT NULL DEFAULT 3, photo_url TEXT, active INTEGER NOT NULL DEFAULT 1, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS administrators (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, must_change_password INTEGER NOT NULL DEFAULT 1, last_login_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS password_reset_tokens (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL)`,
@@ -12,7 +12,7 @@ const statements = [
 let ready: Promise<void> | undefined;
 export function db() { return env.DB as D1Database; }
 export async function ensureDb() {
-  if (!ready) ready=(async()=>{ const d=db(); for(const sql of statements) await d.prepare(sql).run(); const now=new Date().toISOString(); await d.prepare(`INSERT OR IGNORE INTO system_configuration VALUES (1,22,14,30,.6,.4,1,.25,0,2500,?)`).bind(now).run(); await seed(d,now); })();
+  if (!ready) ready=(async()=>{ const d=db(); for(const sql of statements) await d.prepare(sql).run(); const columns=await d.prepare(`PRAGMA table_info(players)`).all(); if(!columns.results.some((column:any)=>column.name==="marking")) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run(); const now=new Date().toISOString(); await d.prepare(`INSERT OR IGNORE INTO system_configuration VALUES (1,22,14,30,.6,.4,1,.25,0,2500,?)`).bind(now).run(); await seed(d,now); })();
   return ready;
 }
 async function seed(d:D1Database, now:string){

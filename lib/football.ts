@@ -1,5 +1,5 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
-export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
+export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
 export type Config = { speedWeight: number; skillWeight: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
 export const defaultConfig: Config = { speedWeight: .6, skillWeight: .4, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };

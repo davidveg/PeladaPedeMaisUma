@@ -17,10 +17,11 @@ export async function POST(request: Request) {
   const displayName = String(payload.displayName || "").trim();
   const speed = Math.round(Number(payload.speed) * 10) / 10;
   const skill = Math.round(Number(payload.skill) * 10) / 10;
+  const marking = Math.round(Number(payload.marking ?? 3) * 10) / 10;
   const positions = new Set(["Defesa", "Meio-campo", "Ataque", "Goleiro"]);
 
-  if (!displayName || !positions.has(payload.primaryPosition) || speed < 1 || speed > 5 || skill < 1 || skill > 5) {
-    return Response.json({ error: "Informe nome, posição, velocidade e habilidade entre 1 e 5." }, { status: 400 });
+  if (!displayName || !positions.has(payload.primaryPosition) || speed < 1 || speed > 5 || skill < 1 || skill > 5 || marking < 1 || marking > 5) {
+    return Response.json({ error: "Informe nome, posição, velocidade, habilidade e marcação entre 1 e 5." }, { status: 400 });
   }
 
   const rows = await db().prepare("SELECT * FROM players WHERE deleted_at IS NULL AND active=1").all();
@@ -32,9 +33,9 @@ export async function POST(request: Request) {
   if (existing) return Response.json({ player: map(existing), reused: true });
 
   const id = crypto.randomUUID(), now = new Date().toISOString();
-  await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(id, String(payload.fullName || displayName).trim(), displayName, String(payload.nickname || "").trim() || null, "[]", payload.primaryPosition === "Goleiro" ? "goalkeeper" : "guest", payload.primaryPosition, speed, skill, null, 1, String(payload.notes || "").trim() || null, now, now).run();
+  await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(id, String(payload.fullName || displayName).trim(), displayName, String(payload.nickname || "").trim() || null, "[]", payload.primaryPosition === "Goleiro" ? "goalkeeper" : "guest", payload.primaryPosition, speed, skill, marking, null, 1, String(payload.notes || "").trim() || null, now, now).run();
   const created = await db().prepare("SELECT * FROM players WHERE id=?").bind(id).first();
-  await audit(null, "CREATE", "player", id, { displayName, type: "guest", primaryPosition: payload.primaryPosition, speed, skill });
+  await audit(null, "CREATE", "player", id, { displayName, type: "guest", primaryPosition: payload.primaryPosition, speed, skill, marking });
   return Response.json({ player: map(created), reused: false }, { status: 201 });
 }
