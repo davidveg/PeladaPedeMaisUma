@@ -128,6 +128,22 @@ O resultado deve ser `aarch64` ou `arm64`. `armv7l` indica um sistema de 32 bits
 
 No plugin Compose do OMV 7, use `platform: linux/arm64`, `build.privileged: true` e `security_opt: [seccomp:unconfined]`. Em alguns kernels de Raspberry Pi, o sandbox padrão do BuildKit encerra até mesmo o Node/npm com `SIGSYS` (código de saída 159). A permissão de build libera somente as instruções `RUN --security=insecure` deste Dockerfile; ela não torna o container final privilegiado. O `security_opt` é mantido para o workerd durante a execução. Fora do plugin, o arquivo `docker-compose.arm64.yml` já fornece esses ajustes:
 
+Antes do primeiro build no OMV, crie uma única vez um builder dedicado que aceite essa permissão. Execute como `root` no terminal do servidor:
+
+```bash
+docker buildx create \
+  --name pelada-arm64 \
+  --driver docker-container \
+  --platform linux/arm64 \
+  --buildkitd-flags '--allow-insecure-entitlement security.insecure' \
+  --use \
+  --bootstrap
+docker buildx use --global pelada-arm64
+docker buildx inspect pelada-arm64 --bootstrap
+```
+
+Na saída da inspeção, a linha `Flags` deve conter `--allow-insecure-entitlement security.insecure`. O builder é isolado e usado somente para builds; o daemon principal e o container final permanecem com as restrições normais.
+
 ```bash
 cp .env.docker.example .env
 docker compose -f docker-compose.yml -f docker-compose.arm64.yml build --pull --no-cache app
