@@ -1,0 +1,5 @@
+services:
+  app:
+    platform: linux/arm64
+    security_opt:
+      - seccomp:unconfined

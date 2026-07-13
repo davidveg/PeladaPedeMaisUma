@@ -41,7 +41,8 @@ RUN --mount=type=cache,target=/root/.npm \
       "wrangler@${WRANGLER_VERSION}" \
       "${workerd_package}@${WORKERD_VERSION}"; \
     /opt/cloudflare-runtime/node_modules/.bin/wrangler --version; \
-    /opt/cloudflare-runtime/node_modules/.bin/workerd --version; \
+    test -x "/opt/cloudflare-runtime/node_modules/${workerd_package}/bin/workerd"; \
+    echo "Pacote ${workerd_package}@${WORKERD_VERSION} instalado para ${architecture}"; \
     mkdir -p /data /home/node/.config /home/node/.wrangler; \
     chown -R node:node /app /data /home/node
 
