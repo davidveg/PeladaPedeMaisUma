@@ -1,9 +1,9 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
-export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
+export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; momentum?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
 export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
 export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
-export const score = (p: Player, c = defaultConfig) => p.speed * c.speedWeight + p.skill * c.skillWeight + (p.marking ?? 3) * c.markingWeight;
+export const score = (p: Player, c = defaultConfig) => Math.max(1,Math.min(5,p.speed * c.speedWeight + p.skill * c.skillWeight + (p.marking ?? 3) * c.markingWeight + (p.momentum ?? 0)));
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
 export function parseWhatsApp(text: string) {
@@ -45,8 +45,8 @@ export function matchPlayers(names: string[], players: Player[]) {
 export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig) {
   const positions = { Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 };
   team.forEach(p => positions[p.primaryPosition]++);
-  const speed = team.reduce((s,p)=>s+p.speed,0), skill = team.reduce((s,p)=>s+p.skill,0), marking = team.reduce((s,p)=>s+(p.marking??3),0), total = team.reduce((s,p)=>s+score(p,c),0);
-  return { count: team.length, positions, speed, skill, marking, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, scoreAvg: total/team.length||0 };
+  const speed = team.reduce((s,p)=>s+p.speed,0), skill = team.reduce((s,p)=>s+p.skill,0), marking = team.reduce((s,p)=>s+(p.marking??3),0),momentum=team.reduce((s,p)=>s+(p.momentum??0),0), total = team.reduce((s,p)=>s+score(p,c),0);
+  return { count: team.length, positions, speed, skill, marking, momentum, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, momentumAvg:momentum/team.length||0, scoreAvg: total/team.length||0 };
 }
 
 export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config = defaultConfig) {
@@ -59,6 +59,7 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
     speed: Math.abs(blueMetrics.speed-yellowMetrics.speed),
     skill: Math.abs(blueMetrics.skill-yellowMetrics.skill),
     marking: Math.abs(blueMetrics.marking-yellowMetrics.marking),
+    momentum: Math.abs(blueMetrics.momentum-yellowMetrics.momentum),
     score: Math.abs(blueMetrics.total-yellowMetrics.total),
   };
   return { blueMetrics, yellowMetrics, delta };

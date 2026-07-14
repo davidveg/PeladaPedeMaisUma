@@ -11,6 +11,7 @@ import {
   type Player,
 } from "../lib/football";
 import { PlayerPhoto } from "./components/PlayerPhoto";
+import QRCode from "qrcode";
 
 const sample = `PELADA - 12/07 - BATISTA
 
@@ -49,6 +50,7 @@ export default function FootballApp() {
   const [guestDraft, setGuestDraft] = useState<GuestDraft | null>(null);
   const [manual, setManual] = useState(false);
   const [config, setConfig] = useState(defaultConfig);
+  const [careerConfig, setCareerConfig] = useState<any>(null);
 
   const load = async () => {
     const [auth, h] = await Promise.all([
@@ -59,16 +61,19 @@ export default function FootballApp() {
     setIsAdmin(administrator);
     setHistory(h.separations || []);
     if (administrator) {
-      const [p, c] = await Promise.all([
+      const [p, c, career] = await Promise.all([
         fetch("/api/players", { cache: "no-store" }).then((response) => response.json()),
         fetch("/api/config", { cache: "no-store" }).then((response) => response.json()),
+        fetch("/api/career/admin", { cache: "no-store" }).then((response) => response.json()),
       ]);
       setPlayers(p.players || []);
       setConfig(c.config || defaultConfig);
+      setCareerConfig(career.config || null);
       if (!initialized.current) setStage("import");
     } else {
       setPlayers([]);
       setConfig(defaultConfig);
+      setCareerConfig(null);
       setStage("history");
     }
     initialized.current = true;
@@ -143,6 +148,15 @@ export default function FootballApp() {
     setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history");
   }
 
+  async function confirmCareerMatch(separationId:string,blueScore:number,yellowScore:number){
+    const response=await fetch('/api/career/match',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({separationId,blueScore,yellowScore})});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(payload.error||'Não foi possível confirmar o placar.');
+    setToast('Partida confirmada e votação aberta.');
+    await load();
+    setHistoryDetail((current:any)=>current?{...current,career:{id:payload.match.id,blueScore:payload.match.blueScore,yellowScore:payload.match.yellowScore,winnerTeam:payload.match.winnerTeam,votingToken:payload.match.votingToken,status:payload.match.status,closesAt:payload.match.closesAt,closedAt:payload.match.closedAt,config:payload.match.config,results:payload.match.results}}:current);
+  }
+
   async function copyTeams(source = result, withScores = false, titleOverride?: string) {
     const title = titleOverride || source?.matchTitle || parsed?.title || "PELADA";
     const weights = resultConfig(source);
@@ -167,7 +181,7 @@ export default function FootballApp() {
       </section>}
       {isAdmin && stage === "result" && result && <ResultPresentation result={result} manuallyAdjusted={manual} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
       {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<button className="primary" onClick={() => setStage("import")}>+ Nova separação</button>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><button className="history-open" onClick={() => setHistoryDetail(item)}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></button><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar para WhatsApp</button></div></article>)}</div></section>}
-      {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} onBack={() => setHistoryDetail(null)} onPlayer={(player:Player)=>showPlayer(player,resultConfig(historyDetail.snapshot))} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
+      {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} isAdmin={isAdmin} careerEnabled={careerConfig?.enabled!==false} onConfirmCareer={confirmCareerMatch} onBack={() => setHistoryDetail(null)} onPlayer={(player:Player)=>showPlayer(player,resultConfig(historyDetail.snapshot))} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
     <footer><b>⚽ Pelada Pede Mais Uma</b><span>Times equilibrados. Resenha garantida.</span></footer>
     {toast && <div className="toast" onAnimationEnd={() => setToast("")}>{toast}</div>}
@@ -180,11 +194,26 @@ function ResultPresentation({ result, manuallyAdjusted, onPlayer, onMove, onNew,
   return <section className="content"><div className="section-head"><div><div className="eyebrow">PROPOSTA {result.proposal}</div><h2>Times prontos para o jogo</h2><p>{manuallyAdjusted ? "Separação ajustada manualmente" : "O algoritmo comparou milhares de combinações."}</p></div><BalanceBadge rating={result.rating} /></div><TeamGrid result={result} onPlayer={onPlayer} onMove={onMove} /><BalanceMetrics delta={result.delta} /><div className="result-actions"><button className="ghost" onClick={onNew}>↻ Gerar nova separação</button><button className="ghost" onClick={onCopy}>Copiar com pontuações</button><button className="primary" onClick={onConfirm}>Confirmar separação</button></div></section>;
 }
 
-function SavedSeparation({ item, onBack, onPlayer, onCopy }: any) {
+function SavedSeparation({ item, isAdmin, careerEnabled, onConfirmCareer, onBack, onPlayer, onCopy }: any) {
   const result = item.snapshot;
   const weights = resultConfig(result);
-  return <section className="content saved-detail"><div className="section-head"><div><div className="eyebrow">SEPARAÇÃO CONFIRMADA</div><h2>{item.matchTitle}</h2><p>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"} · confirmada em {new Date(item.confirmedAt).toLocaleString("pt-BR")}{item.manuallyAdjusted ? " · ajustada manualmente" : ""}</p></div><BalanceBadge rating={result.rating || item.balanceClassification} /></div><TeamGrid result={result} onPlayer={onPlayer} /><BalanceMetrics delta={result.delta} /><div className="saved-meta"><span><small>Proposta utilizada</small><b>{result.proposal || 1}</b></span><span><small>Peso da velocidade</small><b>{Math.round(weights.speedWeight * 100)}%</b></span><span><small>Peso da habilidade</small><b>{Math.round(weights.skillWeight * 100)}%</b></span><span><small>Peso da marcação</small><b>{Math.round(weights.markingWeight * 100)}%</b></span><span><small>Diferença máx. por posição</small><b>{result.maximumPositionDifference??"Não registrado"}</b></span><span><small>Melhores protegidos</small><b>{result.protectedTopPlayersPercentage==null?"Não registrado":`${Math.round(result.protectedTopPlayersPercentage*100)}%`}</b></span><span><small>Tentativas avaliadas</small><b>{result.algorithmAttempts??"Não registrado"}</b></span><span><small>Ajuste manual</small><b>{item.manuallyAdjusted ? "Sim" : "Não"}</b></span></div><div className="result-actions"><button className="ghost" onClick={onBack}>← Voltar ao histórico</button><button className="ghost" onClick={() => onCopy(false)}>Copiar para WhatsApp</button><button className="primary" onClick={() => onCopy(true)}>Copiar com pontuações</button></div></section>;
+  return <section className="content saved-detail"><div className="section-head"><div><div className="eyebrow">SEPARAÇÃO CONFIRMADA</div><h2>{item.matchTitle}</h2><p>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"} · confirmada em {new Date(item.confirmedAt).toLocaleString("pt-BR")}{item.manuallyAdjusted ? " · ajustada manualmente" : ""}</p></div><BalanceBadge rating={result.rating || item.balanceClassification} /></div>{(item.career||isAdmin)&&<CareerMatchCard item={item} isAdmin={isAdmin} enabled={careerEnabled} onConfirm={onConfirmCareer}/>}<TeamGrid result={result} onPlayer={onPlayer} /><BalanceMetrics delta={result.delta} /><div className="saved-meta"><span><small>Proposta utilizada</small><b>{result.proposal || 1}</b></span><span><small>Peso da velocidade</small><b>{Math.round(weights.speedWeight * 100)}%</b></span><span><small>Peso da habilidade</small><b>{Math.round(weights.skillWeight * 100)}%</b></span><span><small>Peso da marcação</small><b>{Math.round(weights.markingWeight * 100)}%</b></span><span><small>Diferença máx. por posição</small><b>{result.maximumPositionDifference??"Não registrado"}</b></span><span><small>Melhores protegidos</small><b>{result.protectedTopPlayersPercentage==null?"Não registrado":`${Math.round(result.protectedTopPlayersPercentage*100)}%`}</b></span><span><small>Tentativas avaliadas</small><b>{result.algorithmAttempts??"Não registrado"}</b></span><span><small>Ajuste manual</small><b>{item.manuallyAdjusted ? "Sim" : "Não"}</b></span></div><div className="result-actions"><button className="ghost" onClick={onBack}>← Voltar ao histórico</button><button className="ghost" onClick={() => onCopy(false)}>Copiar para WhatsApp</button><button className="primary" onClick={() => onCopy(true)}>Copiar com pontuações</button></div></section>;
 }
+
+function CareerMatchCard({item,isAdmin,enabled,onConfirm}:any){
+  const career=item.career;
+  const [blueScore,setBlueScore]=useState(0),[yellowScore,setYellowScore]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(''),[qr,setQr]=useState('');
+  const votingUrl=career&&typeof window!=='undefined'?`${window.location.origin}/votacao?token=${career.votingToken}`:'';
+  useEffect(()=>{if(votingUrl)QRCode.toDataURL(votingUrl,{width:220,margin:1,color:{dark:'#143f31',light:'#ffffff'}}).then(setQr).catch(()=>setQr(''))},[votingUrl]);
+  async function submit(event:any){event.preventDefault();if(!confirm(`Confirmar o placar ${blueScore} × ${yellowScore}? O momentum das equipes será aplicado imediatamente.`))return;setBusy(true);setError('');try{await onConfirm(item.id,blueScore,yellowScore)}catch(error:any){setError(error.message)}finally{setBusy(false)}}
+  async function copy(){await navigator.clipboard.writeText(votingUrl)}
+  function whatsapp(){window.open(`https://wa.me/?text=${encodeURIComponent(`⚽ Vote nos destaques de ${item.matchTitle}: ${votingUrl}`)}`,'_blank','noopener,noreferrer')}
+  if(!career)return <section className="career-match-card pending"><div><small>MODO CARREIRA</small><h3>Este jogo foi realizado?</h3><p>Confirme o placar para aplicar o momentum das equipes e abrir a votação dos destaques.</p></div>{isAdmin?(enabled?<form onSubmit={submit}><label>Time Azul<input type="number" min="0" max="99" value={blueScore} onChange={e=>setBlueScore(Number(e.target.value))}/></label><b>×</b><label>Time Amarelo<input type="number" min="0" max="99" value={yellowScore} onChange={e=>setYellowScore(Number(e.target.value))}/></label><button className="primary" disabled={busy}>{busy?'Confirmando…':'Confirmar partida'}</button>{error&&<span className="career-error">{error}</span>}</form>:<div className="alert">O Modo Carreira está desativado nas configurações administrativas.</div>):null}</section>;
+  const winner=career.winnerTeam==='BLUE'?'Time Azul':career.winnerTeam==='YELLOW'?'Time Amarelo':'Empate',rules=career.config;
+  return <section className="career-match-card confirmed"><div className="career-score"><small>PLACAR CONFIRMADO</small><strong><span>Azul <b>{career.blueScore}</b></span><i>×</i><span><b>{career.yellowScore}</b> Amarelo</span></strong><em>{winner}</em>{rules&&<p className="career-rules">Vitória {signed(rules.winnerBonus)} · derrota {signed(rules.loserPenalty)} · votação por {rules.votingDays} dias</p>}</div><div className="career-voting-share"><div><small>{career.status==='OPEN'?'VOTAÇÃO ABERTA':'VOTAÇÃO ENCERRADA'}</small><h3>Destaques da partida</h3><p>{career.status==='OPEN'?`Votos aceitos até ${new Date(career.closesAt).toLocaleString('pt-BR')}.`:'Resultado final consolidado; os votos não podem mais ser alterados.'}</p>{career.status==='OPEN'&&<div className="career-link-actions"><button className="ghost" onClick={copy}>Copiar link</button><button className="primary" onClick={whatsapp}>Compartilhar no WhatsApp</button></div>}</div>{career.status==='OPEN'&&qr&&<a href={votingUrl} target="_blank" rel="noreferrer"><img src={qr} alt="QR Code para votação da partida"/><span>Abrir votação</span></a>}</div>{career.status==='CLOSED'&&<CareerPublicResults results={career.results} players={[...item.snapshot.blue,...item.snapshot.yellow]}/>}</section>
+}
+function signed(value:number){return `${value>0?'+':''}${Number(value).toFixed(1)}`}
+function CareerPublicResults({results,players}:any){const names=Object.fromEntries(players.map((player:any)=>[player.id,player.displayName]));if(!results?.voteCount)return <div className="career-public-results empty">Votação encerrada sem votos válidos.</div>;const podium=(title:string,entries:any[])=><div><h4>{title}</h4>{entries.map(entry=><span key={entry.playerId}><b>{entry.place}º</b><em>{names[entry.playerId]||'Jogador'}</em><strong>{entry.momentum>0?'+':''}{Number(entry.momentum).toFixed(1)}</strong></span>)}</div>;return <div className="career-public-results">{podium('Man of the Match',results.motm||[])}{podium('Deception of the Match',results.dotm||[])}</div>}
 
 function resultConfig(result: any) {
   const legacySnapshot = result?.markingWeight == null && result?.speedWeight != null && result?.skillWeight != null;
@@ -197,7 +226,7 @@ function TeamGrid({ result, onPlayer, onMove }: any) {
 }
 
 function BalanceBadge({ rating }: { rating: string }) { return <div className={`balance ${rating?.startsWith("Excelente") ? "great" : ""}`}><span>●</span><div><small>INDICADOR</small><b>{rating}</b></div></div>; }
-function BalanceMetrics({ delta }: any) { return <div className="metrics"><h3>Diferenças entre os times</h3><div><Metric label="Jogadores" value={delta?.players ?? 0} /><Metric label="Defensores" value={delta?.defenders ?? 0} /><Metric label="Meio-campistas" value={delta?.midfielders ?? 0} /><Metric label="Atacantes" value={delta?.attackers ?? 0} /><Metric label="Velocidade" value={(delta?.speed ?? 0).toFixed(1)} /><Metric label="Habilidade" value={(delta?.skill ?? 0).toFixed(1)} /><Metric label="Marcação" value={(delta?.marking ?? 0).toFixed(1)} /><Metric label="Pontuação" value={(delta?.score ?? 0).toFixed(2)} /></div></div>; }
+function BalanceMetrics({ delta }: any) { return <div className="metrics"><h3>Diferenças entre os times</h3><div><Metric label="Jogadores" value={delta?.players ?? 0} /><Metric label="Defensores" value={delta?.defenders ?? 0} /><Metric label="Meio-campistas" value={delta?.midfielders ?? 0} /><Metric label="Atacantes" value={delta?.attackers ?? 0} /><Metric label="Velocidade" value={(delta?.speed ?? 0).toFixed(1)} /><Metric label="Habilidade" value={(delta?.skill ?? 0).toFixed(1)} /><Metric label="Marcação" value={(delta?.marking ?? 0).toFixed(1)} /><Metric label="Momentum" value={(delta?.momentum ?? 0).toFixed(1)} /><Metric label="Pontuação" value={(delta?.score ?? 0).toFixed(2)} /></div></div>; }
 
 function PlayerRow({ player, onClick }: { player: Player; onClick: () => void }) { return <button className="player-row" onClick={onClick}><PlayerAvatar player={player} /><div><b>{player.displayName}</b><small>{player.primaryPosition}</small></div><span className="rating">{score(player).toFixed(1)}</span><i>›</i></button>; }
 function Team({ color, title, players, metrics, extraId, scoringConfig, onPlayer, onMove }: any) { return <article className={`team ${color}`}><div className="team-head"><div><span className="shirt">{color === "blue" ? "🔵" : "🟡"}</span><h3>{title}</h3></div><b>{players.length} jogadores</b></div><div className="team-summary"><span>DEF <b>{metrics?.positions.Defesa || 0}</b></span><span>MEI <b>{metrics?.positions["Meio-campo"] || 0}</b></span><span>ATA <b>{metrics?.positions.Ataque || 0}</b></span><span>MÉDIA <b>{metrics?.scoreAvg?.toFixed(2) || "—"}</b></span></div>{players.map((player: Player) => <div className="team-player" key={player.id}><button onClick={() => onPlayer(player)}><PlayerAvatar player={player} /><div><b>{player.displayName}</b><small>{player.primaryPosition}{player.id === extraId ? " · Jogador adicional" : ""}</small></div></button><span>{score(player, scoringConfig).toFixed(1)}</span>{onMove && <button className="swap" title="Mover para o outro time" onClick={() => onMove(player.id)}>⇄</button>}</div>)}</article>; }
@@ -205,7 +234,7 @@ function Team({ color, title, players, metrics, extraId, scoringConfig, onPlayer
 function PlayerAvatar({ player, name }: { player?: Player; name?: string }) { const label = player?.displayName || name || "Jogador"; return <PlayerPhoto photoUrl={player?.photoUrl} name={label} />; }
 function PlayerDetail({ player, config, onClose }: any) {
   const type=player.type === "guest" ? "Convidado" : player.type === "goalkeeper" ? "Goleiro" : "Mensalista";
-  return <div className="modal-back" onClick={onClose}><div className="player-card-modal" onClick={(event) => event.stopPropagation()}><button className="close" onClick={onClose} aria-label="Fechar detalhes">×</button><div className="player-card"><div className="card-top"><div className="overall"><strong>{score(player,config).toFixed(1)}</strong><span>OVERALL</span></div><div className="card-photo"><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} large /></div></div><div className="card-identity"><h2>{player.displayName}</h2>{player.fullName!==player.displayName&&<p>{player.fullName}</p>}</div><div className="card-role"><span><small>TIPO</small><b>{type}</b></span><span><small>POSIÇÃO</small><b>{player.primaryPosition}</b></span></div><div className="card-stats"><span><b>{player.speed.toFixed(1)}</b><small>VELOCIDADE</small></span><span><b>{player.skill.toFixed(1)}</b><small>HABILIDADE</small></span><span><b>{(player.marking??3).toFixed(1)}</b><small>MARCAÇÃO</small></span></div>{player.notes&&<blockquote>{player.notes}</blockquote>}</div></div></div>;
+  return <div className="modal-back" onClick={onClose}><div className="player-card-modal" onClick={(event) => event.stopPropagation()}><button className="close" onClick={onClose} aria-label="Fechar detalhes">×</button><div className="player-card"><div className="card-top"><div className="overall"><strong>{score(player,config).toFixed(1)}</strong><span>OVERALL</span></div><div className="card-photo"><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} large /></div></div><div className="card-identity"><h2>{player.displayName}</h2>{player.fullName!==player.displayName&&<p>{player.fullName}</p>}</div><div className="card-role"><span><small>TIPO</small><b>{type}</b></span><span><small>POSIÇÃO</small><b>{player.primaryPosition}</b></span></div><div className="card-stats"><span><b>{player.speed.toFixed(1)}</b><small>VELOCIDADE</small></span><span><b>{player.skill.toFixed(1)}</b><small>HABILIDADE</small></span><span><b>{(player.marking??3).toFixed(1)}</b><small>MARCAÇÃO</small></span><span><b>{(player.momentum??0)>0?'+':''}{(player.momentum??0).toFixed(1)}</b><small>MOMENTUM</small></span></div>{player.notes&&<blockquote>{player.notes}</blockquote>}</div></div></div>;
 }
 
 function GuestForm({ draft, onClose, onSave }: { draft: GuestDraft; onClose: () => void; onSave: (draft: GuestDraft) => void }) {

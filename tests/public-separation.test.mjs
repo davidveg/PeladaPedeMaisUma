@@ -15,6 +15,16 @@ test("snapshot público preserva times e regras sem expor a lista original", () 
     balance_score: 0,
     confirmed_at: "2026-07-14T12:00:00.000Z",
     manually_adjusted: 0,
+    career_id: "career-one",
+    career_blue_score: 3,
+    career_yellow_score: 1,
+    career_winner_team: "BLUE",
+    career_voting_token: "token",
+    career_status: "OPEN",
+    career_closes_at: "2026-07-19T12:00:00.000Z",
+    career_closed_at: null,
+    career_config_snapshot: JSON.stringify({ winnerBonus: .1, loserPenalty: -.1, votingDays: 5 }),
+    career_results_snapshot: null,
     deleted_at: null,
   });
   assert.equal(result.matchTitle, "Pelada pública");
@@ -25,4 +35,7 @@ test("snapshot público preserva times e regras sem expor a lista original", () 
   assert.equal(result.originalText, undefined);
   assert.equal(result.original_text, undefined);
   assert.equal(result.deleted_at, undefined);
+  assert.equal(result.career.blueScore, 3);
+  assert.equal(result.career.winnerTeam, "BLUE");
+  assert.equal(result.career.config.votingDays, 5);
 });

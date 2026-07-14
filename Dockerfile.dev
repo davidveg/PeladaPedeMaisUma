@@ -8,7 +8,8 @@ ENV NODE_ENV=development \
     WRANGLER_LOG=error
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --ignore-scripts --no-audit --no-fund
+    npm ci --ignore-scripts --no-audit --no-fund && \
+    sha256sum package-lock.json | cut -d ' ' -f 1 > node_modules/.package-lock.sha256
 COPY . .
 EXPOSE 3000
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]

@@ -7,6 +7,7 @@ const map = (row: any) => ({
   displayName: row.display_name,
   primaryPosition: row.primary_position,
   photoUrl: row.photo_url,
+  momentum: Number(row.momentum ?? 0),
   aliases: JSON.parse(row.aliases || "[]"),
   active: Boolean(row.active),
 });

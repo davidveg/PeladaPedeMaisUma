@@ -16,6 +16,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Primeiro administrador `admin` / `admin`, com troca obrigatória por e-mail válido e senha de 8+ caracteres.
 - Senhas com PBKDF2-SHA-256, salt aleatório e 210 mil iterações; sessão em cookie HTTP-only/SameSite.
 - Auditoria de operações administrativas.
+- Modo Carreira com placar confirmado por administrador, momentum de vitória/derrota, votação dos destaques por QR Code e encerramento automático ou antecipado.
 
 ## Execução local
 
@@ -100,6 +101,9 @@ As rotas retornam JSON:
 - `PUT /api/profile/password` — troca autenticada da própria senha administrativa.
 - `GET/POST/PUT /api/administrators` — administração de contas.
 - `GET/POST /api/upload` — leitura e envio validado de fotos ao R2.
+- `POST /api/career/match` — confirmação administrativa do placar e abertura da votação.
+- `GET/POST /api/career/vote` — consulta pública pelo token e registro de um voto por participante.
+- `GET/PUT/POST/DELETE /api/career/admin` — configurações, acompanhamento, encerramento e remoção de votos abertos.
 
 Exemplo de criação de jogador:
 
@@ -119,7 +123,15 @@ Exemplo de criação de jogador:
 
 ## Algoritmo
 
-A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade + marcação × pesoMarcação`. Os padrões são 48%, 32% e 20%, preservando a proporção anterior entre velocidade e habilidade ao incluir marcação. Os três pesos podem ser ajustados na área administrativa e sempre somam 100%. Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e ponderada pelos três atributos. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
+A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade + marcação × pesoMarcação + momentum`, limitada à escala de 1 a 5. Os padrões dos três atributos são 48%, 32% e 20%. Os pesos podem ser ajustados na área administrativa e sempre somam 100%. Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e ponderada pelos atributos e pelo momentum. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
+
+## Modo Carreira
+
+O recurso vem ativado. Em uma separação salva com pelo menos 7 jogadores, um administrador confirma o placar; os jogadores da equipe vencedora recebem `+0,1` de momentum e os da perdedora `-0,1` (empates não alteram as equipes). Essa confirmação cria um link com token aleatório e QR Code. Somente jogadores presentes nos dois times aparecem como votantes e candidatos, cada participante registra um único voto e não pode escolher a si próprio nem repetir nomes entre os seis lugares.
+
+Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
+
+Enquanto a votação estiver aberta, administradores podem revisar e remover votos, liberando o participante para votar novamente. O encerramento, automático pelo prazo ou antecipado por um administrador, aplica o momentum uma única vez, invalida novos envios e torna votos e resultado imutáveis. Cada partida guarda uma cópia dos parâmetros vigentes na abertura, portanto mudanças posteriores nas configurações não alteram a premiação daquela votação.
 
 ## Segurança e produção
 
@@ -159,7 +171,7 @@ Use `docker compose down -v` somente quando quiser apagar definitivamente o volu
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-O código-fonte é montado no container, enquanto dependências e estado local ficam em volumes nomeados.
+O código-fonte é montado no container, enquanto dependências e estado local ficam em volumes nomeados. Na inicialização, o container compara o `package-lock.json` com o volume de dependências e executa `npm ci` automaticamente quando novos pacotes forem adicionados.
 
 ### Raspberry Pi ARM64 com OMV 7
 

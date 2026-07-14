@@ -1,4 +1,4 @@
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
@@ -9,7 +9,7 @@ export const players = sqliteTable("players", {
   id: text("id").primaryKey(), fullName: text("full_name").notNull(), displayName: text("display_name").notNull(),
   nickname: text("nickname"), aliases: text("aliases").notNull().default("[]"), type: text("type").notNull().default("monthly"),
   primaryPosition: text("primary_position").notNull(), speed: real("speed").notNull(), skill: real("skill").notNull(), marking: real("marking").notNull().default(3),
-  photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
+  momentum: real("momentum").notNull().default(0), photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
   deletedAt: text("deleted_at"), ...timestamps,
 });
 
@@ -36,3 +36,24 @@ export const configurations = sqliteTable("system_configuration", {
 });
 
 export const auditLogs = sqliteTable("audit_logs", { id: text("id").primaryKey(), administratorId: text("administrator_id"), action: text("action").notNull(), entityType: text("entity_type").notNull(), entityId: text("entity_id"), previousData: text("previous_data"), newData: text("new_data"), createdAt: text("created_at").notNull() });
+
+export const careerConfiguration = sqliteTable("career_configuration", {
+  id: integer("id").primaryKey().default(1), enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  winnerBonus: real("winner_bonus").notNull().default(.1), loserPenalty: real("loser_penalty").notNull().default(-.1),
+  motmThird: real("motm_third").notNull().default(.1), motmSecond: real("motm_second").notNull().default(.2), motmFirst: real("motm_first").notNull().default(.3),
+  dotmThird: real("dotm_third").notNull().default(-.1), dotmSecond: real("dotm_second").notNull().default(-.2), dotmFirst: real("dotm_first").notNull().default(-.3),
+  votingDays: integer("voting_days").notNull().default(5), updatedAt: text("updated_at").notNull(),
+});
+
+export const careerMatches = sqliteTable("career_matches", {
+  id: text("id").primaryKey(), separationId: text("separation_id").notNull().unique(), blueScore: integer("blue_score").notNull(), yellowScore: integer("yellow_score").notNull(),
+  winnerTeam: text("winner_team").notNull(), votingToken: text("voting_token").notNull().unique(), status: text("status").notNull().default("OPEN"), closesAt: text("closes_at").notNull(), closedAt: text("closed_at"),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), configSnapshot: text("config_snapshot").notNull(), resultsSnapshot: text("results_snapshot"),
+  teamMomentumApplied: integer("team_momentum_applied", { mode: "boolean" }).notNull().default(false), votesMomentumApplied: integer("votes_momentum_applied", { mode: "boolean" }).notNull().default(false), ...timestamps,
+});
+
+export const careerVotes = sqliteTable("career_votes", {
+  id: text("id").primaryKey(), careerMatchId: text("career_match_id").notNull(), voterPlayerId: text("voter_player_id").notNull(),
+  motmThirdId: text("motm_third_id").notNull(), motmSecondId: text("motm_second_id").notNull(), motmFirstId: text("motm_first_id").notNull(),
+  dotmThirdId: text("dotm_third_id").notNull(), dotmSecondId: text("dotm_second_id").notNull(), dotmFirstId: text("dotm_first_id").notNull(), createdAt: text("created_at").notNull(),
+}, table => [uniqueIndex("career_votes_match_voter_unique").on(table.careerMatchId, table.voterPlayerId)]);

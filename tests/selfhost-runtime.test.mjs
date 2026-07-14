@@ -73,3 +73,28 @@ test("migração adiciona marcação e preserva proporcionalmente os pesos exist
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração do Modo Carreira adiciona momentum e configura os padrões", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-career-mode-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE players (id TEXT PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO players (id) VALUES ('one')").run();
+    const migration = await readFile(new URL("../drizzle/0003_career_mode.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const player = await bindings.DB.prepare("SELECT momentum FROM players WHERE id='one'").first();
+    const config = await bindings.DB.prepare("SELECT * FROM career_configuration WHERE id=1").first();
+    assert.equal(player.momentum, 0);
+    assert.equal(config.enabled, 1);
+    assert.equal(config.winner_bonus, .1);
+    assert.equal(config.loser_penalty, -.1);
+    assert.equal(config.motm_first, .3);
+    assert.equal(config.dotm_first, -.3);
+    assert.equal(config.voting_days, 5);
+    await bindings.DB.prepare("INSERT INTO career_votes VALUES (?,?,?,?,?,?,?,?,?,?)").bind("v1","m1","one","a","b","c","d","e","f",new Date().toISOString()).run();
+    await assert.rejects(()=>bindings.DB.prepare("INSERT INTO career_votes VALUES (?,?,?,?,?,?,?,?,?,?)").bind("v2","m1","one","a","b","c","d","e","f",new Date().toISOString()).run(),/UNIQUE/);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
