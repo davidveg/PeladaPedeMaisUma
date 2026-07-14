@@ -4,9 +4,9 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 
 ## Recursos implementados
 
-- Parser de listas do WhatsApp: reconhece ✅, ❌, campos vazios, caracteres invisíveis, data, título, ausentes e duplicidades.
+- Parser de listas do WhatsApp: reconhece ✅, ❌, campos vazios, caracteres invisíveis, data, título, ausentes, duplicidades e as seções Goleiros, Mensalistas e Convidados.
 - Correspondência por nome de exibição, nome completo, apelido e aliases; sugestões ambíguas nunca são vinculadas automaticamente.
-- Cadastro reutilizável de mensalistas, convidados e goleiros, com notas decimais de 1 a 5.
+- Cadastro reutilizável de mensalistas, convidados e goleiros, com o tipo sugerido automaticamente pela seção da lista e notas decimais de 1 a 5. Jogadores de linha usam velocidade, habilidade e marcação; goleiros usam habilidade (reflexos e agilidade), posicionamento e saída de gol (coragem), além do momentum.
 - Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, marcação, médias e proteção do quartil superior no caso ímpar.
 - Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
 - Montagem e confirmação de times exclusivas para administradores autenticados; visitantes acessam somente as separações confirmadas e seus detalhes.
@@ -123,13 +123,13 @@ Exemplo de criação de jogador:
 
 ## Algoritmo
 
-A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade + marcação × pesoMarcação + momentum`, limitada à escala de 1 a 5. Os padrões dos três atributos são 48%, 32% e 20%. Os pesos podem ser ajustados na área administrativa e sempre somam 100%. Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e ponderada pelos atributos e pelo momentum. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
+A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade + marcação × pesoMarcação + (momentum × multiplicadorMomentum)`, limitada à escala de 1 a 5 e arredondada para uma casa decimal. Os padrões dos três atributos são 48%, 32% e 20%, enquanto o multiplicador de momentum começa em `1,0`. Os pesos e o multiplicador podem ser ajustados na área administrativa. Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e ponderada pelos atributos e pelo momentum. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
 
 ## Modo Carreira
 
 O recurso vem ativado. Em uma separação salva com pelo menos 7 jogadores, um administrador confirma o placar; os jogadores da equipe vencedora recebem `+0,1` de momentum e os da perdedora `-0,1` (empates não alteram as equipes). Essa confirmação cria um link com token aleatório e QR Code. Somente jogadores presentes nos dois times aparecem como votantes e candidatos, cada participante registra um único voto e não pode escolher a si próprio nem repetir nomes entre os seis lugares.
 
-Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
+Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores, o multiplicador aplicado ao overall e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
 
 Enquanto a votação estiver aberta, administradores podem revisar e remover votos, liberando o participante para votar novamente. O encerramento, automático pelo prazo ou antecipado por um administrador, aplica o momentum uma única vez, invalida novos envios e torna votos e resultado imutáveis. Cada partida guarda uma cópia dos parâmetros vigentes na abertura, portanto mudanças posteriores nas configurações não alteram a premiação daquela votação.
 

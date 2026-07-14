@@ -1,34 +1,45 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
-export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; momentum?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
-export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
+export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; goalkeeperPositioning?: number; goalExit?: number; momentum?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
+export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; momentumMultiplier?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
-export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
-export const score = (p: Player, c = defaultConfig) => Math.max(1,Math.min(5,p.speed * c.speedWeight + p.skill * c.skillWeight + (p.marking ?? 3) * c.markingWeight + (p.momentum ?? 0)));
+export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, momentumMultiplier: 1, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
+export const playerAttributes = (p: Player) => p.primaryPosition === "Goleiro" || p.type === "goalkeeper"
+  ? { speed: p.goalkeeperPositioning ?? p.speed ?? 3, skill: p.skill, marking: p.goalExit ?? p.marking ?? 3 }
+  : { speed: p.speed, skill: p.skill, marking: p.marking ?? 3 };
+export const score = (p: Player, c = defaultConfig) => {
+  const attributes=playerAttributes(p);
+  const raw=attributes.speed*c.speedWeight+attributes.skill*c.skillWeight+attributes.marking*c.markingWeight+(p.momentum??0)*(c.momentumMultiplier??1);
+  return Math.round(Math.max(1,Math.min(5,raw))*10)/10;
+};
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+export type ImportedPlayerType = "monthly" | "guest" | "goalkeeper";
 
 export function parseWhatsApp(text: string) {
   const clean = text.replace(/[\u200B-\u200D\uFEFF\uFE0E\uFE0F]/g, "");
   const lines = clean.split(/\r?\n/).map((raw, index) => ({ raw, index: index + 1 }));
   const first = lines.find(x => x.raw.trim())?.raw.trim() || "Pelada";
   const dateMatch = clean.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);
-  let section = "";
+  let section: ImportedPlayerType = "monthly";
   const confirmed: string[] = [], absent: string[] = [], unrecognized: string[] = [];
+  const typesByName: Record<string,ImportedPlayerType> = {};
   for (const line of lines) {
     const value = line.raw.trim();
     if (!value) continue;
     const normalized = normalizeName(value);
-    if (/^goleiros?\b/.test(normalized)) { section = "Goleiro"; continue; }
-    if (/^mensalistas?\b/.test(normalized)) { section = "Mensalista"; continue; }
+    if (/^goleiros?\b/.test(normalized)) { section = "goalkeeper"; continue; }
+    if (/^mensalistas?\b/.test(normalized)) { section = "monthly"; continue; }
+    if (/^convidados?\b/.test(normalized)) { section = "guest"; continue; }
     if (/nao vai comparecer|vai comparecer|em branco/.test(normalized)) continue;
     const match = value.match(/^\s*\d+\s*[-.)]?\s*(.+?)(?:\s*:\s*)?([✅❌]*)\s*$/u);
     if (!match) { if (line.index > 1 && value !== first) unrecognized.push(value); continue; }
     const name = match[1].replace(/\s*:\s*$/, "").trim();
     if (!name) continue;
-    if (value.includes("✅")) confirmed.push(name);
+    typesByName[normalizeName(name)] = section;
+    if (value.includes("✅") || (section === "goalkeeper" && !value.includes("❌"))) confirmed.push(name);
     else absent.push(name);
   }
   const duplicates = confirmed.filter((n, i) => confirmed.findIndex(x => normalizeName(x) === normalizeName(n)) !== i);
-  return { title: first, date: dateMatch ? `${dateMatch[3] || new Date().getFullYear()}-${dateMatch[2].padStart(2,"0")}-${dateMatch[1].padStart(2,"0")}` : "", confirmed, absent, unrecognized, duplicates };
+  return { title: first.replace(/^\*|\*$/g,""), date: dateMatch ? `${dateMatch[3] || new Date().getFullYear()}-${dateMatch[2].padStart(2,"0")}-${dateMatch[1].padStart(2,"0")}` : "", confirmed, absent, unrecognized, duplicates, typesByName };
 }
 
 export function matchPlayers(names: string[], players: Player[]) {
@@ -45,7 +56,7 @@ export function matchPlayers(names: string[], players: Player[]) {
 export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig) {
   const positions = { Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 };
   team.forEach(p => positions[p.primaryPosition]++);
-  const speed = team.reduce((s,p)=>s+p.speed,0), skill = team.reduce((s,p)=>s+p.skill,0), marking = team.reduce((s,p)=>s+(p.marking??3),0),momentum=team.reduce((s,p)=>s+(p.momentum??0),0), total = team.reduce((s,p)=>s+score(p,c),0);
+  const speed = team.reduce((s,p)=>s+playerAttributes(p).speed,0), skill = team.reduce((s,p)=>s+playerAttributes(p).skill,0), marking = team.reduce((s,p)=>s+playerAttributes(p).marking,0),momentum=team.reduce((s,p)=>s+(p.momentum??0),0), total = team.reduce((s,p)=>s+score(p,c),0);
   return { count: team.length, positions, speed, skill, marking, momentum, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, momentumAvg:momentum/team.length||0, scoreAvg: total/team.length||0 };
 }
 
@@ -85,5 +96,5 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
   }
   const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, maximumPositionDifference, protectedTopPlayersPercentage: config.protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
+  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, momentumMultiplier: config.momentumMultiplier??1, maximumPositionDifference, protectedTopPlayersPercentage: config.protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
 }

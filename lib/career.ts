@@ -1,5 +1,6 @@
 export type CareerConfig = {
   enabled: boolean;
+  momentumMultiplier: number;
   winnerBonus: number;
   loserPenalty: number;
   motmThird: number;
@@ -11,17 +12,17 @@ export type CareerConfig = {
   votingDays: number;
 };
 
-export const defaultCareerConfig: CareerConfig = { enabled: true, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, votingDays: 5 };
+export const defaultCareerConfig: CareerConfig = { enabled: true, momentumMultiplier: 1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, votingDays: 5 };
 
 export function careerConfigFromRow(row: any): CareerConfig {
   if (!row) return { ...defaultCareerConfig };
-  return { enabled: Boolean(row.enabled), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), votingDays: Number(row.voting_days) };
+  return { enabled: Boolean(row.enabled), momentumMultiplier: Number(row.momentum_multiplier ?? 1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), votingDays: Number(row.voting_days) };
 }
 
 export function validateCareerConfig(config: CareerConfig) {
   const positive = [config.winnerBonus, config.motmThird, config.motmSecond, config.motmFirst];
   const negative = [config.loserPenalty, config.dotmThird, config.dotmSecond, config.dotmFirst];
-  return positive.every(value => Number.isFinite(value) && value >= 0 && value <= 1) && negative.every(value => Number.isFinite(value) && value <= 0 && value >= -1) && Number.isInteger(config.votingDays) && config.votingDays >= 1 && config.votingDays <= 30;
+  return Number.isFinite(config.momentumMultiplier) && config.momentumMultiplier >= 0 && config.momentumMultiplier <= 5 && positive.every(value => Number.isFinite(value) && value >= 0 && value <= 1) && negative.every(value => Number.isFinite(value) && value <= 0 && value >= -1) && Number.isInteger(config.votingDays) && config.votingDays >= 1 && config.votingDays <= 30;
 }
 
 export function matchWinner(blueScore: number, yellowScore: number) { return blueScore === yellowScore ? "DRAW" : blueScore > yellowScore ? "BLUE" : "YELLOW"; }

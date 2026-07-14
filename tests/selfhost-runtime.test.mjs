@@ -98,3 +98,38 @@ test("migração do Modo Carreira adiciona momentum e configura os padrões", as
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração adiciona multiplicador de momentum preservando o efeito atual", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-momentum-multiplier-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO career_configuration (id) VALUES (1)").run();
+    const migration = await readFile(new URL("../drizzle/0004_momentum_multiplier.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const config = await bindings.DB.prepare("SELECT momentum_multiplier FROM career_configuration WHERE id=1").first();
+    assert.equal(config.momentum_multiplier, 1);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração adiciona atributos de goleiro preservando as notas anteriores", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-goalkeeper-attributes-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE players (id TEXT PRIMARY KEY, type TEXT NOT NULL, primary_position TEXT NOT NULL, speed REAL NOT NULL, marking REAL NOT NULL)").run();
+    await bindings.DB.prepare("INSERT INTO players VALUES ('g1','goalkeeper','Goleiro',4.2,3.7)").run();
+    await bindings.DB.prepare("INSERT INTO players VALUES ('p1','monthly','Defesa',4.8,4.4)").run();
+    const migration = await readFile(new URL("../drizzle/0005_goalkeeper_attributes.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const goalkeeper = await bindings.DB.prepare("SELECT goalkeeper_positioning,goal_exit FROM players WHERE id='g1'").first();
+    const linePlayer = await bindings.DB.prepare("SELECT goalkeeper_positioning,goal_exit FROM players WHERE id='p1'").first();
+    assert.deepEqual({...goalkeeper}, { goalkeeper_positioning: 4.2, goal_exit: 3.7 });
+    assert.deepEqual({...linePlayer}, { goalkeeper_positioning: 3, goal_exit: 3 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

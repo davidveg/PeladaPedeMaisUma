@@ -2,14 +2,14 @@ import { getRuntimeBindings } from "./runtime-bindings";
 import { logEvent } from "./logger";
 
 const statements = [
-  `CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, full_name TEXT NOT NULL, display_name TEXT NOT NULL, nickname TEXT, aliases TEXT NOT NULL DEFAULT '[]', type TEXT NOT NULL DEFAULT 'monthly', primary_position TEXT NOT NULL, speed REAL NOT NULL, skill REAL NOT NULL, marking REAL NOT NULL DEFAULT 3, momentum REAL NOT NULL DEFAULT 0, photo_url TEXT, active INTEGER NOT NULL DEFAULT 1, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, full_name TEXT NOT NULL, display_name TEXT NOT NULL, nickname TEXT, aliases TEXT NOT NULL DEFAULT '[]', type TEXT NOT NULL DEFAULT 'monthly', primary_position TEXT NOT NULL, speed REAL NOT NULL, skill REAL NOT NULL, marking REAL NOT NULL DEFAULT 3, goalkeeper_positioning REAL NOT NULL DEFAULT 3, goal_exit REAL NOT NULL DEFAULT 3, momentum REAL NOT NULL DEFAULT 0, photo_url TEXT, active INTEGER NOT NULL DEFAULT 1, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS administrators (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, must_change_password INTEGER NOT NULL DEFAULT 1, last_login_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS password_reset_tokens (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS team_separations (id TEXT PRIMARY KEY, match_title TEXT NOT NULL, match_date TEXT, location TEXT, original_text TEXT NOT NULL, snapshot TEXT NOT NULL, manually_adjusted INTEGER NOT NULL DEFAULT 0, balance_score REAL NOT NULL, balance_classification TEXT NOT NULL, confirmed_at TEXT NOT NULL, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS system_configuration (id INTEGER PRIMARY KEY, default_player_count INTEGER NOT NULL, minimum_recommended_players INTEGER NOT NULL, maximum_recommended_players INTEGER NOT NULL, speed_weight REAL NOT NULL, skill_weight REAL NOT NULL, marking_weight REAL NOT NULL, maximum_position_difference INTEGER NOT NULL, protected_top_players_percentage REAL NOT NULL, default_reserve_count INTEGER NOT NULL, algorithm_attempts INTEGER NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS audit_logs (id TEXT PRIMARY KEY, administrator_id TEXT, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT, previous_data TEXT, new_data TEXT, created_at TEXT NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS career_configuration (id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1, winner_bonus REAL NOT NULL DEFAULT 0.1, loser_penalty REAL NOT NULL DEFAULT -0.1, motm_third REAL NOT NULL DEFAULT 0.1, motm_second REAL NOT NULL DEFAULT 0.2, motm_first REAL NOT NULL DEFAULT 0.3, dotm_third REAL NOT NULL DEFAULT -0.1, dotm_second REAL NOT NULL DEFAULT -0.2, dotm_first REAL NOT NULL DEFAULT -0.3, voting_days INTEGER NOT NULL DEFAULT 5, updated_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS career_configuration (id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1, momentum_multiplier REAL NOT NULL DEFAULT 1, winner_bonus REAL NOT NULL DEFAULT 0.1, loser_penalty REAL NOT NULL DEFAULT -0.1, motm_third REAL NOT NULL DEFAULT 0.1, motm_second REAL NOT NULL DEFAULT 0.2, motm_first REAL NOT NULL DEFAULT 0.3, dotm_third REAL NOT NULL DEFAULT -0.1, dotm_second REAL NOT NULL DEFAULT -0.2, dotm_first REAL NOT NULL DEFAULT -0.3, voting_days INTEGER NOT NULL DEFAULT 5, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS career_matches (id TEXT PRIMARY KEY, separation_id TEXT NOT NULL UNIQUE, blue_score INTEGER NOT NULL, yellow_score INTEGER NOT NULL, winner_team TEXT NOT NULL, voting_token TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'OPEN', closes_at TEXT NOT NULL, closed_at TEXT, created_by_administrator_id TEXT NOT NULL, config_snapshot TEXT NOT NULL, results_snapshot TEXT, team_momentum_applied INTEGER NOT NULL DEFAULT 0, votes_momentum_applied INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS career_votes (id TEXT PRIMARY KEY, career_match_id TEXT NOT NULL, voter_player_id TEXT NOT NULL, motm_third_id TEXT NOT NULL, motm_second_id TEXT NOT NULL, motm_first_id TEXT NOT NULL, dotm_third_id TEXT NOT NULL, dotm_second_id TEXT NOT NULL, dotm_first_id TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(career_match_id,voter_player_id))`,
   `CREATE INDEX IF NOT EXISTS career_votes_match_idx ON career_votes(career_match_id)`,
@@ -25,17 +25,30 @@ export async function ensureDb() {
     if(migratedPlayerMarking) await d.prepare(`ALTER TABLE players ADD COLUMN marking REAL NOT NULL DEFAULT 3`).run();
     const migratedPlayerMomentum=!playerColumns.results.some((column:any)=>column.name==="momentum");
     if(migratedPlayerMomentum) await d.prepare(`ALTER TABLE players ADD COLUMN momentum REAL NOT NULL DEFAULT 0`).run();
+    const migratedGoalkeeperPositioning=!playerColumns.results.some((column:any)=>column.name==="goalkeeper_positioning");
+    if(migratedGoalkeeperPositioning) {
+      await d.prepare(`ALTER TABLE players ADD COLUMN goalkeeper_positioning REAL NOT NULL DEFAULT 3`).run();
+      await d.prepare(`UPDATE players SET goalkeeper_positioning=speed WHERE primary_position='Goleiro' OR type='goalkeeper'`).run();
+    }
+    const migratedGoalExit=!playerColumns.results.some((column:any)=>column.name==="goal_exit");
+    if(migratedGoalExit) {
+      await d.prepare(`ALTER TABLE players ADD COLUMN goal_exit REAL NOT NULL DEFAULT 3`).run();
+      await d.prepare(`UPDATE players SET goal_exit=marking WHERE primary_position='Goleiro' OR type='goalkeeper'`).run();
+    }
     const configurationColumns=await d.prepare(`PRAGMA table_info(system_configuration)`).all();
     const migratedMarkingWeight=!configurationColumns.results.some((column:any)=>column.name==="marking_weight");
     if(migratedMarkingWeight) {
       await d.prepare(`ALTER TABLE system_configuration ADD COLUMN marking_weight REAL NOT NULL DEFAULT 0.2`).run();
       await d.prepare(`UPDATE system_configuration SET speed_weight=speed_weight*0.8, skill_weight=skill_weight*0.8`).run();
     }
+    const careerColumns=await d.prepare(`PRAGMA table_info(career_configuration)`).all();
+    const migratedMomentumMultiplier=!careerColumns.results.some((column:any)=>column.name==="momentum_multiplier");
+    if(migratedMomentumMultiplier) await d.prepare(`ALTER TABLE career_configuration ADD COLUMN momentum_multiplier REAL NOT NULL DEFAULT 1`).run();
     const now=new Date().toISOString();
     await d.prepare(`INSERT OR IGNORE INTO system_configuration (id,default_player_count,minimum_recommended_players,maximum_recommended_players,speed_weight,skill_weight,marking_weight,maximum_position_difference,protected_top_players_percentage,default_reserve_count,algorithm_attempts,updated_at) VALUES (1,22,14,30,.48,.32,.2,1,.25,0,2500,?)`).bind(now).run();
     await d.prepare(`INSERT OR IGNORE INTO career_configuration (id,enabled,winner_bonus,loser_penalty,motm_third,motm_second,motm_first,dotm_third,dotm_second,dotm_first,voting_days,updated_at) VALUES (1,1,.1,-.1,.1,.2,.3,-.1,-.2,-.3,5,?)`).bind(now).run();
     await seed(d,now);
-    logEvent("info","database_ready",{migratedPlayerMarking,migratedPlayerMomentum,migratedMarkingWeight});
+    logEvent("info","database_ready",{migratedPlayerMarking,migratedPlayerMomentum,migratedGoalkeeperPositioning,migratedGoalExit,migratedMarkingWeight,migratedMomentumMultiplier});
   })();
   return ready;
 }

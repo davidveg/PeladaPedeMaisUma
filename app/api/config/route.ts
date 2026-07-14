@@ -4,6 +4,7 @@ export async function GET(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
   const c: any = await db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first();
+  const career: any = await db().prepare(`SELECT momentum_multiplier FROM career_configuration WHERE id=1`).first();
   return Response.json({
     config: {
       defaultPlayerCount: c.default_player_count,
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
       speedWeight: c.speed_weight,
       skillWeight: c.skill_weight,
       markingWeight: c.marking_weight,
+      momentumMultiplier: Number(career?.momentum_multiplier ?? 1),
       maximumPositionDifference: c.maximum_position_difference,
       protectedTopPlayersPercentage: c.protected_top_players_percentage,
       defaultReserveCount: c.default_reserve_count,

@@ -7,6 +7,7 @@ const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",
 
 test("determina vencedor e empate pelo placar",()=>{assert.equal(matchWinner(3,1),"BLUE");assert.equal(matchWinner(0,2),"YELLOW");assert.equal(matchWinner(2,2),"DRAW")});
 test("valida os valores padrão do Modo Carreira",()=>assert.equal(validateCareerConfig(defaultCareerConfig),true));
+test("limita o multiplicador de momentum entre zero e cinco",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:0}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:-.1}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5.1}),false)});
 test("impede auto voto, repetição entre categorias e não participantes",()=>{
  assert.match(validateCareerVote({...valid,motmFirstId:"a"},participantIds),/si mesmo/);
  assert.match(validateCareerVote({...valid,dotmFirstId:"b"},participantIds),/somente uma vez/);
