@@ -1,8 +1,8 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
 export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; photoUrl?: string | null; notes?: string | null; active?: boolean };
-export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
+export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
-export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
+export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
 export const score = (p: Player, c = defaultConfig) => p.speed * c.speedWeight + p.skill * c.skillWeight + (p.marking ?? 3) * c.markingWeight;
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
@@ -66,6 +66,7 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
 
 export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0) {
   if (input.length < 4) throw new Error("São necessários pelo menos 4 jogadores.");
+  const maximumPositionDifference = Number.isFinite(config.maximumPositionDifference) ? Number(config.maximumPositionDifference) : defaultConfig.maximumPositionDifference!;
   const goalkeepers = input.filter(p=>p.primaryPosition === "Goleiro"), line = input.filter(p=>p.primaryPosition !== "Goleiro");
   let best: { blue: Player[]; yellow: Player[]; cost: number; extraId?: string } | null = null;
   const protectedCount = Math.ceil(line.length * config.protectedTopPlayersPercentage);
@@ -75,13 +76,13 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
     const blue: Player[] = [], yellow: Player[] = [];
     shuffled.forEach(p => (blue.length <= yellow.length ? blue : yellow).push(p));
     if (goalkeepers[0]) blue.push(goalkeepers[0]); if (goalkeepers[1]) yellow.push(goalkeepers[1]); goalkeepers.slice(2).forEach((p,i)=>(i%2?yellow:blue).push(p));
-    const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDiff = ["Defesa","Meio-campo","Ataque"].reduce((s,k)=>s+Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions]),0);
+    const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDifferences = ["Defesa","Meio-campo","Ataque"].map(k=>Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions])),positionDiff=positionDifferences.reduce((sum,value)=>sum+value,0),positionExcess=positionDifferences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0);
     const larger = blue.length>yellow.length?blue:yellow; const extra = input.length%2 ? [...larger].sort((a,b)=>score(a,config)-score(b,config)).find(p=>!protectedIds.has(p.id) && p.primaryPosition!=="Goleiro") : undefined;
     const attributeDifference = Math.abs(bm.speed-ym.speed)*config.speedWeight + Math.abs(bm.skill-ym.skill)*config.skillWeight + Math.abs(bm.marking-ym.marking)*config.markingWeight;
-    const cost = Math.abs(blue.length-yellow.length)*1000 + positionDiff*120 + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
+    const cost = Math.abs(blue.length-yellow.length)*1000 + positionExcess*2000 + positionDiff*120 + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
     if (!best || cost < best.cost) best={blue,yellow,cost,extraId:extra?.id};
   }
   const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight };
+  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, maximumPositionDifference, protectedTopPlayersPercentage: config.protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
 }

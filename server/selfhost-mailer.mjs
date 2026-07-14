@@ -19,6 +19,7 @@ export function createSmtpMailer(environment = process.env) {
     return {
       configured: false,
       async sendPasswordReset() { throw new Error("SMTP ou APP_BASE_URL não configurado."); },
+      async sendPasswordChanged() { throw new Error("SMTP não configurado."); },
     };
   }
 
@@ -47,6 +48,17 @@ export function createSmtpMailer(environment = process.env) {
         subject: "Redefinição de senha — Pelada Pede Mais Uma",
         text: `Recebemos uma solicitação para redefinir sua senha administrativa. Abra o link abaixo em até 30 minutos:\n\n${resetUrl}\n\nSe você não solicitou esta alteração, ignore este e-mail.`,
         html: `<div style="font-family:Arial,sans-serif;color:#15241f;line-height:1.6"><h2 style="color:#174d3b">Pelada Pede Mais Uma</h2><p>Recebemos uma solicitação para redefinir sua senha administrativa.</p><p><a href="${resetUrl}" style="display:inline-block;background:#174d3b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold">Criar nova senha</a></p><p>Este link expira em 30 minutos e pode ser usado uma única vez.</p><p style="color:#68756f;font-size:13px">Se você não solicitou esta alteração, ignore este e-mail.</p></div>`,
+      });
+      return { messageId: result.messageId };
+    },
+    async sendPasswordChanged({ to, changedAt }) {
+      const formattedDate = new Date(changedAt).toLocaleString("pt-BR", { timeZone: environment.TZ || "America/Sao_Paulo" });
+      const result = await transporter.sendMail({
+        from,
+        to,
+        subject: "Senha administrativa alterada — Pelada Pede Mais Uma",
+        text: `A senha da sua conta administrativa foi alterada em ${formattedDate}.\n\nNenhuma senha é informada neste e-mail. Se você não reconhece esta alteração, acesse ${publicBaseUrl}/admin e use a opção “Esqueci minha senha” imediatamente.`,
+        html: `<div style="font-family:Arial,sans-serif;color:#15241f;line-height:1.6"><h2 style="color:#174d3b">Pelada Pede Mais Uma</h2><p>A senha da sua conta administrativa foi alterada em <strong>${formattedDate}</strong>.</p><p>Nenhuma senha é informada neste e-mail.</p><p style="padding:12px 14px;background:#fff4dc;border-radius:8px">Se você não reconhece esta alteração, acesse <a href="${publicBaseUrl}/admin">o painel administrativo</a> e use a opção <strong>“Esqueci minha senha”</strong> imediatamente.</p></div>`,
       });
       return { messageId: result.messageId };
     },

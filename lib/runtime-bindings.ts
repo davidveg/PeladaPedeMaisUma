@@ -4,6 +4,7 @@ export interface PeladaRuntimeBindings {
   MAILER?: {
     configured: boolean;
     sendPasswordReset(message: { to: string; token: string }): Promise<{ messageId?: string }>;
+    sendPasswordChanged(message: { to: string; changedAt: string }): Promise<{ messageId?: string }>;
   };
 }
 

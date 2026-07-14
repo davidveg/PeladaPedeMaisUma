@@ -1,4 +1,4 @@
-import { audit, db, ensureDb } from "../../../lib/database";
+import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
 import { normalizeName } from "../../../lib/football";
 
 const map = (row: any) => ({
@@ -12,6 +12,8 @@ const map = (row: any) => ({
 });
 
 export async function POST(request: Request) {
+  const admin: any = await adminRequired(request);
+  if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
   const payload = await request.json() as any;
   const displayName = String(payload.displayName || "").trim();
@@ -36,6 +38,6 @@ export async function POST(request: Request) {
   await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, String(payload.fullName || displayName).trim(), displayName, String(payload.nickname || "").trim() || null, "[]", payload.primaryPosition === "Goleiro" ? "goalkeeper" : "guest", payload.primaryPosition, speed, skill, marking, null, 1, String(payload.notes || "").trim() || null, now, now).run();
   const created = await db().prepare("SELECT * FROM players WHERE id=?").bind(id).first();
-  await audit(null, "CREATE", "player", id, { displayName, type: "guest", primaryPosition: payload.primaryPosition, speed, skill, marking });
+  await audit(admin.id, "CREATE", "player", id, { displayName, type: "guest", primaryPosition: payload.primaryPosition, speed, skill, marking });
   return Response.json({ player: map(created), reused: false }, { status: 201 });
 }

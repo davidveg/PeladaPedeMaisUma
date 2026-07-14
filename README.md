@@ -9,6 +9,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Cadastro reutilizável de mensalistas, convidados e goleiros, com notas decimais de 1 a 5.
 - Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, marcação, médias e proteção do quartil superior no caso ímpar.
 - Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
+- Montagem e confirmação de times exclusivas para administradores autenticados; visitantes acessam somente as separações confirmadas e seus detalhes.
 - Compartilhamento pelo clipboard em formato simples ou com pontuações.
 - Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
 - Painel administrativo com jogadores, administradores, configurações e exclusão lógica.
@@ -91,11 +92,12 @@ O nome exato do label `container` depende das regras configuradas no coletor. O 
 
 As rotas retornam JSON:
 
-- `GET/POST/PUT/DELETE /api/players` — jogadores (escritas exigem administrador).
-- `GET/POST/DELETE /api/separations` — histórico e confirmação.
-- `GET/PUT /api/config` — critérios de equilíbrio.
+- `GET/POST/PUT/DELETE /api/players` — cadastro de jogadores, restrito a administradores.
+- `GET /api/separations` — histórico público com snapshots confirmados; `POST/DELETE` exigem administrador.
+- `GET/PUT /api/config` — critérios de equilíbrio, restritos a administradores.
 - `GET/POST/PUT/DELETE /api/auth` — sessão, login, primeiro acesso e logout.
 - `POST/PUT /api/password-reset` — solicitação e conclusão da redefinição de senha.
+- `PUT /api/profile/password` — troca autenticada da própria senha administrativa.
 - `GET/POST/PUT /api/administrators` — administração de contas.
 - `GET/POST /api/upload` — leitura e envio validado de fotos ao R2.
 

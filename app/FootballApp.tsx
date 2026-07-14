@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   balanceTeams,
   calculateTeamDelta,
@@ -32,7 +32,9 @@ type Stage = "import" | "review" | "result" | "history";
 type GuestDraft = { displayName: string; fullName: string; nickname: string; primaryPosition: string; speed: number; skill: number; marking: number; notes: string };
 
 export default function FootballApp() {
-  const [stage, setStage] = useState<Stage>("import");
+  const initialized = useRef(false);
+  const [stage, setStage] = useState<Stage>("history");
+  const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
   const [text, setText] = useState(sample);
   const [players, setPlayers] = useState<Player[]>([]);
   const [parsed, setParsed] = useState<ReturnType<typeof parseWhatsApp> | null>(null);
@@ -43,19 +45,33 @@ export default function FootballApp() {
   const [historyDetail, setHistoryDetail] = useState<any>(null);
   const [toast, setToast] = useState("");
   const [detail, setDetail] = useState<Player | null>(null);
+  const [detailConfig, setDetailConfig] = useState(defaultConfig);
   const [guestDraft, setGuestDraft] = useState<GuestDraft | null>(null);
   const [manual, setManual] = useState(false);
   const [config, setConfig] = useState(defaultConfig);
 
   const load = async () => {
-    const [p, c, h] = await Promise.all([
-      fetch("/api/players", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/config").then((response) => response.json()),
+    const [auth, h] = await Promise.all([
+      fetch("/api/auth", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/separations").then((response) => response.json()),
     ]);
-    setPlayers(p.players || []);
-    setConfig(c.config || defaultConfig);
+    const administrator = Boolean(auth.admin);
+    setIsAdmin(administrator);
     setHistory(h.separations || []);
+    if (administrator) {
+      const [p, c] = await Promise.all([
+        fetch("/api/players", { cache: "no-store" }).then((response) => response.json()),
+        fetch("/api/config", { cache: "no-store" }).then((response) => response.json()),
+      ]);
+      setPlayers(p.players || []);
+      setConfig(c.config || defaultConfig);
+      if (!initialized.current) setStage("import");
+    } else {
+      setPlayers([]);
+      setConfig(defaultConfig);
+      setStage("history");
+    }
+    initialized.current = true;
   };
 
   useEffect(() => {
@@ -122,7 +138,9 @@ export default function FootballApp() {
     if (!confirm("Deseja confirmar esta separação? Os times serão salvos no histórico.")) return;
     const snapshot = { ...result, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight };
     const response = await fetch("/api/separations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: parsed?.title, date: parsed?.date, originalText: text, result: snapshot, manuallyAdjusted: manual }) });
-    if (response.ok) { setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history"); }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) { setToast(payload.error || "Não foi possível confirmar a separação."); if (response.status === 401) await load(); return; }
+    setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history");
   }
 
   async function copyTeams(source = result, withScores = false, titleOverride?: string) {
@@ -134,25 +152,27 @@ export default function FootballApp() {
     setToast("Times copiados com sucesso.");
   }
 
+  if (isAdmin === undefined) return <div className="admin-loading">Carregando separações…</div>;
+  const showPlayer = (player: Player, scoringConfig = config) => { setDetail(player); setDetailConfig(scoringConfig); };
   return <div className="app-shell">
-    <header><a className="brand" onClick={() => { setHistoryDetail(null); setStage("import"); }}><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav><button className={stage === "import" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("import"); }}>Montar times</button><button className={stage === "history" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("history"); }}>Separações salvas</button><a href="/admin">Área administrativa</a></nav></header>
+    <header><a className="brand" onClick={() => { setHistoryDetail(null); setStage(isAdmin ? "import" : "history"); }}><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{isAdmin&&<button className={stage === "import" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("import"); }}>Montar times</button>}<button className={stage === "history" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("history"); }}>{isAdmin?"Separações salvas":"Últimas separações"}</button><a href="/admin">{isAdmin?"Painel administrativo":"Entrar como administrador"}</a></nav></header>
     <main>
-      {stage !== "history" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>Importar</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
-      {stage === "import" && <section className="hero"><div className="eyebrow">ORGANIZAÇÃO SEM DRAMA</div><h1>Do WhatsApp para o campo,<br /><em>times justos em minutos.</em></h1><p>Cole a lista de confirmações. A gente identifica quem vai, equilibra posições e nível, e deixa tudo pronto para compartilhar.</p><div className="import-card"><label>Cole aqui a lista de confirmações do WhatsApp</label><textarea value={text} onChange={(event) => setText(event.target.value)} aria-label="Lista de confirmações" /><div className="card-foot"><span>✅ Só quem estiver confirmado entra na lista</span><button className="primary" onClick={process}>Processar confirmações <b>→</b></button></div></div><div className="trust"><span>⚖️ Equilibra posições e nível</span><span>🔒 Seus dados ficam protegidos</span><span>📱 Pronto para o WhatsApp</span></div></section>}
-      {stage === "review" && parsed && <section className="content"><div className="section-head"><div><div className="eyebrow">REVISÃO DA PARTIDA</div><h2>{parsed.title}</h2><p>{parsed.confirmed.length} confirmados · {parsed.absent.length} ausentes</p></div><button className="ghost" onClick={() => setStage("import")}>← Editar lista</button></div>
+      {isAdmin && stage !== "history" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>Importar</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
+      {isAdmin && stage === "import" && <section className="hero"><div className="eyebrow">ORGANIZAÇÃO SEM DRAMA</div><h1>Do WhatsApp para o campo,<br /><em>times justos em minutos.</em></h1><p>Cole a lista de confirmações. A gente identifica quem vai, equilibra posições e nível, e deixa tudo pronto para compartilhar.</p><div className="import-card"><label>Cole aqui a lista de confirmações do WhatsApp</label><textarea value={text} onChange={(event) => setText(event.target.value)} aria-label="Lista de confirmações" /><div className="card-foot"><span>✅ Só quem estiver confirmado entra na lista</span><button className="primary" onClick={process}>Processar confirmações <b>→</b></button></div></div><div className="trust"><span>⚖️ Equilibra posições e nível</span><span>🔒 Seus dados ficam protegidos</span><span>📱 Pronto para o WhatsApp</span></div></section>}
+      {isAdmin && stage === "review" && parsed && <section className="content"><div className="section-head"><div><div className="eyebrow">REVISÃO DA PARTIDA</div><h2>{parsed.title}</h2><p>{parsed.confirmed.length} confirmados · {parsed.absent.length} ausentes</p></div><button className="ghost" onClick={() => setStage("import")}>← Editar lista</button></div>
         {parsed.duplicates.length > 0 && <div className="alert error">Jogadores duplicados: {parsed.duplicates.join(", ")}</div>}
         {missing.length > 0 && <div className="alert"><b>Existem jogadores confirmados sem dados suficientes.</b><span>Cadastre ou associe esses jogadores antes de gerar os times.</span></div>}
-        <div className="review-grid"><div className="panel"><h3>Confirmados encontrados <span>{matches.length - missing.length}</span></h3>{matches.filter((match) => match.status === "found").map((match: any) => <PlayerRow key={match.name} player={match.player} onClick={() => setDetail(match.player)} />)}</div><div className="panel"><h3>Sem cadastro <span>{missing.length}</span></h3>{missing.map((match: any) => <div className="missing" key={match.name}><PlayerAvatar name={match.name} /><div><b>{match.name}</b><small>{match.status === "ambiguous" ? "Possível correspondência ambígua" : "Dados obrigatórios pendentes"}</small></div><button onClick={() => openGuest(match.name)}>+ Cadastrar convidado</button></div>)}</div></div>
+        <div className="review-grid"><div className="panel"><h3>Confirmados encontrados <span>{matches.length - missing.length}</span></h3>{matches.filter((match) => match.status === "found").map((match: any) => <PlayerRow key={match.name} player={match.player} onClick={() => showPlayer(match.player)} />)}</div><div className="panel"><h3>Sem cadastro <span>{missing.length}</span></h3>{missing.map((match: any) => <div className="missing" key={match.name}><PlayerAvatar name={match.name} /><div><b>{match.name}</b><small>{match.status === "ambiguous" ? "Possível correspondência ambígua" : "Dados obrigatórios pendentes"}</small></div><button onClick={() => openGuest(match.name)}>+ Cadastrar convidado</button></div>)}</div></div>
         <div className="action-bar"><span>{selected.length} jogadores prontos</span><button className="primary" disabled={selected.length < 4 || missing.length > 0 || parsed.duplicates.length > 0} onClick={() => generate()}>Gerar times equilibrados →</button></div>
       </section>}
-      {stage === "result" && result && <ResultPresentation result={result} manuallyAdjusted={manual} onPlayer={setDetail} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
-      {stage === "history" && !historyDetail && <section className="content"><div className="section-head"><div><div className="eyebrow">MEMÓRIA DA PELADA</div><h2>Separações salvas</h2><p>Clique em uma partida para rever todos os times e indicadores confirmados.</p></div><button className="primary" onClick={() => setStage("import")}>+ Nova separação</button></div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><button className="history-open" onClick={() => setHistoryDetail(item)}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></button><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar para WhatsApp</button></div></article>)}</div></section>}
-      {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} onBack={() => setHistoryDetail(null)} onPlayer={setDetail} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
+      {isAdmin && stage === "result" && result && <ResultPresentation result={result} manuallyAdjusted={manual} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
+      {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<button className="primary" onClick={() => setStage("import")}>+ Nova separação</button>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><button className="history-open" onClick={() => setHistoryDetail(item)}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></button><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar para WhatsApp</button></div></article>)}</div></section>}
+      {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} onBack={() => setHistoryDetail(null)} onPlayer={(player:Player)=>showPlayer(player,resultConfig(historyDetail.snapshot))} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
     <footer><b>⚽ Pelada Pede Mais Uma</b><span>Times equilibrados. Resenha garantida.</span></footer>
     {toast && <div className="toast" onAnimationEnd={() => setToast("")}>{toast}</div>}
-    {detail && <PlayerDetail player={detail} config={config} onClose={() => setDetail(null)} />}
-    {guestDraft && <GuestForm draft={guestDraft} onClose={() => setGuestDraft(null)} onSave={saveGuest} />}
+    {detail && <PlayerDetail player={detail} config={detailConfig} onClose={() => setDetail(null)} />}
+    {isAdmin && guestDraft && <GuestForm draft={guestDraft} onClose={() => setGuestDraft(null)} onSave={saveGuest} />}
   </div>;
 }
 
@@ -163,12 +183,12 @@ function ResultPresentation({ result, manuallyAdjusted, onPlayer, onMove, onNew,
 function SavedSeparation({ item, onBack, onPlayer, onCopy }: any) {
   const result = item.snapshot;
   const weights = resultConfig(result);
-  return <section className="content saved-detail"><div className="section-head"><div><div className="eyebrow">SEPARAÇÃO CONFIRMADA</div><h2>{item.matchTitle}</h2><p>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"} · confirmada em {new Date(item.confirmedAt).toLocaleString("pt-BR")}{item.manuallyAdjusted ? " · ajustada manualmente" : ""}</p></div><BalanceBadge rating={result.rating || item.balanceClassification} /></div><TeamGrid result={result} onPlayer={onPlayer} /><BalanceMetrics delta={result.delta} /><div className="saved-meta"><span><small>Proposta utilizada</small><b>{result.proposal || 1}</b></span><span><small>Peso da velocidade</small><b>{Math.round(weights.speedWeight * 100)}%</b></span><span><small>Peso da habilidade</small><b>{Math.round(weights.skillWeight * 100)}%</b></span><span><small>Peso da marcação</small><b>{Math.round(weights.markingWeight * 100)}%</b></span><span><small>Ajuste manual</small><b>{item.manuallyAdjusted ? "Sim" : "Não"}</b></span></div><div className="result-actions"><button className="ghost" onClick={onBack}>← Voltar ao histórico</button><button className="ghost" onClick={() => onCopy(false)}>Copiar para WhatsApp</button><button className="primary" onClick={() => onCopy(true)}>Copiar com pontuações</button></div></section>;
+  return <section className="content saved-detail"><div className="section-head"><div><div className="eyebrow">SEPARAÇÃO CONFIRMADA</div><h2>{item.matchTitle}</h2><p>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"} · confirmada em {new Date(item.confirmedAt).toLocaleString("pt-BR")}{item.manuallyAdjusted ? " · ajustada manualmente" : ""}</p></div><BalanceBadge rating={result.rating || item.balanceClassification} /></div><TeamGrid result={result} onPlayer={onPlayer} /><BalanceMetrics delta={result.delta} /><div className="saved-meta"><span><small>Proposta utilizada</small><b>{result.proposal || 1}</b></span><span><small>Peso da velocidade</small><b>{Math.round(weights.speedWeight * 100)}%</b></span><span><small>Peso da habilidade</small><b>{Math.round(weights.skillWeight * 100)}%</b></span><span><small>Peso da marcação</small><b>{Math.round(weights.markingWeight * 100)}%</b></span><span><small>Diferença máx. por posição</small><b>{result.maximumPositionDifference??"Não registrado"}</b></span><span><small>Melhores protegidos</small><b>{result.protectedTopPlayersPercentage==null?"Não registrado":`${Math.round(result.protectedTopPlayersPercentage*100)}%`}</b></span><span><small>Tentativas avaliadas</small><b>{result.algorithmAttempts??"Não registrado"}</b></span><span><small>Ajuste manual</small><b>{item.manuallyAdjusted ? "Sim" : "Não"}</b></span></div><div className="result-actions"><button className="ghost" onClick={onBack}>← Voltar ao histórico</button><button className="ghost" onClick={() => onCopy(false)}>Copiar para WhatsApp</button><button className="primary" onClick={() => onCopy(true)}>Copiar com pontuações</button></div></section>;
 }
 
 function resultConfig(result: any) {
   const legacySnapshot = result?.markingWeight == null && result?.speedWeight != null && result?.skillWeight != null;
-  return { ...defaultConfig, speedWeight: result?.speedWeight ?? defaultConfig.speedWeight, skillWeight: result?.skillWeight ?? defaultConfig.skillWeight, markingWeight: result?.markingWeight ?? (legacySnapshot ? 0 : defaultConfig.markingWeight) };
+  return { ...defaultConfig, speedWeight: result?.speedWeight ?? defaultConfig.speedWeight, skillWeight: result?.skillWeight ?? defaultConfig.skillWeight, markingWeight: result?.markingWeight ?? (legacySnapshot ? 0 : defaultConfig.markingWeight), maximumPositionDifference: result?.maximumPositionDifference ?? defaultConfig.maximumPositionDifference, protectedTopPlayersPercentage: result?.protectedTopPlayersPercentage ?? defaultConfig.protectedTopPlayersPercentage, algorithmAttempts: result?.algorithmAttempts ?? defaultConfig.algorithmAttempts };
 }
 
 function TeamGrid({ result, onPlayer, onMove }: any) {
