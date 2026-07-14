@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { insertAdministratorSql } from "../lib/administrator-sql.ts";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 test("adaptador SQLite preserva a API D1 usada pela aplicação", async () => {
@@ -32,6 +33,22 @@ test("adaptador de uploads persiste bytes e metadados", async () => {
     assert.equal(object.httpMetadata.contentType, "image/png");
     assert.deepEqual([...await readFile(join(directory, "uploads", "players", "test.png"))], [...bytes]);
     assert.throws(() => bindings.UPLOADS.objectPath("players/../../escape.png"), /inválida/);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("cadastro de administrador usa exatamente as oito colunas do schema", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-selfhost-admin-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare(`CREATE TABLE administrators (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, active INTEGER NOT NULL, must_change_password INTEGER NOT NULL, last_login_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`).run();
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(insertAdministratorSql).bind("one", "admin@example.com", "hash", 1, 0, null, now, now).run();
+    const row = await bindings.DB.prepare(`SELECT email,active FROM administrators WHERE id=?`).bind("one").first();
+    assert.equal(row.email, "admin@example.com");
+    assert.equal(row.active, 1);
   } finally {
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });
