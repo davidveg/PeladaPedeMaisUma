@@ -8,6 +8,7 @@ interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   UPLOADS: R2Bucket;
+  APP_BASE_URL?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

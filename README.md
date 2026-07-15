@@ -54,9 +54,9 @@ No ambiente hospedado, exporte o banco D1 com as ferramentas de backup/exportaç
 
 As entidades e o acesso estão isolados em `db/` e `lib/database.ts`. Para migrar: crie o schema PostgreSQL equivalente, exporte jogadores/configurações/admins/separações, converta inteiros booleanos, importe snapshots sem transformá-los, troque o driver Drizzle e execute testes de contagem e integridade. IDs UUID em texto e datas ISO evitam acoplamento ao SQLite.
 
-## SMTP e recuperação de senha
+## URL pública, compartilhamento e SMTP
 
-No OMV, a recuperação envia um link de uso único para o e-mail do administrador. O token é armazenado somente como hash, expira em 30 minutos, invalida todas as sessões após a troca e limita novas solicitações a uma por minuto e cinco por hora por conta.
+No OMV, `APP_BASE_URL` define o endereço público usado nos links de votação compartilhados pelo WhatsApp e na recuperação de senha. Informe a URL HTTPS acessível pelos jogadores, sem `/votacao` no final. A recuperação envia um link de uso único para o e-mail do administrador. O token é armazenado somente como hash, expira em 30 minutos, invalida todas as sessões após a troca e limita novas solicitações a uma por minuto e cinco por hora por conta.
 
 Para enviar pela conta `peladapedemaisuma@gmail.com`:
 

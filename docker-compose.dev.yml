@@ -10,6 +10,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      APP_BASE_URL: ${APP_BASE_URL:-}
     ports:
       - "${HOST_PORT:-3000}:3000"
     volumes:

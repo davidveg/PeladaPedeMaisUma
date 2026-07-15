@@ -1,6 +1,7 @@
 export interface PeladaRuntimeBindings {
   DB: D1Database;
   UPLOADS: R2Bucket;
+  APP_BASE_URL?: string;
   MAILER?: {
     configured: boolean;
     sendPasswordReset(message: { to: string; token: string }): Promise<{ messageId?: string }>;

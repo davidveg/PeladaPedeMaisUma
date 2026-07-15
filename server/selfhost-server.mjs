@@ -7,6 +7,7 @@ import { logEvent } from "./selfhost-logger.mjs";
 const dataDirectory = resolve(process.env.DATA_DIR ?? "/data");
 const bindings = await createSelfhostBindings(dataDirectory);
 bindings.MAILER = createSmtpMailer(process.env);
+bindings.APP_BASE_URL = process.env.APP_BASE_URL?.trim();
 
 globalThis.__PELADA_RUNTIME_BINDINGS__ = bindings;
 globalThis.__PELADA_LOG_LEVEL__ = process.env.LOG_LEVEL ?? "info";
