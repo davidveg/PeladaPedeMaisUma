@@ -1,10 +1,16 @@
-export function publicSeparation(row: any) {
+type PublicPlayerCareerStats = { games: number; wins: number; losses: number };
+
+export function publicSeparation(row: any, careerStats: Record<string, PublicPlayerCareerStats> = {}) {
+  const snapshot = typeof row.snapshot === "string" ? JSON.parse(row.snapshot) : row.snapshot;
+  const withStats = (player: any) => ({ ...player, careerStats: careerStats[player.id] ?? { games: 0, wins: 0, losses: 0 } });
+  snapshot.blue = (snapshot.blue || []).map(withStats);
+  snapshot.yellow = (snapshot.yellow || []).map(withStats);
   const separation:any = {
     id: row.id,
     matchTitle: row.match_title,
     matchDate: row.match_date,
     location: row.location,
-    snapshot: typeof row.snapshot === "string" ? JSON.parse(row.snapshot) : row.snapshot,
+    snapshot,
     balanceClassification: row.balance_classification,
     balanceScore: row.balance_score,
     confirmedAt: row.confirmed_at,

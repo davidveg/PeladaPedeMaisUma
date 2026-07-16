@@ -64,7 +64,8 @@ export default function FootballApp() {
     ]);
     const administrator = Boolean(auth.admin);
     setIsAdmin(administrator);
-    setHistory(h.separations || []);
+    const separations = h.separations || [];
+    setHistory(separations);
     setPublicBaseUrl(publicConfig.baseUrl || window.location.origin);
     if (administrator) {
       const [p, c, career] = await Promise.all([
@@ -83,6 +84,7 @@ export default function FootballApp() {
       setStage("history");
     }
     initialized.current = true;
+    return separations;
   };
 
   useEffect(() => {
@@ -160,8 +162,8 @@ export default function FootballApp() {
     const payload=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(payload.error||'Não foi possível confirmar o placar.');
     setToast('Partida confirmada e votação aberta.');
-    await load();
-    setHistoryDetail((current:any)=>current?{...current,career:{id:payload.match.id,blueScore:payload.match.blueScore,yellowScore:payload.match.yellowScore,winnerTeam:payload.match.winnerTeam,votingToken:payload.match.votingToken,status:payload.match.status,closesAt:payload.match.closesAt,closedAt:payload.match.closedAt,config:payload.match.config,results:payload.match.results}}:current);
+    const separations=await load();
+    setHistoryDetail((current:any)=>separations.find((separation:any)=>separation.id===current?.id)??current);
   }
 
   async function copyTeams(source = result, withScores = false, titleOverride?: string) {
@@ -246,7 +248,8 @@ function PlayerDetail({ player, config, onClose }: any) {
   const type=player.type === "guest" ? "Convidado" : player.type === "goalkeeper" ? "Goleiro" : "Mensalista";
   const goalkeeper=player.type==="goalkeeper"||player.primaryPosition==="Goleiro";
   const stats=goalkeeper?[{label:"HABILIDADE",value:player.skill},{label:"POSICIONAMENTO",value:player.goalkeeperPositioning??player.speed??3},{label:"SAÍDA DE GOL",value:player.goalExit??player.marking??3}]:[{label:"VELOCIDADE",value:player.speed},{label:"HABILIDADE",value:player.skill},{label:"MARCAÇÃO",value:player.marking??3}];
-  return <div className="modal-back" onClick={onClose}><div className="player-card-modal" onClick={event=>event.stopPropagation()}><button className="close" onClick={onClose} aria-label="Fechar detalhes">×</button><div className="player-card"><div className="card-top"><div className="overall"><strong>{score(player,config).toFixed(1)}</strong><span>OVERALL</span></div><div className="card-photo"><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} large /></div></div><div className="card-identity"><h2>{player.displayName}</h2>{player.fullName!==player.displayName&&<p>{player.fullName}</p>}</div><div className="card-role"><span><small>TIPO</small><b>{type}</b></span><span><small>POSIÇÃO</small><b>{player.primaryPosition}</b></span></div><div className="card-stats">{stats.map(stat=><span key={stat.label}><b>{Number(stat.value).toFixed(1)}</b><small>{stat.label}</small></span>)}<span><b>{(player.momentum??0)>0?'+':''}{(player.momentum??0).toFixed(1)}</b><small>MOMENTUM</small></span></div>{player.notes&&<blockquote>{player.notes}</blockquote>}</div></div></div>;
+  const careerStats=player.careerStats??{games:0,wins:0,losses:0};
+  return <div className="modal-back" onClick={onClose}><div className="player-card-modal" onClick={event=>event.stopPropagation()}><button className="close" onClick={onClose} aria-label="Fechar detalhes">×</button><div className="player-card"><div className="card-top"><div className="overall"><strong>{score(player,config).toFixed(1)}</strong><span>OVERALL</span></div><div className="card-photo"><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} large /></div></div><div className="card-identity"><h2>{player.displayName}</h2>{player.fullName!==player.displayName&&<p>{player.fullName}</p>}</div><div className="card-role"><span><small>TIPO</small><b>{type}</b></span><span><small>POSIÇÃO</small><b>{player.primaryPosition}</b></span></div><div className="card-stats">{stats.map(stat=><span key={stat.label}><b>{Number(stat.value).toFixed(1)}</b><small>{stat.label}</small></span>)}<span><b>{(player.momentum??0)>0?'+':''}{(player.momentum??0).toFixed(1)}</b><small>MOMENTUM</small></span></div><div className="card-career-stats" aria-label="Estatísticas de partidas confirmadas"><span><b>{careerStats.games}</b><small>JOGOS</small></span><span className="wins"><b>{careerStats.wins}</b><small>VITÓRIAS</small></span><span className="losses"><b>{careerStats.losses}</b><small>DERROTAS</small></span></div>{player.notes&&<blockquote>{player.notes}</blockquote>}</div></div></div>;
 }
 
 function GuestForm({ draft, onClose, onSave }: { draft: GuestDraft; onClose: () => void; onSave: (draft: GuestDraft) => void }) {
