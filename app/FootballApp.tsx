@@ -32,7 +32,7 @@ Mensalistas
 8 - Mateus: ✅
 9 - Pedro Henrique: ✅`;
 
-type Stage = "import" | "review" | "result" | "history";
+type Stage = "import" | "review" | "result" | "history" | "players";
 type GuestDraft = { displayName: string; fullName: string; nickname: string; type: ImportedPlayerType; primaryPosition: string; speed: number; skill: number; marking: number; goalkeeperPositioning: number; goalExit: number; notes: string };
 
 export default function FootballApp() {
@@ -41,6 +41,8 @@ export default function FootballApp() {
   const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
   const [text, setText] = useState(sample);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [publicPlayers, setPublicPlayers] = useState<Player[]>([]);
+  const [publicPlayerConfig, setPublicPlayerConfig] = useState(defaultConfig);
   const [parsed, setParsed] = useState<ReturnType<typeof parseWhatsApp> | null>(null);
   const [selected, setSelected] = useState<Player[]>([]);
   const [result, setResult] = useState<any>(null);
@@ -57,16 +59,19 @@ export default function FootballApp() {
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
 
   const load = async () => {
-    const [auth, h, publicConfig] = await Promise.all([
+    const [auth, h, publicConfig, publicPlayersPayload] = await Promise.all([
       fetch("/api/auth", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/separations").then((response) => response.json()),
       fetch("/api/public-config", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/public-players", { cache: "no-store" }).then((response) => response.json()),
     ]);
     const administrator = Boolean(auth.admin);
     setIsAdmin(administrator);
     const separations = h.separations || [];
     setHistory(separations);
     setPublicBaseUrl(publicConfig.baseUrl || window.location.origin);
+    setPublicPlayers(publicPlayersPayload.players || []);
+    setPublicPlayerConfig({ ...defaultConfig, ...(publicPlayersPayload.config || {}) });
     if (administrator) {
       const [p, c, career] = await Promise.all([
         fetch("/api/players", { cache: "no-store" }).then((response) => response.json()),
@@ -81,7 +86,7 @@ export default function FootballApp() {
       setPlayers([]);
       setConfig(defaultConfig);
       setCareerConfig(null);
-      setStage("history");
+      if (!initialized.current) setStage("history");
     }
     initialized.current = true;
     return separations;
@@ -178,9 +183,9 @@ export default function FootballApp() {
   if (isAdmin === undefined) return <div className="admin-loading">Carregando separações…</div>;
   const showPlayer = (player: Player, scoringConfig = config) => { setDetail(player); setDetailConfig(scoringConfig); };
   return <div className="app-shell">
-    <header><a className="brand" onClick={() => { setHistoryDetail(null); setStage(isAdmin ? "import" : "history"); }}><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{isAdmin&&<button className={stage === "import" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("import"); }}>Montar times</button>}<button className={stage === "history" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("history"); }}>{isAdmin?"Separações salvas":"Últimas separações"}</button><a href="/admin">{isAdmin?"Painel administrativo":"Entrar como administrador"}</a></nav></header>
+    <header><a className="brand" onClick={() => { setHistoryDetail(null); setStage(isAdmin ? "import" : "history"); }}><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{isAdmin&&<button className={stage === "import" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("import"); }}>Montar times</button>}<button className={stage === "players" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("players"); }}>Jogadores</button><button className={stage === "history" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("history"); }}>{isAdmin?"Separações salvas":"Últimas separações"}</button><a href="/conta">Minha conta</a><a href="/admin">{isAdmin?"Painel administrativo":"Entrar como administrador"}</a></nav></header>
     <main>
-      {isAdmin && stage !== "history" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>Importar</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
+      {isAdmin && stage !== "history" && stage !== "players" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>Importar</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
       {isAdmin && stage === "import" && <section className="hero"><div className="eyebrow">ORGANIZAÇÃO SEM DRAMA</div><h1>Do WhatsApp para o campo,<br /><em>times justos em minutos.</em></h1><p>Cole a lista de confirmações. A gente identifica quem vai, equilibra posições e nível, e deixa tudo pronto para compartilhar.</p><div className="import-card"><label>Cole aqui a lista de confirmações do WhatsApp</label><textarea value={text} onChange={(event) => setText(event.target.value)} aria-label="Lista de confirmações" /><div className="card-foot"><span>✅ Só quem estiver confirmado entra na lista</span><button className="primary" onClick={process}>Processar confirmações <b>→</b></button></div></div><div className="trust"><span>⚖️ Equilibra posições e nível</span><span>🔒 Seus dados ficam protegidos</span><span>📱 Pronto para o WhatsApp</span></div></section>}
       {isAdmin && stage === "review" && parsed && <section className="content"><div className="section-head"><div><div className="eyebrow">REVISÃO DA PARTIDA</div><h2>{parsed.title}</h2><p>{parsed.confirmed.length} confirmados · {parsed.absent.length} ausentes</p></div><button className="ghost" onClick={() => setStage("import")}>← Editar lista</button></div>
         {parsed.duplicates.length > 0 && <div className="alert error">Jogadores duplicados: {parsed.duplicates.join(", ")}</div>}
@@ -189,6 +194,7 @@ export default function FootballApp() {
         <div className="action-bar"><span>{selected.length} jogadores prontos</span><button className="primary" disabled={selected.length < 4 || missing.length > 0 || parsed.duplicates.length > 0} onClick={() => generate()}>Gerar times equilibrados →</button></div>
       </section>}
       {isAdmin && stage === "result" && result && <ResultPresentation result={result} manuallyAdjusted={manual} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
+      {stage === "players" && <PublicPlayersView players={publicPlayers} config={publicPlayerConfig} onPlayer={(player:Player)=>showPlayer(player,publicPlayerConfig)} />}
       {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<button className="primary" onClick={() => setStage("import")}>+ Nova separação</button>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><button className="history-open" onClick={() => setHistoryDetail(item)}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></button><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar para WhatsApp</button></div></article>)}</div></section>}
       {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} isAdmin={isAdmin} careerEnabled={careerConfig?.enabled!==false} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onBack={() => setHistoryDetail(null)} onPlayer={(player:Player)=>showPlayer(player,resultConfig(historyDetail.snapshot))} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
@@ -197,6 +203,19 @@ export default function FootballApp() {
     {detail && <PlayerDetail player={detail} config={detailConfig} onClose={() => setDetail(null)} />}
     {isAdmin && guestDraft && <GuestForm draft={guestDraft} onClose={() => setGuestDraft(null)} onSave={saveGuest} />}
   </div>;
+}
+
+function PublicPlayersView({players,config,onPlayer}:{players:Player[];config:any;onPlayer:(player:Player)=>void}) {
+  const [query,setQuery]=useState("");
+  const filtered=useMemo(()=>players.filter(player=>[player.displayName,player.primaryPosition,playerTypeLabel(player.type)].some(value=>value.toLowerCase().includes(query.trim().toLowerCase()))),[players,query]);
+  const goalkeepers=filtered.filter(player=>player.type==="goalkeeper"||player.primaryPosition==="Goleiro");
+  const linePlayers=filtered.filter(player=>player.type!=="goalkeeper"&&player.primaryPosition!=="Goleiro");
+  return <section className="content public-players"><div className="section-head"><div><div className="eyebrow">ELENCO DA PELADA</div><h2>Jogadores</h2><p>Consulte os atributos e clique em um jogador para abrir seu card completo.</p></div><div className="public-player-total"><b>{players.length}</b><span>jogadores ativos</span></div></div><label className="public-player-search"><span>Buscar jogador</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Nome, tipo ou posição…"/></label><PublicPlayerList title="Jogadores de linha" subtitle="Velocidade, habilidade e marcação" players={linePlayers} config={config} onPlayer={onPlayer}/><PublicPlayerList title="Goleiros" subtitle="Posicionamento, habilidade e saída de gol" players={goalkeepers} config={config} onPlayer={onPlayer} goalkeeper/></section>;
+}
+
+function PublicPlayerList({title,subtitle,players,config,onPlayer,goalkeeper=false}:{title:string;subtitle:string;players:Player[];config:any;onPlayer:(player:Player)=>void;goalkeeper?:boolean}) {
+  const headers=goalkeeper?["Goleiro","Posicionamento","Habilidade","Saída de gol","Momentum","J / V / D","Overall"]:["Jogador","Tipo","Posição","Velocidade","Habilidade","Marcação","Momentum","J / V / D","Overall"];
+  return <section className="public-player-section"><div className="public-player-list-title"><div><h3>{title}</h3><p>{subtitle}</p></div><b>{players.length}</b></div><div className="public-player-table" role="table"><div className={`public-player-tr ${goalkeeper?"goalkeeper":"line"} th`} role="row">{headers.map(header=><span key={header} role="columnheader">{header}</span>)}</div>{players.length===0?<div className="public-player-empty">Nenhum jogador encontrado nesta lista.</div>:players.map(player=>{const career=player.careerStats??{games:0,wins:0,losses:0};return <button className={`public-player-tr ${goalkeeper?"goalkeeper":"line"}`} key={player.id} onClick={()=>onPlayer(player)} aria-label={`Abrir card de ${player.displayName}`}><span className="public-player-identity"><PlayerAvatar player={player}/><b>{player.displayName}<small>{goalkeeper?"Goleiro":playerTypeLabel(player.type)}</small></b></span>{goalkeeper?<><span>{(player.goalkeeperPositioning??player.speed).toFixed(1)}</span><span>{player.skill.toFixed(1)}</span><span>{(player.goalExit??player.marking??3).toFixed(1)}</span></>:<><span>{playerTypeLabel(player.type)}</span><span>{player.primaryPosition}</span><span>{player.speed.toFixed(1)}</span><span>{player.skill.toFixed(1)}</span><span>{(player.marking??3).toFixed(1)}</span></>}<span className={(player.momentum??0)>0?"positive":(player.momentum??0)<0?"negative":""}>{(player.momentum??0)>0?"+":""}{(player.momentum??0).toFixed(1)}</span><span>{career.games} / {career.wins} / {career.losses}</span><strong>{score(player,config).toFixed(1)}</strong></button>})}</div></section>;
 }
 
 function ResultPresentation({ result, manuallyAdjusted, onPlayer, onMove, onNew, onCopy, onConfirm }: any) {

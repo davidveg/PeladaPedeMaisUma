@@ -1,4 +1,4 @@
-import { adminRequired } from "../../../lib/database";
+import { adminRequired, memberRequired } from "../../../lib/database";
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 
 const MAX_FILE_SIZE = 5_000_000;
@@ -17,7 +17,7 @@ function detectImageType(bytes: Uint8Array) {
 }
 
 export async function POST(request: Request) {
-  if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
+  if (!(await adminRequired(request)) && !(await memberRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
   const declaredSize = Number(request.headers.get("content-length") || 0);
   if (declaredSize > MAX_FILE_SIZE) return Response.json({ error: "A foto deve ter no máximo 5 MB." }, { status: 413 });
 

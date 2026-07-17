@@ -133,3 +133,45 @@ test("migração adiciona atributos de goleiro preservando as notas anteriores",
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração de contas garante um único login para cada jogador", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-member-accounts-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    const migration = await readFile(new URL("../drizzle/0006_member_accounts.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(`INSERT INTO member_accounts (id,email,password_hash,player_id,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`).bind("one", "one@example.com", "hash", "player-one", now, now).run();
+    await assert.rejects(() => bindings.DB.prepare(`INSERT INTO member_accounts (id,email,password_hash,player_id,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`).bind("two", "two@example.com", "hash", "player-one", now, now).run(), /UNIQUE/);
+    await bindings.DB.prepare(`UPDATE member_accounts SET player_id=NULL WHERE id='one'`).run();
+    await bindings.DB.prepare(`INSERT INTO member_accounts (id,email,password_hash,player_id,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`).bind("two", "two@example.com", "hash", "player-one", now, now).run();
+    const account = await bindings.DB.prepare(`SELECT email FROM member_accounts WHERE player_id='player-one'`).first();
+    assert.equal(account.email, "two@example.com");
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("vínculo compartilhado impede que administrador e usuário escolham o mesmo jogador", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-shared-player-link-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0006_member_accounts.sql", import.meta.url), "utf8"));
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(`INSERT INTO member_accounts (id,email,password_hash,player_id,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`).bind("member-one", "member@example.com", "hash", "player-one", now, now).run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0007_shared_player_account_links.sql", import.meta.url), "utf8"));
+    const migrated = await bindings.DB.prepare(`SELECT account_type,account_id FROM player_account_links WHERE player_id='player-one'`).first();
+    const legacy = await bindings.DB.prepare(`SELECT player_id FROM member_accounts WHERE id='member-one'`).first();
+    assert.deepEqual({ ...migrated }, { account_type: "member", account_id: "member-one" });
+    assert.equal(legacy.player_id, null);
+    await assert.rejects(() => bindings.DB.prepare(`INSERT INTO player_account_links VALUES (?,?,?,?)`).bind("player-one", "administrator", "admin-one", now).run(), /UNIQUE/);
+    await bindings.DB.prepare(`DELETE FROM player_account_links WHERE account_id='member-one'`).run();
+    await bindings.DB.prepare(`INSERT INTO player_account_links VALUES (?,?,?,?)`).bind("player-one", "administrator", "admin-one", now).run();
+    const administratorLink = await bindings.DB.prepare(`SELECT account_type FROM player_account_links WHERE account_id='admin-one'`).first();
+    assert.equal(administratorLink.account_type, "administrator");
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -21,6 +21,12 @@ export const administrators = sqliteTable("administrators", {
 });
 
 export const sessions = sqliteTable("sessions", { id: text("id").primaryKey(), administratorId: text("administrator_id").notNull(), expiresAt: text("expires_at").notNull(), createdAt: text("created_at").notNull() });
+export const memberAccounts = sqliteTable("member_accounts", {
+  id: text("id").primaryKey(), email: text("email").notNull().unique(), passwordHash: text("password_hash").notNull(),
+  playerId: text("player_id").unique(), active: integer("active", { mode: "boolean" }).notNull().default(true), lastLoginAt: text("last_login_at"), ...timestamps,
+});
+export const memberSessions = sqliteTable("member_sessions", { id: text("id").primaryKey(), memberAccountId: text("member_account_id").notNull(), expiresAt: text("expires_at").notNull(), createdAt: text("created_at").notNull() });
+export const playerAccountLinks = sqliteTable("player_account_links", { playerId: text("player_id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull().unique(), createdAt: text("created_at").notNull() });
 export const passwordResetTokens = sqliteTable("password_reset_tokens", { id: text("id").primaryKey(), administratorId: text("administrator_id").notNull(), tokenHash: text("token_hash").notNull(), expiresAt: text("expires_at").notNull(), usedAt: text("used_at"), createdAt: text("created_at").notNull() });
 
 export const separations = sqliteTable("team_separations", {

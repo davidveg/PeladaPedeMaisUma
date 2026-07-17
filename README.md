@@ -13,6 +13,8 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Compartilhamento pelo clipboard em formato simples ou com pontuações.
 - Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
 - Painel administrativo com jogadores, administradores, configurações e exclusão lógica.
+- Contas para mensalistas e convidados, com associação exclusiva a um jogador, card pessoal e atualização de foto, nome completo, apelido, posição e observações.
+- Gestão administrativa das associações entre logins e jogadores, incluindo contas administrativas, vínculo próprio pela área Minha conta e desassociação para correção.
 - Primeiro administrador `admin` / `admin`, com troca obrigatória por e-mail válido e senha de 8+ caracteres.
 - Senhas com PBKDF2-SHA-256, salt aleatório e 210 mil iterações; sessão em cookie HTTP-only/SameSite.
 - Auditoria de operações administrativas.
@@ -94,6 +96,10 @@ O nome exato do label `container` depende das regras configuradas no coletor. O 
 As rotas retornam JSON:
 
 - `GET/POST/PUT/DELETE /api/players` — cadastro de jogadores, restrito a administradores.
+- `GET/POST/PUT/DELETE /api/member-auth` — sessão e cadastro de contas de jogadores.
+- `GET/POST /api/member-players` — jogadores disponíveis e associação exclusiva da própria conta.
+- `GET/PUT /api/member-profile` — leitura do card e atualização limitada do perfil associado.
+- `GET/DELETE /api/member-associations` — consulta e desassociação, restritas a administradores.
 - `GET /api/separations` — histórico público com snapshots confirmados; `POST/DELETE` exigem administrador.
 - `GET/PUT /api/config` — critérios de equilíbrio, restritos a administradores.
 - `GET/POST/PUT/DELETE /api/auth` — sessão, login, primeiro acesso e logout.
