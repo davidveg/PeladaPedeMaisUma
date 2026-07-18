@@ -10,6 +10,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, marcação, médias e proteção do quartil superior no caso ímpar.
 - Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
 - Montagem e confirmação de times exclusivas para administradores autenticados; visitantes acessam somente as separações confirmadas e seus detalhes.
+- Ordem de chegada persistente e independente para cada equipe nas separações salvas, editável somente por administradores e exibida do primeiro ao último jogador de cada time em campo.
 - Compartilhamento pelo clipboard em formato simples ou com pontuações.
 - Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
 - Painel administrativo com jogadores, administradores, configurações e exclusão lógica.
@@ -18,7 +19,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Primeiro administrador `admin` / `admin`, com troca obrigatória por e-mail válido e senha de 8+ caracteres.
 - Senhas com PBKDF2-SHA-256, salt aleatório e 210 mil iterações; sessão em cookie HTTP-only/SameSite.
 - Auditoria de operações administrativas.
-- Modo Carreira com placar confirmado por administrador, momentum de vitória/derrota, votação dos destaques por QR Code e encerramento automático ou antecipado.
+- Modo Carreira com placar confirmado por administrador, momentum de vitória/derrota, registro opcional de gols e assistências, votação dos destaques por QR Code e encerramento automático ou antecipado.
 
 ## Execução local
 
@@ -138,6 +139,8 @@ O recurso vem ativado. Em uma separação salva com pelo menos 7 jogadores, um a
 Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores, o multiplicador aplicado ao overall e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
 
 Enquanto a votação estiver aberta, administradores podem revisar e remover votos, liberando o participante para votar novamente. O encerramento, automático pelo prazo ou antecipado por um administrador, aplica o momentum uma única vez, invalida novos envios e torna votos e resultado imutáveis. Cada partida guarda uma cópia dos parâmetros vigentes na abertura, portanto mudanças posteriores nas configurações não alteram a premiação daquela votação.
+
+O acompanhamento de **gols e assistências** também é configurado nessa tela e vem ativado por padrão. Quando ativo, cada gol do placar exige um autor do time correspondente e aceita opcionalmente um jogador do mesmo time como assistente; o autor não pode assistir o próprio gol. Gols contra são marcados como **GC**, entram somente no placar, não permitem assistência e não aumentam o histórico individual do jogador responsável. Os totais acumulados aparecem nos cards dos jogadores. Desativar a opção apenas oculta o formulário e as estatísticas, preservando todos os registros anteriores.
 
 ## Segurança e produção
 

@@ -1,7 +1,7 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
-export type PlayerCareerStats = { games: number; wins: number; losses: number };
+export type PlayerCareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
 export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; goalkeeperPositioning?: number; goalExit?: number; momentum?: number; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
-export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; momentumMultiplier?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
+export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; momentumMultiplier?: number; showContributions?: boolean; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
 export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, momentumMultiplier: 1, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
 export const playerAttributes = (p: Player) => p.primaryPosition === "Goleiro" || p.type === "goalkeeper"

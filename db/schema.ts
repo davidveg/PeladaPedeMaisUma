@@ -32,7 +32,7 @@ export const passwordResetTokens = sqliteTable("password_reset_tokens", { id: te
 export const separations = sqliteTable("team_separations", {
   id: text("id").primaryKey(), matchTitle: text("match_title").notNull(), matchDate: text("match_date"), location: text("location"),
   originalText: text("original_text").notNull(), snapshot: text("snapshot").notNull(), manuallyAdjusted: integer("manually_adjusted", { mode: "boolean" }).notNull().default(false),
-  balanceScore: real("balance_score").notNull(), balanceClassification: text("balance_classification").notNull(), confirmedAt: text("confirmed_at").notNull(), deletedAt: text("deleted_at"), ...timestamps,
+  arrivalOrder: text("arrival_order"), balanceScore: real("balance_score").notNull(), balanceClassification: text("balance_classification").notNull(), confirmedAt: text("confirmed_at").notNull(), deletedAt: text("deleted_at"), ...timestamps,
 });
 
 export const configurations = sqliteTable("system_configuration", {
@@ -46,6 +46,7 @@ export const auditLogs = sqliteTable("audit_logs", { id: text("id").primaryKey()
 
 export const careerConfiguration = sqliteTable("career_configuration", {
   id: integer("id").primaryKey().default(1), enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  trackContributions: integer("track_contributions", { mode: "boolean" }).notNull().default(true),
   momentumMultiplier: real("momentum_multiplier").notNull().default(1),
   winnerBonus: real("winner_bonus").notNull().default(.1), loserPenalty: real("loser_penalty").notNull().default(-.1),
   motmThird: real("motm_third").notNull().default(.1), motmSecond: real("motm_second").notNull().default(.2), motmFirst: real("motm_first").notNull().default(.3),
@@ -65,3 +66,8 @@ export const careerVotes = sqliteTable("career_votes", {
   motmThirdId: text("motm_third_id").notNull(), motmSecondId: text("motm_second_id").notNull(), motmFirstId: text("motm_first_id").notNull(),
   dotmThirdId: text("dotm_third_id").notNull(), dotmSecondId: text("dotm_second_id").notNull(), dotmFirstId: text("dotm_first_id").notNull(), createdAt: text("created_at").notNull(),
 }, table => [uniqueIndex("career_votes_match_voter_unique").on(table.careerMatchId, table.voterPlayerId)]);
+
+export const careerMatchContributions = sqliteTable("career_match_contributions", {
+  id: text("id").primaryKey(), careerMatchId: text("career_match_id").notNull(), scorerPlayerId: text("scorer_player_id").notNull(),
+  assistPlayerId: text("assist_player_id"), team: text("team").notNull(), ownGoal: integer("is_own_goal", { mode: "boolean" }).notNull().default(false), createdAt: text("created_at").notNull(),
+});

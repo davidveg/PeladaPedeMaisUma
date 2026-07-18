@@ -2,6 +2,8 @@ export type PlayerCareerStats = {
   games: number;
   wins: number;
   losses: number;
+  goals: number;
+  assists: number;
 };
 
 type CareerMatchStatsRow = {
@@ -10,9 +12,9 @@ type CareerMatchStatsRow = {
   winnerTeam?: string;
 };
 
-export const emptyPlayerCareerStats = (): PlayerCareerStats => ({ games: 0, wins: 0, losses: 0 });
+export const emptyPlayerCareerStats = (): PlayerCareerStats => ({ games: 0, wins: 0, losses: 0, goals: 0, assists: 0 });
 
-export function calculatePlayerCareerStats(rows: CareerMatchStatsRow[]): Record<string, PlayerCareerStats> {
+export function calculatePlayerCareerStats(rows: CareerMatchStatsRow[], contributions: any[] = []): Record<string, PlayerCareerStats> {
   const totals: Record<string, PlayerCareerStats> = {};
 
   for (const row of rows) {
@@ -35,6 +37,14 @@ export function calculatePlayerCareerStats(rows: CareerMatchStatsRow[]): Record<
       else if (winner === "BLUE" || winner === "YELLOW") stats.losses += 1;
       totals[playerId] = stats;
     }
+  }
+
+  for (const contribution of contributions) {
+    if (Boolean(contribution.is_own_goal ?? contribution.ownGoal)) continue;
+    const scorerId = String(contribution.scorer_player_id ?? contribution.scorerPlayerId ?? "");
+    const assistId = String(contribution.assist_player_id ?? contribution.assistPlayerId ?? "");
+    if (scorerId) { const stats = totals[scorerId] ?? emptyPlayerCareerStats(); stats.goals += 1; totals[scorerId] = stats; }
+    if (assistId) { const stats = totals[assistId] ?? emptyPlayerCareerStats(); stats.assists += 1; totals[assistId] = stats; }
   }
 
   return totals;

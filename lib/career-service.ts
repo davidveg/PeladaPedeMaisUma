@@ -1,6 +1,7 @@
 import { audit, db, ensureDb } from "./database";
 import { careerConfigFromRow, matchWinner, rankCareerVotes, type CareerConfig } from "./career";
 import { logEvent } from "./logger";
+import { validateMatchContributions, type MatchContributionInput } from "./match-contributions";
 
 export async function getCareerConfig() { await ensureDb(); return careerConfigFromRow(await db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first()); }
 
@@ -9,7 +10,7 @@ export function careerMatchFromRow(row: any) {
   return { id: row.id, separationId: row.separation_id, blueScore: Number(row.blue_score), yellowScore: Number(row.yellow_score), winnerTeam: row.winner_team, votingToken: row.voting_token, status: row.status, closesAt: row.closes_at, closedAt: row.closed_at, config: JSON.parse(row.config_snapshot), results: row.results_snapshot ? JSON.parse(row.results_snapshot) : null, createdAt: row.created_at };
 }
 
-export async function createCareerMatch(separationId: string, blueScore: number, yellowScore: number, administratorId: string) {
+export async function createCareerMatch(separationId: string, blueScore: number, yellowScore: number, administratorId: string, contributionInput: MatchContributionInput[] = []) {
   await ensureDb();
   const config = await getCareerConfig();
   if (!config.enabled) throw new Error("O Modo Carreira está desativado.");
@@ -20,13 +21,16 @@ export async function createCareerMatch(separationId: string, blueScore: number,
   const snapshot = JSON.parse(separation.snapshot), blueIds=(snapshot.blue||[]).map((player:any)=>player.id),yellowIds=(snapshot.yellow||[]).map((player:any)=>player.id);
   if (!blueIds.length || !yellowIds.length) throw new Error("A separação não possui dois times válidos.");
   if (new Set([...blueIds,...yellowIds]).size < 7) throw new Error("O Modo Carreira exige pelo menos 7 jogadores para que cada participante escolha seis destaques diferentes de si mesmo.");
+  const contributionValidation=config.trackContributions?validateMatchContributions({contributions:contributionInput,blueScore,yellowScore,blueIds,yellowIds}):{error:null,contributions:[] as MatchContributionInput[]};
+  if(contributionValidation.error)throw new Error(contributionValidation.error);
   const winnerTeam=matchWinner(blueScore,yellowScore),id=crypto.randomUUID(),token=[...crypto.getRandomValues(new Uint8Array(24))].map(value=>value.toString(16).padStart(2,"0")).join(""),now=new Date(),closesAt=new Date(now.getTime()+config.votingDays*86400000);
   const statements=[db().prepare(`INSERT INTO career_matches (id,separation_id,blue_score,yellow_score,winner_team,voting_token,status,closes_at,closed_at,created_by_administrator_id,config_snapshot,results_snapshot,team_momentum_applied,votes_momentum_applied,created_at,updated_at) VALUES (?,?,?,?,?,?,'OPEN',?,NULL,?,?,NULL,1,0,?,?)`).bind(id,separationId,blueScore,yellowScore,winnerTeam,token,closesAt.toISOString(),administratorId,JSON.stringify(config),now.toISOString(),now.toISOString())];
   const deltaFor=(team:"BLUE"|"YELLOW")=>winnerTeam==="DRAW"?0:winnerTeam===team?config.winnerBonus:config.loserPenalty;
   for(const playerId of blueIds) statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),updated_at=? WHERE id=?`).bind(deltaFor("BLUE"),now.toISOString(),playerId));
   for(const playerId of yellowIds) statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),updated_at=? WHERE id=?`).bind(deltaFor("YELLOW"),now.toISOString(),playerId));
+  for(const contribution of contributionValidation.contributions) statements.push(db().prepare(`INSERT INTO career_match_contributions (id,career_match_id,scorer_player_id,assist_player_id,team,is_own_goal,created_at) VALUES (?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),id,contribution.scorerPlayerId,contribution.assistPlayerId||null,contribution.team,contribution.ownGoal?1:0,now.toISOString()));
   await db().batch(statements);
-  await audit(administratorId,"CAREER_MATCH_CONFIRMED","career_match",id,{separationId,blueScore,yellowScore,winnerTeam,closesAt:closesAt.toISOString()});
+  await audit(administratorId,"CAREER_MATCH_CONFIRMED","career_match",id,{separationId,blueScore,yellowScore,winnerTeam,closesAt:closesAt.toISOString(),goals:contributionValidation.contributions.filter(goal=>!goal.ownGoal).length,ownGoals:contributionValidation.contributions.filter(goal=>goal.ownGoal).length,assists:contributionValidation.contributions.filter(goal=>goal.assistPlayerId).length});
   logEvent("info","career_match_confirmed",{careerMatchId:id,separationId,winnerTeam});
   return careerMatchFromRow(await db().prepare(`SELECT * FROM career_matches WHERE id=?`).bind(id).first());
 }

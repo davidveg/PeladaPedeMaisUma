@@ -22,6 +22,45 @@ test("adaptador SQLite preserva a API D1 usada pela aplicação", async () => {
   }
 });
 
+test("migração adiciona configuração e eventos de gols com assistência opcional", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-goal-assists-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO career_configuration (id) VALUES (1)").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0008_goal_assist_tracking.sql", import.meta.url), "utf8"));
+    const config = await bindings.DB.prepare("SELECT track_contributions FROM career_configuration WHERE id=1").first();
+    assert.equal(config.track_contributions, 1);
+    const now = new Date().toISOString();
+    await bindings.DB.prepare("INSERT INTO career_match_contributions VALUES (?,?,?,?,?,?,?)").bind("goal-1", "match-1", "player-1", null, "BLUE", 1, now).run();
+    await bindings.DB.prepare("INSERT INTO career_match_contributions VALUES (?,?,?,?,?,?,?)").bind("goal-2", "match-1", "player-2", "player-1", "BLUE", 0, now).run();
+    const rows = await bindings.DB.prepare("SELECT scorer_player_id,assist_player_id,is_own_goal FROM career_match_contributions ORDER BY id").all();
+    assert.deepEqual(rows.results.map(row => ({ ...row })), [
+      { scorer_player_id: "player-1", assist_player_id: null, is_own_goal: 1 },
+      { scorer_player_id: "player-2", assist_player_id: "player-1", is_own_goal: 0 },
+    ]);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração adiciona ordem de chegada às separações existentes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-arrival-order-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE team_separations (id TEXT PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO team_separations (id) VALUES ('match-1')").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0009_separation_arrival_order.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE team_separations SET arrival_order=? WHERE id='match-1'").bind(JSON.stringify(["p2", "p1"])).run();
+    const row = await bindings.DB.prepare("SELECT arrival_order FROM team_separations WHERE id='match-1'").first();
+    assert.deepEqual(JSON.parse(row.arrival_order), ["p2", "p1"]);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("adaptador de uploads persiste bytes e metadados", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-selfhost-upload-"));
   const bindings = await createSelfhostBindings(directory);

@@ -1,5 +1,6 @@
 export type CareerConfig = {
   enabled: boolean;
+  trackContributions: boolean;
   momentumMultiplier: number;
   winnerBonus: number;
   loserPenalty: number;
@@ -12,11 +13,11 @@ export type CareerConfig = {
   votingDays: number;
 };
 
-export const defaultCareerConfig: CareerConfig = { enabled: true, momentumMultiplier: 1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, votingDays: 5 };
+export const defaultCareerConfig: CareerConfig = { enabled: true, trackContributions: true, momentumMultiplier: 1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, votingDays: 5 };
 
 export function careerConfigFromRow(row: any): CareerConfig {
   if (!row) return { ...defaultCareerConfig };
-  return { enabled: Boolean(row.enabled), momentumMultiplier: Number(row.momentum_multiplier ?? 1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), votingDays: Number(row.voting_days) };
+  return { enabled: Boolean(row.enabled), trackContributions: Boolean(row.track_contributions ?? 1), momentumMultiplier: Number(row.momentum_multiplier ?? 1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), votingDays: Number(row.voting_days) };
 }
 
 export function validateCareerConfig(config: CareerConfig) {
