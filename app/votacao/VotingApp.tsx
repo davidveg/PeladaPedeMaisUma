@@ -9,7 +9,16 @@ export default function VotingApp(){
  const [data,setData]=useState<any>(null),[voter,setVoter]=useState(""),[votes,setVotes]=useState<Record<Field,string>>(Object.fromEntries(fields.map(field=>[field,""])) as any),[error,setError]=useState(""),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const token=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("token")||"":"";
  const load=async()=>{const response=await fetch(`/api/career/vote?token=${encodeURIComponent(token)}`,{cache:"no-store"}),payload=await response.json();if(!response.ok)throw new Error(payload.error);setData(payload)};
- useEffect(()=>{load().catch(error=>setError(error.message))},[token]);
+ useEffect(()=>{
+  let active=true;
+  const refresh=()=>load().catch(error=>{if(active)setError(error.message)});
+  refresh();
+  const interval=window.setInterval(refresh,30000);
+  const onVisible=()=>{if(document.visibilityState==="visible")refresh()};
+  window.addEventListener("focus",refresh);
+  document.addEventListener("visibilitychange",onVisible);
+  return()=>{active=false;window.clearInterval(interval);window.removeEventListener("focus",refresh);document.removeEventListener("visibilitychange",onVisible)};
+ },[token]);
  const names=useMemo(()=>Object.fromEntries((data?.players||[]).map((player:any)=>[player.id,player.displayName])),[data]);
  const selected=new Set(Object.values(votes).filter(Boolean));
  function options(field:Field){return(data?.players||[]).filter((player:any)=>player.id!==voter&&(!selected.has(player.id)||votes[field]===player.id));}
