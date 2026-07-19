@@ -27,6 +27,7 @@ export function validateCareerConfig(config: CareerConfig) {
 }
 
 export function matchWinner(blueScore: number, yellowScore: number) { return blueScore === yellowScore ? "DRAW" : blueScore > yellowScore ? "BLUE" : "YELLOW"; }
+export function teamMomentumForResult(winner: "BLUE" | "YELLOW" | "DRAW", team: "BLUE" | "YELLOW", winnerBonus: number, loserPenalty: number) { return winner === "DRAW" ? 0 : winner === team ? winnerBonus : loserPenalty; }
 
 export type CareerVoteInput = { voterPlayerId: string; motmThirdId: string; motmSecondId: string; motmFirstId: string; dotmThirdId: string; dotmSecondId: string; dotmFirstId: string };
 

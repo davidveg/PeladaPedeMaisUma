@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultCareerConfig, matchWinner, rankCareerVotes, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
+import { defaultCareerConfig, matchWinner, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
 
 const participantIds=["a","b","c","d","e","f","g"];
 const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",dotmThirdId:"e",dotmSecondId:"f",dotmFirstId:"g"};
 
 test("determina vencedor e empate pelo placar",()=>{assert.equal(matchWinner(3,1),"BLUE");assert.equal(matchWinner(0,2),"YELLOW");assert.equal(matchWinner(2,2),"DRAW")});
+test("calcula o momentum da equipe e a diferença necessária ao corrigir o resultado",()=>{
+ assert.equal(teamMomentumForResult("BLUE","BLUE",.1,-.1),.1);
+ assert.equal(teamMomentumForResult("BLUE","YELLOW",.1,-.1),-.1);
+ assert.equal(teamMomentumForResult("DRAW","BLUE",.1,-.1),0);
+ const correction=teamMomentumForResult("YELLOW","BLUE",.1,-.1)-teamMomentumForResult("BLUE","BLUE",.1,-.1);
+ assert.ok(Math.abs(correction-(-.2))<Number.EPSILON*4);
+});
 test("valida os valores padrão do Modo Carreira",()=>assert.equal(validateCareerConfig(defaultCareerConfig),true));
 test("limita o multiplicador de momentum entre zero e cinco",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:0}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:-.1}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5.1}),false)});
 test("impede auto voto, repetição entre categorias e não participantes",()=>{

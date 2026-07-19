@@ -1,5 +1,5 @@
 import { audit, db, ensureDb } from "./database";
-import { careerConfigFromRow, matchWinner, rankCareerVotes, type CareerConfig } from "./career";
+import { careerConfigFromRow, matchWinner, rankCareerVotes, teamMomentumForResult, type CareerConfig } from "./career";
 import { logEvent } from "./logger";
 import { validateMatchContributions, type MatchContributionInput } from "./match-contributions";
 
@@ -33,6 +33,26 @@ export async function createCareerMatch(separationId: string, blueScore: number,
   await audit(administratorId,"CAREER_MATCH_CONFIRMED","career_match",id,{separationId,blueScore,yellowScore,winnerTeam,closesAt:closesAt.toISOString(),goals:contributionValidation.contributions.filter(goal=>!goal.ownGoal).length,ownGoals:contributionValidation.contributions.filter(goal=>goal.ownGoal).length,assists:contributionValidation.contributions.filter(goal=>goal.assistPlayerId).length});
   logEvent("info","career_match_confirmed",{careerMatchId:id,separationId,winnerTeam});
   return careerMatchFromRow(await db().prepare(`SELECT * FROM career_matches WHERE id=?`).bind(id).first());
+}
+
+export async function editCareerMatch(matchId:string,blueScore:number,yellowScore:number,administratorId:string,contributionInput:MatchContributionInput[]=[]){
+  await ensureDb();
+  if(![blueScore,yellowScore].every(score=>Number.isInteger(score)&&score>=0&&score<=99))throw new Error("Informe um placar válido entre 0 e 99 gols.");
+  const row:any=await db().prepare(`SELECT c.*,s.snapshot FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE c.id=? AND s.deleted_at IS NULL`).bind(matchId).first();
+  if(!row)throw new Error("Partida do Modo Carreira não encontrada.");
+  const snapshot=JSON.parse(row.snapshot),blueIds=(snapshot.blue||[]).map((player:any)=>player.id),yellowIds=(snapshot.yellow||[]).map((player:any)=>player.id),currentConfig=await getCareerConfig();
+  const validation=currentConfig.trackContributions?validateMatchContributions({contributions:contributionInput,blueScore,yellowScore,blueIds,yellowIds}):{error:null,contributions:[] as MatchContributionInput[]};
+  if(validation.error)throw new Error(validation.error);
+  const previousContributions=(await db().prepare(`SELECT scorer_player_id,assist_player_id,team,is_own_goal FROM career_match_contributions WHERE career_match_id=? ORDER BY created_at`).bind(matchId).all()).results as any[];
+  const oldWinner=row.winner_team as "BLUE"|"YELLOW"|"DRAW",newWinner=matchWinner(blueScore,yellowScore),rules={winnerBonus:.1,loserPenalty:-.1,...JSON.parse(row.config_snapshot||"{}")},now=new Date().toISOString(),statements:any[]=[];
+  for(const [team,ids] of [["BLUE",blueIds],["YELLOW",yellowIds]] as const){const adjustment=teamMomentumForResult(newWinner,team,rules.winnerBonus,rules.loserPenalty)-teamMomentumForResult(oldWinner,team,rules.winnerBonus,rules.loserPenalty);if(adjustment)for(const playerId of ids)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),updated_at=? WHERE id=?`).bind(adjustment,now,playerId))}
+  statements.push(db().prepare(`UPDATE career_matches SET blue_score=?,yellow_score=?,winner_team=?,updated_at=? WHERE id=?`).bind(blueScore,yellowScore,newWinner,now,matchId));
+  if(currentConfig.trackContributions||blueScore!==Number(row.blue_score)||yellowScore!==Number(row.yellow_score))statements.push(db().prepare(`DELETE FROM career_match_contributions WHERE career_match_id=?`).bind(matchId));
+  if(currentConfig.trackContributions)for(const goal of validation.contributions)statements.push(db().prepare(`INSERT INTO career_match_contributions (id,career_match_id,scorer_player_id,assist_player_id,team,is_own_goal,created_at) VALUES (?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),matchId,goal.scorerPlayerId,goal.assistPlayerId||null,goal.team,goal.ownGoal?1:0,now));
+  await db().batch(statements);
+  await audit(administratorId,"CAREER_MATCH_EDITED","career_match",matchId,{blueScore,yellowScore,winnerTeam:newWinner,contributions:currentConfig.trackContributions?validation.contributions:undefined},{blueScore:Number(row.blue_score),yellowScore:Number(row.yellow_score),winnerTeam:oldWinner,contributions:previousContributions});
+  logEvent("info","career_match_edited",{careerMatchId:matchId,oldWinner,newWinner,blueScore,yellowScore});
+  return careerMatchFromRow(await db().prepare(`SELECT * FROM career_matches WHERE id=?`).bind(matchId).first());
 }
 
 export async function finalizeCareerMatch(matchId: string, administratorId: string | null = null) {

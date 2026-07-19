@@ -142,6 +142,8 @@ Enquanto a votação estiver aberta, administradores podem revisar e remover vot
 
 O acompanhamento de **gols e assistências** também é configurado nessa tela e vem ativado por padrão. Quando ativo, cada gol do placar exige um autor do time correspondente e aceita opcionalmente um jogador do mesmo time como assistente; o autor não pode assistir o próprio gol. Gols contra são marcados como **GC**, entram somente no placar, não permitem assistência e não aumentam o histórico individual do jogador responsável. Os totais acumulados aparecem nos cards dos jogadores. Desativar a opção apenas oculta o formulário e as estatísticas, preservando todos os registros anteriores.
 
+Administradores podem corrigir o placar, os gols e as assistências de uma partida já confirmada pela própria separação salva. A correção substitui os registros individuais e ajusta o momentum das equipes somente pela diferença entre o resultado anterior e o novo, sem duplicar bônus ou ônus; a votação existente permanece aberta ou encerrada no estado em que já se encontrava.
+
 ## Segurança e produção
 
 Use HTTPS, mantenha cookies `Secure` no ambiente de produção, aplique rate limiting no gateway às rotas `/api/auth` e de recuperação, configure política de acesso administrativo, monitore auditoria e faça rotação de segredos. Fotos aceitam somente JPEG, PNG e WebP até 5 MB e recebem nomes aleatórios. A aplicação não retorna hashes nem tokens em APIs.
