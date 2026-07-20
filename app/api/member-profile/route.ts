@@ -12,11 +12,11 @@ export async function GET(request: Request) {
     db().prepare(`SELECT * FROM players WHERE id=? AND deleted_at IS NULL`).bind(member.playerId).first<any>(),
     loadPlayerCareerStats(),
     db().prepare(`SELECT speed_weight,skill_weight,marking_weight FROM system_configuration WHERE id=1`).first<any>(),
-    db().prepare(`SELECT momentum_multiplier,track_contributions FROM career_configuration WHERE id=1`).first<any>(),
+    db().prepare(`SELECT momentum_multiplier,track_contributions,card_tiers_enabled,card_bronze_max,card_silver_max,card_gold_max FROM career_configuration WHERE id=1`).first<any>(),
   ]);
   if (!row) return Response.json({ member: { ...member, playerId: null }, player: null });
   const player = attachPlayerCareerStats({ id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, type: row.type, primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), momentum: Number(row.momentum ?? 0), photoUrl: row.photo_url, notes: row.notes, active: !!row.active }, careerStats);
-  return Response.json({ member, player, config: { speedWeight: Number(configuration?.speed_weight ?? .48), skillWeight: Number(configuration?.skill_weight ?? .32), markingWeight: Number(configuration?.marking_weight ?? .2), momentumMultiplier: Number(careerConfiguration?.momentum_multiplier ?? 1), showContributions: Boolean(careerConfiguration?.track_contributions ?? 1) } }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ member, player, config: { speedWeight: Number(configuration?.speed_weight ?? .48), skillWeight: Number(configuration?.skill_weight ?? .32), markingWeight: Number(configuration?.marking_weight ?? .2), momentumMultiplier: Number(careerConfiguration?.momentum_multiplier ?? 1), showContributions: Boolean(careerConfiguration?.track_contributions ?? 1), cardTiersEnabled: Boolean(careerConfiguration?.card_tiers_enabled ?? 0), cardBronzeMax: Number(careerConfiguration?.card_bronze_max ?? 2.4), cardSilverMax: Number(careerConfiguration?.card_silver_max ?? 3.9), cardGoldMax: Number(careerConfiguration?.card_gold_max ?? 4.5) } }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function PUT(request: Request) {

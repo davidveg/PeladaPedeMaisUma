@@ -231,3 +231,28 @@ test("vínculo compartilhado impede que administrador e usuário escolham o mesm
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração adiciona a configuração de cards por nível desativada por padrão", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-card-tiers-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO career_configuration (id) VALUES (1)").run();
+    const migration = await readFile(new URL("../drizzle/0011_player_card_tiers.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const initial = await bindings.DB.prepare("SELECT card_tiers_enabled,card_bronze_max,card_silver_max,card_gold_max FROM career_configuration WHERE id=1").first();
+    assert.equal(initial.card_tiers_enabled, 0);
+    assert.equal(initial.card_bronze_max, 2.4);
+    assert.equal(initial.card_silver_max, 3.9);
+    assert.equal(initial.card_gold_max, 4.5);
+    await bindings.DB.prepare("UPDATE career_configuration SET card_tiers_enabled=1,card_bronze_max=2.2,card_silver_max=3.7,card_gold_max=4.4 WHERE id=1").run();
+    const enabled = await bindings.DB.prepare("SELECT card_tiers_enabled,card_bronze_max,card_silver_max,card_gold_max FROM career_configuration WHERE id=1").first();
+    assert.equal(enabled.card_tiers_enabled, 1);
+    assert.equal(enabled.card_bronze_max, 2.2);
+    assert.equal(enabled.card_silver_max, 3.7);
+    assert.equal(enabled.card_gold_max, 4.4);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -47,6 +47,10 @@ export const auditLogs = sqliteTable("audit_logs", { id: text("id").primaryKey()
 export const careerConfiguration = sqliteTable("career_configuration", {
   id: integer("id").primaryKey().default(1), enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   trackContributions: integer("track_contributions", { mode: "boolean" }).notNull().default(true),
+  cardTiersEnabled: integer("card_tiers_enabled", { mode: "boolean" }).notNull().default(false),
+  cardBronzeMax: real("card_bronze_max").notNull().default(2.4),
+  cardSilverMax: real("card_silver_max").notNull().default(3.9),
+  cardGoldMax: real("card_gold_max").notNull().default(4.5),
   momentumMultiplier: real("momentum_multiplier").notNull().default(1),
   winnerBonus: real("winner_bonus").notNull().default(.1), loserPenalty: real("loser_penalty").notNull().default(-.1),
   motmThird: real("motm_third").notNull().default(.1), motmSecond: real("motm_second").notNull().default(.2), motmFirst: real("motm_first").notNull().default(.3),

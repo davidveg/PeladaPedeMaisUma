@@ -138,6 +138,8 @@ O recurso vem ativado. Em uma separação salva com pelo menos 7 jogadores, um a
 
 Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores, o multiplicador aplicado ao overall e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
 
+Nessa mesma tela, a opção **Cards por nível** pode variar o visual da carta conforme o overall final arredondado para uma casa decimal. Os limites máximos de bronze, prata e ouro são configuráveis e começam em `2,4`, `3,9` e `4,5`; acima do limite ouro, o card é lendário. A lista pública usa a mesma classificação para colorir cada linha. A opção vem desativada por padrão; nesse estado, todas as cartas mantêm o visual ouro tradicional e as linhas da lista permanecem sem cores de nível.
+
 Depois do encerramento, a separação salva oferece o botão **Compartilhar resultado no WhatsApp**, que monta uma mensagem com placar, quantidade de votos, os dois pódios, ajustes de momentum e o link público da partida.
 
 Enquanto a votação estiver aberta, administradores podem revisar e remover votos, liberando o participante para votar novamente. O encerramento, automático pelo prazo ou antecipado por um administrador, aplica o momentum uma única vez, invalida novos envios e torna votos e resultado imutáveis. Cada partida guarda uma cópia dos parâmetros vigentes na abertura, portanto mudanças posteriores nas configurações não alteram a premiação daquela votação.

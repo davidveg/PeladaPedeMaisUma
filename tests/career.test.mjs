@@ -15,6 +15,7 @@ test("calcula o momentum da equipe e a diferença necessária ao corrigir o resu
 });
 test("valida os valores padrão do Modo Carreira",()=>assert.equal(validateCareerConfig(defaultCareerConfig),true));
 test("limita o multiplicador de momentum entre zero e cinco",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:0}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:-.1}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5.1}),false)});
+test("valida os limites crescentes dos níveis de card",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,cardBronzeMax:2.4,cardSilverMax:3.9,cardGoldMax:4.5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,cardBronzeMax:4,cardSilverMax:3.9}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,cardGoldMax:5}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,cardSilverMax:3.95}),false)});
 test("impede auto voto, repetição entre categorias e não participantes",()=>{
  assert.match(validateCareerVote({...valid,motmFirstId:"a"},participantIds),/si mesmo/);
  assert.match(validateCareerVote({...valid,dotmFirstId:"b"},participantIds),/somente uma vez/);
