@@ -31,3 +31,12 @@ export function buildWhatsAppShareUrl(message: string): string {
   url.searchParams.set("text", message);
   return url.toString();
 }
+
+export function buildWhatsAppCareerResultsMessage({matchTitle,blueScore,yellowScore,results,names,separationUrl}:{matchTitle:string;blueScore:number;yellowScore:number;results:any;names:Record<string,string>;separationUrl?:string}) {
+  const ball=String.fromCodePoint(0x26bd,0xfe0f),trophy=String.fromCodePoint(0x1f3c6),chart=String.fromCodePoint(0x1f4ca),warning=String.fromCodePoint(0x26a0,0xfe0f),medals=[0x1f947,0x1f948,0x1f949].map(code=>String.fromCodePoint(code));
+  const title=matchTitle.replace(/\*/g,"").trim(),signed=(value:number)=>`${value>0?"+":""}${Number(value).toFixed(1)}`;
+  const podium=(entries:any[])=>(entries||[]).map((entry:any,index:number)=>`${medals[index]||`${entry.place}º`} ${names[entry.playerId]||"Jogador"} (${signed(entry.momentum)})`).join("\n");
+  const voteCount=Number(results?.voteCount||0),details=voteCount?`${trophy} *Man of the Match*\n${podium(results.motm)}\n\n${warning} *Deception of the Match*\n${podium(results.dotm)}`:"Votação encerrada sem votos válidos.";
+  const link=separationUrl?`\n\n${chart} *Veja os detalhes da partida:*\n${separationUrl}`:"";
+  return `${ball} *PELADA PEDE MAIS UMA*\n\n${trophy} *Resultado da votação*\n${title}\n\n*Placar:* Azul ${blueScore} × ${yellowScore} Amarelo\n*Votos registrados:* ${voteCount}\n\n${details}${link}`;
+}

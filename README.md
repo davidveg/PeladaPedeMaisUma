@@ -9,7 +9,7 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Cadastro reutilizável de mensalistas, convidados e goleiros, com o tipo sugerido automaticamente pela seção da lista e notas decimais de 1 a 5. Jogadores de linha usam velocidade, habilidade e marcação; goleiros usam habilidade (reflexos e agilidade), posicionamento e saída de gol (coragem), além do momentum.
 - Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, marcação, médias e proteção do quartil superior no caso ímpar.
 - Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
-- Montagem e confirmação de times exclusivas para administradores autenticados; visitantes acessam somente as separações confirmadas e seus detalhes.
+- Montagem e confirmação de times exclusivas para administradores autenticados; visitantes acessam somente as separações confirmadas e seus detalhes por links públicos permanentes, copiáveis e compartilháveis.
 - Ordem de chegada persistente e independente para cada equipe nas separações salvas, editável somente por administradores e exibida do primeiro ao último jogador de cada time em campo.
 - Compartilhamento pelo clipboard em formato simples ou com pontuações.
 - Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
@@ -138,9 +138,13 @@ O recurso vem ativado. Em uma separação salva com pelo menos 7 jogadores, um a
 
 Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores, o multiplicador aplicado ao overall e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
 
+Depois do encerramento, a separação salva oferece o botão **Compartilhar resultado no WhatsApp**, que monta uma mensagem com placar, quantidade de votos, os dois pódios, ajustes de momentum e o link público da partida.
+
 Enquanto a votação estiver aberta, administradores podem revisar e remover votos, liberando o participante para votar novamente. O encerramento, automático pelo prazo ou antecipado por um administrador, aplica o momentum uma única vez, invalida novos envios e torna votos e resultado imutáveis. Cada partida guarda uma cópia dos parâmetros vigentes na abertura, portanto mudanças posteriores nas configurações não alteram a premiação daquela votação.
 
 O acompanhamento de **gols e assistências** também é configurado nessa tela e vem ativado por padrão. Quando ativo, cada gol do placar exige um autor do time correspondente e aceita opcionalmente um jogador do mesmo time como assistente; o autor não pode assistir o próprio gol. Gols contra são marcados como **GC**, entram somente no placar, não permitem assistência e não aumentam o histórico individual do jogador responsável. Os totais acumulados aparecem nos cards dos jogadores. Desativar a opção apenas oculta o formulário e as estatísticas, preservando todos os registros anteriores.
+
+Antes de confirmar o resultado, um administrador pode abrir o **Rascunho da súmula** pela separação salva. A página foi preparada para celular e tablet: cada gol adicionado atualiza o placar automaticamente e permite informar autor, assistência ou gol contra. O rascunho fica salvo na própria separação e pode ser carregado na tela de confirmação para uma última revisão; somente a confirmação oficial aplica estatísticas, momentum e abre a votação.
 
 Administradores podem corrigir o placar, os gols e as assistências de uma partida já confirmada pela própria separação salva. A correção substitui os registros individuais e ajusta o momentum das equipes somente pela diferença entre o resultado anterior e o novo, sem duplicar bônus ou ônus; a votação existente permanece aberta ou encerrada no estado em que já se encontrava.
 

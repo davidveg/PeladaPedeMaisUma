@@ -32,7 +32,7 @@ export const passwordResetTokens = sqliteTable("password_reset_tokens", { id: te
 export const separations = sqliteTable("team_separations", {
   id: text("id").primaryKey(), matchTitle: text("match_title").notNull(), matchDate: text("match_date"), location: text("location"),
   originalText: text("original_text").notNull(), snapshot: text("snapshot").notNull(), manuallyAdjusted: integer("manually_adjusted", { mode: "boolean" }).notNull().default(false),
-  arrivalOrder: text("arrival_order"), balanceScore: real("balance_score").notNull(), balanceClassification: text("balance_classification").notNull(), confirmedAt: text("confirmed_at").notNull(), deletedAt: text("deleted_at"), ...timestamps,
+  arrivalOrder: text("arrival_order"), matchDraft: text("match_draft"), balanceScore: real("balance_score").notNull(), balanceClassification: text("balance_classification").notNull(), confirmedAt: text("confirmed_at").notNull(), deletedAt: text("deleted_at"), ...timestamps,
 });
 
 export const configurations = sqliteTable("system_configuration", {

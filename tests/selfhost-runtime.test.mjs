@@ -61,6 +61,23 @@ test("migração adiciona ordem de chegada às separações existentes", async (
   }
 });
 
+test("migração adiciona rascunho de súmula às separações existentes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-match-draft-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE team_separations (id TEXT PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO team_separations (id) VALUES ('match-1')").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0010_match_contribution_draft.sql", import.meta.url), "utf8"));
+    const draft={contributions:[{team:"BLUE",scorerPlayerId:"p1",assistPlayerId:null,ownGoal:false}]};
+    await bindings.DB.prepare("UPDATE team_separations SET match_draft=? WHERE id='match-1'").bind(JSON.stringify(draft)).run();
+    const row = await bindings.DB.prepare("SELECT match_draft FROM team_separations WHERE id='match-1'").first();
+    assert.deepEqual(JSON.parse(row.match_draft),draft);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("adaptador de uploads persiste bytes e metadados", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-selfhost-upload-"));
   const bindings = await createSelfhostBindings(directory);

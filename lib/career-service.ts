@@ -29,6 +29,7 @@ export async function createCareerMatch(separationId: string, blueScore: number,
   for(const playerId of blueIds) statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),updated_at=? WHERE id=?`).bind(deltaFor("BLUE"),now.toISOString(),playerId));
   for(const playerId of yellowIds) statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),updated_at=? WHERE id=?`).bind(deltaFor("YELLOW"),now.toISOString(),playerId));
   for(const contribution of contributionValidation.contributions) statements.push(db().prepare(`INSERT INTO career_match_contributions (id,career_match_id,scorer_player_id,assist_player_id,team,is_own_goal,created_at) VALUES (?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),id,contribution.scorerPlayerId,contribution.assistPlayerId||null,contribution.team,contribution.ownGoal?1:0,now.toISOString()));
+  statements.push(db().prepare(`UPDATE team_separations SET match_draft=NULL,updated_at=? WHERE id=?`).bind(now.toISOString(),separationId));
   await db().batch(statements);
   await audit(administratorId,"CAREER_MATCH_CONFIRMED","career_match",id,{separationId,blueScore,yellowScore,winnerTeam,closesAt:closesAt.toISOString(),goals:contributionValidation.contributions.filter(goal=>!goal.ownGoal).length,ownGoals:contributionValidation.contributions.filter(goal=>goal.ownGoal).length,assists:contributionValidation.contributions.filter(goal=>goal.assistPlayerId).length});
   logEvent("info","career_match_confirmed",{careerMatchId:id,separationId,winnerTeam});
