@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Pelada Pede Mais Uma",
+    "slug": "pelada-pede-mais-uma",
+    "version": "1.0.0",
+    "orientation": "default",
+    "scheme": "peladapedemaisuma",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.peladapedemaisuma.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "br.com.peladapedemaisuma.app",
+      "versionCode": 1,
+      "adaptiveIcon": { "backgroundColor": "#0B3D2E" }
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-secure-store", { "configureAndroidBackup": true }],
+      ["expo-image-picker", { "photosPermission": "Permita selecionar uma foto para o seu card de jogador.", "microphonePermission": false }]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

@@ -1,0 +1,20 @@
+appId: br.com.peladapedemaisuma.app
+name: Pesos administrativos preservam 100%
+---
+- launchApp:
+    clearState: true
+- tapOn: E-mail
+- inputText: ${ADMIN_EMAIL}
+- tapOn: Senha
+- inputText: ${ADMIN_PASSWORD}
+- tapOn: Entrar
+- tapOn: Pesos
+- assertVisible: Total configurado
+- assertVisible: 100%
+- tapOn: Peso da Velocidade
+- eraseText
+- inputText: "50"
+- assertVisible: 100%
+- tapOn: Salvar pesos
+- tapOn: Salvar
+- assertVisible: Tudo certo

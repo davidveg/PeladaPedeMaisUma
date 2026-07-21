@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: Pelada Pede Mais Uma - API Mobile
+  version: 1.0.0
+  description: Contratos nativos. A autenticação web por cookie permanece compatível e independente.
+servers:
+  - url: https://peladapedemaisuma.exemplo.com
+security:
+  - bearerAuth: []
+paths:
+  /api/mobile/auth:
+    get:
+      summary: Consulta a sessão nativa atual
+      responses:
+        "200": { description: Sessão válida, content: { application/json: { schema: { $ref: "#/components/schemas/AccountResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Login nativo de jogador ou administrador
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: jogador@example.com }
+                password: { type: string, format: password }
+                deviceName: { type: string, maxLength: 120, example: iPhone 17 - 1.0.0 }
+      responses:
+        "201": { description: Tokens emitidos, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "401": { description: Credenciais inválidas }
+        "403": { description: Conta desativada ou primeiro acesso administrativo pendente }
+    put:
+      summary: Rotaciona access e refresh tokens
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [refreshToken], properties: { refreshToken: { type: string }, deviceName: { type: string, maxLength: 120 } } } } }
+      responses:
+        "200": { description: Novo par de tokens, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "401": { description: Token expirado, revogado ou reutilizado }
+    delete:
+      summary: Revoga a sessão do aparelho
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { refreshToken: { type: string } } } } }
+      responses:
+        "200": { description: Sessão revogada }
+  /api/mobile/separations:
+    get:
+      summary: Lista as separações para a conta autenticada
+      responses:
+        "200": { description: Lista com snapshots, placar, contribuições, chegada e URL de votação }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Salva uma separação (administrador)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, originalText, result]
+              properties:
+                title: { type: string }
+                date: { type: [string, "null"], format: date }
+                location: { type: [string, "null"] }
+                originalText: { type: string }
+                result: { $ref: "#/components/schemas/TeamProposal" }
+                manuallyAdjusted: { type: boolean }
+      responses:
+        "201": { description: Separação criada }
+        "200": { description: Repetição idempotente, headers: { x-idempotent-replay: { schema: { type: string, const: "true" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      summary: Salva novamente as ordens independentes de chegada (administrador)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [id, arrivalOrder], properties: { id: { type: string, format: uuid }, arrivalOrder: { type: object, required: [blue, yellow], properties: { blue: { type: array, items: { type: string } }, yellow: { type: array, items: { type: string } } } } } } } }
+      responses:
+        "200": { description: Ordem validada e salva }
+        "400": { description: Jogador ausente, duplicado ou de outra equipe }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/mobile/separations/proposal:
+    post:
+      summary: Interpreta confirmações e executa o algoritmo oficial (administrador)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [originalText], properties: { originalText: { type: string }, nonce: { type: integer, minimum: 0 } } }
+                - { type: object, required: [playerIds], properties: { playerIds: { type: array, minItems: 4, items: { type: string } }, nonce: { type: integer, minimum: 0 } } }
+      responses:
+        "200": { description: Proposta oficial com jogadores e configuração, content: { application/json: { schema: { type: object, properties: { result: { $ref: "#/components/schemas/TeamProposal" } } } } } }
+        "422": { description: Nome ausente, ambíguo, duplicado ou jogador inativo }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/mobile/config:
+    get:
+      summary: Consulta somente os três pesos editáveis (administrador)
+      responses:
+        "200": { description: Pesos atuais, content: { application/json: { schema: { $ref: "#/components/schemas/Weights" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Atualiza somente os três pesos editáveis (administrador)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/Weights" } } } }
+      responses:
+        "200": { description: Pesos atualizados e auditados }
+        "400": { description: Pesos fora do intervalo ou soma diferente de 100% }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/mobile/career/match:
+    post:
+      summary: Confirma o resultado final (administrador)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MatchInput" } } } }
+      responses:
+        "201": { description: Resultado confirmado e URL HTTPS de votação retornada }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Corrige um resultado confirmado (administrador, auditado)
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { required: true, content: { application/json: { schema: { allOf: [{ $ref: "#/components/schemas/MatchInput" }, { type: object, required: [matchId], properties: { matchId: { type: string } } }] } } } }
+      responses:
+        "200": { description: Resultado corrigido }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/member-profile:
+    get:
+      summary: Perfil e card oficial do jogador associado
+      responses:
+        "200": { description: Conta, jogador associado ou null, estatísticas e configuração oficial do card }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/players:
+    get:
+      summary: Jogadores disponíveis para montar os times (administrador)
+      responses:
+        "200": { description: Jogadores ativos e atributos oficiais }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/career/draft:
+    get:
+      summary: Consulta o rascunho da partida (administrador)
+      parameters: [{ $ref: "#/components/parameters/SeparationId" }]
+      responses:
+        "200": { description: Participantes, eventos, placar provisório e recursos habilitados }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Salva o rascunho sem oficializar o resultado (administrador)
+      parameters: [{ $ref: "#/components/parameters/SeparationId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [contributions], properties: { contributions: { type: array, items: { $ref: "#/components/schemas/Contribution" } } } } } }
+      responses:
+        "200": { description: Rascunho validado, salvo e auditado }
+        "400": { description: Autor, assistência, equipe ou GC inválido }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/career/admin:
+    get:
+      summary: Configuração e partidas administrativas do Modo Carreira
+      responses:
+        "200": { description: Configuração oficial e partidas }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/public-config:
+    get:
+      summary: URL pública canônica para links compartilháveis
+      security: []
+      responses:
+        "200": { description: URL pública, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri } } } } } }
+  /api/health:
+    get:
+      summary: Disponibilidade do servidor e banco
+      security: []
+      responses:
+        "200": { description: Servidor saudável }
+        "503": { description: Servidor ou banco indisponível }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: opaque }
+  parameters:
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 16, maxLength: 128 }, description: UUID gerado pelo cliente e reutilizado somente ao repetir a mesma ação. }
+    SeparationId: { name: separationId, in: query, required: true, schema: { type: string }, description: Identificador imutável da separação. }
+  responses:
+    Unauthorized: { description: Token ausente, expirado, revogado ou papel insuficiente }
+  schemas:
+    Account:
+      type: object
+      required: [id, email, role, playerId]
+      properties: { id: { type: string }, email: { type: string, format: email }, role: { enum: [admin, player] }, playerId: { type: [string, "null"] } }
+    AccountResponse: { type: object, properties: { account: { $ref: "#/components/schemas/Account" } } }
+    Session:
+      allOf:
+        - { $ref: "#/components/schemas/AccountResponse" }
+        - type: object
+          required: [accessToken, refreshToken, accessExpiresAt, refreshExpiresAt]
+          properties: { accessToken: { type: string }, refreshToken: { type: string }, accessExpiresAt: { type: string, format: date-time }, refreshExpiresAt: { type: string, format: date-time }, expiresIn: { type: integer, example: 900 } }
+    Weights:
+      type: object
+      required: [speedWeight, skillWeight, markingWeight]
+      properties: { speedWeight: { type: number, minimum: 0, maximum: 1 }, skillWeight: { type: number, minimum: 0, maximum: 1 }, markingWeight: { type: number, minimum: 0, maximum: 1 } }
+    TeamProposal:
+      type: object
+      required: [blue, yellow, speedWeight, skillWeight, markingWeight]
+      properties: { blue: { type: array, items: { type: object } }, yellow: { type: array, items: { type: object } }, rating: { type: string }, cost: { type: number }, speedWeight: { type: number }, skillWeight: { type: number }, markingWeight: { type: number } }
+    Contribution:
+      type: object
+      required: [team, scorerPlayerId]
+      properties: { team: { enum: [BLUE, YELLOW] }, scorerPlayerId: { type: string }, assistPlayerId: { type: [string, "null"] }, ownGoal: { type: boolean } }
+    MatchInput:
+      type: object
+      required: [blueScore, yellowScore, contributions]
+      properties: { separationId: { type: string }, blueScore: { type: integer, minimum: 0, maximum: 99 }, yellowScore: { type: integer, minimum: 0, maximum: 99 }, contributions: { type: array, items: { $ref: "#/components/schemas/Contribution" } } }

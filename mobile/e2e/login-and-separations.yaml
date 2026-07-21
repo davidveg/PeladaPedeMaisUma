@@ -1,0 +1,14 @@
+appId: br.com.peladapedemaisuma.app
+name: Login e consulta de separações
+---
+- launchApp:
+    clearState: true
+- tapOn: E-mail
+- inputText: ${PLAYER_EMAIL}
+- tapOn: Senha
+- inputText: ${PLAYER_PASSWORD}
+- tapOn: Entrar
+- assertVisible: Separações salvas
+- swipe:
+    direction: DOWN
+- assertNotVisible: Nova

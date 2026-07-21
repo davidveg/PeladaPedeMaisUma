@@ -1,0 +1,30 @@
+appId: br.com.peladapedemaisuma.app
+name: Ordem, rascunho e resultado
+---
+- launchApp:
+    clearState: true
+- tapOn: E-mail
+- inputText: ${ADMIN_EMAIL}
+- tapOn: Senha
+- inputText: ${ADMIN_PASSWORD}
+- tapOn: Entrar
+- tapOn: Separações
+- tapOn: ${MATCH_TITLE}
+- assertVisible: Ordem de chegada
+- tapOn:
+    text: Descer.*
+    index: 0
+- tapOn: Salvar ordem
+- tapOn: Salvar
+- assertVisible: Tudo certo
+- tapOn: Adicionar gol
+- tapOn: Time Azul
+- tapOn:
+    text: ${BLUE_SCORER}
+- tapOn: Sem assistência
+- tapOn: Adicionar à súmula
+- tapOn: Salvar rascunho
+- assertVisible: Rascunho salvo
+- tapOn: Confirmar resultado final
+- tapOn: Confirmar
+- assertVisible: Resultado confirmado

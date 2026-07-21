@@ -1,0 +1,51 @@
+{
+  "name": "pelada-pede-mais-uma-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@hookform/resolvers": "^5.2.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/netinfo": "12.0.1",
+    "@react-native-community/slider": "5.2.0",
+    "@tanstack/query-async-storage-persister": "^5.90.20",
+    "@tanstack/react-query": "^5.90.20",
+    "@tanstack/react-query-persist-client": "^5.90.20",
+    "expo": "~56.0.5",
+    "expo-application": "~56.0.3",
+    "expo-constants": "~56.0.20",
+    "expo-crypto": "~56.0.4",
+    "expo-image-manipulator": "~56.0.22",
+    "expo-image-picker": "~56.0.21",
+    "expo-linear-gradient": "~56.0.4",
+    "expo-linking": "~56.0.12",
+    "expo-router": "~56.2.14",
+    "expo-secure-store": "~56.0.4",
+    "expo-status-bar": "~56.0.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-hook-form": "^7.62.0",
+    "react-native": "0.85.3",
+    "react-native-draggable-flatlist": "^4.0.3",
+    "react-native-gesture-handler": "~2.31.1",
+    "react-native-reanimated": "4.3.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2",
+    "react-native-web": "~0.21.0",
+    "react-native-worklets": "0.8.3",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}

@@ -26,6 +26,18 @@ export const memberAccounts = sqliteTable("member_accounts", {
   playerId: text("player_id").unique(), active: integer("active", { mode: "boolean" }).notNull().default(true), lastLoginAt: text("last_login_at"), ...timestamps,
 });
 export const memberSessions = sqliteTable("member_sessions", { id: text("id").primaryKey(), memberAccountId: text("member_account_id").notNull(), expiresAt: text("expires_at").notNull(), createdAt: text("created_at").notNull() });
+export const mobileSessions = sqliteTable("mobile_sessions", {
+  id: text("id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull(),
+  accessTokenHash: text("access_token_hash").notNull().unique(), refreshTokenHash: text("refresh_token_hash").notNull().unique(),
+  accessExpiresAt: text("access_expires_at").notNull(), refreshExpiresAt: text("refresh_expires_at").notNull(),
+  revokedAt: text("revoked_at"), replacedBySessionId: text("replaced_by_session_id"), deviceName: text("device_name"),
+  lastUsedAt: text("last_used_at"), createdAt: text("created_at").notNull(),
+});
+export const mobileIdempotencyKeys = sqliteTable("mobile_idempotency_keys", {
+  id: text("id").primaryKey(), administratorId: text("administrator_id").notNull(), operation: text("operation").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(), statusCode: integer("status_code").notNull(), responseJson: text("response_json").notNull(),
+  createdAt: text("created_at").notNull(),
+}, table => [uniqueIndex("mobile_idempotency_unique").on(table.administratorId, table.operation, table.idempotencyKey)]);
 export const playerAccountLinks = sqliteTable("player_account_links", { playerId: text("player_id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull().unique(), createdAt: text("created_at").notNull() });
 export const passwordResetTokens = sqliteTable("password_reset_tokens", { id: text("id").primaryKey(), administratorId: text("administrator_id").notNull(), tokenHash: text("token_hash").notNull(), expiresAt: text("expires_at").notNull(), usedAt: text("used_at"), createdAt: text("created_at").notNull() });
 

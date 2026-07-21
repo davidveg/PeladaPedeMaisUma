@@ -1,0 +1,19 @@
+import { Alert, ScrollView, Text, TextInput, View } from "react-native";
+import Slider from "@react-native-community/slider";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { apiFetch, jsonMutation } from "@/api";
+import { Button, Card, ErrorState, Header, Screen } from "@/components";
+import { colors } from "@/theme";
+import { normalizeWeights, type Weights } from "@/weights";
+
+const fields = [{ key: "speedWeight", label: "Velocidade", help: "Influência da velocidade e do posicionamento do goleiro." }, { key: "skillWeight", label: "Habilidade", help: "Influência técnica de jogadores e goleiros." }, { key: "markingWeight", label: "Marcação", help: "Influência defensiva e da saída de gol." }] as const;
+
+export default function ConfigScreen() {
+  const client = useQueryClient(), query = useQuery({ queryKey: ["mobile-config"], queryFn: () => apiFetch<Weights>("/api/mobile/config") }), [editedWeights, setEditedWeights] = useState<Weights | null>(null), weights = editedWeights || query.data || null;
+  const mutation = useMutation({ mutationFn: (value: Weights) => apiFetch("/api/mobile/config", jsonMutation("PUT", value)), onSuccess: () => { client.invalidateQueries({ queryKey: ["mobile-config"] }); client.invalidateQueries({ queryKey: ["profile"] }); Alert.alert("Tudo certo", "Pesos atualizados com sucesso."); }, onError: (error: Error) => Alert.alert("Não foi possível salvar", error.message) });
+  if (query.isError) return <Screen><Header title="Pesos do algoritmo"/><ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/></Screen>;
+  const change = (key: keyof Weights, percent: number) => setEditedWeights(normalizeWeights(weights || { speedWeight: .48, skillWeight: .32, markingWeight: .2 }, key as "speedWeight" | "skillWeight" | "markingWeight", Math.max(0, Math.min(100, percent)) / 100));
+  const save = () => weights && Alert.alert("Salvar novos pesos?", "A mudança será usada nas próximas separações e ficará registrada na auditoria.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => mutation.mutate(weights) }]);
+  return <Screen><Header eyebrow="ADMINISTRAÇÃO" title="Pesos do algoritmo"/><ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 14 }}>{weights ? <>{fields.map(field => <Card key={field.key} style={{ gap: 8 }}><View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}><Text style={{ color: colors.text, fontSize: 17, fontWeight: "800" }}>{field.label}</Text><View style={{ flexDirection: "row", alignItems: "center" }}><TextInput accessibilityLabel={`Peso da ${field.label}`} keyboardType="decimal-pad" value={String(Math.round(weights[field.key] * 100))} onChangeText={value => change(field.key, Number(value.replace(/\D/g, "")))} style={{ width: 64, minHeight: 44, textAlign: "right", borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 8, fontSize: 17 }}/><Text style={{ fontWeight: "800" }}>%</Text></View></View><Text style={{ color: colors.muted }}>{field.help}</Text><Slider accessibilityLabel={`Ajustar peso da ${field.label}`} minimumValue={0} maximumValue={1} step={.01} value={weights[field.key]} onValueChange={value => change(field.key, value * 100)} minimumTrackTintColor={colors.green} maximumTrackTintColor={colors.border} thumbTintColor={colors.green}/></Card>)}<Card style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ fontWeight: "800", color: colors.text }}>Total configurado</Text><Text style={{ fontWeight: "900", color: colors.success }}>{Math.round((weights.speedWeight + weights.skillWeight + weights.markingWeight) * 100)}%</Text></Card><Button title="Salvar pesos" busy={mutation.isPending} onPress={save}/></> : null}</ScrollView></Screen>;
+}

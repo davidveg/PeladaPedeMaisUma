@@ -1,0 +1,23 @@
+appId: br.com.peladapedemaisuma.app
+name: Administrador cria separação
+---
+- launchApp:
+    clearState: true
+- tapOn: E-mail
+- inputText: ${ADMIN_EMAIL}
+- tapOn: Senha
+- inputText: ${ADMIN_PASSWORD}
+- tapOn: Entrar
+- tapOn: Nova
+- assertVisible: Importar confirmações
+- tapOn: Lista do WhatsApp
+- inputText: ${WHATSAPP_CONFIRMED_LIST}
+- tapOn: Processar confirmações
+- assertVisible: Revisar jogadores
+- tapOn: Gerar times
+- assertVisible: TIME AZUL
+- assertVisible: TIME AMARELO
+- tapOn: Continuar
+- tapOn: Confirmar e salvar
+- tapOn: Salvar
+- assertVisible: Equilíbrio e regras
