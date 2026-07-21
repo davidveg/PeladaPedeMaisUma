@@ -1,31 +1,43 @@
-import { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import DraggableFlatList, { ScaleDecorator, type RenderItemParams } from "react-native-draggable-flatlist";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { apiFetch, jsonMutation } from "@/api";
 import { useAuth } from "@/auth";
 import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
+import { CareerVotingResults } from "@/career-voting-results";
 import { colors } from "@/theme";
 import type { Contribution, Player, Separation, TeamResult } from "@/types";
-import { formatDate, separationMessage, shareText, votingMessage } from "@/sharing";
+import { careerResultsMessage, formatDate, separationMessage, shareText, votingMessage } from "@/sharing";
 
 type DraftPayload = { enabled: boolean; trackContributions: boolean; officialResultConfirmed: boolean; players: { blue: Player[]; yellow: Player[] }; draft: { contributions: Contribution[]; blueScore: number; yellowScore: number; updatedAt?: string } };
 
 export default function SeparationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>(), { account } = useAuth(), admin = account?.role === "admin", client = useQueryClient();
-  const listQuery = useQuery({ queryKey: ["separations"], queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations") });
+  const listQuery = useQuery({
+    queryKey: ["separations"],
+    queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
+    refetchInterval: query => {
+      const data = query.state.data as { separations: Separation[] } | undefined;
+      return data?.separations.find(value => value.id === id)?.career?.status === "OPEN" ? 30_000 : false;
+    },
+  });
   const publicQuery = useQuery({ queryKey: ["public-config"], queryFn: () => apiFetch<{ baseUrl: string }>("/api/public-config") });
+  useFocusEffect(useCallback(() => {
+    void listQuery.refetch();
+  }, [listQuery.refetch]));
   const item = listQuery.data?.separations.find(value => value.id === id);
   if (listQuery.isError && !listQuery.data) return <Screen><Header title="Detalhes"/><ErrorState message={(listQuery.error as Error).message} retry={() => listQuery.refetch()}/></Screen>;
   if (!item) return <Screen><Header title="Detalhes"/><EmptyState title="Separação não encontrada" message="Atualize a lista e tente novamente."/></Screen>;
-  return <Screen><Header eyebrow={formatDate(item.matchDate || item.confirmedAt)} title={item.matchTitle}/><ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 14 }}>
+  return <Screen><Header eyebrow={formatDate(item.matchDate || item.confirmedAt)} title={item.matchTitle}/><ScrollView refreshControl={<RefreshControl refreshing={listQuery.isRefetching} onRefresh={listQuery.refetch} tintColor={colors.green}/>} contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 14 }}>
     {item.career ? <Card style={{ alignItems: "center", gap: 4 }}><Text style={{ color: colors.muted }}>PLACAR CONFIRMADO</Text><Text style={{ fontSize: 39, fontWeight: "900", color: colors.text }}><Text style={{ color: colors.blue }}>{item.career.blueScore}</Text> × <Text style={{ color: colors.yellow }}>{item.career.yellowScore}</Text></Text><Text style={{ color: colors.muted }}>Votação {item.career.status === "OPEN" ? `aberta até ${formatDate(item.career.closesAt)}` : "encerrada"}</Text></Card> : <Card><Text style={{ color: colors.yellow, textAlign: "center", fontWeight: "800" }}>Resultado pendente</Text></Card>}
+    {item.career?.status === "CLOSED" ? <CareerVotingResults item={item}/> : null}
     <TeamCard title="TIME AZUL" color={colors.blue} soft={colors.blueSoft} players={item.snapshot.blue} config={item.snapshot}/><TeamCard title="TIME AMARELO" color={colors.yellow} soft={colors.yellowSoft} players={item.snapshot.yellow} config={item.snapshot}/>
     <Card style={{ gap: 7 }}><Text style={{ fontWeight: "800", color: colors.text }}>Equilíbrio e regras</Text><Text style={{ color: colors.green, fontWeight: "700" }}>{item.balanceClassification}</Text><Text style={{ color: colors.muted }}>Velocidade {Math.round(Number(item.snapshot.speedWeight || 0) * 100)}% · Habilidade {Math.round(Number(item.snapshot.skillWeight || 0) * 100)}% · Marcação {Math.round(Number(item.snapshot.markingWeight || 0) * 100)}%</Text></Card>
     {item.career?.contributions?.length ? <Card style={{ gap: 8 }}><Text style={{ fontWeight: "800", color: colors.text }}>Gols e assistências</Text>{item.career.contributions.map((goal, index) => <GoalRow key={index} goal={goal}/>)}</Card> : null}
-    {admin ? <><Button title="Compartilhar times no WhatsApp" variant="secondary" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(separationMessage(item, publicQuery.data.baseUrl)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/><ArrivalEditor item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/><MatchPanel item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/>{item.career?.votingUrl ? <Button title="Compartilhar votação no WhatsApp" onPress={() => shareText(votingMessage(item, item.career!.votingUrl!)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</> : null}
+    {admin ? <><Button title="Compartilhar times no WhatsApp" variant="secondary" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(separationMessage(item, publicQuery.data.baseUrl)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/><ArrivalEditor item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/><MatchPanel item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/>{item.career?.status === "CLOSED" ? <Button title="Compartilhar resultado no WhatsApp" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(careerResultsMessage(item, publicQuery.data.baseUrl)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : item.career?.votingUrl ? <Button title="Compartilhar votação no WhatsApp" onPress={() => shareText(votingMessage(item, item.career!.votingUrl!)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</> : null}
   </ScrollView></Screen>;
 }
 

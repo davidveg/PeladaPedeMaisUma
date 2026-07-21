@@ -15,13 +15,35 @@
     "android": {
       "package": "br.com.peladapedemaisuma.app",
       "versionCode": 1,
-      "adaptiveIcon": { "backgroundColor": "#0B3D2E" }
+      "adaptiveIcon": {
+        "backgroundColor": "#0B3D2E"
+      }
     },
     "plugins": [
       "expo-router",
-      ["expo-secure-store", { "configureAndroidBackup": true }],
-      ["expo-image-picker", { "photosPermission": "Permita selecionar uma foto para o seu card de jogador.", "microphonePermission": false }]
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita selecionar uma foto para o seu card de jogador.",
+          "microphonePermission": false
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "00374e15-c3c9-46fd-ab57-ebb23ee01635"
+      }
+    },
+    "owner": "davidvegabr"
   }
 }

@@ -1,5 +1,6 @@
 import { Linking, Share } from "react-native";
 import type { Player, Separation } from "./types";
+export { careerResultsMessage } from "./career-results";
 
 function ensurePublicHttps(url: string) {
   const parsed = new URL(url);

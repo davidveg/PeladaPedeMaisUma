@@ -1,11 +1,18 @@
 import { useState, type PropsWithChildren } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
-import { QueryClient, onlineManager } from "@tanstack/react-query";
+import { AppState, Platform } from "react-native";
+import { focusManager, QueryClient, onlineManager } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
 onlineManager.setEventListener(setOnline => NetInfo.addEventListener(state => setOnline(Boolean(state.isConnected))));
+if (Platform.OS !== "web") {
+  focusManager.setEventListener(setFocused => {
+    const subscription = AppState.addEventListener("change", state => setFocused(state === "active"));
+    return () => subscription.remove();
+  });
+}
 const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: "ppm.query-cache.v1", throttleTime: 1000 });
 
 export function QueryProvider({ children }: PropsWithChildren) {
