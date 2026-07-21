@@ -6,6 +6,7 @@
     "orientation": "default",
     "scheme": "peladapedemaisuma",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon-football-beer.png",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -16,6 +17,7 @@
       "package": "br.com.peladapedemaisuma.app",
       "versionCode": 1,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-football-beer.png",
         "backgroundColor": "#0B3D2E"
       }
     },
