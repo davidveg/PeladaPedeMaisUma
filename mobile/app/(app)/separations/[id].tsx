@@ -76,6 +76,35 @@ function GoalModal({ visible, blue, yellow, onClose, onAdd }: { visible: boolean
   const [team, setTeam] = useState<"BLUE" | "YELLOW">("BLUE"), [ownGoal, setOwnGoal] = useState(false), [scorer, setScorer] = useState<Player | null>(null), [assist, setAssist] = useState<Player | null>(null);
   const benefiting = team === "BLUE" ? blue : yellow, scorers = ownGoal ? (team === "BLUE" ? yellow : blue) : benefiting;
   const changeTeam = (next: "BLUE" | "YELLOW") => { setTeam(next); setScorer(null); setAssist(null); }, changeOwnGoal = (next: boolean) => { setOwnGoal(next); setScorer(null); setAssist(null); };
-  return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}><ScrollView contentContainerStyle={{ padding: 24, gap: 14, backgroundColor: colors.cream, flexGrow: 1 }}><Header title="Adicionar gol"/><View style={{ flexDirection: "row", gap: 10 }}><View style={{ flex: 1 }}><Button title="Time Azul" variant={team === "BLUE" ? "primary" : "secondary"} onPress={() => changeTeam("BLUE")}/></View><View style={{ flex: 1 }}><Button title="Time Amarelo" variant={team === "YELLOW" ? "primary" : "secondary"} onPress={() => changeTeam("YELLOW")}/></View></View><Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}><Text style={{ fontWeight: "800", color: colors.text }}>Gol contra (GC)</Text><Switch value={ownGoal} onValueChange={changeOwnGoal} trackColor={{ true: colors.danger }}/></Card><Text style={{ fontWeight: "900", color: colors.text }}>{ownGoal ? "Jogador adversário que marcou contra" : "Autor do gol"}</Text>{scorers.map(player => <Choice key={player.id} selected={scorer?.id === player.id} label={player.displayName} onPress={() => setScorer(player)}/>)}{!ownGoal ? <><Text style={{ fontWeight: "900", color: colors.text }}>Assistência opcional</Text><Choice selected={!assist} label="Sem assistência" onPress={() => setAssist(null)}/>{benefiting.filter(player => player.id !== scorer?.id).map(player => <Choice key={player.id} selected={assist?.id === player.id} label={player.displayName} onPress={() => setAssist(player)}/>)}</> : null}<Button title="Adicionar à súmula" disabled={!scorer} onPress={() => scorer && onAdd({ team, scorerPlayerId: scorer.id, scorerName: scorer.displayName, assistPlayerId: assist?.id || null, assistName: assist?.displayName || null, ownGoal })}/><Button title="Cancelar" variant="secondary" onPress={onClose}/></ScrollView></Modal>;
+  return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <ScrollView contentContainerStyle={{ padding: 24, gap: 14, backgroundColor: colors.cream, flexGrow: 1 }}>
+      <Header title="Adicionar gol"/>
+      <View accessibilityRole="radiogroup" style={{ flexDirection: "row", gap: 10 }}>
+        <TeamButton team="BLUE" selected={team === "BLUE"} onPress={() => changeTeam("BLUE")}/>
+        <TeamButton team="YELLOW" selected={team === "YELLOW"} onPress={() => changeTeam("YELLOW")}/>
+      </View>
+      <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}><Text style={{ fontWeight: "800", color: colors.text }}>Gol contra (GC)</Text><Switch value={ownGoal} onValueChange={changeOwnGoal} trackColor={{ true: colors.danger }}/></Card>
+      <Text style={{ fontWeight: "900", color: colors.text }}>{ownGoal ? "Jogador adversário que marcou contra" : "Autor do gol"}</Text>
+      {scorers.map(player => <Choice key={player.id} selected={scorer?.id === player.id} label={player.displayName} onPress={() => setScorer(player)}/>)}
+      {!ownGoal ? <><Text style={{ fontWeight: "900", color: colors.text }}>Assistência opcional</Text><Choice selected={!assist} label="Sem assistência" onPress={() => setAssist(null)}/>{benefiting.filter(player => player.id !== scorer?.id).map(player => <Choice key={player.id} selected={assist?.id === player.id} label={player.displayName} onPress={() => setAssist(player)}/>)}</> : null}
+      <Button title="Adicionar à súmula" disabled={!scorer} onPress={() => scorer && onAdd({ team, scorerPlayerId: scorer.id, scorerName: scorer.displayName, assistPlayerId: assist?.id || null, assistName: assist?.displayName || null, ownGoal })}/>
+      <Button title="Cancelar" variant="secondary" onPress={onClose}/>
+    </ScrollView>
+  </Modal>;
 }
+
+function TeamButton({ team, selected, onPress }: { team: "BLUE" | "YELLOW"; selected: boolean; onPress: () => void }) {
+  const blue = team === "BLUE", color = blue ? colors.blue : colors.yellow, soft = blue ? colors.blueSoft : colors.yellowSoft;
+  const selectedText = blue ? "#fff" : colors.text, textColor = selected ? selectedText : color;
+  return <Pressable
+    accessibilityRole="radio"
+    accessibilityLabel={`Time ${blue ? "Azul" : "Amarelo"}`}
+    accessibilityState={{ selected }}
+    onPress={onPress}
+    style={({ pressed }) => ({ flex: 1, minHeight: 52, borderRadius: 14, borderWidth: 2, borderColor: color, backgroundColor: selected ? color : soft, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", opacity: pressed ? .8 : 1 })}
+  >
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} style={{ color: textColor, fontSize: 16, fontWeight: "900" }}>{selected ? "✓ " : ""}Time {blue ? "Azul" : "Amarelo"}</Text>
+  </Pressable>;
+}
+
 function Choice({ selected, label, onPress }: { selected: boolean; label: string; onPress: () => void }) { return <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ minHeight: 48, borderRadius: 10, padding: 12, backgroundColor: selected ? colors.green : "#fff", borderWidth: 1, borderColor: selected ? colors.green : colors.border }}><Text style={{ color: selected ? "#fff" : colors.text, fontWeight: "700" }}>{label}</Text></Pressable>; }
