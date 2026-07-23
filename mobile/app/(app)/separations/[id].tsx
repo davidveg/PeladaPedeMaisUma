@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { apiFetch, jsonMutation } from "@/api";
 import { useAuth } from "@/auth";
+import { BalanceDetails } from "@/balance-details";
 import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
 import { CareerVotingResults } from "@/career-voting-results";
 import { colors } from "@/theme";
@@ -35,7 +36,7 @@ export default function SeparationDetail() {
     {item.career ? <Card style={{ alignItems: "center", gap: 4 }}><Text style={{ color: colors.muted }}>PLACAR CONFIRMADO</Text><Text style={{ fontSize: 39, fontWeight: "900", color: colors.text }}><Text style={{ color: colors.blue }}>{item.career.blueScore}</Text> × <Text style={{ color: colors.yellow }}>{item.career.yellowScore}</Text></Text><Text style={{ color: colors.muted }}>Votação {item.career.status === "OPEN" ? `aberta até ${formatDate(item.career.closesAt)}` : "encerrada"}</Text></Card> : <Card><Text style={{ color: colors.yellow, textAlign: "center", fontWeight: "800" }}>Resultado pendente</Text></Card>}
     {item.career?.status === "CLOSED" ? <CareerVotingResults item={item}/> : null}
     <TeamCard title="TIME AZUL" color={colors.blue} soft={colors.blueSoft} players={item.snapshot.blue} config={item.snapshot}/><TeamCard title="TIME AMARELO" color={colors.yellow} soft={colors.yellowSoft} players={item.snapshot.yellow} config={item.snapshot}/>
-    <Card style={{ gap: 7 }}><Text style={{ fontWeight: "800", color: colors.text }}>Equilíbrio e regras</Text><Text style={{ color: colors.green, fontWeight: "700" }}>{item.balanceClassification}</Text><Text style={{ color: colors.muted }}>Velocidade {Math.round(Number(item.snapshot.speedWeight || 0) * 100)}% · Habilidade {Math.round(Number(item.snapshot.skillWeight || 0) * 100)}% · Marcação {Math.round(Number(item.snapshot.markingWeight || 0) * 100)}%</Text></Card>
+    <BalanceDetails result={item.snapshot} fallbackRating={item.balanceClassification}/>
     {item.career?.contributions?.length ? <Card style={{ gap: 8 }}><Text style={{ fontWeight: "800", color: colors.text }}>Gols e assistências</Text>{item.career.contributions.map((goal, index) => <GoalRow key={index} goal={goal}/>)}</Card> : null}
     {admin ? <><Button title="Compartilhar times no WhatsApp" variant="secondary" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(separationMessage(item, publicQuery.data.baseUrl)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/><ArrivalEditor item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/><MatchPanel item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/>{item.career?.status === "CLOSED" ? <Button title="Compartilhar resultado no WhatsApp" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(careerResultsMessage(item, publicQuery.data.baseUrl)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : item.career?.votingUrl ? <Button title="Compartilhar votação no WhatsApp" onPress={() => shareText(votingMessage(item, item.career!.votingUrl!)).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</> : null}
   </ScrollView></Screen>;
