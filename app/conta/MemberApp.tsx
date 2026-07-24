@@ -29,11 +29,23 @@ export default function MemberApp() {
   async function associate(candidate: any) {
     if (!confirm(`Confirmar a associação da sua conta com ${candidate.displayName}? Depois disso, somente um administrador poderá desfazer a associação.`)) return;
     setError("");
-    try { const result = await api("/api/member-players", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ playerId: candidate.id }) }); setNotice(result.message); await load(); } catch (cause: any) { setError(cause.message); }
+    try {
+      const result = await api("/api/member-players", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ playerId: candidate.id }) });
+      const returnTo = safeReturnTo();
+      if (returnTo) { window.location.assign(returnTo); return; }
+      setNotice(result.message);
+      await load();
+    } catch (cause: any) { setError(cause.message); }
   }
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
   if (!member) return <MemberAccess onDone={load} />;
   return <div className="member-page"><header className="member-header"><a href="/" className="brand"><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{member.accountType === "administrator" && <a href="/admin">Painel administrativo</a>}<a href="/">Área pública</a><button onClick={logout}>Sair</button></nav></header><main className="member-main"><div className="member-account-head"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : ""}</p></div></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}</main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+}
+
+function safeReturnTo() {
+  if (typeof window === "undefined") return "";
+  const value = new URLSearchParams(window.location.search).get("returnTo") || "";
+  return value.startsWith("/") && !value.startsWith("//") ? value : "";
 }
 
 function MemberAccess({ onDone }: { onDone: () => Promise<void> }) {

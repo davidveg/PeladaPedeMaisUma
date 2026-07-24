@@ -3,8 +3,11 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Redirect, Tabs } from "expo-router";
 import { ActivityIndicator, StyleSheet, View, type ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/api";
 import { useAuth } from "@/auth";
 import { colors } from "@/theme";
+import type { Separation } from "@/types";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -17,9 +20,15 @@ function TabIcon({ focused, color, active, inactive }: { focused: boolean; color
 export default function AppLayout() {
   const { account, loading } = useAuth();
   const insets = useSafeAreaInsets();
+  const separationsQuery = useQuery({
+    queryKey: ["separations"],
+    queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
+    enabled: Boolean(account),
+  });
   if (loading) return <View style={styles.loading}><ActivityIndicator color={colors.green}/></View>;
   if (!account) return <Redirect href="/login"/>;
   const admin = account.role === "admin";
+  const pendingVotes = separationsQuery.data?.separations.filter(item => item.career?.viewerCanVote).length || 0;
 
   return <Tabs screenOptions={{
     headerStyle: { backgroundColor: colors.green },
@@ -40,6 +49,8 @@ export default function AppLayout() {
     <Tabs.Screen name="index" options={{ href: null }}/>
     <Tabs.Screen name="separations/index" options={{
       title: "Separações",
+      tabBarBadge: pendingVotes || undefined,
+      tabBarBadgeStyle: styles.badge,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="people" inactive="people-outline"/>,
     }}/>
     <Tabs.Screen name="separations/[id]" options={{ href: null, title: "Detalhes" }}/>
@@ -71,4 +82,5 @@ const styles = StyleSheet.create({
   tabLabel: { marginTop: 2, fontWeight: "800", fontSize: 10 },
   iconPill: { width: 42, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   iconPillActive: { backgroundColor: "#E5F0E9" },
+  badge: { backgroundColor: colors.danger, color: "#fff", fontWeight: "900" },
 });

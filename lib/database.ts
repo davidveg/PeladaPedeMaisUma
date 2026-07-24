@@ -12,6 +12,10 @@ const statements = [
   `CREATE INDEX IF NOT EXISTS mobile_sessions_account_idx ON mobile_sessions(account_type,account_id)`,
   `CREATE INDEX IF NOT EXISTS mobile_sessions_refresh_idx ON mobile_sessions(refresh_token_hash)`,
   `CREATE TABLE IF NOT EXISTS mobile_idempotency_keys (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, operation TEXT NOT NULL, idempotency_key TEXT NOT NULL, status_code INTEGER NOT NULL, response_json TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(administrator_id,operation,idempotency_key))`,
+  `CREATE TABLE IF NOT EXISTS mobile_push_tokens (id TEXT PRIMARY KEY, account_type TEXT NOT NULL CHECK(account_type IN ('administrator','member')), account_id TEXT NOT NULL, mobile_session_id TEXT, expo_push_token TEXT NOT NULL UNIQUE, platform TEXT NOT NULL, device_name TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS mobile_push_tokens_account_idx ON mobile_push_tokens(account_type,account_id,active)`,
+  `CREATE TABLE IF NOT EXISTS push_notification_deliveries (id TEXT PRIMARY KEY, career_match_id TEXT NOT NULL, push_token_id TEXT NOT NULL, status TEXT NOT NULL, ticket_id TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(career_match_id,push_token_id))`,
+  `CREATE INDEX IF NOT EXISTS push_notification_deliveries_match_idx ON push_notification_deliveries(career_match_id)`,
   `CREATE TABLE IF NOT EXISTS player_account_links (player_id TEXT PRIMARY KEY, account_type TEXT NOT NULL, account_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS password_reset_tokens (id TEXT PRIMARY KEY, administrator_id TEXT NOT NULL, token_hash TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS team_separations (id TEXT PRIMARY KEY, match_title TEXT NOT NULL, match_date TEXT, location TEXT, original_text TEXT NOT NULL, snapshot TEXT NOT NULL, manually_adjusted INTEGER NOT NULL DEFAULT 0, arrival_order TEXT, match_draft TEXT, balance_score REAL NOT NULL, balance_classification TEXT NOT NULL, confirmed_at TEXT NOT NULL, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
@@ -19,7 +23,7 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS audit_logs (id TEXT PRIMARY KEY, administrator_id TEXT, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT, previous_data TEXT, new_data TEXT, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS career_configuration (id INTEGER PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1, track_contributions INTEGER NOT NULL DEFAULT 1, card_tiers_enabled INTEGER NOT NULL DEFAULT 0, card_bronze_max REAL NOT NULL DEFAULT 2.4, card_silver_max REAL NOT NULL DEFAULT 3.9, card_gold_max REAL NOT NULL DEFAULT 4.5, momentum_multiplier REAL NOT NULL DEFAULT 1, winner_bonus REAL NOT NULL DEFAULT 0.1, loser_penalty REAL NOT NULL DEFAULT -0.1, motm_third REAL NOT NULL DEFAULT 0.1, motm_second REAL NOT NULL DEFAULT 0.2, motm_first REAL NOT NULL DEFAULT 0.3, dotm_third REAL NOT NULL DEFAULT -0.1, dotm_second REAL NOT NULL DEFAULT -0.2, dotm_first REAL NOT NULL DEFAULT -0.3, voting_days INTEGER NOT NULL DEFAULT 5, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS career_matches (id TEXT PRIMARY KEY, separation_id TEXT NOT NULL UNIQUE, blue_score INTEGER NOT NULL, yellow_score INTEGER NOT NULL, winner_team TEXT NOT NULL, voting_token TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'OPEN', closes_at TEXT NOT NULL, closed_at TEXT, created_by_administrator_id TEXT NOT NULL, config_snapshot TEXT NOT NULL, results_snapshot TEXT, team_momentum_applied INTEGER NOT NULL DEFAULT 0, votes_momentum_applied INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS career_votes (id TEXT PRIMARY KEY, career_match_id TEXT NOT NULL, voter_player_id TEXT NOT NULL, motm_third_id TEXT NOT NULL, motm_second_id TEXT NOT NULL, motm_first_id TEXT NOT NULL, dotm_third_id TEXT NOT NULL, dotm_second_id TEXT NOT NULL, dotm_first_id TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(career_match_id,voter_player_id))`,
+  `CREATE TABLE IF NOT EXISTS career_votes (id TEXT PRIMARY KEY, career_match_id TEXT NOT NULL, voter_player_id TEXT NOT NULL, motm_third_id TEXT NOT NULL, motm_second_id TEXT NOT NULL, motm_first_id TEXT NOT NULL, dotm_third_id TEXT NOT NULL, dotm_second_id TEXT NOT NULL, dotm_first_id TEXT NOT NULL, created_at TEXT NOT NULL, voter_account_type TEXT, voter_account_id TEXT, UNIQUE(career_match_id,voter_player_id))`,
   `CREATE INDEX IF NOT EXISTS career_votes_match_idx ON career_votes(career_match_id)`,
   `CREATE TABLE IF NOT EXISTS career_match_contributions (id TEXT PRIMARY KEY, career_match_id TEXT NOT NULL, scorer_player_id TEXT NOT NULL, assist_player_id TEXT, team TEXT NOT NULL, is_own_goal INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS career_match_contributions_match_idx ON career_match_contributions(career_match_id)`,
@@ -74,13 +78,19 @@ export async function ensureDb() {
     if(migratedArrivalOrder) await d.prepare(`ALTER TABLE team_separations ADD COLUMN arrival_order TEXT`).run();
     const migratedMatchDraft=!separationColumns.results.some((column:any)=>column.name==="match_draft");
     if(migratedMatchDraft) await d.prepare(`ALTER TABLE team_separations ADD COLUMN match_draft TEXT`).run();
+    const voteColumns=await d.prepare(`PRAGMA table_info(career_votes)`).all();
+    const migratedVoteAccountType=!voteColumns.results.some((column:any)=>column.name==="voter_account_type");
+    if(migratedVoteAccountType) await d.prepare(`ALTER TABLE career_votes ADD COLUMN voter_account_type TEXT`).run();
+    const migratedVoteAccountId=!voteColumns.results.some((column:any)=>column.name==="voter_account_id");
+    if(migratedVoteAccountId) await d.prepare(`ALTER TABLE career_votes ADD COLUMN voter_account_id TEXT`).run();
+    await d.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS career_votes_account_unique_idx ON career_votes(career_match_id,voter_account_type,voter_account_id) WHERE voter_account_type IS NOT NULL AND voter_account_id IS NOT NULL`).run();
     const now=new Date().toISOString();
     await d.prepare(`INSERT OR IGNORE INTO player_account_links (player_id,account_type,account_id,created_at) SELECT player_id,'member',id,? FROM member_accounts WHERE player_id IS NOT NULL`).bind(now).run();
     await d.prepare(`UPDATE member_accounts SET player_id=NULL WHERE player_id IS NOT NULL`).run();
     await d.prepare(`INSERT OR IGNORE INTO system_configuration (id,default_player_count,minimum_recommended_players,maximum_recommended_players,speed_weight,skill_weight,marking_weight,maximum_position_difference,protected_top_players_percentage,default_reserve_count,algorithm_attempts,updated_at) VALUES (1,22,14,30,.48,.32,.2,1,.25,0,2500,?)`).bind(now).run();
     await d.prepare(`INSERT OR IGNORE INTO career_configuration (id,enabled,winner_bonus,loser_penalty,motm_third,motm_second,motm_first,dotm_third,dotm_second,dotm_first,voting_days,updated_at) VALUES (1,1,.1,-.1,.1,.2,.3,-.1,-.2,-.3,5,?)`).bind(now).run();
     await seed(d,now);
-    logEvent("info","database_ready",{migratedPlayerMarking,migratedPlayerMomentum,migratedGoalkeeperPositioning,migratedGoalExit,migratedMarkingWeight,migratedMomentumMultiplier,migratedTrackContributions,migratedCardTiers,migratedCardBronzeMax,migratedCardSilverMax,migratedCardGoldMax,migratedOwnGoal,migratedArrivalOrder,migratedMatchDraft});
+    logEvent("info","database_ready",{migratedPlayerMarking,migratedPlayerMomentum,migratedGoalkeeperPositioning,migratedGoalExit,migratedMarkingWeight,migratedMomentumMultiplier,migratedTrackContributions,migratedCardTiers,migratedCardBronzeMax,migratedCardSilverMax,migratedCardGoldMax,migratedOwnGoal,migratedArrivalOrder,migratedMatchDraft,migratedVoteAccountType,migratedVoteAccountId});
   })();
   return ready;
 }

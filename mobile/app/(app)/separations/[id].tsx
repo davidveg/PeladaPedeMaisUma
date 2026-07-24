@@ -9,6 +9,7 @@ import { useAuth } from "@/auth";
 import { BalanceDetails } from "@/balance-details";
 import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
 import { CareerVotingResults } from "@/career-voting-results";
+import { CareerVoting } from "@/career-voting";
 import { colors } from "@/theme";
 import type { Contribution, Player, Separation, TeamResult } from "@/types";
 import { careerResultsMessage, formatDate, separationMessage, shareText, votingMessage } from "@/sharing";
@@ -17,6 +18,9 @@ type DraftPayload = { enabled: boolean; trackContributions: boolean; officialRes
 
 export default function SeparationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>(), { account } = useAuth(), admin = account?.role === "admin", client = useQueryClient();
+  const refreshSeparations = useCallback(() => {
+    void client.invalidateQueries({ queryKey: ["separations"] });
+  }, [client]);
   const listQuery = useQuery({
     queryKey: ["separations"],
     queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
@@ -34,6 +38,7 @@ export default function SeparationDetail() {
   if (!item) return <Screen><Header title="Detalhes"/><EmptyState title="Separação não encontrada" message="Atualize a lista e tente novamente."/></Screen>;
   return <Screen><Header eyebrow={formatDate(item.matchDate || item.confirmedAt)} title={item.matchTitle}/><ScrollView refreshControl={<RefreshControl refreshing={listQuery.isRefetching} onRefresh={listQuery.refetch} tintColor={colors.green}/>} contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 14 }}>
     {item.career ? <Card style={{ alignItems: "center", gap: 4 }}><Text style={{ color: colors.muted }}>PLACAR CONFIRMADO</Text><Text style={{ fontSize: 39, fontWeight: "900", color: colors.text }}><Text style={{ color: colors.blue }}>{item.career.blueScore}</Text> × <Text style={{ color: colors.yellow }}>{item.career.yellowScore}</Text></Text><Text style={{ color: colors.muted }}>Votação {item.career.status === "OPEN" ? `aberta até ${formatDate(item.career.closesAt)}` : "encerrada"}</Text></Card> : <Card><Text style={{ color: colors.yellow, textAlign: "center", fontWeight: "800" }}>Resultado pendente</Text></Card>}
+    {item.career?.status === "OPEN" ? <CareerVoting token={item.career.votingToken} onChanged={refreshSeparations}/> : null}
     {item.career?.status === "CLOSED" ? <CareerVotingResults item={item}/> : null}
     <TeamCard title="TIME AZUL" color={colors.blue} soft={colors.blueSoft} players={item.snapshot.blue} config={item.snapshot}/><TeamCard title="TIME AMARELO" color={colors.yellow} soft={colors.yellowSoft} players={item.snapshot.yellow} config={item.snapshot}/>
     <BalanceDetails result={item.snapshot} fallbackRating={item.balanceClassification}/>

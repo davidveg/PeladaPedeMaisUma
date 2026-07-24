@@ -49,6 +49,7 @@ export async function refreshSession() {
 
 export async function logout() {
   const session = await sessionStore.get();
+  try { await apiFetch("/api/mobile/notifications", { method: "DELETE" }, false); } catch { /* O logout continua mesmo sem remover o token remoto. */ }
   try { await apiFetch("/api/mobile/auth", { method: "DELETE", body: JSON.stringify({ refreshToken: session?.refreshToken }) }, false); } catch { /* A limpeza local sempre acontece. */ }
   await sessionStore.clear();
 }

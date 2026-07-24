@@ -31,9 +31,11 @@ export default function Separations() {
     queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
     refetchOnMount: true,
   });
+  const refetch = query.refetch;
   useFocusEffect(useCallback(() => {
-    void query.refetch();
-  }, [query.refetch]));
+    void refetch();
+  }, [refetch]));
+  const pendingVotes = query.data?.separations.filter(item => item.career?.viewerCanVote) || [];
 
   return <Screen>
     <Header eyebrow="DIA DE JOGO" title="Separações salvas"/>
@@ -45,6 +47,20 @@ export default function Separations() {
           data={query.data?.separations || []}
           keyExtractor={item => item.id}
           refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} tintColor={colors.green}/>}
+          ListHeaderComponent={pendingVotes.length ? <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${pendingVotes.length} votação pendente. Abrir votação.`}
+            onPress={() => router.push({ pathname: "/separations/[id]", params: { id: pendingVotes[0].id } })}
+          >
+            <Card style={styles.voteAlert}>
+              <View style={styles.voteAlertCount}><Text style={styles.voteAlertCountText}>{pendingVotes.length}</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.voteAlertTitle}>{pendingVotes.length === 1 ? "Você tem uma votação pendente" : "Você tem votações pendentes"}</Text>
+                <Text style={styles.voteAlertText}>Toque para votar nos melhores e piores jogadores.</Text>
+              </View>
+              <Text style={styles.voteAlertArrow}>›</Text>
+            </Card>
+          </Pressable> : null}
           ListEmptyComponent={<EmptyState title="Nenhuma separação" message="As separações salvas no site aparecerão aqui."/>}
           renderItem={({ item }) => <Pressable
             accessibilityRole="button"
@@ -65,7 +81,15 @@ export default function Separations() {
                 <Text style={styles.blueTeam}>Azul {item.snapshot.blue.length}</Text>
                 <Text style={styles.yellowTeam}>Amarelo {item.snapshot.yellow.length}</Text>
               </View>
-              {item.career ? <Text style={item.career.status === "CLOSED" ? styles.closed : styles.open}>{item.career.status === "CLOSED" ? "Votação encerrada · resultado disponível" : `Votação aberta até ${formatDate(item.career.closesAt)}`}</Text> : null}
+              {item.career ? <Text style={item.career.status === "CLOSED" ? styles.closed : item.career.viewerCanVote ? styles.votePending : styles.open}>{
+                item.career.status === "CLOSED"
+                  ? "Votação encerrada · resultado disponível"
+                  : item.career.viewerCanVote
+                    ? `Seu voto está pendente · aberta até ${formatDate(item.career.closesAt)}`
+                    : item.career.viewerHasVoted
+                      ? "Seu voto já foi registrado"
+                      : `Votação aberta até ${formatDate(item.career.closesAt)}`
+              }</Text> : null}
               <Text style={styles.balance}>{item.balanceClassification}</Text>
             </Card>
           </Pressable>}
@@ -75,6 +99,12 @@ export default function Separations() {
 
 const styles = StyleSheet.create({
   list: { padding: 20, paddingTop: 8, gap: 12, flexGrow: 1 },
+  voteAlert: { flexDirection: "row", alignItems: "center", gap: 12, borderColor: colors.yellow, backgroundColor: colors.yellowSoft, marginBottom: 2 },
+  voteAlertCount: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" },
+  voteAlertCountText: { color: "#fff", fontSize: 18, fontWeight: "900" },
+  voteAlertTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
+  voteAlertText: { color: colors.muted, marginTop: 2 },
+  voteAlertArrow: { color: colors.yellow, fontSize: 28, fontWeight: "800" },
   card: { gap: 11 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 },
   identity: { flex: 1, minWidth: 0 },
@@ -92,6 +122,7 @@ const styles = StyleSheet.create({
   blueTeam: { backgroundColor: colors.blueSoft, color: colors.blue, padding: 7, borderRadius: 8, fontWeight: "700" },
   yellowTeam: { backgroundColor: colors.yellowSoft, color: colors.yellow, padding: 7, borderRadius: 8, fontWeight: "700" },
   open: { color: colors.yellow, fontWeight: "700" },
+  votePending: { color: colors.danger, fontWeight: "900" },
   closed: { color: colors.success, fontWeight: "800" },
   balance: { color: colors.green, fontWeight: "700" },
 });

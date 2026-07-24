@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultCareerConfig, matchWinner, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
+import { careerVoteForAuthenticatedPlayer, defaultCareerConfig, matchWinner, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
 
 const participantIds=["a","b","c","d","e","f","g"];
 const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",dotmThirdId:"e",dotmSecondId:"f",dotmFirstId:"g"};
@@ -21,6 +21,11 @@ test("impede auto voto, repetição entre categorias e não participantes",()=>{
  assert.match(validateCareerVote({...valid,dotmFirstId:"b"},participantIds),/somente uma vez/);
  assert.match(validateCareerVote({...valid,voterPlayerId:"x"},participantIds),/não participou/);
  assert.equal(validateCareerVote(valid,participantIds),null);
+});
+test("usa o jogador associado à conta e ignora identidade enviada pelo cliente",()=>{
+ const vote=careerVoteForAuthenticatedPlayer({...valid,voterPlayerId:"fraudador"},"a");
+ assert.equal(vote.voterPlayerId,"a");
+ assert.equal(validateCareerVote(vote,participantIds),null);
 });
 test("classifica votos por pesos 3, 2 e 1 com desempate por primeiros lugares",()=>{
  const votes=[

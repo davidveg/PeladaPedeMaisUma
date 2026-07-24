@@ -2,6 +2,7 @@ import { audit, db, ensureDb } from "./database";
 import { careerConfigFromRow, matchWinner, rankCareerVotes, teamMomentumForResult, type CareerConfig } from "./career";
 import { logEvent } from "./logger";
 import { validateMatchContributions, type MatchContributionInput } from "./match-contributions";
+import { notifyOpenCareerVote } from "./push-notifications";
 
 export async function getCareerConfig() { await ensureDb(); return careerConfigFromRow(await db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first()); }
 
@@ -33,6 +34,7 @@ export async function createCareerMatch(separationId: string, blueScore: number,
   await db().batch(statements);
   await audit(administratorId,"CAREER_MATCH_CONFIRMED","career_match",id,{separationId,blueScore,yellowScore,winnerTeam,closesAt:closesAt.toISOString(),goals:contributionValidation.contributions.filter(goal=>!goal.ownGoal).length,ownGoals:contributionValidation.contributions.filter(goal=>goal.ownGoal).length,assists:contributionValidation.contributions.filter(goal=>goal.assistPlayerId).length});
   logEvent("info","career_match_confirmed",{careerMatchId:id,separationId,winnerTeam});
+  await notifyOpenCareerVote(id);
   return careerMatchFromRow(await db().prepare(`SELECT * FROM career_matches WHERE id=?`).bind(id).first());
 }
 

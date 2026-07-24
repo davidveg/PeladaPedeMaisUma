@@ -37,6 +37,18 @@ export function teamMomentumForResult(winner: "BLUE" | "YELLOW" | "DRAW", team: 
 
 export type CareerVoteInput = { voterPlayerId: string; motmThirdId: string; motmSecondId: string; motmFirstId: string; dotmThirdId: string; dotmSecondId: string; dotmFirstId: string };
 
+export function careerVoteForAuthenticatedPlayer(payload: Record<string, unknown>, voterPlayerId: string): CareerVoteInput {
+  return {
+    voterPlayerId,
+    motmThirdId: String(payload.motmThirdId || ""),
+    motmSecondId: String(payload.motmSecondId || ""),
+    motmFirstId: String(payload.motmFirstId || ""),
+    dotmThirdId: String(payload.dotmThirdId || ""),
+    dotmSecondId: String(payload.dotmSecondId || ""),
+    dotmFirstId: String(payload.dotmFirstId || ""),
+  };
+}
+
 export function validateCareerVote(input: CareerVoteInput, participantIds: string[]) {
   const podium = [input.motmThirdId, input.motmSecondId, input.motmFirstId, input.dotmThirdId, input.dotmSecondId, input.dotmFirstId];
   const participants = new Set(participantIds);

@@ -147,8 +147,66 @@ test("migração do Modo Carreira adiciona momentum e configura os padrões", as
     assert.equal(config.motm_first, .3);
     assert.equal(config.dotm_first, -.3);
     assert.equal(config.voting_days, 5);
-    await bindings.DB.prepare("INSERT INTO career_votes VALUES (?,?,?,?,?,?,?,?,?,?)").bind("v1","m1","one","a","b","c","d","e","f",new Date().toISOString()).run();
-    await assert.rejects(()=>bindings.DB.prepare("INSERT INTO career_votes VALUES (?,?,?,?,?,?,?,?,?,?)").bind("v2","m1","one","a","b","c","d","e","f",new Date().toISOString()).run(),/UNIQUE/);
+    const insertVote="INSERT INTO career_votes (id,career_match_id,voter_player_id,motm_third_id,motm_second_id,motm_first_id,dotm_third_id,dotm_second_id,dotm_first_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)";
+    await bindings.DB.prepare(insertVote).bind("v1","m1","one","a","b","c","d","e","f",new Date().toISOString()).run();
+    await assert.rejects(()=>bindings.DB.prepare(insertVote).bind("v2","m1","one","a","b","c","d","e","f",new Date().toISOString()).run(),/UNIQUE/);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração vincula cada voto à conta autenticada", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-authenticated-votes-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare(`CREATE TABLE career_votes (
+      id TEXT PRIMARY KEY,
+      career_match_id TEXT NOT NULL,
+      voter_player_id TEXT NOT NULL,
+      motm_third_id TEXT NOT NULL,
+      motm_second_id TEXT NOT NULL,
+      motm_first_id TEXT NOT NULL,
+      dotm_third_id TEXT NOT NULL,
+      dotm_second_id TEXT NOT NULL,
+      dotm_first_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(career_match_id,voter_player_id)
+    )`).run();
+    const migration = await readFile(new URL("../drizzle/0013_authenticated_career_votes.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const columns = await bindings.DB.prepare("PRAGMA table_info(career_votes)").all();
+    assert.ok(columns.results.some(column => column.name === "voter_account_type"));
+    assert.ok(columns.results.some(column => column.name === "voter_account_id"));
+    const insert = `INSERT INTO career_votes
+      (id,career_match_id,voter_player_id,motm_third_id,motm_second_id,motm_first_id,dotm_third_id,dotm_second_id,dotm_first_id,created_at,voter_account_type,voter_account_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`;
+    await bindings.DB.prepare(insert).bind("v1","m1","p1","a","b","c","d","e","f",new Date().toISOString(),"member","account-1").run();
+    await assert.rejects(
+      () => bindings.DB.prepare(insert).bind("v2","m1","p2","a","b","c","d","e","f",new Date().toISOString(),"member","account-1").run(),
+      /UNIQUE/,
+    );
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração adiciona tokens e entregas deduplicadas de push mobile", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-mobile-push-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    const migration = await readFile(new URL("../drizzle/0014_mobile_push_notifications.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(`INSERT INTO mobile_push_tokens (id,account_type,account_id,expo_push_token,platform,created_at,updated_at) VALUES (?,?,?,?,?,?,?)`)
+      .bind("t1", "member", "a1", "ExpoPushToken[one]", "android", now, now).run();
+    await bindings.DB.prepare(`INSERT INTO push_notification_deliveries (id,career_match_id,push_token_id,status,created_at,updated_at) VALUES (?,?,?,?,?,?)`)
+      .bind("d1", "m1", "t1", "SENT", now, now).run();
+    await assert.rejects(
+      () => bindings.DB.prepare(`INSERT INTO push_notification_deliveries (id,career_match_id,push_token_id,status,created_at,updated_at) VALUES (?,?,?,?,?,?)`).bind("d2", "m1", "t1", "SENT", now, now).run(),
+      /UNIQUE/,
+    );
   } finally {
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });

@@ -35,6 +35,14 @@
           "photosPermission": "Permita selecionar uma foto para o seu card de jogador.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-icon-football-beer.png",
+          "color": "#0B3D2E",
+          "defaultChannel": "career-votes"
+        }
       ]
     ],
     "experiments": {
