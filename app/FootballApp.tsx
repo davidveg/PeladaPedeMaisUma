@@ -235,7 +235,21 @@ export default function FootballApp() {
       {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<button className="primary" onClick={() => setStage("import")}>+ Nova separação</button>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><a className="history-open" href={`/?separation=${encodeURIComponent(item.id)}`} onClick={event=>{event.preventDefault();openSavedSeparation(item)}}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></a><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar times</button><button onClick={()=>shareSavedSeparation(item)}>Compartilhar link</button></div></article>)}</div></section>}
       {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} isAdmin={isAdmin} careerConfig={careerConfig} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onEditCareer={editCareerResult} onSaveArrivalOrder={saveArrivalOrder} onBack={closeSavedSeparation} onShareLink={()=>shareSavedSeparation(historyDetail)} onPlayer={(player:Player)=>showPlayer(player,{...resultConfig(historyDetail.snapshot),showContributions:publicPlayerConfig.showContributions,cardTiersEnabled:publicPlayerConfig.cardTiersEnabled,cardBronzeMax:publicPlayerConfig.cardBronzeMax,cardSilverMax:publicPlayerConfig.cardSilverMax,cardGoldMax:publicPlayerConfig.cardGoldMax})} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
-    <footer><b>⚽ Pelada Pede Mais Uma</b><span>Times equilibrados. Resenha garantida.</span></footer>
+    <footer className="site-footer">
+      <div className="footer-signature"><b>⚽ Pelada Pede Mais Uma</b><span>Times equilibrados. Resenha garantida.</span></div>
+      <div className="app-downloads" aria-label="Aplicativos Pelada Pede Mais Uma">
+        <a className="app-download-badge android" href="https://web.vegaalameda.com/download/pedemaisuma/android/PeladaPedeMaisUma.apk" target="_blank" rel="noopener noreferrer" aria-label="Baixar aplicativo Pelada Pede Mais Uma para Android">
+          <span className="app-platform-icon" aria-hidden="true">APK</span>
+          <span><small>BAIXE AGORA</small><b>Aplicativo Android</b></span>
+          <i aria-hidden="true">↓</i>
+        </a>
+        <div className="app-download-badge ios upcoming" aria-label="Aplicativo para iOS em desenvolvimento">
+          <span className="app-platform-icon" aria-hidden="true">iOS</span>
+          <span><small>EM DESENVOLVIMENTO</small><b>Aplicativo para iOS</b></span>
+          <i aria-hidden="true">EM BREVE</i>
+        </div>
+      </div>
+    </footer>
     {toast && <div className="toast" onAnimationEnd={() => setToast("")}>{toast}</div>}
     {detail && <PlayerDetail player={detail} config={detailConfig} onClose={() => setDetail(null)} />}
     {isAdmin && guestDraft && <GuestForm draft={guestDraft} onClose={() => setGuestDraft(null)} onSave={saveGuest} />}
