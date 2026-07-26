@@ -213,6 +213,25 @@ test("migração adiciona tokens e entregas deduplicadas de push mobile", async 
   }
 });
 
+test("migração adiciona tokens de recuperação exclusivos para jogadores", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-member-reset-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    const migration = await readFile(new URL("../drizzle/0015_member_password_reset.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(`INSERT INTO member_password_reset_tokens (id,member_account_id,token_hash,expires_at,created_at) VALUES (?,?,?,?,?)`)
+      .bind("r1", "member-1", "hash-1", "2099-01-01T00:00:00.000Z", now).run();
+    await assert.rejects(
+      () => bindings.DB.prepare(`INSERT INTO member_password_reset_tokens (id,member_account_id,token_hash,expires_at,created_at) VALUES (?,?,?,?,?)`).bind("r2", "member-2", "hash-1", "2099-01-01T00:00:00.000Z", now).run(),
+      /UNIQUE/,
+    );
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("migração adiciona multiplicador de momentum preservando o efeito atual", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-momentum-multiplier-"));
   const bindings = await createSelfhostBindings(directory);

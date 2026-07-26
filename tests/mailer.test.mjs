@@ -25,6 +25,16 @@ test("mailer gera mensagem de redefinição com transporte local de teste", asyn
   assert.ok(result.messageId);
 });
 
+test("mailer gera recuperação para a área do jogador", async () => {
+  const mailer = createSmtpMailer({
+    SMTP_JSON_TRANSPORT: "true",
+    SMTP_FROM: "Pelada <pelada@example.com>",
+    APP_BASE_URL: "https://pelada.example.com",
+  });
+  const result = await mailer.sendPasswordReset({ to: "jogador@example.com", token: "b".repeat(64), portal: "member" });
+  assert.ok(result.messageId);
+});
+
 test("mailer envia aviso de alteração sem receber ou informar a senha", async () => {
   const mailer = createSmtpMailer({
     SMTP_JSON_TRANSPORT: "true",

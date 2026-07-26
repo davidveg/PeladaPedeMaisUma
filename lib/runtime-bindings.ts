@@ -4,8 +4,8 @@ export interface PeladaRuntimeBindings {
   APP_BASE_URL?: string;
   MAILER?: {
     configured: boolean;
-    sendPasswordReset(message: { to: string; token: string }): Promise<{ messageId?: string }>;
-    sendPasswordChanged(message: { to: string; changedAt: string }): Promise<{ messageId?: string }>;
+    sendPasswordReset(message: { to: string; token: string; portal?: "admin" | "member" }): Promise<{ messageId?: string }>;
+    sendPasswordChanged(message: { to: string; changedAt: string; portal?: "admin" | "member" }): Promise<{ messageId?: string }>;
   };
 }
 

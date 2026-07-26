@@ -39,26 +39,28 @@ export function createSmtpMailer(environment = process.env) {
 
   return {
     configured: true,
-    async sendPasswordReset({ to, token }) {
-      const resetUrl = new URL("/admin", publicBaseUrl);
+    async sendPasswordReset({ to, token, portal = "admin" }) {
+      const member = portal === "member";
+      const resetUrl = new URL(member ? "/conta" : "/admin", publicBaseUrl);
       resetUrl.searchParams.set("reset", token);
       const result = await transporter.sendMail({
         from,
         to,
         subject: "Redefinição de senha — Pelada Pede Mais Uma",
-        text: `Recebemos uma solicitação para redefinir sua senha administrativa. Abra o link abaixo em até 30 minutos:\n\n${resetUrl}\n\nSe você não solicitou esta alteração, ignore este e-mail.`,
-        html: `<div style="font-family:Arial,sans-serif;color:#15241f;line-height:1.6"><h2 style="color:#174d3b">Pelada Pede Mais Uma</h2><p>Recebemos uma solicitação para redefinir sua senha administrativa.</p><p><a href="${resetUrl}" style="display:inline-block;background:#174d3b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold">Criar nova senha</a></p><p>Este link expira em 30 minutos e pode ser usado uma única vez.</p><p style="color:#68756f;font-size:13px">Se você não solicitou esta alteração, ignore este e-mail.</p></div>`,
+        text: `Recebemos uma solicitação para redefinir a senha da sua ${member ? "conta de jogador" : "conta administrativa"}. Abra o link abaixo em até 30 minutos:\n\n${resetUrl}\n\nSe você não solicitou esta alteração, ignore este e-mail.`,
+        html: `<div style="font-family:Arial,sans-serif;color:#15241f;line-height:1.6"><h2 style="color:#174d3b">Pelada Pede Mais Uma</h2><p>Recebemos uma solicitação para redefinir a senha da sua <strong>${member ? "conta de jogador" : "conta administrativa"}</strong>.</p><p><a href="${resetUrl}" style="display:inline-block;background:#174d3b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold">Criar nova senha</a></p><p>Este link expira em 30 minutos e pode ser usado uma única vez.</p><p style="color:#68756f;font-size:13px">Se você não solicitou esta alteração, ignore este e-mail.</p></div>`,
       });
       return { messageId: result.messageId };
     },
-    async sendPasswordChanged({ to, changedAt }) {
+    async sendPasswordChanged({ to, changedAt, portal = "admin" }) {
+      const member = portal === "member";
       const formattedDate = new Date(changedAt).toLocaleString("pt-BR", { timeZone: environment.TZ || "America/Sao_Paulo" });
       const result = await transporter.sendMail({
         from,
         to,
-        subject: "Senha administrativa alterada — Pelada Pede Mais Uma",
-        text: `A senha da sua conta administrativa foi alterada em ${formattedDate}.\n\nNenhuma senha é informada neste e-mail. Se você não reconhece esta alteração, acesse ${publicBaseUrl}/admin e use a opção “Esqueci minha senha” imediatamente.`,
-        html: `<div style="font-family:Arial,sans-serif;color:#15241f;line-height:1.6"><h2 style="color:#174d3b">Pelada Pede Mais Uma</h2><p>A senha da sua conta administrativa foi alterada em <strong>${formattedDate}</strong>.</p><p>Nenhuma senha é informada neste e-mail.</p><p style="padding:12px 14px;background:#fff4dc;border-radius:8px">Se você não reconhece esta alteração, acesse <a href="${publicBaseUrl}/admin">o painel administrativo</a> e use a opção <strong>“Esqueci minha senha”</strong> imediatamente.</p></div>`,
+        subject: `Senha ${member ? "da conta de jogador" : "administrativa"} alterada — Pelada Pede Mais Uma`,
+        text: `A senha da sua ${member ? "conta de jogador" : "conta administrativa"} foi alterada em ${formattedDate}.\n\nNenhuma senha é informada neste e-mail. Se você não reconhece esta alteração, acesse ${publicBaseUrl}${member ? "/conta" : "/admin"} e use a opção “Esqueci minha senha” imediatamente.`,
+        html: `<div style="font-family:Arial,sans-serif;color:#15241f;line-height:1.6"><h2 style="color:#174d3b">Pelada Pede Mais Uma</h2><p>A senha da sua ${member ? "conta de jogador" : "conta administrativa"} foi alterada em <strong>${formattedDate}</strong>.</p><p>Nenhuma senha é informada neste e-mail.</p><p style="padding:12px 14px;background:#fff4dc;border-radius:8px">Se você não reconhece esta alteração, acesse <a href="${publicBaseUrl}${member ? "/conta" : "/admin"}">${member ? "a área do jogador" : "o painel administrativo"}</a> e use a opção <strong>“Esqueci minha senha”</strong> imediatamente.</p></div>`,
       });
       return { messageId: result.messageId };
     },

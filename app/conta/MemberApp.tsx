@@ -38,6 +38,7 @@ export default function MemberApp() {
     } catch (cause: any) { setError(cause.message); }
   }
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
+  if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
   return <div className="member-page"><header className="member-header"><a href="/" className="brand"><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{member.accountType === "administrator" && <a href="/admin">Painel administrativo</a>}<a href="/">Área pública</a><button onClick={logout}>Sair</button></nav></header><main className="member-main"><div className="member-account-head"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : ""}</p></div></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}</main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
 }
@@ -49,12 +50,45 @@ function safeReturnTo() {
 }
 
 function MemberAccess({ onDone }: { onDone: () => Promise<void> }) {
-  const [mode, setMode] = useState<"login" | "register">("login"), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [confirmation, setConfirmation] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const initialResetToken = memberResetToken();
+  const [mode, setMode] = useState<"login" | "register" | "request" | "reset">(initialResetToken ? "reset" : "login"), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [confirmation, setConfirmation] = useState(""), [resetToken] = useState(initialResetToken), [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(false);
+  const changeMode = (next: "login" | "register" | "request") => { setMode(next); setError(""); setNotice(""); setPassword(""); setConfirmation(""); };
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError(""); setBusy(true);
-    try { await api("/api/member-auth", { method: mode === "login" ? "POST" : "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password, confirmation }) }); await onDone(); } catch (cause: any) { setError(cause.message); } finally { setBusy(false); }
+    try {
+      if (mode === "request") {
+        const result = await api("/api/member-password-reset", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) });
+        setNotice(result.message);
+      } else if (mode === "reset") {
+        const result = await api("/api/member-password-reset", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: resetToken, password, confirmation }) });
+        window.history.replaceState({}, "", window.location.pathname);
+        setMode("login"); setPassword(""); setConfirmation(""); setNotice(result.message);
+      } else {
+        await api("/api/member-auth", { method: mode === "login" ? "POST" : "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password, confirmation }) });
+        await onDone();
+      }
+    } catch (cause: any) { setError(cause.message); } finally { setBusy(false); }
   }
-  return <div className="member-access"><section className="member-access-copy"><a href="/">⚽ <b>Pelada Pede Mais Uma</b></a><div><span>ÁREA DO JOGADOR</span><h1>Seus números,<br />seu perfil, sua pelada.</h1><p>Associe sua conta ao seu jogador e acompanhe atributos, momentum e histórico de partidas.</p></div><small>Jogadores e administradores usam suas próprias credenciais.</small></section><form className="member-access-card" onSubmit={submit}><div className="member-access-tabs"><button type="button" className={mode === "login" ? "on" : ""} onClick={() => { setMode("login"); setError(""); }}>Entrar</button><button type="button" className={mode === "register" ? "on" : ""} onClick={() => { setMode("register"); setError(""); }}>Criar conta</button></div><div className="ball">⚽</div><h2>{mode === "login" ? "Bem-vindo de volta" : "Crie sua conta"}</h2><p>{mode === "login" ? "Jogadores e administradores podem entrar com seu e-mail e senha." : "Depois do cadastro, você escolherá seu nome na lista de jogadores disponíveis."}</p>{error && <div className="alert error">{error}</div>}<label>E-mail<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required /></label><label>Senha<input type="password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} required /></label>{mode === "register" && <label>Confirmar senha<input type="password" minLength={8} value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="new-password" required /><small>Mínimo de 8 caracteres.</small></label>}<button className="primary" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar →" : "Cadastrar e continuar →"}</button><a href="/">← Voltar para a área pública</a></form></div>;
+  const heading = mode === "login" ? "Bem-vindo de volta" : mode === "register" ? "Crie sua conta" : mode === "request" ? "Recuperar senha" : "Criar nova senha";
+  const description = mode === "login" ? "Jogadores e administradores podem entrar com seu e-mail e senha." : mode === "register" ? "Depois do cadastro, você escolherá seu nome na lista de jogadores disponíveis." : mode === "request" ? "Enviaremos um link de uso único para o e-mail da sua conta de jogador." : "Escolha uma nova senha. O link expira em 30 minutos e só pode ser utilizado uma vez.";
+  return <div className="member-access"><section className="member-access-copy"><a href="/">⚽ <b>Pelada Pede Mais Uma</b></a><div><span>ÁREA DO JOGADOR</span><h1>Seus números,<br />seu perfil, sua pelada.</h1><p>Associe sua conta ao seu jogador e acompanhe atributos, momentum e histórico de partidas.</p></div><small>Jogadores e administradores usam suas próprias credenciais.</small></section><form className="member-access-card" onSubmit={submit}>
+    {mode === "login" || mode === "register" ? <div className="member-access-tabs"><button type="button" className={mode === "login" ? "on" : ""} onClick={() => changeMode("login")}>Entrar</button><button type="button" className={mode === "register" ? "on" : ""} onClick={() => changeMode("register")}>Criar conta</button></div> : null}
+    <div className="ball">{mode === "request" ? "✉️" : mode === "reset" ? "🔐" : "⚽"}</div><h2>{heading}</h2><p>{description}</p>
+    {error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b></div>}
+    {mode !== "reset" && <label>E-mail<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required /></label>}
+    {mode !== "request" && <label>{mode === "reset" ? "Nova senha" : "Senha"}<input type="password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} required />{mode === "reset" && <small>Mínimo de 8 caracteres.</small>}</label>}
+    {(mode === "register" || mode === "reset") && <label>Confirmar senha<input type="password" minLength={8} value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="new-password" required /><small>Digite novamente a nova senha.</small></label>}
+    {mode === "login" && <button className="member-forgot" type="button" onClick={() => changeMode("request")}>Esqueci minha senha</button>}
+    <button className="primary" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar →" : mode === "register" ? "Cadastrar e continuar →" : mode === "request" ? "Enviar link de recuperação" : "Redefinir senha"}</button>
+    {mode === "request" && <button className="member-back" type="button" onClick={() => changeMode("login")}>← Voltar ao login</button>}
+    {mode === "reset" && <button className="member-back" type="button" onClick={() => { window.history.replaceState({}, "", window.location.pathname); changeMode("login"); }}>Cancelar</button>}
+    <a href="/">← Voltar para a área pública</a>
+  </form></div>;
+}
+
+function memberResetToken() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("reset") || "";
 }
 
 function AssociationPicker({ players, onSelect }: { players: any[]; onSelect: (player: any) => void }) {
