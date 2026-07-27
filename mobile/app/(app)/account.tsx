@@ -39,13 +39,15 @@ function NotificationPreferencesCard() {
     if (!preferences) return;
     setDraft({
       ...preferences, attendanceInApp: false, attendancePush: false, matchesInApp: false,
-      matchesPush: false, separationsInApp: false, separationsPush: false, careerVotesPush: false,
+      matchesPush: false, separationsInApp: false, separationsPush: false,
+      appUpdatesInApp: false, appUpdatesPush: false, careerVotesPush: false,
     });
   };
   const rows = [
     { label: "Confirmações e ausências", inApp: "attendanceInApp", push: "attendancePush" },
     { label: "Partidas criadas ou alteradas", inApp: "matchesInApp", push: "matchesPush" },
     { label: "Separações prontas", inApp: "separationsInApp", push: "separationsPush" },
+    { label: "Atualizações do aplicativo", inApp: "appUpdatesInApp", push: "appUpdatesPush" },
   ] as const;
   return <Card style={{ gap: 14 }}><View style={{ gap: 5 }}><Text style={preferenceStyles.heading}>Notificações e pushes</Text><Text style={preferenceStyles.description}>Escolha o que aparece em Avisos e o que chega à central de notificações do celular.</Text></View>
     {query.isError ? <Text accessibilityRole="alert" style={{ color: colors.danger }}>{(query.error as Error).message}</Text> : !preferences ? <Text style={{ color: colors.muted }}>Carregando preferências…</Text> : <>

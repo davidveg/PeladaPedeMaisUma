@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(requestedPage, totalPages);
   const rows = (await db().prepare(
-    `SELECT id,type,title,body,match_id,read_at,created_at
+    `SELECT id,type,title,body,match_id,action_url,read_at,created_at
      FROM account_notifications WHERE account_type=? AND account_id=?
      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
   ).bind(accountType, account.id, pageSize, (page - 1) * pageSize).all()).results as any[];
@@ -40,7 +40,8 @@ export async function GET(request: Request) {
     hasNext: page < totalPages,
     notifications: rows.map(row => ({
       id: String(row.id), type: String(row.type), title: String(row.title), body: String(row.body),
-      matchId: row.match_id ? String(row.match_id) : null, readAt: row.read_at || null, createdAt: String(row.created_at),
+      matchId: row.match_id ? String(row.match_id) : null, actionUrl: row.action_url ? String(row.action_url) : null,
+      readAt: row.read_at || null, createdAt: String(row.created_at),
     })),
   }, { headers: noStore });
 }

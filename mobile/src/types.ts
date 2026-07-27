@@ -21,11 +21,12 @@ export type ScheduledMatch = {
 };
 export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string };
 export type MatchListPayload = { matches: ScheduledMatch[]; players?: MatchPlayer[]; serverNow: string };
-export type AppNotification = { id: string; type: string; title: string; body: string; matchId?: string | null; readAt?: string | null; createdAt: string };
+export type AppNotification = { id: string; type: string; title: string; body: string; matchId?: string | null; actionUrl?: string | null; readAt?: string | null; createdAt: string };
 export type NotificationPreferences = {
   attendanceInApp: boolean; attendancePush: boolean;
   matchesInApp: boolean; matchesPush: boolean;
   separationsInApp: boolean; separationsPush: boolean;
+  appUpdatesInApp: boolean; appUpdatesPush: boolean;
   careerVotesPush: boolean; pageSize: number;
 };
 export type NotificationPage = {

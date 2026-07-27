@@ -19,6 +19,7 @@ type NotificationPreferences = {
   attendanceInApp: boolean; attendancePush: boolean;
   matchesInApp: boolean; matchesPush: boolean;
   separationsInApp: boolean; separationsPush: boolean;
+  appUpdatesInApp: boolean; appUpdatesPush: boolean;
   careerVotesPush: boolean; pageSize: number;
 };
 
@@ -66,13 +67,15 @@ function NotificationPreferencesCard() {
   function disableAll() {
     setPreferences(current => current ? {
       ...current, attendanceInApp: false, attendancePush: false, matchesInApp: false,
-      matchesPush: false, separationsInApp: false, separationsPush: false, careerVotesPush: false,
+      matchesPush: false, separationsInApp: false, separationsPush: false,
+      appUpdatesInApp: false, appUpdatesPush: false, careerVotesPush: false,
     } : current);
   }
   const rows = [
     { label: "Confirmações e ausências", description: "Mudanças na lista de presença.", inApp: "attendanceInApp", push: "attendancePush" },
     { label: "Partidas", description: "Criação, alteração ou cancelamento.", inApp: "matchesInApp", push: "matchesPush" },
     { label: "Separações prontas", description: "Lista encerrada e times disponíveis.", inApp: "separationsInApp", push: "separationsPush" },
+    { label: "Atualizações do aplicativo", description: "Novas versões disponíveis para Android e iOS.", inApp: "appUpdatesInApp", push: "appUpdatesPush" },
   ] as const;
   return <section className="notification-preferences-card"><div className="notification-preferences-head"><div><div className="eyebrow">PREFERÊNCIAS</div><h2>Notificações e pushes</h2><p>Escolha quais novidades aparecem no feed e quais chegam à central de notificações do celular. A alteração vale para site, Android e iOS.</p></div><button className="ghost" type="button" onClick={disableAll} disabled={!preferences}>Desativar tudo</button></div>
     {error && <div className="alert error">{error}</div>}{message && <div className="admin-notice" role="status"><span>✓</span><b>{message}</b></div>}

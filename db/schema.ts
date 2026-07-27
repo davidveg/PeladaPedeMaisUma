@@ -54,7 +54,7 @@ export const matchAttendance = sqliteTable("match_attendance", {
 export const accountNotifications = sqliteTable("account_notifications", {
   id: text("id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull(),
   type: text("type").notNull(), title: text("title").notNull(), body: text("body").notNull(),
-  matchId: text("match_id"), readAt: text("read_at"), createdAt: text("created_at").notNull(),
+  matchId: text("match_id"), actionUrl: text("action_url"), readAt: text("read_at"), createdAt: text("created_at").notNull(),
 });
 export const accountNotificationPreferences = sqliteTable("account_notification_preferences", {
   id: text("id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull(),
@@ -64,6 +64,8 @@ export const accountNotificationPreferences = sqliteTable("account_notification_
   matchesPush: integer("matches_push", { mode: "boolean" }).notNull().default(true),
   separationsInApp: integer("separations_in_app", { mode: "boolean" }).notNull().default(true),
   separationsPush: integer("separations_push", { mode: "boolean" }).notNull().default(true),
+  appUpdatesInApp: integer("app_updates_in_app", { mode: "boolean" }).notNull().default(true),
+  appUpdatesPush: integer("app_updates_push", { mode: "boolean" }).notNull().default(true),
   careerVotesPush: integer("career_votes_push", { mode: "boolean" }).notNull().default(true),
   pageSize: integer("page_size").notNull().default(10), ...timestamps,
 }, table => [uniqueIndex("account_notification_preferences_account_unique").on(table.accountType, table.accountId)]);
@@ -71,6 +73,22 @@ export const notificationPushDeliveries = sqliteTable("notification_push_deliver
   id: text("id").primaryKey(), notificationId: text("notification_id").notNull(), pushTokenId: text("push_token_id").notNull(),
   status: text("status").notNull(), ticketId: text("ticket_id"), error: text("error"), ...timestamps,
 }, table => [uniqueIndex("notification_push_delivery_unique").on(table.notificationId, table.pushTokenId)]);
+export const mobileReleaseConfiguration = sqliteTable("mobile_release_configuration", {
+  id: integer("id").primaryKey().default(1),
+  latestVersion: text("latest_version").notNull().default("1.0.0"),
+  androidBuild: integer("android_build").notNull().default(1),
+  iosBuild: integer("ios_build").notNull().default(1),
+  minimumAndroidBuild: integer("minimum_android_build").notNull().default(1),
+  minimumIosBuild: integer("minimum_ios_build").notNull().default(1),
+  androidEnabled: integer("android_enabled", { mode: "boolean" }).notNull().default(false),
+  iosEnabled: integer("ios_enabled", { mode: "boolean" }).notNull().default(false),
+  androidUrl: text("android_url"),
+  iosUrl: text("ios_url"),
+  releaseNotes: text("release_notes").notNull().default(""),
+  publishedAt: text("published_at"),
+  publishedByAdministratorId: text("published_by_administrator_id"),
+  updatedAt: text("updated_at").notNull(),
+});
 export const playerAccountLinks = sqliteTable("player_account_links", { playerId: text("player_id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull().unique(), createdAt: text("created_at").notNull() });
 export const passwordResetTokens = sqliteTable("password_reset_tokens", { id: text("id").primaryKey(), administratorId: text("administrator_id").notNull(), tokenHash: text("token_hash").notNull(), expiresAt: text("expires_at").notNull(), usedAt: text("used_at"), createdAt: text("created_at").notNull() });
 

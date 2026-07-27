@@ -297,16 +297,16 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     <footer className="site-footer">
       <div className="footer-signature"><b>⚽ Pelada Pede Mais Uma</b><span>Times equilibrados. Resenha garantida.</span></div>
       <div className="app-downloads" aria-label="Aplicativos Pelada Pede Mais Uma">
-        <a className="app-download-badge android" href="https://web.vegaalameda.com/download/pedemaisuma/android/PeladaPedeMaisUma.apk" target="_blank" rel="noopener noreferrer" aria-label="Baixar aplicativo Pelada Pede Mais Uma para Android">
+        <a className="app-download-badge android" href="/baixar-app?platform=android" aria-label="Baixar aplicativo Pelada Pede Mais Uma para Android">
           <span className="app-platform-icon" aria-hidden="true">APK</span>
           <span><small>BAIXE AGORA</small><b>Aplicativo Android</b></span>
           <i aria-hidden="true">↓</i>
         </a>
-        <div className="app-download-badge ios upcoming" aria-label="Aplicativo para iOS em desenvolvimento">
+        <a className="app-download-badge ios" href="/baixar-app?platform=ios" aria-label="Baixar aplicativo Pelada Pede Mais Uma para iOS">
           <span className="app-platform-icon" aria-hidden="true">iOS</span>
-          <span><small>EM DESENVOLVIMENTO</small><b>Aplicativo para iOS</b></span>
-          <i aria-hidden="true">EM BREVE</i>
-        </div>
+          <span><small>TESTFLIGHT / APP STORE</small><b>Aplicativo para iOS</b></span>
+          <i aria-hidden="true">ABRIR</i>
+        </a>
       </div>
     </footer>
     {toast && <div className="toast" onAnimationEnd={() => setToast("")}>{toast}</div>}

@@ -13,13 +13,15 @@ export type AccountNotificationType =
   | "MATCH_UPDATED"
   | "ATTENDANCE_CHANGED"
   | "MATCH_CLOSED"
-  | "MATCH_CANCELLED";
+  | "MATCH_CANCELLED"
+  | "APP_RELEASED";
 
 export type BroadcastNotification = {
   type: AccountNotificationType;
   title: string;
   body: string;
-  matchId: string;
+  matchId?: string | null;
+  actionUrl?: string | null;
 };
 
 const expoPushEndpoint = "https://exp.host/--/api/v2/push/send";
@@ -31,6 +33,7 @@ export async function broadcastAccountNotification(message: BroadcastNotificatio
             preferences.attendance_in_app,preferences.attendance_push,
             preferences.matches_in_app,preferences.matches_push,
             preferences.separations_in_app,preferences.separations_push,
+            preferences.app_updates_in_app,preferences.app_updates_push,
             preferences.career_votes_push,preferences.page_size
      FROM (
        SELECT id account_id,'administrator' account_type FROM administrators WHERE active=1
@@ -56,9 +59,9 @@ export async function broadcastAccountNotification(message: BroadcastNotificatio
   for (let offset = 0; offset < inAppNotifications.length; offset += 100) {
     await db().batch(inAppNotifications.slice(offset, offset + 100).map(item => db().prepare(
       `INSERT INTO account_notifications
-       (id,account_type,account_id,type,title,body,match_id,created_at)
-       VALUES (?,?,?,?,?,?,?,?)`,
-    ).bind(item.id, item.accountType, item.accountId, message.type, message.title, message.body, message.matchId, now)));
+       (id,account_type,account_id,type,title,body,match_id,action_url,created_at)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+    ).bind(item.id, item.accountType, item.accountId, message.type, message.title, message.body, message.matchId || null, message.actionUrl || null, now)));
   }
   const sent = await sendPush(notifications.filter(item => item.push), message);
   return { created: inAppNotifications.length, sent };
@@ -101,8 +104,8 @@ async function sendPush(
           body: message.body,
           sound: "default",
           priority: "high",
-          channelId: "matches",
-          data: { type: message.type.toLowerCase(), matchId: message.matchId },
+          channelId: message.type === "APP_RELEASED" ? "app-updates" : "matches",
+          data: { type: message.type.toLowerCase(), matchId: message.matchId || undefined, actionUrl: message.actionUrl || undefined },
         }))),
         signal: AbortSignal.timeout(8_000),
       });

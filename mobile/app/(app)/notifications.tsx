@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { apiFetch, jsonMutation } from "@/api";
 import { EmptyState, ErrorState, Header, Screen } from "@/components";
 import { colors } from "@/theme";
@@ -25,7 +25,8 @@ export default function NotificationsScreen() {
   });
   function open(item: AppNotification) {
     if (!item.readAt) read.mutate({ id: item.id });
-    if (item.matchId) router.push(`/matches/${item.matchId}` as never);
+    if (item.actionUrl) void Linking.openURL(item.actionUrl);
+    else if (item.matchId) router.push(`/matches/${item.matchId}` as never);
   }
   const data = query.data;
   const first = data?.total ? (data.page - 1) * data.pageSize + 1 : 0;
@@ -37,10 +38,10 @@ export default function NotificationsScreen() {
       ListHeaderComponent={<View style={styles.toolbar}><Text style={styles.summary}>{first}–{last} de {data?.total || 0}</Text><View style={styles.sizes}><Text style={styles.sizeLabel}>Por página</Text>{[10, 20, 50].map(size => <Pressable key={size} accessibilityRole="button" style={[styles.size, effectivePageSize === size && styles.sizeOn]} onPress={() => { setPage(1); setPageSize(size); }}><Text style={[effectivePageSize === size && styles.sizeTextOn]}>{size}</Text></Pressable>)}</View></View>}
       ListEmptyComponent={<EmptyState title="Tudo em dia" message="As novidades sobre partidas aparecerão aqui."/>}
       ListFooterComponent={data && data.totalPages > 1 ? <View style={styles.pagination}><Pressable disabled={!data.hasPrevious || query.isFetching} style={[styles.pageButton, !data.hasPrevious && styles.disabled]} onPress={() => setPage(data.page - 1)}><Text style={styles.pageButtonText}>← Anterior</Text></Pressable><Text style={styles.pageLabel}>{data.page}/{data.totalPages}</Text><Pressable disabled={!data.hasNext || query.isFetching} style={[styles.pageButton, !data.hasNext && styles.disabled]} onPress={() => setPage(data.page + 1)}><Text style={styles.pageButtonText}>Próxima →</Text></Pressable></View> : null}
-      renderItem={({ item }) => <Pressable style={[styles.item, !item.readAt && styles.unread]} onPress={() => open(item)}><View style={styles.icon}><Text>{icon(item.type)}</Text></View><View style={{ flex: 1 }}><Text style={styles.title}>{item.title}</Text><Text style={styles.body}>{item.body}</Text><Text style={styles.date}>{new Date(item.createdAt).toLocaleString("pt-BR")}</Text></View>{item.matchId ? <Text style={styles.arrow}>›</Text> : null}</Pressable>}
+      renderItem={({ item }) => <Pressable style={[styles.item, !item.readAt && styles.unread]} onPress={() => open(item)}><View style={styles.icon}><Text>{icon(item.type)}</Text></View><View style={{ flex: 1 }}><Text style={styles.title}>{item.title}</Text><Text style={styles.body}>{item.body}</Text><Text style={styles.date}>{new Date(item.createdAt).toLocaleString("pt-BR")}</Text></View>{item.matchId || item.actionUrl ? <Text style={styles.arrow}>›</Text> : null}</Pressable>}
     />}</Screen>;
 }
-function icon(type: string) { return type === "MATCH_CREATED" ? "📅" : type === "ATTENDANCE_CHANGED" ? "✅" : type === "MATCH_CANCELLED" ? "🚫" : "📣"; }
+function icon(type: string) { return type === "APP_RELEASED" ? "⬆️" : type === "MATCH_CREATED" ? "📅" : type === "ATTENDANCE_CHANGED" ? "✅" : type === "MATCH_CANCELLED" ? "🚫" : "📣"; }
 const styles = StyleSheet.create({
   readAll: { color: colors.green, fontWeight: "900" }, list: { padding: 20, paddingTop: 8, gap: 9, flexGrow: 1 },
   toolbar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 4 },

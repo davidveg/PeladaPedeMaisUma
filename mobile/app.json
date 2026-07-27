@@ -8,6 +8,14 @@
     "userInterfaceStyle": "light",
     "icon": "./assets/icon-football-beer.png",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/00374e15-c3c9-46fd-ab57-ebb23ee01635",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "br.com.peladapedemaisuma.app",
