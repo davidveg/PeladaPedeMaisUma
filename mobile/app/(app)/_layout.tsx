@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api";
 import { useAuth } from "@/auth";
 import { colors } from "@/theme";
-import type { Separation } from "@/types";
+import type { MatchListPayload, Separation } from "@/types";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -25,10 +25,22 @@ export default function AppLayout() {
     queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
     enabled: Boolean(account),
   });
+  const matchesQuery = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => apiFetch<MatchListPayload>(account?.role === "admin" ? "/api/admin/matches" : "/api/matches"),
+    enabled: Boolean(account),
+  });
+  const notificationsQuery = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => apiFetch<{ unread: number }>("/api/notifications"),
+    enabled: Boolean(account),
+  });
   if (loading) return <View style={styles.loading}><ActivityIndicator color={colors.green}/></View>;
   if (!account) return <Redirect href="/login"/>;
   const admin = account.role === "admin";
   const pendingVotes = separationsQuery.data?.separations.filter(item => item.career?.viewerCanVote).length || 0;
+  const pendingMatches = matchesQuery.data?.matches.filter(item => item.status === "OPEN" && item.viewer.canRespond && !item.viewer.status).length || 0;
+  const unreadNotifications = notificationsQuery.data?.unread || 0;
 
   return <Tabs screenOptions={{
     headerStyle: { backgroundColor: colors.green },
@@ -54,6 +66,20 @@ export default function AppLayout() {
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="people" inactive="people-outline"/>,
     }}/>
     <Tabs.Screen name="separations/[id]" options={{ href: null, title: "Detalhes" }}/>
+    <Tabs.Screen name="matches/index" options={{
+      title: "Partidas",
+      tabBarBadge: pendingMatches || undefined,
+      tabBarBadgeStyle: styles.badge,
+      tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="calendar" inactive="calendar-outline"/>,
+    }}/>
+    <Tabs.Screen name="matches/[id]" options={{ href: null, title: "Partida" }}/>
+    <Tabs.Screen name="matches/manage" options={{ href: null, title: "Configurar partida" }}/>
+    <Tabs.Screen name="notifications" options={{
+      title: "Avisos",
+      tabBarBadge: unreadNotifications || undefined,
+      tabBarBadgeStyle: styles.badge,
+      tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="notifications" inactive="notifications-outline"/>,
+    }}/>
     <Tabs.Screen name="card" options={{
       title: "Meu card",
       href: account.playerId ? undefined : null,

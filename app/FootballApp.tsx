@@ -13,6 +13,7 @@ import {
   type Player,
 } from "../lib/football";
 import { PlayerPhoto } from "./components/PlayerPhoto";
+import { SiteHeader } from "./components/SiteHeader";
 import { buildVotingUrl, buildWhatsAppCareerResultsMessage, buildWhatsAppShareUrl, buildWhatsAppVotingMessage } from "../lib/career-sharing";
 import { playerCardTier, playerCardTierLabel } from "../lib/player-card-tier";
 import QRCode from "qrcode";
@@ -34,11 +35,12 @@ Mensalistas
 9 - Pedro Henrique: ✅`;
 
 type Stage = "import" | "review" | "result" | "history" | "players";
+type InitialStage = Extract<Stage, "history" | "players">;
 type GuestDraft = { displayName: string; fullName: string; nickname: string; type: ImportedPlayerType; primaryPosition: string; speed: number; skill: number; marking: number; goalkeeperPositioning: number; goalExit: number; notes: string };
 
-export default function FootballApp() {
+export default function FootballApp({ initialStage }: { initialStage?: InitialStage }) {
   const initialized = useRef(false);
-  const [stage, setStage] = useState<Stage>("history");
+  const [stage, setStage] = useState<Stage>(initialStage ?? "history");
   const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
   const [text, setText] = useState(sample);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -92,21 +94,21 @@ export default function FootballApp() {
       });
       setCareerConfig(career.config || null);
       if (!initialized.current) {
-        if(requested){setStage("history");setHistoryDetail(requested)}else setStage("import");
+        if(requested){setStage("history");setHistoryDetail(requested)}else setStage(initialStage ?? "import");
       }
     } else {
       setPlayers([]);
       setConfig(defaultConfig);
       setCareerConfig(null);
-      if (!initialized.current) {setStage("history");if(requested)setHistoryDetail(requested)}
+      if (!initialized.current) {setStage(initialStage ?? "history");if(requested){setStage("history");setHistoryDetail(requested)}}
     }
     initialized.current = true;
     return separations;
   };
 
-  function openSavedSeparation(item:any){setHistoryDetail(item);setStage("history");window.history.pushState({},"",`/?separation=${encodeURIComponent(item.id)}`);window.scrollTo({top:0,behavior:"smooth"})}
-  function closeSavedSeparation(){setHistoryDetail(null);setStage("history");window.history.pushState({},"","/")}
-  function savedSeparationUrl(item:any){return `${window.location.origin}/?separation=${encodeURIComponent(item.id)}`}
+  function openSavedSeparation(item:any){setHistoryDetail(item);setStage("history");window.history.pushState({},"",`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`);window.scrollTo({top:0,behavior:"smooth"})}
+  function closeSavedSeparation(){setHistoryDetail(null);setStage("history");window.history.pushState({},"","/separacoes-salvas")}
+  function savedSeparationUrl(item:any){return `${window.location.origin}/separacoes-salvas?separation=${encodeURIComponent(item.id)}`}
   async function shareSavedSeparation(item:any){const url=savedSeparationUrl(item),text=`⚽ ${item.matchTitle}\nConfira os times e os detalhes desta separação:`;if(navigator.share){try{await navigator.share({title:item.matchTitle,text,url});return}catch(error:any){if(error?.name==="AbortError")return}}await navigator.clipboard.writeText(`${text}\n${url}`);setToast("Link da separação copiado.")}
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function FootballApp() {
     const response = await fetch("/api/separations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: parsed?.title, date: parsed?.date, originalText: text, result: snapshot, manuallyAdjusted: manual }) });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) { setToast(payload.error || "Não foi possível confirmar a separação."); if (response.status === 401) await load(); return; }
-    setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history");
+    setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history"); window.history.replaceState({}, "", "/separacoes-salvas");
   }
 
   async function confirmCareerMatch(separationId:string,blueScore:number,yellowScore:number,contributions:any[]=[]){
@@ -220,7 +222,7 @@ export default function FootballApp() {
   if (isAdmin === undefined) return <div className="admin-loading">Carregando separações…</div>;
   const showPlayer = (player: Player, scoringConfig = config) => { setDetail(player); setDetailConfig(scoringConfig); };
   return <div className="app-shell">
-    <header><a className="brand" onClick={() => { setHistoryDetail(null); setStage(isAdmin ? "import" : "history"); }}><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{isAdmin&&<button className={stage === "import" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("import"); }}>Montar times</button>}<button className={stage === "players" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("players"); }}>Jogadores</button><button className={stage === "history" ? "active" : ""} onClick={() => { setHistoryDetail(null); setStage("history"); }}>{isAdmin?"Separações salvas":"Últimas separações"}</button><a href="/conta">Minha conta</a><a href="/admin">{isAdmin?"Painel administrativo":"Entrar como administrador"}</a></nav></header>
+    <SiteHeader active={stage === "players" ? "players" : stage === "history" ? "separations" : "home"} isAdmin={isAdmin}/>
     <main>
       {isAdmin && stage !== "history" && stage !== "players" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>Importar</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
       {isAdmin && stage === "import" && <section className="hero"><div className="eyebrow">ORGANIZAÇÃO SEM DRAMA</div><h1>Do WhatsApp para o campo,<br /><em>times justos em minutos.</em></h1><p>Cole a lista de confirmações. A gente identifica quem vai, equilibra posições e nível, e deixa tudo pronto para compartilhar.</p><div className="import-card"><label>Cole aqui a lista de confirmações do WhatsApp</label><textarea value={text} onChange={(event) => setText(event.target.value)} aria-label="Lista de confirmações" /><div className="card-foot"><span>✅ Só quem estiver confirmado entra na lista</span><button className="primary" onClick={process}>Processar confirmações <b>→</b></button></div></div><div className="trust"><span>⚖️ Equilibra posições e nível</span><span>🔒 Seus dados ficam protegidos</span><span>📱 Pronto para o WhatsApp</span></div></section>}
@@ -232,7 +234,7 @@ export default function FootballApp() {
       </section>}
       {isAdmin && stage === "result" && result && <ResultPresentation result={result} manuallyAdjusted={manual} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
       {stage === "players" && <PublicPlayersView players={publicPlayers} config={publicPlayerConfig} onPlayer={(player:Player)=>showPlayer(player,publicPlayerConfig)} />}
-      {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<button className="primary" onClick={() => setStage("import")}>+ Nova separação</button>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><a className="history-open" href={`/?separation=${encodeURIComponent(item.id)}`} onClick={event=>{event.preventDefault();openSavedSeparation(item)}}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></a><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar times</button><button onClick={()=>shareSavedSeparation(item)}>Compartilhar link</button></div></article>)}</div></section>}
+      {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<a className="primary" href="/">+ Nova separação</a>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><a className="history-open" href={`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`} onClick={event=>{event.preventDefault();openSavedSeparation(item)}}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></a><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar times</button><button onClick={()=>shareSavedSeparation(item)}>Compartilhar link</button></div></article>)}</div></section>}
       {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} isAdmin={isAdmin} careerConfig={careerConfig} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onEditCareer={editCareerResult} onSaveArrivalOrder={saveArrivalOrder} onBack={closeSavedSeparation} onShareLink={()=>shareSavedSeparation(historyDetail)} onPlayer={(player:Player)=>showPlayer(player,{...resultConfig(historyDetail.snapshot),showContributions:publicPlayerConfig.showContributions,cardTiersEnabled:publicPlayerConfig.cardTiersEnabled,cardBronzeMax:publicPlayerConfig.cardBronzeMax,cardSilverMax:publicPlayerConfig.cardSilverMax,cardGoldMax:publicPlayerConfig.cardGoldMax})} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
     <footer className="site-footer">

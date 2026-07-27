@@ -11,3 +11,14 @@ export type TeamDelta = { players: number; defenders: number; midfielders: numbe
 export type TeamResult = { blue: Player[]; yellow: Player[]; rating: string; cost: number; blueMetrics?: TeamMetrics; yellowMetrics?: TeamMetrics; delta?: TeamDelta; speedWeight: number; skillWeight: number; markingWeight: number; momentumMultiplier?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage?: number; algorithmAttempts?: number; proposal?: number; extraId?: string; [key: string]: unknown };
 export type Separation = { id: string; matchTitle: string; matchDate?: string | null; location?: string | null; snapshot: TeamResult; balanceClassification: string; balanceScore: number; confirmedAt: string; arrivalOrder?: { blue: string[]; yellow: string[] } | null; career?: { id: string; blueScore: number; yellowScore: number; votingToken: string; votingUrl?: string; status: string; closesAt: string; closedAt?: string | null; results?: CareerVotingResults | null; contributions?: Contribution[]; viewerIsParticipant?: boolean; viewerHasVoted?: boolean; viewerCanVote?: boolean } };
 export type ProfilePayload = { member: { id: string; email: string; accountType: "administrator" | "member"; playerId?: string | null }; player: Player | null; config?: { speedWeight: number; skillWeight: number; markingWeight: number; momentumMultiplier: number; showContributions: boolean; cardTiersEnabled: boolean; cardBronzeMax: number; cardSilverMax: number; cardGoldMax: number } };
+export type MatchAttendance = { id: string; playerId: string; playerName: string; photoUrl?: string | null; status: "PRESENT" | "ABSENT"; changeCount: number; maxChanges: number; updatedAt: string; administratorOverride?: boolean };
+export type ScheduledMatch = {
+  id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
+  maxChanges: number; status: "OPEN" | "CLOSED" | "CANCELLED"; acceptingResponses: boolean; separationId?: string | null;
+  counts: { present: number; absent: number; pending: number }; attendance: MatchAttendance[];
+  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean };
+  createdAt: string; updatedAt: string;
+};
+export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string };
+export type MatchListPayload = { matches: ScheduledMatch[]; players?: MatchPlayer[]; serverNow: string };
+export type AppNotification = { id: string; type: string; title: string; body: string; matchId?: string | null; readAt?: string | null; createdAt: string };

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Pelada Pede Mais Uma - API Mobile
-  version: 1.0.0
+  version: 1.1.0
   description: Contratos nativos. A autenticação web por cookie permanece compatível e independente.
 servers:
   - url: https://peladapedemaisuma.exemplo.com
@@ -125,6 +125,57 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { allOf: [{ $ref: "#/components/schemas/MatchInput" }, { type: object, required: [matchId], properties: { matchId: { type: string } } }] } } } }
       responses:
         "200": { description: Resultado corrigido }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/matches:
+    get:
+      summary: Lista partidas e a resposta do jogador associado
+      responses:
+        "200": { description: Partidas, contagens, presenças públicas e limite compartilhado de remarcações }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Confirma presença ou ausência do jogador associado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [matchId, status]
+              properties:
+                matchId: { type: string }
+                status: { enum: [PRESENT, ABSENT] }
+      responses:
+        "200": { description: Resposta registrada ou repetição idempotente da mesma resposta }
+        "409": { description: Prazo, lista fechada ou limite de remarcações atingido }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/admin/matches:
+    get:
+      summary: Lista partidas e todos os jogadores ativos (administrador)
+      responses:
+        "200": { description: Dados administrativos de partidas e presenças }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Cria uma partida e notifica todas as contas ativas (administrador)
+      responses:
+        "201": { description: Partida criada }
+        "400": { description: Datas, título ou regras inválidos }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      summary: Edita, cancela, responde por um jogador ou fecha a lista e gera os times (administrador)
+      responses:
+        "200": { description: Operação concluída e auditada }
+        "409": { description: Estado da partida incompatível ou menos de quatro presentes }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/notifications:
+    get:
+      summary: Central interna de notificações da conta
+      responses:
+        "200": { description: Até 100 notificações recentes e total não lido }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      summary: Marca uma ou todas as notificações como lidas
+      responses:
+        "200": { description: Notificações atualizadas }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /api/member-profile:
     get:

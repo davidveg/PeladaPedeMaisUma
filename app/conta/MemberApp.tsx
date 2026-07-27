@@ -5,6 +5,7 @@ import type { Config, Player } from "../../lib/football";
 import { defaultConfig, score } from "../../lib/football";
 import { playerCardTier, playerCardTierLabel } from "../../lib/player-card-tier";
 import { PlayerPhoto } from "../components/PlayerPhoto";
+import { SiteHeader } from "../components/SiteHeader";
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options), text = await response.text();
@@ -40,7 +41,7 @@ export default function MemberApp() {
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
   if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
-  return <div className="member-page"><header className="member-header"><a href="/" className="brand"><span className="brand-mark">⚽</span><span><b>Pelada</b><small>Pede Mais Uma</small></span></a><nav>{member.accountType === "administrator" && <a href="/admin">Painel administrativo</a>}<a href="/">Área pública</a><button onClick={logout}>Sair</button></nav></header><main className="member-main"><div className="member-account-head"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : ""}</p></div></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}</main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator"} onLogout={logout}/><main className="member-main"><div className="member-account-head"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : ""}</p></div></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}</main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
 }
 
 function safeReturnTo() {

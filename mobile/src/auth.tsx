@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import * as Application from "expo-application";
 import { login as loginRequest, logout as logoutRequest, onSessionExpired } from "./api";
 import { sessionStore } from "./session-store";
@@ -8,13 +9,14 @@ type AuthValue = { account: Account | null; loading: boolean; login(email: strin
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const queryClient = useQueryClient();
   const [account, setAccount] = useState<Account | null>(null), [loading, setLoading] = useState(true);
   useEffect(() => { sessionStore.get().then(session => setAccount(session?.account || null)).finally(() => setLoading(false)); }, []);
-  useEffect(() => onSessionExpired(() => setAccount(null)), []);
+  useEffect(() => onSessionExpired(() => { queryClient.clear(); setAccount(null); }), [queryClient]);
   const value = useMemo<AuthValue>(() => ({ account, loading,
-    async login(email, password) { const session = await loginRequest(email, password, `${Application.applicationName || "Pelada"} ${Application.nativeApplicationVersion || "dev"}`); setAccount(session.account); },
-    async logout() { await logoutRequest(); setAccount(null); },
-  }), [account, loading]);
+    async login(email, password) { const session = await loginRequest(email, password, `${Application.applicationName || "Pelada"} ${Application.nativeApplicationVersion || "dev"}`); queryClient.clear(); setAccount(session.account); },
+    async logout() { await logoutRequest(); queryClient.clear(); setAccount(null); },
+  }), [account, loading, queryClient]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

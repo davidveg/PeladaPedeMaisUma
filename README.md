@@ -19,6 +19,9 @@ Aplicação web responsiva para importar confirmações do WhatsApp, identificar
 - Primeiro administrador `admin` / `admin`, com troca obrigatória por e-mail válido e senha de 8+ caracteres.
 - Senhas com PBKDF2-SHA-256, salt aleatório e 210 mil iterações; sessão em cookie HTTP-only/SameSite.
 - Auditoria de operações administrativas.
+- Partidas agendadas com data, local, prazo de confirmação, limite configurável de remarcações e respostas sincronizadas entre site e aplicativo.
+- Central de notificações por conta e push para Android/iOS quando uma partida é criada, editada, cancelada, encerrada ou recebe uma nova resposta de presença.
+- Confirmação administrativa para jogadores sem conta vinculada e fechamento antecipado da lista com geração automática de uma separação equilibrada; o importador do WhatsApp continua disponível em paralelo.
 - Modo Carreira com placar confirmado por administrador, momentum de vitória/derrota, registro opcional de gols e assistências, votação dos destaques por QR Code e encerramento automático ou antecipado.
 
 ## Execução local

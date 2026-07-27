@@ -1,0 +1,48 @@
+import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { apiFetch } from "@/api";
+import { useAuth } from "@/auth";
+import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
+import { colors } from "@/theme";
+import type { MatchListPayload, ScheduledMatch } from "@/types";
+
+export default function MatchesScreen() {
+  const { account } = useAuth(), router = useRouter();
+  const query = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => apiFetch<MatchListPayload>(account?.role === "admin" ? "/api/admin/matches" : "/api/matches"),
+  });
+  const refetch = query.refetch;
+  useFocusEffect(useCallback(() => { void refetch(); }, [refetch]));
+  return <Screen><Header eyebrow="AGENDA DA PELADA" title="Partidas" action={account?.role === "admin" ? <Button title="+ Criar" onPress={() => router.push("/matches/manage" as never)}/> : null}/>
+    {query.isError && !query.data ? <ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/> : <FlatList
+      contentContainerStyle={styles.list} data={query.data?.matches || []} keyExtractor={item => item.id}
+      refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} tintColor={colors.green}/>}
+      ListEmptyComponent={<EmptyState title="Nenhuma partida" message="As partidas criadas pelos administradores aparecerão aqui."/>}
+      renderItem={({ item }) => <MatchCard item={item} onPress={() => router.push(`/matches/${item.id}` as never)}/>}
+    />}</Screen>;
+}
+
+function MatchCard({ item, onPress }: { item: ScheduledMatch; onPress(): void }) {
+  const own = item.viewer.status === "PRESENT" ? "Você vai jogar" : item.viewer.status === "ABSENT" ? "Você não irá" : "Confirmação pendente";
+  return <Pressable onPress={onPress}><Card style={[styles.card, item.status === "CANCELLED" && styles.cancelled]}>
+    <View style={styles.top}><View style={{ flex: 1 }}><Text style={[styles.state, item.status === "OPEN" ? styles.open : item.status === "CANCELLED" ? styles.cancelledState : styles.closed]}>{status(item.status, item.acceptingResponses)}</Text><Text style={styles.title}>{item.title}</Text><Text style={styles.date}>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</Text></View><View style={styles.count}><Text style={styles.countValue}>{item.counts.present}</Text><Text style={styles.countLabel}>presentes</Text></View></View>
+    <View style={styles.summary}><Text style={styles.present}>{item.counts.present} presentes</Text><Text style={styles.absent}>{item.counts.absent} ausentes</Text><Text style={styles.pending}>{item.counts.pending} pendentes</Text></View>
+    <Text style={[styles.viewer, !item.viewer.status && item.status === "OPEN" && styles.viewerPending]}>{own}</Text>
+  </Card></Pressable>;
+}
+function status(value: string, accepting: boolean) { return value === "OPEN" ? accepting ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : value === "CLOSED" ? "LISTA ENCERRADA" : "CANCELADA"; }
+function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
+const styles = StyleSheet.create({
+  list: { padding: 20, paddingTop: 8, gap: 12, flexGrow: 1 }, card: { gap: 12 }, cancelled: { opacity: .65 },
+  top: { flexDirection: "row", gap: 12 }, state: { alignSelf: "flex-start", fontSize: 9, fontWeight: "900", letterSpacing: .6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10 },
+  open: { color: colors.success, backgroundColor: "#E5F4EA" }, closed: { color: colors.muted, backgroundColor: "#EEF1EF" }, cancelledState: { color: colors.danger, backgroundColor: colors.dangerSoft },
+  title: { color: colors.text, fontSize: 20, fontWeight: "900", marginTop: 8 }, date: { color: colors.muted, marginTop: 4 },
+  count: { width: 72, height: 68, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#E9F3EC" },
+  countValue: { color: colors.green, fontSize: 27, fontWeight: "900" }, countLabel: { color: colors.muted, fontSize: 9 },
+  summary: { flexDirection: "row", flexWrap: "wrap", gap: 6 }, present: { color: colors.success, backgroundColor: "#E5F4EA", padding: 6, borderRadius: 8, fontWeight: "800" },
+  absent: { color: colors.danger, backgroundColor: colors.dangerSoft, padding: 6, borderRadius: 8, fontWeight: "800" }, pending: { color: colors.muted, backgroundColor: "#EEF1EF", padding: 6, borderRadius: 8, fontWeight: "800" },
+  viewer: { color: colors.green, fontWeight: "800" }, viewerPending: { color: colors.danger },
+});

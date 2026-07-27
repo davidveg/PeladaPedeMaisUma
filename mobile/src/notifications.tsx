@@ -24,9 +24,12 @@ export function NotificationCoordinator() {
       const identifier = response.notification.request.identifier;
       if (handledResponse.current === identifier) return;
       const data = response.notification.request.content.data;
-      if (data?.type !== "career_vote_open" || typeof data.separationId !== "string") return;
       handledResponse.current = identifier;
-      router.push({ pathname: "/separations/[id]", params: { id: data.separationId } });
+      if (data?.type === "career_vote_open" && typeof data.separationId === "string") {
+        router.push({ pathname: "/separations/[id]", params: { id: data.separationId } });
+      } else if (typeof data?.matchId === "string" && ["match_created", "match_updated", "attendance_changed", "match_closed", "match_cancelled"].includes(String(data.type))) {
+        router.push(`/matches/${data.matchId}` as never);
+      }
     };
     void (async () => {
       try {
@@ -63,6 +66,14 @@ async function registerPushNotifications(Notifications: NotificationsModule) {
       await Notifications.setNotificationChannelAsync("career-votes", {
         name: "Votações da pelada",
         description: "Avisos de votações abertas após a confirmação dos resultados.",
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 150, 250],
+        lightColor: "#0B3D2E",
+        sound: "default",
+      });
+      await Notifications.setNotificationChannelAsync("matches", {
+        name: "Partidas e presenças",
+        description: "Criação de partidas, confirmações e alterações de presença.",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 150, 250],
         lightColor: "#0B3D2E",

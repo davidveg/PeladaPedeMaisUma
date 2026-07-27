@@ -38,6 +38,28 @@ export const mobileIdempotencyKeys = sqliteTable("mobile_idempotency_keys", {
   idempotencyKey: text("idempotency_key").notNull(), statusCode: integer("status_code").notNull(), responseJson: text("response_json").notNull(),
   createdAt: text("created_at").notNull(),
 }, table => [uniqueIndex("mobile_idempotency_unique").on(table.administratorId, table.operation, table.idempotencyKey)]);
+export const scheduledMatches = sqliteTable("scheduled_matches", {
+  id: text("id").primaryKey(), title: text("title").notNull(), matchAt: text("match_at").notNull(),
+  confirmationDeadline: text("confirmation_deadline").notNull(), location: text("location"),
+  maxChanges: integer("max_changes").notNull().default(2), status: text("status").notNull().default("OPEN"),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), separationId: text("separation_id"),
+  closedAt: text("closed_at"), ...timestamps,
+});
+export const matchAttendance = sqliteTable("match_attendance", {
+  id: text("id").primaryKey(), matchId: text("match_id").notNull(), playerId: text("player_id").notNull(),
+  status: text("status").notNull(), changeCount: integer("change_count").notNull().default(0),
+  respondedByAccountType: text("responded_by_account_type"), respondedByAccountId: text("responded_by_account_id"),
+  updatedByAdministratorId: text("updated_by_administrator_id"), ...timestamps,
+}, table => [uniqueIndex("match_attendance_match_player_unique").on(table.matchId, table.playerId)]);
+export const accountNotifications = sqliteTable("account_notifications", {
+  id: text("id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull(),
+  type: text("type").notNull(), title: text("title").notNull(), body: text("body").notNull(),
+  matchId: text("match_id"), readAt: text("read_at"), createdAt: text("created_at").notNull(),
+});
+export const notificationPushDeliveries = sqliteTable("notification_push_deliveries", {
+  id: text("id").primaryKey(), notificationId: text("notification_id").notNull(), pushTokenId: text("push_token_id").notNull(),
+  status: text("status").notNull(), ticketId: text("ticket_id"), error: text("error"), ...timestamps,
+}, table => [uniqueIndex("notification_push_delivery_unique").on(table.notificationId, table.pushTokenId)]);
 export const playerAccountLinks = sqliteTable("player_account_links", { playerId: text("player_id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull().unique(), createdAt: text("created_at").notNull() });
 export const passwordResetTokens = sqliteTable("password_reset_tokens", { id: text("id").primaryKey(), administratorId: text("administrator_id").notNull(), tokenHash: text("token_hash").notNull(), expiresAt: text("expires_at").notNull(), usedAt: text("used_at"), createdAt: text("created_at").notNull() });
 

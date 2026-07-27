@@ -4,6 +4,8 @@ import { createPasswordResetToken, hashPasswordResetToken, validNewPassword, val
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 
 const genericMessage = "Se o e-mail estiver cadastrado, você receberá as instruções em alguns minutos.";
+type Administrator = { id: string; email: string };
+type PasswordResetRow = { token_id: string; administrator_id: string; email: string };
 
 export async function POST(request: Request) {
   await ensureDb();
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
 
   const payload = await request.json().catch(() => ({})) as { email?: string };
   const email = String(payload.email ?? "").trim().toLowerCase();
-  const admin: any = /^\S+@\S+\.\S+$/.test(email) ? await db().prepare(`SELECT id,email FROM administrators WHERE email=? AND active=1`).bind(email).first() : null;
+  const admin = /^\S+@\S+\.\S+$/.test(email) ? await db().prepare(`SELECT id,email FROM administrators WHERE email=? AND active=1`).bind(email).first<Administrator>() : null;
   if (!admin) {
     logEvent("info", "password_reset_requested", { accountFound: false });
     return Response.json({ ok: true, message: genericMessage }, { status: 202 });
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
   const minimumCreatedAt = new Date(Date.now() - 60_000).toISOString();
   const recent = await db().prepare(`SELECT id FROM password_reset_tokens WHERE administrator_id=? AND created_at>? LIMIT 1`).bind(admin.id, minimumCreatedAt).first();
   const hourlyCreatedAt = new Date(Date.now() - 60 * 60_000).toISOString();
-  const hourly: any = await db().prepare(`SELECT COUNT(*) total FROM password_reset_tokens WHERE administrator_id=? AND created_at>?`).bind(admin.id, hourlyCreatedAt).first();
+  const hourly = await db().prepare(`SELECT COUNT(*) total FROM password_reset_tokens WHERE administrator_id=? AND created_at>?`).bind(admin.id, hourlyCreatedAt).first<{ total: number }>();
   if (recent || Number(hourly?.total ?? 0) >= 5) {
     logEvent("warn", "password_reset_rate_limited", { administratorId: admin.id });
     return Response.json({ ok: true, message: genericMessage }, { status: 202 });
@@ -59,7 +61,7 @@ export async function PUT(request: Request) {
   }
 
   const now = new Date().toISOString();
-  const row: any = await db().prepare(`SELECT t.id token_id,t.administrator_id FROM password_reset_tokens t JOIN administrators a ON a.id=t.administrator_id WHERE t.token_hash=? AND t.used_at IS NULL AND t.expires_at>? AND a.active=1 LIMIT 1`).bind(await hashPasswordResetToken(token), now).first();
+  const row = await db().prepare(`SELECT t.id token_id,t.administrator_id,a.email FROM password_reset_tokens t JOIN administrators a ON a.id=t.administrator_id WHERE t.token_hash=? AND t.used_at IS NULL AND t.expires_at>? AND a.active=1 LIMIT 1`).bind(await hashPasswordResetToken(token), now).first<PasswordResetRow>();
   if (!row) {
     logEvent("warn", "password_reset_token_rejected");
     return Response.json({ error: "Este link é inválido, expirou ou já foi utilizado." }, { status: 400 });
@@ -75,8 +77,15 @@ export async function PUT(request: Request) {
     database.prepare(`UPDATE administrators SET password_hash=?,must_change_password=0,updated_at=? WHERE id=?`).bind(await hashPassword(password), now, row.administrator_id),
     database.prepare(`UPDATE password_reset_tokens SET used_at=? WHERE administrator_id=? AND used_at IS NULL`).bind(now, row.administrator_id),
     database.prepare(`DELETE FROM sessions WHERE administrator_id=?`).bind(row.administrator_id),
+    database.prepare(`UPDATE mobile_sessions SET revoked_at=? WHERE account_type='administrator' AND account_id=? AND revoked_at IS NULL`).bind(now, row.administrator_id),
+    database.prepare(`UPDATE mobile_push_tokens SET active=0,updated_at=? WHERE account_type='administrator' AND account_id=?`).bind(now, row.administrator_id),
   ]);
-  await audit(row.administrator_id, "PASSWORD_RESET", "administrator", row.administrator_id, { sessionsRevoked: true });
+  await audit(row.administrator_id, "PASSWORD_RESET", "administrator", row.administrator_id, { sessionsRevoked: true, mobileSessionsRevoked: true });
   logEvent("info", "password_reset_completed", { administratorId: row.administrator_id });
+  try {
+    await getRuntimeBindings().MAILER?.sendPasswordChanged({ to: row.email, changedAt: now, portal: "admin" });
+  } catch (error) {
+    logEvent("error", "password_changed_email_failed", { administratorId: row.administrator_id, error });
+  }
   return Response.json({ ok: true, message: "Senha redefinida. Você já pode entrar no painel." });
 }

@@ -5,13 +5,15 @@ Aplicativo Expo/React Native com uma única base TypeScript para iOS e Android. 
 ## Arquitetura e decisões
 
 - Expo SDK 56 + Expo Router, seguindo o template estável oficial disponível durante a implementação.
-- TanStack Query para cache, invalidação e persistência offline apenas de separações, perfil e configuração pública.
+- TanStack Query para cache, invalidação e persistência offline de separações, partidas, notificações, perfil e configuração pública.
 - Tokens somente no SecureStore. Senhas existem apenas durante o envio do login.
 - Uma resposta `401` provoca uma única tentativa compartilhada de refresh; falha remove a sessão local e volta ao login.
 - Mutações usam `networkMode: online`, não são enfileiradas, e confirmações críticas usam `Idempotency-Key`.
 - O servidor interpreta a lista e chama o algoritmo oficial. O cliente apenas apresenta a proposta e permite trocas manuais.
 - Datas são apresentadas em `America/Sao_Paulo`; os contratos continuam usando ISO 8601.
 - O compartilhamento tenta WhatsApp e cai no compartilhamento nativo. Links são rejeitados se não forem HTTPS públicos.
+- Partidas e presenças usam a mesma API do site; mudar a resposta em qualquer cliente consome a mesma contagem de remarcações.
+- Push é opcional e nunca bloqueia o aplicativo. No Expo Go o módulo nativo fica desativado automaticamente, enquanto a central interna de notificações continua funcionando.
 
 ## Execução local
 
@@ -86,7 +88,7 @@ Access tokens duram 15 minutos. Refresh tokens duram 30 dias, são armazenados s
 
 ## Testes de fluxo recomendados antes de cada release
 
-1. Jogador: login, separações, detalhe somente leitura, card associado e mensagem de conta sem associação.
+1. Jogador: login, partidas, confirmação e remarcação de presença, notificações, separações, card associado e mensagem de conta sem associação.
 2. Autorização: chamar proposta, config, ordem, súmula e resultado com token de jogador e confirmar `401`.
 3. Administrador: importar lista, tratar nome ambíguo, revisar, gerar novamente, trocar jogadores e salvar.
 4. Ordem: arrastar em cada time, usar setas acessíveis, salvar, alterar e salvar novamente.
@@ -110,8 +112,8 @@ Access tokens duram 15 minutos. Refresh tokens duram 30 dias, são armazenados s
 
 ## Limitações objetivas da versão 1.0
 
-- cadastro, associação, recuperação de senha, votação e administração completa continuam no site responsivo;
+- cadastro, associação, conclusão da redefinição de senha recebida por e-mail, votação e administração completa continuam no site responsivo;
 - cache offline é somente leitura e expira após sete dias;
 - correção manual de jogadores desconhecidos ou ambíguos deve ser feita no site;
-- notificações push não fazem parte desta versão;
+- notificações push exigem um development/preview/production build; no Expo Go apenas a central interna é usada;
 - ícones/splash comerciais e credenciais de assinatura das lojas devem ser fornecidos antes da publicação.
