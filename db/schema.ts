@@ -56,6 +56,17 @@ export const accountNotifications = sqliteTable("account_notifications", {
   type: text("type").notNull(), title: text("title").notNull(), body: text("body").notNull(),
   matchId: text("match_id"), readAt: text("read_at"), createdAt: text("created_at").notNull(),
 });
+export const accountNotificationPreferences = sqliteTable("account_notification_preferences", {
+  id: text("id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull(),
+  attendanceInApp: integer("attendance_in_app", { mode: "boolean" }).notNull().default(true),
+  attendancePush: integer("attendance_push", { mode: "boolean" }).notNull().default(true),
+  matchesInApp: integer("matches_in_app", { mode: "boolean" }).notNull().default(true),
+  matchesPush: integer("matches_push", { mode: "boolean" }).notNull().default(true),
+  separationsInApp: integer("separations_in_app", { mode: "boolean" }).notNull().default(true),
+  separationsPush: integer("separations_push", { mode: "boolean" }).notNull().default(true),
+  careerVotesPush: integer("career_votes_push", { mode: "boolean" }).notNull().default(true),
+  pageSize: integer("page_size").notNull().default(10), ...timestamps,
+}, table => [uniqueIndex("account_notification_preferences_account_unique").on(table.accountType, table.accountId)]);
 export const notificationPushDeliveries = sqliteTable("notification_push_deliveries", {
   id: text("id").primaryKey(), notificationId: text("notification_id").notNull(), pushTokenId: text("push_token_id").notNull(),
   status: text("status").notNull(), ticketId: text("ticket_id"), error: text("error"), ...timestamps,

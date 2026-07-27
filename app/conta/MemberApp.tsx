@@ -15,6 +15,13 @@ async function api(url: string, options?: RequestInit) {
   return body;
 }
 
+type NotificationPreferences = {
+  attendanceInApp: boolean; attendancePush: boolean;
+  matchesInApp: boolean; matchesPush: boolean;
+  separationsInApp: boolean; separationsPush: boolean;
+  careerVotesPush: boolean; pageSize: number;
+};
+
 export default function MemberApp() {
   const [member, setMember] = useState<any>(undefined), [player, setPlayer] = useState<Player | null>(null), [config, setConfig] = useState<Config>(defaultConfig), [available, setAvailable] = useState<any[]>([]), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
   async function load() {
@@ -41,7 +48,37 @@ export default function MemberApp() {
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
   if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
-  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator"} onLogout={logout}/><main className="member-main"><div className="member-account-head"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : ""}</p></div></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}</main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+}
+
+function NotificationPreferencesCard() {
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null), [saving, setSaving] = useState(false), [message, setMessage] = useState(""), [error, setError] = useState("");
+  useEffect(() => { api("/api/notification-preferences").then(result => setPreferences(result.preferences)).catch(cause => setError(cause.message)); }, []);
+  const set = (key: keyof NotificationPreferences, value: boolean | number) => setPreferences(current => current ? { ...current, [key]: value } : current);
+  async function save() {
+    if (!preferences) return;
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await api("/api/notification-preferences", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(preferences) });
+      setPreferences(result.preferences); setMessage(result.message);
+    } catch (cause: any) { setError(cause.message); } finally { setSaving(false); }
+  }
+  function disableAll() {
+    setPreferences(current => current ? {
+      ...current, attendanceInApp: false, attendancePush: false, matchesInApp: false,
+      matchesPush: false, separationsInApp: false, separationsPush: false, careerVotesPush: false,
+    } : current);
+  }
+  const rows = [
+    { label: "Confirmações e ausências", description: "Mudanças na lista de presença.", inApp: "attendanceInApp", push: "attendancePush" },
+    { label: "Partidas", description: "Criação, alteração ou cancelamento.", inApp: "matchesInApp", push: "matchesPush" },
+    { label: "Separações prontas", description: "Lista encerrada e times disponíveis.", inApp: "separationsInApp", push: "separationsPush" },
+  ] as const;
+  return <section className="notification-preferences-card"><div className="notification-preferences-head"><div><div className="eyebrow">PREFERÊNCIAS</div><h2>Notificações e pushes</h2><p>Escolha quais novidades aparecem no feed e quais chegam à central de notificações do celular. A alteração vale para site, Android e iOS.</p></div><button className="ghost" type="button" onClick={disableAll} disabled={!preferences}>Desativar tudo</button></div>
+    {error && <div className="alert error">{error}</div>}{message && <div className="admin-notice" role="status"><span>✓</span><b>{message}</b></div>}
+    {!preferences ? <div className="member-empty">Carregando preferências…</div> : <><div className="notification-preferences-grid"><div className="notification-preferences-labels"><b>Tipo de aviso</b><b>No aplicativo</b><b>Push</b></div>{rows.map(row => <div className="notification-preference-row" key={row.label}><span><b>{row.label}</b><small>{row.description}</small></span><label><input type="checkbox" checked={preferences[row.inApp]} onChange={event => set(row.inApp, event.target.checked)} /><i aria-hidden="true"/></label><label><input type="checkbox" checked={preferences[row.push]} onChange={event => set(row.push, event.target.checked)} /><i aria-hidden="true"/></label></div>)}<div className="notification-preference-row"><span><b>Votações pós-jogo</b><small>Lembretes para votar em Man of the Match e Deception of the Match.</small></span><em>—</em><label><input type="checkbox" checked={preferences.careerVotesPush} onChange={event => set("careerVotesPush", event.target.checked)} /><i aria-hidden="true"/></label></div></div>
+      <div className="notification-preferences-actions"><label>Notificações por página<select value={preferences.pageSize} onChange={event => set("pageSize", Number(event.target.value))}><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label><button className="primary" type="button" onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar preferências"}</button></div></>}
+  </section>;
 }
 
 function safeReturnTo() {

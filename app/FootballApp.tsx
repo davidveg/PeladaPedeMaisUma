@@ -37,9 +37,11 @@ Mensalistas
 type Stage = "import" | "review" | "result" | "history" | "players";
 type InitialStage = Extract<Stage, "history" | "players">;
 type GuestDraft = { displayName: string; fullName: string; nickname: string; type: ImportedPlayerType; primaryPosition: string; speed: number; skill: number; marking: number; goalkeeperPositioning: number; goalExit: number; notes: string };
+type MatchSeparationSource = { id: string; title: string; matchAt: string; date: string; location?: string | null; presentCount: number };
 
 export default function FootballApp({ initialStage }: { initialStage?: InitialStage }) {
   const initialized = useRef(false);
+  const previousInitialStage = useRef<InitialStage | undefined>(initialStage);
   const [stage, setStage] = useState<Stage>(initialStage ?? "history");
   const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
   const [text, setText] = useState(sample);
@@ -60,6 +62,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   const [config, setConfig] = useState(defaultConfig);
   const [careerConfig, setCareerConfig] = useState<any>(null);
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
+  const [matchSource, setMatchSource] = useState<MatchSeparationSource | null>(null);
 
   const load = async () => {
     const [auth, h, publicConfig, publicPlayersPayload] = await Promise.all([
@@ -71,7 +74,9 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     const administrator = Boolean(auth.admin);
     setIsAdmin(administrator);
     const separations = h.separations || [];
-    const requestedSeparation=new URLSearchParams(window.location.search).get("separation");
+    const searchParams = new URLSearchParams(window.location.search);
+    const requestedSeparation=searchParams.get("separation");
+    const requestedMatchId=searchParams.get("matchId");
     const requested=separations.find((separation:any)=>separation.id===requestedSeparation);
     setHistory(separations);
     setPublicBaseUrl(publicConfig.baseUrl || window.location.origin);
@@ -84,17 +89,41 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
         fetch("/api/career/admin", { cache: "no-store" }).then((response) => response.json()),
       ]);
       setPlayers(p.players || []);
-      setConfig({
+      const nextConfig = {
         ...(c.config || defaultConfig),
         showContributions: Boolean(career.config?.trackContributions),
         cardTiersEnabled: Boolean(career.config?.cardTiersEnabled),
         cardBronzeMax: Number(career.config?.cardBronzeMax ?? 2.4),
         cardSilverMax: Number(career.config?.cardSilverMax ?? 3.9),
         cardGoldMax: Number(career.config?.cardGoldMax ?? 4.5),
-      });
+      };
+      setConfig(nextConfig);
       setCareerConfig(career.config || null);
       if (!initialized.current) {
-        if(requested){setStage("history");setHistoryDetail(requested)}else setStage(initialStage ?? "import");
+        if(requested){setStage("history");setHistoryDetail(requested)}
+        else if (requestedMatchId) {
+          const proposalResponse = await fetch("/api/mobile/separations/proposal", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ matchId: requestedMatchId, nonce: 0 }),
+          });
+          const proposal = await proposalResponse.json().catch(() => ({}));
+          if (!proposalResponse.ok) {
+            setToast(proposal.error || "Não foi possível carregar os presentes desta partida.");
+            setStage("import");
+          } else {
+            setMatchSource(proposal.match);
+            setSelected(proposal.players || []);
+            setResult(proposal.result);
+            setNonce(Math.max(0, Number(proposal.result?.proposal || 1) - 1));
+            setManual(false);
+            setText("");
+            setStage("result");
+          }
+        } else {
+          setMatchSource(null);
+          setStage(initialStage ?? "import");
+        }
       }
     } else {
       setPlayers([]);
@@ -121,10 +150,20 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => { window.removeEventListener("pageshow", refresh);window.removeEventListener("popstate",syncNavigation); document.removeEventListener("visibilitychange", refreshWhenVisible); };
   }, []);
+
+  useEffect(() => {
+    if (isAdmin === undefined || previousInitialStage.current === initialStage) return;
+    previousInitialStage.current = initialStage;
+    setHistoryDetail(null);
+    setDetail(null);
+    setStage(initialStage ?? (isAdmin ? "import" : "history"));
+  }, [initialStage, isAdmin]);
+
   const matches = useMemo(() => parsed ? matchPlayers(parsed.confirmed, players) : [], [parsed, players]);
   const missing = matches.filter((match) => match.status !== "found");
 
   async function process() {
+    setMatchSource(null);
     const next = parseWhatsApp(text);
     let currentPlayers = players;
     try {
@@ -175,12 +214,30 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   }
 
   async function confirmSeparation() {
-    if (!confirm("Deseja confirmar esta separação? Os times serão salvos no histórico.")) return;
+    const confirmation = matchSource
+      ? `Deseja fechar a lista de ${matchSource.title} e salvar esta proposta no histórico?`
+      : "Deseja confirmar esta separação? Os times serão salvos no histórico.";
+    if (!confirm(confirmation)) return;
     const snapshot = { ...result, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight };
-    const response = await fetch("/api/separations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: parsed?.title, date: parsed?.date, originalText: text, result: snapshot, manuallyAdjusted: manual }) });
+    const response = matchSource
+      ? await fetch("/api/admin/matches", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "close", matchId: matchSource.id, result: snapshot, manuallyAdjusted: manual }),
+      })
+      : await fetch("/api/separations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: parsed?.title, date: parsed?.date, originalText: text, result: snapshot, manuallyAdjusted: manual }),
+      });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) { setToast(payload.error || "Não foi possível confirmar a separação."); if (response.status === 401) await load(); return; }
-    setToast("Separação confirmada e salva."); await load(); setHistoryDetail(null); setStage("history"); window.history.replaceState({}, "", "/separacoes-salvas");
+    setToast(payload.message || "Separação confirmada e salva.");
+    setMatchSource(null);
+    await load();
+    setHistoryDetail(null);
+    setStage("history");
+    window.history.replaceState({}, "", "/separacoes-salvas");
   }
 
   async function confirmCareerMatch(separationId:string,blueScore:number,yellowScore:number,contributions:any[]=[]){
@@ -211,7 +268,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   }
 
   async function copyTeams(source = result, withScores = false, titleOverride?: string) {
-    const title = titleOverride || source?.matchTitle || parsed?.title || "PELADA";
+    const title = titleOverride || source?.matchTitle || matchSource?.title || parsed?.title || "PELADA";
     const weights = resultConfig(source);
     const format = (player: Player, index: number) => {const goalkeeper=player.type==="goalkeeper"||player.primaryPosition==="Goleiro";const stats=goalkeeper?`Hab ${player.skill.toFixed(1)} · Pos ${(player.goalkeeperPositioning??player.speed).toFixed(1)} · Saída ${(player.goalExit??player.marking??3).toFixed(1)}`:`Vel ${player.speed.toFixed(1)} · Hab ${player.skill.toFixed(1)} · Mar ${(player.marking??3).toFixed(1)}`;return `${index + 1}. ${player.displayName}${withScores ? ` — ${player.primaryPosition} · ${stats}` : ""}`};
     const output = `⚽ ${title}\n\n🔵 TIME AZUL\n${source.blue.map(format).join("\n")}\n\n🟡 TIME AMARELO\n${source.yellow.map(format).join("\n")}\n\n📊 ${source.rating || source.balanceClassification}\nVelocidade: peso de ${Math.round(weights.speedWeight * 100)}%\nHabilidade: peso de ${Math.round(weights.skillWeight * 100)}%\nMarcação: peso de ${Math.round(weights.markingWeight * 100)}%`;
@@ -224,7 +281,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   return <div className="app-shell">
     <SiteHeader active={stage === "players" ? "players" : stage === "history" ? "separations" : "home"} isAdmin={isAdmin}/>
     <main>
-      {isAdmin && stage !== "history" && stage !== "players" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>Importar</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
+      {isAdmin && stage !== "history" && stage !== "players" && <div className="steps"><span className={stage === "import" ? "on" : "done"}>1 <i>{matchSource ? "Presentes" : "Importar"}</i></span><b></b><span className={stage === "review" ? "on" : stage === "result" ? "done" : ""}>2 <i>Revisar</i></span><b></b><span className={stage === "result" ? "on" : ""}>3 <i>Times</i></span></div>}
       {isAdmin && stage === "import" && <section className="hero"><div className="eyebrow">ORGANIZAÇÃO SEM DRAMA</div><h1>Do WhatsApp para o campo,<br /><em>times justos em minutos.</em></h1><p>Cole a lista de confirmações. A gente identifica quem vai, equilibra posições e nível, e deixa tudo pronto para compartilhar.</p><div className="import-card"><label>Cole aqui a lista de confirmações do WhatsApp</label><textarea value={text} onChange={(event) => setText(event.target.value)} aria-label="Lista de confirmações" /><div className="card-foot"><span>✅ Só quem estiver confirmado entra na lista</span><button className="primary" onClick={process}>Processar confirmações <b>→</b></button></div></div><div className="trust"><span>⚖️ Equilibra posições e nível</span><span>🔒 Seus dados ficam protegidos</span><span>📱 Pronto para o WhatsApp</span></div></section>}
       {isAdmin && stage === "review" && parsed && <section className="content"><div className="section-head"><div><div className="eyebrow">REVISÃO DA PARTIDA</div><h2>{parsed.title}</h2><p>{parsed.confirmed.length} confirmados · {parsed.absent.length} ausentes</p></div><button className="ghost" onClick={() => setStage("import")}>← Editar lista</button></div>
         {parsed.duplicates.length > 0 && <div className="alert error">Jogadores duplicados: {parsed.duplicates.join(", ")}</div>}
@@ -232,7 +289,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
         <div className="review-grid"><div className="panel"><h3>Confirmados encontrados <span>{matches.length - missing.length}</span></h3>{matches.filter((match) => match.status === "found").map((match: any) => <PlayerRow key={match.name} player={match.player} onClick={() => showPlayer(match.player)} />)}</div><div className="panel"><h3>Sem cadastro <span>{missing.length}</span></h3>{missing.map((match: any) => <div className="missing" key={match.name}><PlayerAvatar name={match.name} /><div><b>{match.name}</b><small>{match.status === "ambiguous" ? "Possível correspondência ambígua" : `${playerTypeLabel(importedPlayerType(parsed,match.name))} sem cadastro`}</small></div><button onClick={() => openGuest(match.name)}>+ Cadastrar {playerTypeLabel(importedPlayerType(parsed,match.name)).toLowerCase()}</button></div>)}</div></div>
         <div className="action-bar"><span>{selected.length} jogadores prontos</span><button className="primary" disabled={selected.length < 4 || missing.length > 0 || parsed.duplicates.length > 0} onClick={() => generate()}>Gerar times equilibrados →</button></div>
       </section>}
-      {isAdmin && stage === "result" && result && <ResultPresentation result={result} manuallyAdjusted={manual} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
+      {isAdmin && stage === "result" && result && <ResultPresentation result={result} source={matchSource} manuallyAdjusted={manual} onBack={matchSource ? () => window.history.back() : undefined} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
       {stage === "players" && <PublicPlayersView players={publicPlayers} config={publicPlayerConfig} onPlayer={(player:Player)=>showPlayer(player,publicPlayerConfig)} />}
       {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&<a className="primary" href="/">+ Nova separação</a>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><a className="history-open" href={`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`} onClick={event=>{event.preventDefault();openSavedSeparation(item)}}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></a><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar times</button><button onClick={()=>shareSavedSeparation(item)}>Compartilhar link</button></div></article>)}</div></section>}
       {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} isAdmin={isAdmin} careerConfig={careerConfig} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onEditCareer={editCareerResult} onSaveArrivalOrder={saveArrivalOrder} onBack={closeSavedSeparation} onShareLink={()=>shareSavedSeparation(historyDetail)} onPlayer={(player:Player)=>showPlayer(player,{...resultConfig(historyDetail.snapshot),showContributions:publicPlayerConfig.showContributions,cardTiersEnabled:publicPlayerConfig.cardTiersEnabled,cardBronzeMax:publicPlayerConfig.cardBronzeMax,cardSilverMax:publicPlayerConfig.cardSilverMax,cardGoldMax:publicPlayerConfig.cardGoldMax})} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
@@ -282,8 +339,8 @@ function comparePublicPlayers(a:Player,b:Player,sort:PublicPlayerSort,config:any
   const aValue=value(a),bValue=value(b);let result=typeof aValue==="number"&&typeof bValue==="number"?aValue-bValue:String(aValue).localeCompare(String(bValue),"pt-BR",{sensitivity:"base",numeric:true});if(result===0)result=a.displayName.localeCompare(b.displayName,"pt-BR",{sensitivity:"base",numeric:true});return sort.direction==="asc"?result:-result;
 }
 
-function ResultPresentation({ result, manuallyAdjusted, onPlayer, onMove, onNew, onCopy, onConfirm }: any) {
-  return <section className="content"><div className="section-head"><div><div className="eyebrow">PROPOSTA {result.proposal}</div><h2>Times prontos para o jogo</h2><p>{manuallyAdjusted ? "Separação ajustada manualmente" : "O algoritmo comparou milhares de combinações."}</p></div><BalanceBadge rating={result.rating} /></div><TeamGrid result={result} onPlayer={onPlayer} onMove={onMove} /><BalanceMetrics delta={result.delta} /><div className="result-actions"><button className="ghost" onClick={onNew}>↻ Gerar nova separação</button><button className="ghost" onClick={onCopy}>Copiar com pontuações</button><button className="primary" onClick={onConfirm}>Confirmar separação</button></div></section>;
+function ResultPresentation({ result, source, manuallyAdjusted, onBack, onPlayer, onMove, onNew, onCopy, onConfirm }: any) {
+  return <section className="content"><div className="section-head"><div><div className="eyebrow">{source ? `${source.presentCount} PRESENTES · ` : ""}PROPOSTA {result.proposal}</div><h2>Times prontos para o jogo</h2><p>{source ? `${source.title} · proposta criada somente com as presenças confirmadas.` : manuallyAdjusted ? "Separação ajustada manualmente" : "O algoritmo comparou milhares de combinações."}</p></div><BalanceBadge rating={result.rating} /></div><TeamGrid result={result} onPlayer={onPlayer} onMove={onMove} /><BalanceMetrics delta={result.delta} /><div className="result-actions">{onBack && <button className="ghost" onClick={onBack}>← Voltar às presenças</button>}<button className="ghost" onClick={onNew}>↻ Gerar nova separação</button><button className="ghost" onClick={onCopy}>Copiar com pontuações</button><button className="primary" onClick={onConfirm}>{source ? "Fechar lista e confirmar" : "Confirmar separação"}</button></div></section>;
 }
 
 function SavedSeparation({ item, isAdmin, careerConfig, publicBaseUrl, onConfirmCareer, onEditCareer, onSaveArrivalOrder, onBack, onShareLink, onPlayer, onCopy }: any) {

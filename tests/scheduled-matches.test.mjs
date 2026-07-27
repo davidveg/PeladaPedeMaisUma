@@ -7,12 +7,13 @@ import test from "node:test";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
-const [{ setRuntimeBindings }, database, adminMatches, matches, notifications] = await Promise.all([
+const [{ setRuntimeBindings }, database, adminMatches, matches, notifications, separationProposal] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
   import("../app/api/admin/matches/route.ts"),
   import("../app/api/matches/route.ts"),
   import("../app/api/notifications/route.ts"),
+  import("../app/api/mobile/separations/proposal/route.ts"),
 ]);
 const { db, ensureDb, hashOpaqueToken, hashPassword } = database;
 
@@ -66,13 +67,46 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
       const response = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", { action: "attendance", matchId, playerId: player.id, status: "PRESENT" }, "ppm_session=match-admin-session", "PATCH"));
       assert.equal(response.status, 200);
     }
-    const closed = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", { action: "close", matchId }, "ppm_session=match-admin-session", "PATCH"));
+    const firstProposalResponse = await separationProposal.POST(jsonRequest(
+      "https://pelada.example/api/mobile/separations/proposal",
+      { matchId, nonce: 0 },
+      "ppm_session=match-admin-session",
+    ));
+    assert.equal(firstProposalResponse.status, 200);
+    const firstProposal = await firstProposalResponse.json();
+    assert.equal(firstProposal.players.length, 4);
+    assert.equal(firstProposal.result.proposal, 1);
+
+    const regeneratedResponse = await separationProposal.POST(jsonRequest(
+      "https://pelada.example/api/mobile/separations/proposal",
+      { matchId, nonce: 1 },
+      "ppm_session=match-admin-session",
+    ));
+    assert.equal(regeneratedResponse.status, 200);
+    const regenerated = await regeneratedResponse.json();
+    assert.equal(regenerated.result.proposal, 2);
+
+    const incomplete = { ...regenerated.result, blue: regenerated.result.blue.slice(1) };
+    const rejected = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
+      action: "close", matchId, result: incomplete, manuallyAdjusted: true,
+    }, "ppm_session=match-admin-session", "PATCH"));
+    assert.equal(rejected.status, 409);
+    assert.equal((await db().prepare(`SELECT status FROM scheduled_matches WHERE id=?`).bind(matchId).first()).status, "OPEN");
+
+    const adjusted = structuredClone(regenerated.result);
+    [adjusted.blue[0], adjusted.yellow[0]] = [adjusted.yellow[0], adjusted.blue[0]];
+    const closed = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
+      action: "close", matchId, result: adjusted, manuallyAdjusted: true,
+    }, "ppm_session=match-admin-session", "PATCH"));
     assert.equal(closed.status, 200);
     const closedPayload = await closed.json();
     assert.ok(closedPayload.separationId);
     const stored = await db().prepare(`SELECT status,separation_id FROM scheduled_matches WHERE id=?`).bind(matchId).first();
     assert.deepEqual({ ...stored }, { status: "CLOSED", separation_id: closedPayload.separationId });
-    assert.ok(await db().prepare(`SELECT id FROM team_separations WHERE id=?`).bind(closedPayload.separationId).first());
+    const savedSeparation = await db().prepare(`SELECT id,snapshot,manually_adjusted FROM team_separations WHERE id=?`).bind(closedPayload.separationId).first();
+    assert.ok(savedSeparation);
+    assert.equal(JSON.parse(savedSeparation.snapshot).proposal, 2);
+    assert.equal(savedSeparation.manually_adjusted, 1);
   } finally {
     bindings.DB.close();
     setRuntimeBindings(undefined);

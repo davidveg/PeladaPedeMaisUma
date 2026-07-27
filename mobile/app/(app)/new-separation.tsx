@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch, jsonMutation } from "@/api";
 import { BalanceDetails } from "@/balance-details";
 import { Button, Card, Field, Header, Screen } from "@/components";
@@ -11,10 +11,17 @@ import { colors } from "@/theme";
 import type { Player, TeamResult } from "@/types";
 
 type TeamKey = "blue" | "yellow";
-type Proposal = { parsed?: { title: string; date: string }; players: Player[]; result: TeamResult; config: Record<string, unknown> };
+type Proposal = {
+  parsed?: { title: string; date: string };
+  match?: { id: string; title: string; date: string; location?: string | null; presentCount: number };
+  players: Player[];
+  result: TeamResult;
+  config: Record<string, unknown>;
+};
 
 export default function NewSeparation() {
-  const [step, setStep] = useState(1);
+  const { matchId } = useLocalSearchParams<{ matchId?: string }>();
+  const [step, setStep] = useState(matchId ? 2 : 1);
   const [text, setText] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -24,23 +31,48 @@ export default function NewSeparation() {
   const [title, setTitle] = useState("Pelada");
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
+  const loadedMatch = useRef("");
   const router = useRouter(), client = useQueryClient();
-  const playersQuery = useQuery({ queryKey: ["admin-players"], queryFn: () => apiFetch<{ players: Player[] }>("/api/players") });
+  const playersQuery = useQuery({ queryKey: ["admin-players"], queryFn: () => apiFetch<{ players: Player[] }>("/api/players"), enabled: !matchId });
   const proposalMutation = useMutation({
     mutationFn: (body: unknown) => apiFetch<Proposal>("/api/mobile/separations/proposal", jsonMutation("POST", body)),
     onError: (error: Error) => Alert.alert("Revise a lista", error.message),
   });
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (matchId) {
+        const closed = await apiFetch<{ separationId: string }>("/api/admin/matches", jsonMutation("PATCH", {
+          action: "close", matchId, result: proposal?.result, manuallyAdjusted: manual,
+        }));
+        return { id: closed.separationId };
+      }
       const key = Crypto.randomUUID();
       return apiFetch<{ id: string }>("/api/mobile/separations", jsonMutation("POST", { title, date: date || null, location: location || null, originalText: text, result: proposal?.result, manuallyAdjusted: manual }, key));
     },
     onSuccess: ({ id }) => {
       client.invalidateQueries({ queryKey: ["separations"] });
+      client.invalidateQueries({ queryKey: ["matches"] });
+      client.invalidateQueries({ queryKey: ["notifications"] });
       router.replace({ pathname: "/separations/[id]", params: { id } });
     },
     onError: (error: Error) => Alert.alert("Não foi possível salvar", error.message),
   });
+
+  useEffect(() => {
+    if (!matchId || loadedMatch.current === matchId) return;
+    loadedMatch.current = matchId;
+    void proposalMutation.mutateAsync({ matchId, nonce: 0 }).then(next => {
+      setProposal(next);
+      setSelected(next.players.map(player => player.id));
+      setTitle(next.match?.title || next.parsed?.title || "Pelada");
+      setDate(next.match?.date || next.parsed?.date || "");
+      setLocation(next.match?.location || "");
+      setNonce(Math.max(0, Number(next.result?.proposal || 1) - 1));
+      setStep(2);
+    }).catch(() => {
+      loadedMatch.current = "";
+    });
+  }, [matchId]);
 
   const importList = async () => {
     const next = await proposalMutation.mutateAsync({ originalText: text, nonce: 0 }).catch(() => null);
@@ -54,7 +86,8 @@ export default function NewSeparation() {
 
   const generate = async (retry = false) => {
     const nextNonce = retry ? nonce + 1 : nonce;
-    const next = await proposalMutation.mutateAsync({ playerIds: selected, nonce: nextNonce }).catch(() => null);
+    const body = matchId ? { matchId, nonce: nextNonce } : { playerIds: selected, nonce: nextNonce };
+    const next = await proposalMutation.mutateAsync(body).catch(() => null);
     if (!next) return;
     setNonce(nextNonce);
     setProposal(next);
@@ -104,8 +137,10 @@ export default function NewSeparation() {
     applyTeams(blue, yellow);
   };
 
+  const reviewPlayers = matchId ? proposal?.players || [] : playersQuery.data?.players || [];
+
   return <Screen>
-    <Header eyebrow={`ETAPA ${step} DE 4`} title={step === 1 ? "Importar confirmações" : step === 2 ? "Revisar jogadores" : step === 3 ? "Ajuste fino dos times" : "Confirmar e salvar"}/>
+    <Header eyebrow={`${matchId ? "PARTIDA · " : ""}ETAPA ${step} DE 4`} title={step === 1 ? "Importar confirmações" : step === 2 ? matchId ? "Revisar presentes" : "Revisar jogadores" : step === 3 ? "Ajuste fino dos times" : "Confirmar e salvar"}/>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {step === 1 ? <Card style={styles.gap}>
         <Text style={styles.muted}>Cole a lista com as seções Goleiros, Mensalistas e Convidados. Somente os confirmados serão usados.</Text>
@@ -115,17 +150,21 @@ export default function NewSeparation() {
 
       {step === 2 ? <>
         <Card>
-          <Text style={styles.sectionTitle}>{selected.length} jogadores selecionados</Text>
+          <Text style={styles.sectionTitle}>{selected.length} {matchId ? "presentes confirmados" : "jogadores selecionados"}</Text>
+          {matchId ? <Text style={styles.muted}>A lista veio das confirmações da partida e será validada novamente antes do fechamento.</Text> : null}
           <Text style={{ color: selected.length % 2 ? colors.yellow : colors.muted }}>{selected.length % 2 ? "Lista ímpar: um time terá um jogador extra." : "Quantidade par de jogadores."}</Text>
         </Card>
-        {(playersQuery.data?.players || []).map(player => <Pressable key={player.id} accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(player.id) }} onPress={() => toggle(player.id)}>
+        {reviewPlayers.map(player => matchId ? <Card key={player.id} style={[styles.playerChoice, styles.playerChoiceSelected]}>
+          <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · Presença confirmada</Text></View>
+          <Text style={styles.choiceMark}>✓</Text>
+        </Card> : <Pressable key={player.id} accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(player.id) }} onPress={() => toggle(player.id)}>
           <Card style={[styles.playerChoice, selected.includes(player.id) && styles.playerChoiceSelected]}>
             <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · {player.type === "goalkeeper" ? "Goleiro" : player.type === "monthly" ? "Mensalista" : "Convidado"}</Text></View>
             <Text style={styles.choiceMark}>{selected.includes(player.id) ? "✓" : "+"}</Text>
           </Card>
         </Pressable>)}
         <Button title="Gerar times" busy={proposalMutation.isPending} disabled={selected.length < 4} onPress={() => generate()}/>
-        <Button title="Voltar" variant="secondary" onPress={() => setStep(1)}/>
+        <Button title={matchId ? "Voltar à partida" : "Voltar"} variant="secondary" onPress={() => matchId ? router.back() : setStep(1)}/>
       </> : null}
 
       {step === 3 && proposal ? <>
@@ -145,12 +184,10 @@ export default function NewSeparation() {
 
       {step === 4 && proposal ? <>
         <Card style={styles.gap}>
-          <Field label="Título" value={title} onChangeText={setTitle}/>
-          <Field label="Data (AAAA-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none"/>
-          <Field label="Local (opcional)" value={location} onChangeText={setLocation}/>
+          {matchId ? <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={styles.official}>A lista será fechada somente após esta confirmação.</Text></> : <><Field label="Título" value={title} onChangeText={setTitle}/><Field label="Data (AAAA-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none"/><Field label="Local (opcional)" value={location} onChangeText={setLocation}/></>}
           <Text style={styles.muted}>{proposal.result.blue.length} no Azul · {proposal.result.yellow.length} no Amarelo · {manual ? "Ajuste manual" : "Proposta oficial"} · {proposal.result.rating}</Text>
         </Card>
-        <Button title="Confirmar e salvar" busy={saveMutation.isPending} onPress={() => Alert.alert("Salvar separação?", "Os times e os indicadores atuais serão gravados na mesma base da aplicação web.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate() }])}/>
+        <Button title={matchId ? "Fechar lista e salvar" : "Confirmar e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(matchId ? "Fechar lista e salvar?" : "Salvar separação?", matchId ? "A partida será encerrada com esta proposta. Os presentes e os indicadores serão validados novamente." : "Os times e os indicadores atuais serão gravados na mesma base da aplicação web.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate() }])}/>
         <Button title="Voltar aos times" variant="secondary" onPress={() => setStep(3)}/>
       </> : null}
     </ScrollView>

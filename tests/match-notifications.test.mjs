@@ -43,6 +43,33 @@ test("evento de partida cria aviso interno e envia push com link para a partida"
     assert.deepEqual({ ...internal }, { type: "MATCH_CREATED", title: "Nova partida criada", match_id: "scheduled-match-1", read_at: null });
     const delivery = await db().prepare(`SELECT status,ticket_id FROM notification_push_deliveries WHERE push_token_id='notice-token'`).first();
     assert.deepEqual({ ...delivery }, { status: "SENT", ticket_id: "match-ticket" });
+
+    await db().prepare(`INSERT INTO account_notification_preferences
+      (id,account_type,account_id,attendance_in_app,attendance_push,matches_in_app,matches_push,separations_in_app,separations_push,career_votes_push,page_size,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind("notice-preferences", "member", "notice-member", 1, 1, 0, 1, 1, 1, 1, 10, now, now).run();
+    await broadcastAccountNotification({
+      type: "MATCH_UPDATED", title: "Partida atualizada",
+      body: "O horário mudou.", matchId: "scheduled-match-1",
+    });
+    assert.equal(requests.length, 2, "push continua ativo quando o aviso interno está desligado");
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM account_notifications WHERE account_type='member' AND account_id='notice-member'`).first("total"), 1);
+
+    await db().prepare(`UPDATE account_notification_preferences SET matches_in_app=1,matches_push=0 WHERE account_type='member' AND account_id='notice-member'`).run();
+    await broadcastAccountNotification({
+      type: "MATCH_UPDATED", title: "Local atualizado",
+      body: "O campo mudou.", matchId: "scheduled-match-1",
+    });
+    assert.equal(requests.length, 2, "aviso interno não deve forçar o envio de push");
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM account_notifications WHERE account_type='member' AND account_id='notice-member'`).first("total"), 2);
+
+    await db().prepare(`UPDATE account_notification_preferences SET matches_in_app=0,matches_push=0 WHERE account_type='member' AND account_id='notice-member'`).run();
+    await broadcastAccountNotification({
+      type: "MATCH_CANCELLED", title: "Partida cancelada",
+      body: "A partida não será realizada.", matchId: "scheduled-match-1",
+    });
+    assert.equal(requests.length, 2);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM account_notifications WHERE account_type='member' AND account_id='notice-member'`).first("total"), 2);
   } finally {
     globalThis.fetch = originalFetch;
     bindings.DB.close();

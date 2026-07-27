@@ -18,15 +18,6 @@ export default function MatchDetail() {
     onSuccess: async () => { await client.invalidateQueries({ queryKey: ["matches"] }); await client.invalidateQueries({ queryKey: ["notifications"] }); },
     onError: error => Alert.alert("Não foi possível confirmar", (error as Error).message),
   });
-  const closeMutation = useMutation({
-    mutationFn: () => apiFetch<{ separationId: string }>("/api/admin/matches", jsonMutation("PATCH", { action: "close", matchId: id })),
-    onSuccess: async result => {
-      await client.invalidateQueries({ queryKey: ["matches"] });
-      await client.invalidateQueries({ queryKey: ["separations"] });
-      router.push({ pathname: "/separations/[id]", params: { id: result.separationId } });
-    },
-    onError: error => Alert.alert("Não foi possível fechar a lista", (error as Error).message),
-  });
   if (query.isError) return <Screen><ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/></Screen>;
   if (!item) return <Screen><ErrorState message="Partida não encontrada." retry={() => query.refetch()}/></Screen>;
   const attendanceByPlayer = Object.fromEntries(item.attendance.map(answer => [answer.playerId, answer]));
@@ -48,7 +39,7 @@ export default function MatchDetail() {
       {account?.role !== "admin" && <Roster item={item}/>}
     </>}
     renderItem={({ item: player }: { item: MatchPlayer }) => { const response = attendanceByPlayer[player.id]; return <View style={styles.player}><View style={{ flex: 1 }}><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.playerMeta}>{player.primaryPosition} · {response ? `${response.changeCount}/${item.maxChanges} remarcações` : "Sem resposta"}</Text></View><Pressable style={[styles.smallButton, response?.status === "PRESENT" && styles.smallPresent]} onPress={() => mutation.mutate({ playerId: player.id, status: "PRESENT" })}><Text style={response?.status === "PRESENT" ? styles.smallOnText : styles.smallPresentText}>✓</Text></Pressable><Pressable style={[styles.smallButton, response?.status === "ABSENT" && styles.smallAbsent]} onPress={() => mutation.mutate({ playerId: player.id, status: "ABSENT" })}><Text style={response?.status === "ABSENT" ? styles.smallOnText : styles.smallAbsentText}>×</Text></Pressable></View>; }}
-    ListFooterComponent={<View style={styles.footer}>{item.separationId ? <Button title="Abrir separação gerada" variant="secondary" onPress={() => router.push({ pathname: "/separations/[id]", params: { id: item.separationId! } })}/> : null}{account?.role === "admin" && item.status === "OPEN" ? <Button title="Fechar lista e gerar times" busy={closeMutation.isPending} disabled={item.counts.present < 4} onPress={() => Alert.alert("Fechar lista?", `Gerar a separação com ${item.counts.present} jogadores presentes?`, [{ text: "Cancelar", style: "cancel" }, { text: "Gerar times", onPress: () => closeMutation.mutate() }])}/> : null}</View>}
+    ListFooterComponent={<View style={styles.footer}>{item.separationId ? <Button title="Abrir separação gerada" variant="secondary" onPress={() => router.push({ pathname: "/separations/[id]", params: { id: item.separationId! } })}/> : null}{account?.role === "admin" && item.status === "OPEN" ? <Button title="Fechar lista e gerar times" disabled={item.counts.present < 4} onPress={() => router.push({ pathname: "/new-separation", params: { matchId: item.id } } as never)}/> : null}</View>}
   /></Screen>;
 }
 function Count({ value, label, color }: { value: number; label: string; color: string }) { return <View style={styles.count}><Text style={[styles.countValue, { color }]}>{value}</Text><Text style={styles.countLabel}>{label}</Text></View>; }

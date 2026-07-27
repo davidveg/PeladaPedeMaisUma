@@ -2,11 +2,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { adminRequired, db, ensureDb } from "../../../../../lib/database";
 import { balanceTeams, matchPlayers, parseWhatsApp, type Config, type Player } from "../../../../../lib/football";
+import { createMatchSeparationProposal } from "../../../../../lib/scheduled-matches";
 
 export async function POST(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
+  if (payload.matchId) {
+    try {
+      const proposal = await createMatchSeparationProposal(String(payload.matchId), Number(payload.nonce) || 0);
+      return Response.json({
+        parsed: { title: proposal.match.title, date: proposal.match.date },
+        ...proposal,
+      }, { headers: { "cache-control": "no-store" } });
+    } catch (error: any) {
+      return Response.json({ error: error?.message || "Não foi possível gerar os times." }, { status: Number(error?.status || 400) });
+    }
+  }
   const [playerRows, systemConfig, careerConfig] = await Promise.all([
     db().prepare(`SELECT * FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
     db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),

@@ -40,16 +40,8 @@ export function MatchesPanel({ api, setError, setNotice }: Props) {
       setNotice(result.message); await load();
     } catch (cause: any) { setError(cause.message); }
   }
-  async function closeMatch(item: Match) {
-    if (!confirm(`Fechar a lista de ${item.title} e gerar os times com ${item.counts.present} presentes?`)) return;
-    setError("");
-    try {
-      const result = await api("/api/admin/matches", {
-        method: "PATCH", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "close", matchId: item.id }),
-      });
-      setNotice(result.message); await load();
-    } catch (cause: any) { setError(cause.message); }
+  function closeMatch(item: Match) {
+    window.location.assign(`/?matchId=${encodeURIComponent(item.id)}`);
   }
   async function cancelMatch(item: Match) {
     if (!confirm(`Cancelar ${item.title}? Todos os usuários serão notificados.`)) return;
@@ -81,7 +73,7 @@ function MatchAdminDetail({ match, players, onAttendance, onEdit, onClose, onCan
   return <section className="admin-card match-admin-detail"><div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
     <div className="match-attendance-summary"><span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span><span><b>{match.counts.pending}</b>Pendentes</span></div>
     <div className="match-player-admin-list">{players.map((player: Player) => { const answer = byPlayer[player.id]; return <div key={player.id}><span><b>{player.displayName}</b><small>{player.primaryPosition} · {answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta"}</small></span><div><button className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button><button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div></div>})}</div>
-    <div className="match-admin-actions">{match.separationId && <a className="ghost" href={`/?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <><button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
+    <div className="match-admin-actions">{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <><button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
   </section>;
 }
 

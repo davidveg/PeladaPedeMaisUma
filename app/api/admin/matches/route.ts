@@ -59,7 +59,10 @@ export async function PATCH(request: Request) {
       return Response.json({ ok: true, changed: result.changed, message: "Presença atualizada." }, { headers: noStore });
     }
     if (action === "close") {
-      const result = await createSeparationFromMatch(String(payload.matchId || ""), admin);
+      const result = await createSeparationFromMatch(String(payload.matchId || ""), admin, {
+        result: payload.result,
+        manuallyAdjusted: Boolean(payload.manuallyAdjusted),
+      });
       if (!result.alreadyCreated) {
         await broadcastAccountNotification({
           type: "MATCH_CLOSED",

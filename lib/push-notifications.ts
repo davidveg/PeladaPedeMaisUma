@@ -58,7 +58,8 @@ async function loadTokens(identity?: AccountIdentity): Promise<PushTokenRow[]> {
     `SELECT t.id,t.expo_push_token,l.player_id,t.account_type,t.account_id
      FROM mobile_push_tokens t
      LEFT JOIN player_account_links l ON l.account_type=t.account_type AND l.account_id=t.account_id
-     WHERE t.active=1 ${clause}`,
+     LEFT JOIN account_notification_preferences p ON p.account_type=t.account_type AND p.account_id=t.account_id
+     WHERE t.active=1 AND COALESCE(p.career_votes_push,1)=1 ${clause}`,
   );
   const result = identity
     ? await statement.bind(identity.accountType, identity.accountId).all()

@@ -2,6 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db, ensureDb } from "./database";
 import { logEvent } from "./logger";
+import {
+  mapNotificationPreferences,
+  notificationCategory,
+  preferenceEnabled,
+} from "./notification-preferences";
 
 export type AccountNotificationType =
   | "MATCH_CREATED"
@@ -22,25 +27,41 @@ const expoPushEndpoint = "https://exp.host/--/api/v2/push/send";
 export async function broadcastAccountNotification(message: BroadcastNotification) {
   await ensureDb();
   const recipients = (await db().prepare(
-    `SELECT id account_id,'administrator' account_type FROM administrators WHERE active=1
-     UNION ALL
-     SELECT id account_id,'member' account_type FROM member_accounts WHERE active=1`,
+    `SELECT accounts.account_id,accounts.account_type,
+            preferences.attendance_in_app,preferences.attendance_push,
+            preferences.matches_in_app,preferences.matches_push,
+            preferences.separations_in_app,preferences.separations_push,
+            preferences.career_votes_push,preferences.page_size
+     FROM (
+       SELECT id account_id,'administrator' account_type FROM administrators WHERE active=1
+       UNION ALL
+       SELECT id account_id,'member' account_type FROM member_accounts WHERE active=1
+     ) accounts
+     LEFT JOIN account_notification_preferences preferences
+       ON preferences.account_type=accounts.account_type AND preferences.account_id=accounts.account_id`,
   ).all()).results as any[];
+  const category = notificationCategory(message.type);
   const now = new Date().toISOString();
-  const notifications = recipients.map(recipient => ({
-    id: crypto.randomUUID(),
-    accountType: recipient.account_type === "administrator" ? "administrator" : "member",
-    accountId: String(recipient.account_id),
-  }));
-  for (let offset = 0; offset < notifications.length; offset += 100) {
-    await db().batch(notifications.slice(offset, offset + 100).map(item => db().prepare(
+  const notifications = recipients.map(recipient => {
+    const preferences = mapNotificationPreferences(recipient);
+    return {
+      id: crypto.randomUUID(),
+      accountType: recipient.account_type === "administrator" ? "administrator" : "member",
+      accountId: String(recipient.account_id),
+      inApp: preferenceEnabled(preferences, category, "inApp"),
+      push: preferenceEnabled(preferences, category, "push"),
+    };
+  });
+  const inAppNotifications = notifications.filter(item => item.inApp);
+  for (let offset = 0; offset < inAppNotifications.length; offset += 100) {
+    await db().batch(inAppNotifications.slice(offset, offset + 100).map(item => db().prepare(
       `INSERT INTO account_notifications
        (id,account_type,account_id,type,title,body,match_id,created_at)
        VALUES (?,?,?,?,?,?,?,?)`,
     ).bind(item.id, item.accountType, item.accountId, message.type, message.title, message.body, message.matchId, now)));
   }
-  const sent = await sendPush(notifications, message);
-  return { created: notifications.length, sent };
+  const sent = await sendPush(notifications.filter(item => item.push), message);
+  return { created: inAppNotifications.length, sent };
 }
 
 async function sendPush(

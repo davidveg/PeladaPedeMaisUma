@@ -54,6 +54,18 @@ test("push de votação alcança somente participante pendente e não duplica a 
     const duplicate = await notifyOpenCareerVote("push-match");
     assert.equal(duplicate.sent, 0);
     assert.equal(requests.length, 1);
+
+    await db().prepare(`INSERT INTO account_notification_preferences
+      (id,account_type,account_id,attendance_in_app,attendance_push,matches_in_app,matches_push,separations_in_app,separations_push,career_votes_push,page_size,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind("push-preferences", "member", "push-account", 1, 1, 1, 1, 1, 1, 0, 10, now, now).run();
+    await db().prepare(`INSERT INTO team_separations (id,match_title,original_text,snapshot,balance_score,balance_classification,confirmed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .bind("push-separation-muted", "Pelada sem push", "", JSON.stringify({ blue: players.slice(0, 4), yellow: players.slice(4) }), 0, "Bom equilíbrio", now, now, now).run();
+    await db().prepare(`INSERT INTO career_matches (id,separation_id,blue_score,yellow_score,winner_team,voting_token,status,closes_at,created_by_administrator_id,config_snapshot,team_momentum_applied,votes_momentum_applied,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind("push-match-muted", "push-separation-muted", 2, 1, "BLUE", "push-vote-token-muted", "OPEN", "2099-01-01T00:00:00.000Z", "admin", "{}", 1, 0, now, now).run();
+    const muted = await notifyOpenCareerVote("push-match-muted");
+    assert.equal(muted.sent, 0);
+    assert.equal(requests.length, 1, "preferência desliga também o push de votação pós-jogo");
   } finally {
     globalThis.fetch = originalFetch;
     bindings.DB.close();

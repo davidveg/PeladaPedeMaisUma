@@ -1,30 +1,34 @@
 "use client";
 
-import Link from "next/link";
+import type { MouseEvent } from "react";
 
 type SiteSection = "home" | "players" | "separations" | "matches" | "notifications" | "account" | "admin";
+
+function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  window.location.assign(href);
+}
 
 export function SiteHeader({
   active,
   isAdmin = false,
-  onLogout,
 }: {
   active?: SiteSection;
   isAdmin?: boolean;
-  onLogout?: () => void;
 }) {
   const link = (section: SiteSection, href: string, label: string) => (
-    <Link className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href}>
+    <a className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       {label}
-    </Link>
+    </a>
   );
 
   return (
     <header className="site-header">
-      <Link href="/" className="brand">
+      <a href="/" className="brand" onClick={(event) => navigateWithDocument(event, "/")}>
         <span className="brand-mark">⚽</span>
         <span><b>Pelada</b><small>Pede Mais Uma</small></span>
-      </Link>
+      </a>
       <nav aria-label="Navegação principal">
         {link("home", "/", isAdmin ? "Montar times" : "Início")}
         {link("players", "/jogadores", "Jogadores")}
@@ -33,7 +37,6 @@ export function SiteHeader({
         {link("notifications", "/notificacoes", "Notificações")}
         {link("account", "/conta", "Minha conta")}
         {link("admin", "/admin", isAdmin ? "Painel administrativo" : "Entrar como administrador")}
-        {onLogout ? <button type="button" onClick={onLogout}>Sair</button> : null}
       </nav>
     </header>
   );

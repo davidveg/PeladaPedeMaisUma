@@ -1,7 +1,7 @@
 /* Scheduled match rows and snapshots are narrowed at the service boundary. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb } from "./database";
-import { balanceTeams, defaultConfig, type Config, type Player } from "./football";
+import { balanceTeams, calculateTeamDelta, defaultConfig, type Config, type Player } from "./football";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
 
@@ -101,15 +101,16 @@ export async function setAttendance(params: {
   };
 }
 
-export async function createSeparationFromMatch(matchId: string, admin: any) {
+export async function createMatchSeparationProposal(matchId: string, nonce = 0) {
   await ensureDb();
   const match: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first();
   if (!match) throw statusError("Partida não encontrada.", 404);
-  if (match.separation_id) return { match, separationId: String(match.separation_id), alreadyCreated: true };
+  if (match.separation_id) throw statusError("Esta partida já possui uma separação confirmada.", 409);
   if (match.status !== "OPEN") throw statusError("Somente uma partida aberta pode gerar a separação.", 409);
   const presentRows = (await db().prepare(
     `SELECT p.* FROM match_attendance a JOIN players p ON p.id=a.player_id
-     WHERE a.match_id=? AND a.status='PRESENT' AND p.active=1 AND p.deleted_at IS NULL`,
+     WHERE a.match_id=? AND a.status='PRESENT' AND p.active=1 AND p.deleted_at IS NULL
+     ORDER BY p.display_name`,
   ).bind(matchId).all()).results as any[];
   if (presentRows.length < 4) throw statusError("São necessários pelo menos 4 jogadores presentes para gerar a separação.", 409);
   const [systemConfig, careerConfig] = await Promise.all([
@@ -126,14 +127,43 @@ export async function createSeparationFromMatch(matchId: string, admin: any) {
     protectedTopPlayersPercentage: Number(systemConfig?.protected_top_players_percentage ?? .25),
     algorithmAttempts: Number(systemConfig?.algorithm_attempts ?? 2500),
   };
-  const result = balanceTeams(presentRows.map(mapPlayer), config);
+  const players = presentRows.map(mapPlayer);
+  const result = balanceTeams(players, config, Math.max(0, Math.floor(Number(nonce) || 0)));
+  return {
+    match: {
+      id: String(match.id), title: String(match.title), matchAt: String(match.match_at),
+      date: String(match.match_at).slice(0, 10), location: match.location ? String(match.location) : null,
+      presentCount: players.length,
+    },
+    players,
+    result,
+    config,
+  };
+}
+
+export async function createSeparationFromMatch(
+  matchId: string,
+  admin: any,
+  draft?: { result?: any; manuallyAdjusted?: boolean },
+) {
+  await ensureDb();
+  const existing: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first();
+  if (!existing) throw statusError("Partida não encontrada.", 404);
+  if (existing.separation_id) return { match: existing, separationId: String(existing.separation_id), alreadyCreated: true };
+  const proposalNumber = Math.max(1, Math.floor(Number(draft?.result?.proposal) || 1));
+  const proposal = await createMatchSeparationProposal(matchId, proposalNumber - 1);
+  const match: any = existing;
+  const manuallyAdjusted = Boolean(draft?.result && draft?.manuallyAdjusted);
+  const result = draft?.result
+    ? validateAndRebuildResult(draft.result, proposal.players, proposal.config, proposal.result, manuallyAdjusted)
+    : proposal.result;
   const id = crypto.randomUUID(), now = new Date().toISOString(), date = String(match.match_at).slice(0, 10);
   const batch = await db().batch([
     db().prepare(
       `INSERT INTO team_separations
        (id,match_title,match_date,location,original_text,snapshot,manually_adjusted,balance_score,balance_classification,confirmed_at,created_at,updated_at)
-       VALUES (?,?,?,?,?,?,0,?,?,?,?,?)`,
-    ).bind(id, match.title, date, match.location || null, "", JSON.stringify(result), result.cost, result.rating, now, now, now),
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ).bind(id, match.title, date, match.location || null, "", JSON.stringify(result), manuallyAdjusted ? 1 : 0, result.cost, result.rating, now, now, now),
     db().prepare(`UPDATE scheduled_matches SET status='CLOSED',separation_id=?,closed_at=?,updated_at=? WHERE id=? AND status='OPEN' AND separation_id IS NULL`)
       .bind(id, now, now, matchId),
   ]);
@@ -144,13 +174,42 @@ export async function createSeparationFromMatch(matchId: string, admin: any) {
     throw statusError("A partida foi alterada enquanto a separação era gerada. Atualize e tente novamente.", 409);
   }
   await audit(admin.id, "MATCH_CLOSED_AND_SEPARATED", "scheduled_match", matchId, {
-    separationId: id, presentPlayers: presentRows.length, balanceClassification: result.rating,
+    separationId: id, presentPlayers: proposal.players.length, balanceClassification: result.rating,
+    proposal: result.proposal, manuallyAdjusted,
   });
   return { match: { ...match, status: "CLOSED", separation_id: id }, separationId: id, result };
 }
 
 export function statusError(message: string, status: number) {
   return Object.assign(new Error(message), { status });
+}
+
+function validateAndRebuildResult(input: any, players: Player[], config: Config, generated: any, manuallyAdjusted: boolean) {
+  const blueIds = Array.isArray(input?.blue) ? input.blue.map((player: any) => String(player?.id || "")) : [];
+  const yellowIds = Array.isArray(input?.yellow) ? input.yellow.map((player: any) => String(player?.id || "")) : [];
+  const submitted = [...blueIds, ...yellowIds], expected = new Set(players.map(player => player.id));
+  if (!blueIds.length || !yellowIds.length || submitted.length !== expected.size || new Set(submitted).size !== submitted.length || submitted.some(id => !expected.has(id))) {
+    throw statusError("A lista de presentes mudou ou a proposta está incompleta. Gere os times novamente.", 409);
+  }
+  const sameTeam = (left: string[], right: Player[]) => left.length === right.length && left.every(id => right.some(player => player.id === id));
+  if (!manuallyAdjusted && (!sameTeam(blueIds, generated.blue) || !sameTeam(yellowIds, generated.yellow))) {
+    throw statusError("A proposta enviada não corresponde à geração atual. Gere os times novamente.", 409);
+  }
+  if (!manuallyAdjusted) return generated;
+  const byId = new Map(players.map(player => [player.id, player]));
+  const blue = blueIds.map(id => byId.get(id)!), yellow = yellowIds.map(id => byId.get(id)!);
+  const metrics = calculateTeamDelta(blue, yellow, config);
+  const positionDifferences = [metrics.delta.defenders, metrics.delta.midfielders, metrics.delta.attackers];
+  const positionDifference = positionDifferences.reduce((sum, value) => sum + value, 0);
+  const maximumPositionDifference = Number(generated.maximumPositionDifference ?? config.maximumPositionDifference ?? 1);
+  const positionExcess = positionDifferences.reduce((sum, value) => sum + Math.max(0, value - maximumPositionDifference), 0);
+  const attributeDifference = metrics.delta.speed * config.speedWeight
+    + metrics.delta.skill * config.skillWeight
+    + metrics.delta.marking * config.markingWeight;
+  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120
+    + attributeDifference * 14 + Math.abs(metrics.blueMetrics.scoreAvg - metrics.yellowMetrics.scoreAvg) * 18;
+  const rating = cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
+  return { ...generated, blue, yellow, ...metrics, cost, rating, extraId: undefined };
 }
 
 function publicMatch(row: any, attendance: any[], account: any, totalActive: number) {
