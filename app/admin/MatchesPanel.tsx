@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
-type Props = { api: Api; setError(value: string): void; setNotice(value: string): void };
+type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any };
 type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "ABSENT"; changeCount: number };
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
@@ -14,7 +14,7 @@ type Match = {
 };
 type Player = { id: string; displayName: string; type: string; primaryPosition: string };
 
-export function MatchesPanel({ api, setError, setNotice }: Props) {
+export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props) {
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function MatchesPanel({ api, setError, setNotice }: Props) {
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b><b>{item.counts.pending} pendentes</b></div>
     </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}</div>
     <div>{current ? <MatchAdminDetail match={current} players={data.players} onAttendance={attendance} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
-    {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
+    {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
 }
 
@@ -77,9 +77,9 @@ function MatchAdminDetail({ match, players, onAttendance, onEdit, onClose, onCan
   </section>;
 }
 
-function MatchEditor({ match, api, onClose, onSaved }: { match: Match | null; api: Api; onClose(): void; onSaved(message: string): Promise<void> }) {
-  const defaults = nextSundayDefaults();
-  const [title, setTitle] = useState(match?.title || "Pelada");
+function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { match: Match | null; api: Api; instanceConfig?: any; onClose(): void; onSaved(message: string): Promise<void> }) {
+  const defaults = nextMatchDefaults(instanceConfig);
+  const [title, setTitle] = useState(match?.title || instanceConfig?.defaultMatchTitle || "Pelada");
   const [matchAt, setMatchAt] = useState(localInput(match?.matchAt) || defaults.matchAt);
   const [deadline, setDeadline] = useState(localInput(match?.confirmationDeadline) || defaults.deadline);
   const [location, setLocation] = useState(match?.location || "");
@@ -96,11 +96,15 @@ function MatchEditor({ match, api, onClose, onSaved }: { match: Match | null; ap
   return <div className="modal-back"><form className="editor match-editor" onSubmit={submit}><button type="button" className="close" onClick={onClose}>×</button><div className="ball">📅</div><h2>{match ? "Editar partida" : "Criar partida"}</h2><p>Todos os usuários serão avisados no aplicativo e, quando disponível, por push.</p>{error && <div className="alert error">{error}</div>}<div className="form-grid"><label className="wide">Título<input value={title} onChange={event => setTitle(event.target.value)} required maxLength={120}/></label><label>Data e hora do jogo<input type="datetime-local" value={matchAt} onChange={event => setMatchAt(event.target.value)} required/></label><label>Confirmar presença até<input type="datetime-local" value={deadline} onChange={event => setDeadline(event.target.value)} required/></label><label>Local<input value={location} onChange={event => setLocation(event.target.value)} maxLength={160}/></label><label>Máximo de remarcações<input type="number" min="0" max="20" value={maxChanges} onChange={event => setMaxChanges(Number(event.target.value))} required/></label></div><div className="editor-actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary" disabled={busy}>{busy ? "Salvando…" : match ? "Salvar alterações" : "Criar e notificar"}</button></div></form></div>;
 }
 
-function nextSundayDefaults() {
-  const now = new Date(), day = now.getDay(), days = day === 0 && now.getHours() < 8 ? 0 : (7 - day) % 7 || 7;
-  const sunday = new Date(now); sunday.setDate(now.getDate() + days); sunday.setHours(9, 0, 0, 0);
-  const deadline = new Date(sunday); deadline.setHours(8, 0, 0, 0);
-  return { matchAt: localInput(sunday.toISOString()), deadline: localInput(deadline.toISOString()) };
+function nextMatchDefaults(config?: any) {
+  const now = new Date(), weekday = Number(config?.defaultMatchWeekday ?? 0);
+  const [hour, minute] = String(config?.defaultMatchTime || "09:00").split(":").map(Number);
+  let days = (weekday - now.getDay() + 7) % 7;
+  const todayMatch = new Date(now); todayMatch.setHours(hour, minute, 0, 0);
+  if (days === 0 && todayMatch.getTime() <= now.getTime()) days = 7;
+  const match = new Date(now); match.setDate(now.getDate() + days); match.setHours(hour, minute, 0, 0);
+  const deadline = new Date(match.getTime() - Number(config?.confirmationLeadMinutes ?? 60) * 60_000);
+  return { matchAt: localInput(match.toISOString()), deadline: localInput(deadline.toISOString()) };
 }
 function localInput(value?: string | null) { if (!value) return ""; const date = new Date(value); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }

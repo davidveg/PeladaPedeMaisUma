@@ -1,12 +1,16 @@
 import { SiteHeader } from "../components/SiteHeader";
 import { getMobileReleaseConfiguration } from "../../lib/mobile-release";
+import { db, ensureDb } from "../../lib/database";
+import { instanceConfigurationFromRow } from "../../lib/instance-config";
 
 export const dynamic = "force-dynamic";
 
 export default async function DownloadAppPage() {
+  await ensureDb();
   const release = await getMobileReleaseConfiguration();
+  const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
   return <div className="member-page"><SiteHeader active="home"/><main className="download-app-main">
-    <section className="download-app-hero"><div className="eyebrow">APLICATIVO OFICIAL</div><h1>Pelada Pede Mais Uma<br/><em>sempre atualizado.</em></h1><p>Baixe a versão mais recente para seu aparelho. Esta página mantém os links oficiais definidos pelos organizadores da pelada.</p>{release.publishedAt && <span>Versão {release.latestVersion} · publicada em {new Date(release.publishedAt).toLocaleDateString("pt-BR")}</span>}</section>
+    <section className="download-app-hero"><div className="eyebrow">APLICATIVO OFICIAL</div><h1>{instance.appName}<br/><em>sempre atualizado.</em></h1><p>Baixe a versão mais recente para seu aparelho. Esta página mantém os links oficiais definidos pelos organizadores da pelada.</p>{release.publishedAt && <span>Versão {release.latestVersion} · publicada em {new Date(release.publishedAt).toLocaleDateString("pt-BR")}</span>}</section>
     <div className="download-platform-grid">
       <DownloadPlatform platform="Android" icon="APK" enabled={release.androidEnabled} build={release.androidBuild} url={release.androidUrl} description="Instale o APK mais recente no seu celular Android."/>
       <DownloadPlatform platform="iOS" icon="iOS" enabled={release.iosEnabled} build={release.iosBuild} url={release.iosUrl} description="Abra o TestFlight ou a App Store para atualizar no iPhone."/>

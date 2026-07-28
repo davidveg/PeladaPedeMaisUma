@@ -105,6 +105,35 @@ export const configurations = sqliteTable("system_configuration", {
   defaultReserveCount: integer("default_reserve_count").notNull().default(0), algorithmAttempts: integer("algorithm_attempts").notNull().default(2500), updatedAt: text("updated_at").notNull(),
 });
 
+export const instanceConfigurations = sqliteTable("instance_configuration", {
+  id: integer("id").primaryKey().default(1),
+  siteName: text("site_name").notNull().default("Pelada Pede Mais Uma"),
+  siteShortName: text("site_short_name").notNull().default("Pelada"),
+  siteTagline: text("site_tagline").notNull().default("Times equilibrados. Resenha garantida."),
+  footerText: text("footer_text").notNull().default("Times equilibrados. Resenha garantida."),
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color").notNull().default("#174D3B"),
+  secondaryColor: text("secondary_color").notNull().default("#D9F36B"),
+  backgroundColor: text("background_color").notNull().default("#F5F7F3"),
+  surfaceColor: text("surface_color").notNull().default("#FFFFFF"),
+  textColor: text("text_color").notNull().default("#15241F"),
+  mutedColor: text("muted_color").notNull().default("#68756F"),
+  teamBlueColor: text("team_blue_color").notNull().default("#1768E5"),
+  teamYellowColor: text("team_yellow_color").notNull().default("#F4BF20"),
+  appName: text("app_name").notNull().default("Pelada Pede Mais Uma"),
+  appTagline: text("app_tagline").notNull().default("Entre para a partida"),
+  appPrimaryColor: text("app_primary_color").notNull().default("#0B3D2E"),
+  appSecondaryColor: text("app_secondary_color").notNull().default("#D9F36B"),
+  appBackgroundColor: text("app_background_color").notNull().default("#F6F4EC"),
+  appTextColor: text("app_text_color").notNull().default("#17221D"),
+  defaultMatchTitle: text("default_match_title").notNull().default("Pelada"),
+  defaultMatchWeekday: integer("default_match_weekday").notNull().default(0),
+  defaultMatchTime: text("default_match_time").notNull().default("09:00"),
+  confirmationLeadMinutes: integer("confirmation_lead_minutes").notNull().default(60),
+  timezone: text("timezone").notNull().default("America/Sao_Paulo"),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const auditLogs = sqliteTable("audit_logs", { id: text("id").primaryKey(), administratorId: text("administrator_id"), action: text("action").notNull(), entityType: text("entity_type").notNull(), entityId: text("entity_id"), previousData: text("previous_data"), newData: text("new_data"), createdAt: text("created_at").notNull() });
 
 export const careerConfiguration = sqliteTable("career_configuration", {

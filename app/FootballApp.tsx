@@ -14,6 +14,7 @@ import {
 } from "../lib/football";
 import { PlayerPhoto } from "./components/PlayerPhoto";
 import { SiteHeader } from "./components/SiteHeader";
+import { useInstanceBranding } from "./InstanceBranding";
 import { buildVotingUrl, buildWhatsAppCareerResultsMessage, buildWhatsAppShareUrl, buildWhatsAppVotingMessage } from "../lib/career-sharing";
 import { playerCardTier, playerCardTierLabel } from "../lib/player-card-tier";
 import QRCode from "qrcode";
@@ -45,6 +46,7 @@ function stageForCurrentRoute(fallback?: InitialStage): InitialStage | undefined
 }
 
 export default function FootballApp({ initialStage }: { initialStage?: InitialStage }) {
+  const { config: instanceBrand } = useInstanceBranding();
   const initialized = useRef(false);
   const previousInitialStage = useRef<InitialStage | undefined>(initialStage);
   const previousAdministrator = useRef<boolean | undefined>(undefined);
@@ -318,14 +320,14 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
       {stage === "history" && historyDetail && <SavedSeparation item={historyDetail} isAdmin={isAdmin} careerConfig={careerConfig} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onEditCareer={editCareerResult} onSaveArrivalOrder={saveArrivalOrder} onBack={closeSavedSeparation} onShareLink={()=>shareSavedSeparation(historyDetail)} onPlayer={(player:Player)=>showPlayer(player,{...resultConfig(historyDetail.snapshot),showContributions:publicPlayerConfig.showContributions,cardTiersEnabled:publicPlayerConfig.cardTiersEnabled,cardBronzeMax:publicPlayerConfig.cardBronzeMax,cardSilverMax:publicPlayerConfig.cardSilverMax,cardGoldMax:publicPlayerConfig.cardGoldMax})} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
     <footer className="site-footer">
-      <div className="footer-signature"><b>⚽ Pelada Pede Mais Uma</b><span>Times equilibrados. Resenha garantida.</span></div>
-      <div className="app-downloads" aria-label="Aplicativos Pelada Pede Mais Uma">
-        <a className="app-download-badge android" href="/baixar-app?platform=android" aria-label="Baixar aplicativo Pelada Pede Mais Uma para Android">
+      <div className="footer-signature"><b>⚽ {instanceBrand.siteName}</b><span>{instanceBrand.footerText}</span></div>
+      <div className="app-downloads" aria-label={`Aplicativos ${instanceBrand.appName}`}>
+        <a className="app-download-badge android" href="/baixar-app?platform=android" aria-label={`Baixar aplicativo ${instanceBrand.appName} para Android`}>
           <span className="app-platform-icon" aria-hidden="true">APK</span>
           <span><small>BAIXE AGORA</small><b>Aplicativo Android</b></span>
           <i aria-hidden="true">↓</i>
         </a>
-        <a className="app-download-badge ios" href="/baixar-app?platform=ios" aria-label="Baixar aplicativo Pelada Pede Mais Uma para iOS">
+        <a className="app-download-badge ios" href="/baixar-app?platform=ios" aria-label={`Baixar aplicativo ${instanceBrand.appName} para iOS`}>
           <span className="app-platform-icon" aria-hidden="true">iOS</span>
           <span><small>TESTFLIGHT / APP STORE</small><b>Aplicativo para iOS</b></span>
           <i aria-hidden="true">ABRIR</i>

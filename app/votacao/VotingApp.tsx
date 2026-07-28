@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useInstanceBranding } from "../InstanceBranding";
 
 const fields = ["motmThirdId", "motmSecondId", "motmFirstId", "dotmThirdId", "dotmSecondId", "dotmFirstId"] as const;
 type Field = typeof fields[number];
@@ -13,6 +14,7 @@ async function api(url: string, options?: RequestInit) {
 }
 
 export default function VotingApp() {
+  const { config: brand } = useInstanceBranding();
   const [data, setData] = useState<any>(null);
   const [votes, setVotes] = useState<Record<Field, string>>(emptyVotes());
   const [error, setError] = useState("");
@@ -97,7 +99,7 @@ export default function VotingApp() {
 
   return (
     <main className="vote-page">
-      <header className="vote-brand"><a href="/">⚽ <b>Pelada Pede Mais Uma</b></a><span>Modo Carreira</span></header>
+      <header className="vote-brand"><a href="/">⚽ <b>{brand.siteName}</b></a><span>Modo Carreira</span></header>
       <section className="vote-card">
         <div className="vote-head">
           <div><small>VOTAÇÃO DA PARTIDA</small><h1>{match.matchTitle}</h1><p>{match.matchDate ? new Date(match.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"}</p></div>

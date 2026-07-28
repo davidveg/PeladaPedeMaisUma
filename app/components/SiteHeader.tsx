@@ -2,6 +2,7 @@
 
 import type { MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
+import { BrandIdentity } from "../InstanceBranding";
 
 type SiteSection = "home" | "players" | "separations" | "matches" | "notifications" | "account" | "admin";
 
@@ -39,8 +40,7 @@ export function SiteHeader({
   return (
     <header className="site-header">
       <a href="/" className="brand" onClick={(event) => navigateWithDocument(event, "/")}>
-        <span className="brand-mark">⚽</span>
-        <span><b>Pelada</b><small>Pede Mais Uma</small></span>
+        <BrandIdentity/>
       </a>
       <nav aria-label="Navegação principal">
         {link("home", "/", isAdmin ? "Montar times" : "Início")}

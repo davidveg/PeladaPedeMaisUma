@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { InstanceBrandingProvider } from "./InstanceBranding";
 import "./globals.css";
+import "./branding.css";
 
 const siteIcons: Metadata["icons"] = {
   icon: [
@@ -38,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body><InstanceBrandingProvider>{children}</InstanceBrandingProvider></body>
     </html>
   );
 }

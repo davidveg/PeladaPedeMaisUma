@@ -1,0 +1,30 @@
+CREATE TABLE IF NOT EXISTS `instance_configuration` (
+  `id` integer PRIMARY KEY DEFAULT 1 NOT NULL,
+  `site_name` text DEFAULT 'Pelada Pede Mais Uma' NOT NULL,
+  `site_short_name` text DEFAULT 'Pelada' NOT NULL,
+  `site_tagline` text DEFAULT 'Times equilibrados. Resenha garantida.' NOT NULL,
+  `footer_text` text DEFAULT 'Times equilibrados. Resenha garantida.' NOT NULL,
+  `logo_url` text,
+  `primary_color` text DEFAULT '#174D3B' NOT NULL,
+  `secondary_color` text DEFAULT '#D9F36B' NOT NULL,
+  `background_color` text DEFAULT '#F5F7F3' NOT NULL,
+  `surface_color` text DEFAULT '#FFFFFF' NOT NULL,
+  `text_color` text DEFAULT '#15241F' NOT NULL,
+  `muted_color` text DEFAULT '#68756F' NOT NULL,
+  `team_blue_color` text DEFAULT '#1768E5' NOT NULL,
+  `team_yellow_color` text DEFAULT '#F4BF20' NOT NULL,
+  `app_name` text DEFAULT 'Pelada Pede Mais Uma' NOT NULL,
+  `app_tagline` text DEFAULT 'Entre para a partida' NOT NULL,
+  `app_primary_color` text DEFAULT '#0B3D2E' NOT NULL,
+  `app_secondary_color` text DEFAULT '#D9F36B' NOT NULL,
+  `app_background_color` text DEFAULT '#F6F4EC' NOT NULL,
+  `app_text_color` text DEFAULT '#17221D' NOT NULL,
+  `default_match_title` text DEFAULT 'Pelada' NOT NULL,
+  `default_match_weekday` integer DEFAULT 0 NOT NULL,
+  `default_match_time` text DEFAULT '09:00' NOT NULL,
+  `confirmation_lead_minutes` integer DEFAULT 60 NOT NULL,
+  `timezone` text DEFAULT 'America/Sao_Paulo' NOT NULL,
+  `updated_at` text NOT NULL
+);
+
+INSERT OR IGNORE INTO `instance_configuration` (`id`,`updated_at`) VALUES (1,CURRENT_TIMESTAMP);

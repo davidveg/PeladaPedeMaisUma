@@ -1,11 +1,11 @@
-name: pelada-pede-mais-uma
+name: ${COMPOSE_PROJECT_NAME:-pelada-pede-mais-uma}
 
 # Modelo para o plugin Compose do OMV. O arquivo Compose fica um nível acima
 # do checkout do projeto, armazenado na pasta ./source.
 services:
   app:
-    image: pelada-pede-mais-uma:selfhost-arm64
-    container_name: pelada-pede-mais-uma
+    image: ${APP_IMAGE:-pelada-pede-mais-uma:selfhost-arm64}
+    container_name: ${CONTAINER_NAME:-pelada-pede-mais-uma}
     platform: linux/arm64
     build:
       context: ./source
@@ -18,7 +18,7 @@ services:
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
-      PORT: "3000"
+      PORT: ${CONTAINER_PORT:-3000}
       DATA_DIR: /data
       TZ: America/Sao_Paulo
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -31,10 +31,10 @@ services:
       SMTP_FROM: ${SMTP_FROM:-Pelada Pede Mais Uma <peladapedemaisuma@gmail.com>}
     volumes:
       - type: bind
-        source: CHANGE_TO_COMPOSE_DATA_PATH/pelada-pede-mais-uma
+        source: ${INSTANCE_DATA_PATH:-CHANGE_TO_COMPOSE_DATA_PATH/pelada-pede-mais-uma}
         target: /data
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3000}:${CONTAINER_PORT:-3000}"
     init: true
     restart: unless-stopped
     stop_grace_period: 20s
@@ -46,14 +46,14 @@ services:
       - ALL
     labels:
       logging: "promtail"
-      logging_jobname: "pelada-pede-mais-uma"
+      logging_jobname: ${LOGGING_JOB_NAME:-pelada-pede-mais-uma}
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 45s

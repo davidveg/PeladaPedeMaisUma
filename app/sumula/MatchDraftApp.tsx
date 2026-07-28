@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PlayerPhoto } from "../components/PlayerPhoto";
+import { useInstanceBranding } from "../InstanceBranding";
 
 type Team = "BLUE" | "YELLOW";
 type Goal = { team: Team; scorerPlayerId: string; assistPlayerId: string; ownGoal: boolean };
 
 export default function MatchDraftApp() {
+  const { config: brand } = useInstanceBranding();
   const separationId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("separationId") || "" : "";
   const [data,setData]=useState<any>(null),[goals,setGoals]=useState<Goal[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[dirty,setDirty]=useState(false);
   const scores=useMemo(()=>({blue:goals.filter(goal=>goal.team==="BLUE").length,yellow:goals.filter(goal=>goal.team==="YELLOW").length}),[goals]);
@@ -20,7 +22,7 @@ export default function MatchDraftApp() {
   if(!data)return <main className="match-draft-page"><div className="match-draft-loading"><b>{error||"Carregando rascunho da partida…"}</b><a href="/">Voltar ao site</a></div></main>;
   const backUrl=`/?view=history&separation=${encodeURIComponent(separationId)}`;
   return <main className="match-draft-page">
-    <header className="match-draft-top"><a href={backUrl}>← Voltar para a separação</a><span>⚽ Pelada Pede Mais Uma</span></header>
+    <header className="match-draft-top"><a href={backUrl}>← Voltar para a separação</a><span>⚽ {brand.siteName}</span></header>
     <section className="match-draft-hero"><div><small>RASCUNHO DA SÚMULA</small><h1>{data.matchTitle}</h1><p>{data.matchDate?new Date(data.matchDate+"T12:00:00").toLocaleDateString("pt-BR"):"Data não informada"}</p></div><div className="match-draft-score"><span className="blue">Azul <b>{scores.blue}</b></span><i>×</i><span className="yellow"><b>{scores.yellow}</b> Amarelo</span></div></section>
     {data.officialResultConfirmed&&<div className="match-draft-notice">O resultado desta partida já foi confirmado. O rascunho não pode mais ser alterado.</div>}
     {(!data.enabled||!data.trackContributions)&&<div className="match-draft-notice">O registro de gols e assistências está desativado no Modo Carreira.</div>}

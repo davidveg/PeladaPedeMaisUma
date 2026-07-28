@@ -8,6 +8,7 @@ import { apiFetch } from "@/api";
 import { useAuth } from "@/auth";
 import { colors } from "@/theme";
 import type { MatchListPayload, Separation } from "@/types";
+import { useMobileBranding } from "@/branding";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -18,6 +19,7 @@ function TabIcon({ focused, color, active, inactive }: { focused: boolean; color
 }
 
 export default function AppLayout() {
+  const { palette } = useMobileBranding();
   const { account, loading } = useAuth();
   const insets = useSafeAreaInsets();
   const separationsQuery = useQuery({
@@ -35,7 +37,7 @@ export default function AppLayout() {
     queryFn: () => apiFetch<{ unread: number }>("/api/notifications"),
     enabled: Boolean(account),
   });
-  if (loading) return <View style={styles.loading}><ActivityIndicator color={colors.green}/></View>;
+  if (loading) return <View style={styles.loading}><ActivityIndicator color={palette.green}/></View>;
   if (!account) return <Redirect href="/login"/>;
   const admin = account.role === "admin";
   const pendingVotes = separationsQuery.data?.separations.filter(item => item.career?.viewerCanVote).length || 0;
@@ -43,9 +45,9 @@ export default function AppLayout() {
   const unreadNotifications = notificationsQuery.data?.unread || 0;
 
   return <Tabs screenOptions={{
-    headerStyle: { backgroundColor: colors.green },
+    headerStyle: { backgroundColor: palette.green },
     headerTintColor: "#fff",
-    tabBarActiveTintColor: colors.green,
+    tabBarActiveTintColor: palette.green,
     tabBarInactiveTintColor: "#7A847F",
     tabBarHideOnKeyboard: true,
     tabBarLabelStyle: styles.tabLabel,

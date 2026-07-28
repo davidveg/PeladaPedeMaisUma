@@ -7,6 +7,7 @@ import { playerCardTier, playerCardTierLabel } from "../../lib/player-card-tier"
 import { safeSiteReturnTo } from "../../lib/site-navigation";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 import { SiteHeader } from "../components/SiteHeader";
+import { useInstanceBranding } from "../InstanceBranding";
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options), text = await response.text();
@@ -92,6 +93,7 @@ function safeReturnTo() {
 }
 
 function MemberAccess({ onDone }: { onDone: () => Promise<{ member: any; player: Player | null }> }) {
+  const { config: brand } = useInstanceBranding();
   const initialResetToken = memberResetToken();
   const [mode, setMode] = useState<"login" | "register" | "request" | "reset">(initialResetToken ? "reset" : "login"), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [confirmation, setConfirmation] = useState(""), [resetToken] = useState(initialResetToken), [error, setError] = useState(""), [notice, setNotice] = useState(sessionExpiredNotice), [busy, setBusy] = useState(false);
   const changeMode = (next: "login" | "register" | "request") => { setMode(next); setError(""); setNotice(""); setPassword(""); setConfirmation(""); };
@@ -118,7 +120,7 @@ function MemberAccess({ onDone }: { onDone: () => Promise<{ member: any; player:
   }
   const heading = mode === "login" ? "Bem-vindo de volta" : mode === "register" ? "Crie sua conta" : mode === "request" ? "Recuperar senha" : "Criar nova senha";
   const description = mode === "login" ? "Jogadores e administradores podem entrar com seu e-mail e senha." : mode === "register" ? "Depois do cadastro, você escolherá seu nome na lista de jogadores disponíveis." : mode === "request" ? "Enviaremos um link de uso único para o e-mail da sua conta de jogador." : "Escolha uma nova senha. O link expira em 30 minutos e só pode ser utilizado uma vez.";
-  return <div className="member-access"><section className="member-access-copy"><a href="/">⚽ <b>Pelada Pede Mais Uma</b></a><div><span>ÁREA DO JOGADOR</span><h1>Seus números,<br />seu perfil, sua pelada.</h1><p>Associe sua conta ao seu jogador e acompanhe atributos, momentum e histórico de partidas.</p></div><small>Jogadores e administradores usam suas próprias credenciais.</small></section><form className="member-access-card" onSubmit={submit}>
+  return <div className="member-access"><section className="member-access-copy"><a href="/">⚽ <b>{brand.siteName}</b></a><div><span>ÁREA DO JOGADOR</span><h1>Seus números,<br />seu perfil, sua pelada.</h1><p>Associe sua conta ao seu jogador e acompanhe atributos, momentum e histórico de partidas.</p></div><small>{brand.siteTagline}</small></section><form className="member-access-card" onSubmit={submit}>
     {mode === "login" || mode === "register" ? <div className="member-access-tabs"><button type="button" className={mode === "login" ? "on" : ""} onClick={() => changeMode("login")}>Entrar</button><button type="button" className={mode === "register" ? "on" : ""} onClick={() => changeMode("register")}>Criar conta</button></div> : null}
     <div className="ball">{mode === "request" ? "✉️" : mode === "reset" ? "🔐" : "⚽"}</div><h2>{heading}</h2><p>{description}</p>
     {error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b></div>}

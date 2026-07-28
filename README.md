@@ -1,5 +1,7 @@
 # Pelada Pede Mais Uma
 
+Para operar vários grupos com o mesmo codebase, consulte [Operação de múltiplas peladas](docs/MULTI_INSTANCE.md).
+
 Aplicação web responsiva para importar confirmações do WhatsApp, identificar jogadores e criar dois times equilibrados — Time Azul e Time Amarelo. A aplicação inclui área pública, histórico persistente e painel administrativo.
 
 ## Recursos implementados

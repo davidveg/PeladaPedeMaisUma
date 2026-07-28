@@ -1,4 +1,4 @@
-name: pelada-pede-mais-uma
+name: ${COMPOSE_PROJECT_NAME:-pelada-pede-mais-uma}
 
 services:
   app:
