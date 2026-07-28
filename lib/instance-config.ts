@@ -12,6 +12,8 @@ export type InstanceConfiguration = {
   mutedColor: string;
   teamBlueColor: string;
   teamYellowColor: string;
+  teamBlueName: string;
+  teamYellowName: string;
   appName: string;
   appTagline: string;
   appPrimaryColor: string;
@@ -40,6 +42,8 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   mutedColor: "#68756F",
   teamBlueColor: "#1768E5",
   teamYellowColor: "#F4BF20",
+  teamBlueName: "Azul",
+  teamYellowName: "Amarelo",
   appName: "Pelada Pede Mais Uma",
   appTagline: "Entre para a partida",
   appPrimaryColor: "#0B3D2E",
@@ -72,6 +76,8 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     mutedColor: value("muted_color", DEFAULT_INSTANCE_CONFIGURATION.mutedColor),
     teamBlueColor: value("team_blue_color", DEFAULT_INSTANCE_CONFIGURATION.teamBlueColor),
     teamYellowColor: value("team_yellow_color", DEFAULT_INSTANCE_CONFIGURATION.teamYellowColor),
+    teamBlueName: value("team_blue_name", DEFAULT_INSTANCE_CONFIGURATION.teamBlueName),
+    teamYellowName: value("team_yellow_name", DEFAULT_INSTANCE_CONFIGURATION.teamYellowName),
     appName: value("app_name", DEFAULT_INSTANCE_CONFIGURATION.appName),
     appTagline: value("app_tagline", DEFAULT_INSTANCE_CONFIGURATION.appTagline),
     appPrimaryColor: value("app_primary_color", DEFAULT_INSTANCE_CONFIGURATION.appPrimaryColor),
@@ -111,6 +117,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     mutedColor: color("mutedColor", DEFAULT_INSTANCE_CONFIGURATION.mutedColor),
     teamBlueColor: color("teamBlueColor", DEFAULT_INSTANCE_CONFIGURATION.teamBlueColor),
     teamYellowColor: color("teamYellowColor", DEFAULT_INSTANCE_CONFIGURATION.teamYellowColor),
+    teamBlueName: text("teamBlueName", 40, DEFAULT_INSTANCE_CONFIGURATION.teamBlueName),
+    teamYellowName: text("teamYellowName", 40, DEFAULT_INSTANCE_CONFIGURATION.teamYellowName),
     appName: text("appName", 120, DEFAULT_INSTANCE_CONFIGURATION.appName),
     appTagline: text("appTagline", 180, DEFAULT_INSTANCE_CONFIGURATION.appTagline),
     appPrimaryColor: color("appPrimaryColor", DEFAULT_INSTANCE_CONFIGURATION.appPrimaryColor),
@@ -124,9 +132,10 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     timezone: text("timezone", 80, DEFAULT_INSTANCE_CONFIGURATION.timezone),
   };
 
-  if (!config.siteName || !config.siteShortName || !config.appName || !config.defaultMatchTitle) {
-    return { error: "Nome do site, nome curto, nome do aplicativo e título padrão da partida são obrigatórios." };
+  if (!config.siteName || !config.siteShortName || !config.appName || !config.defaultMatchTitle || !config.teamBlueName || !config.teamYellowName) {
+    return { error: "Os nomes do site, aplicativo, partida e das duas equipes são obrigatórios." };
   }
+  if (config.teamBlueName.toLocaleLowerCase("pt-BR") === config.teamYellowName.toLocaleLowerCase("pt-BR")) return { error: "As duas equipes precisam ter nomes diferentes." };
   const colorKeys = [
     "primaryColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
     "teamBlueColor", "teamYellowColor", "appPrimaryColor", "appSecondaryColor", "appBackgroundColor", "appTextColor",
@@ -153,7 +162,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
 export const INSTANCE_CONFIGURATION_COLUMNS = [
   "site_name", "site_short_name", "site_tagline", "footer_text", "logo_url",
   "primary_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
-  "team_blue_color", "team_yellow_color", "app_name", "app_tagline", "app_primary_color",
+  "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "confirmation_lead_minutes", "timezone",
 ] as const;
@@ -162,7 +171,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
   return [
     config.siteName, config.siteShortName, config.siteTagline, config.footerText, config.logoUrl,
     config.primaryColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
-    config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.appName, config.appTagline,
+    config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.confirmationLeadMinutes,
     config.timezone,

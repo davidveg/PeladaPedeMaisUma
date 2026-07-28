@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, jsonMutation } from "./api";
 import { Button, Card, ErrorState, Header } from "./components";
 import { colors } from "./theme";
+import { useMobileBranding } from "./branding";
 
 type VoteField =
   | "motmThirdId"
@@ -44,6 +45,7 @@ const podiums: { title: string; description: string; tone: string; fields: { fie
 ];
 
 export function CareerVoting({ token, onChanged }: { token: string; onChanged: () => void }) {
+  const { config: brand } = useMobileBranding();
   const client = useQueryClient();
   const [vote, setVote] = useState<VoteState>(emptyVote);
   const [picker, setPicker] = useState<{ field: VoteField; title: string } | null>(null);
@@ -145,6 +147,7 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
   visible: boolean; title: string; players: VotePlayer[]; selectedId: string;
   onClose: () => void; onSelect: (playerId: string) => void;
 }) {
+  const { config: brand } = useMobileBranding();
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <ScrollView contentContainerStyle={{ padding: 20, gap: 10, backgroundColor: colors.cream, flexGrow: 1 }}>
       <Header title={title}/>
@@ -162,7 +165,7 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
           <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color }}/>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: "900" }}>{player.displayName}</Text>
-            <Text style={{ color }}>{blue ? "Time Azul" : "Time Amarelo"}{player.primaryPosition ? ` · ${player.primaryPosition}` : ""}</Text>
+            <Text style={{ color }}>{blue ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}{player.primaryPosition ? ` · ${player.primaryPosition}` : ""}</Text>
           </View>
           {player.id === selectedId ? <Text style={{ color, fontWeight: "900" }}>✓</Text> : null}
         </Pressable>;

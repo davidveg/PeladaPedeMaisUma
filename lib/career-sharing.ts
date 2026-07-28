@@ -7,10 +7,12 @@ export function buildWhatsAppVotingMessage({
   matchTitle,
   votingUrl,
   closesAt,
+  siteName = "Pelada Pede Mais Uma",
 }: {
   matchTitle: string;
   votingUrl: string;
   closesAt?: string;
+  siteName?: string;
 }): string {
   // Construímos os símbolos por code point para que nenhuma etapa de build,
   // container ou proxy possa reinterpretar os bytes UTF-8 do arquivo-fonte.
@@ -23,7 +25,7 @@ export function buildWhatsAppVotingMessage({
     ? `\n\n${hourglass} Votação disponível até ${new Date(closesAt).toLocaleString("pt-BR")}.`
     : "";
 
-  return `${ball} *PELADA PEDE MAIS UMA*\n\n${trophy} *Votação dos destaques*\n${title}\n\nEscolha os 3 melhores e os 3 que ficaram devendo na partida.\n\n${pointing} *Acesse e vote:*\n${votingUrl}${deadline}`;
+  return `${ball} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${trophy} *Votação dos destaques*\n${title}\n\nEscolha os 3 melhores e os 3 que ficaram devendo na partida.\n\n${pointing} *Acesse e vote:*\n${votingUrl}${deadline}`;
 }
 
 export function buildWhatsAppShareUrl(message: string): string {
@@ -32,11 +34,11 @@ export function buildWhatsAppShareUrl(message: string): string {
   return url.toString();
 }
 
-export function buildWhatsAppCareerResultsMessage({matchTitle,blueScore,yellowScore,results,names,separationUrl}:{matchTitle:string;blueScore:number;yellowScore:number;results:any;names:Record<string,string>;separationUrl?:string}) {
+export function buildWhatsAppCareerResultsMessage({matchTitle,blueScore,yellowScore,results,names,separationUrl,siteName="Pelada Pede Mais Uma",teamBlueName="Azul",teamYellowName="Amarelo"}:{matchTitle:string;blueScore:number;yellowScore:number;results:any;names:Record<string,string>;separationUrl?:string;siteName?:string;teamBlueName?:string;teamYellowName?:string}) {
   const ball=String.fromCodePoint(0x26bd,0xfe0f),trophy=String.fromCodePoint(0x1f3c6),chart=String.fromCodePoint(0x1f4ca),warning=String.fromCodePoint(0x26a0,0xfe0f),medals=[0x1f947,0x1f948,0x1f949].map(code=>String.fromCodePoint(code));
   const title=matchTitle.replace(/\*/g,"").trim(),signed=(value:number)=>`${value>0?"+":""}${Number(value).toFixed(1)}`;
   const podium=(entries:any[])=>(entries||[]).map((entry:any,index:number)=>`${medals[index]||`${entry.place}º`} ${names[entry.playerId]||"Jogador"} (${signed(entry.momentum)})`).join("\n");
   const voteCount=Number(results?.voteCount||0),details=voteCount?`${trophy} *Man of the Match*\n${podium(results.motm)}\n\n${warning} *Deception of the Match*\n${podium(results.dotm)}`:"Votação encerrada sem votos válidos.";
   const link=separationUrl?`\n\n${chart} *Veja os detalhes da partida:*\n${separationUrl}`:"";
-  return `${ball} *PELADA PEDE MAIS UMA*\n\n${trophy} *Resultado da votação*\n${title}\n\n*Placar:* Azul ${blueScore} × ${yellowScore} Amarelo\n*Votos registrados:* ${voteCount}\n\n${details}${link}`;
+  return `${ball} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${trophy} *Resultado da votação*\n${title}\n\n*Placar:* ${teamBlueName} ${blueScore} × ${yellowScore} ${teamYellowName}\n*Votos registrados:* ${voteCount}\n\n${details}${link}`;
 }

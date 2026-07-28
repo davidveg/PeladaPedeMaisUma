@@ -103,7 +103,7 @@ export default function VotingApp() {
       <section className="vote-card">
         <div className="vote-head">
           <div><small>VOTAÇÃO DA PARTIDA</small><h1>{match.matchTitle}</h1><p>{match.matchDate ? new Date(match.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"}</p></div>
-          <div className="score-board"><span>Azul <b>{match.blueScore}</b></span><i>×</i><span><b>{match.yellowScore}</b> Amarelo</span></div>
+          <div className="score-board"><span>{brand.teamBlueName} <b>{match.blueScore}</b></span><i>×</i><span><b>{match.yellowScore}</b> {brand.teamYellowName}</span></div>
         </div>
         {data.showContributions && match.contributions?.length > 0 && <VoteContributions contributions={match.contributions} />}
         {!data.enabled && !closed && <div className="alert">O Modo Carreira está temporariamente desativado. Nenhum voto pode ser enviado agora.</div>}
@@ -193,9 +193,10 @@ function VoteLogin({ onDone }: { onDone: () => Promise<void> }) {
 }
 
 function VoteIdentity({ player, onLogout, busy }: any) {
+  const { config: brand } = useInstanceBranding();
   return (
     <div className="vote-identity">
-      <span><small>VOTANDO COMO</small><b>{player.displayName}</b><em>{player.team === "BLUE" ? "Time Azul" : "Time Amarelo"}</em></span>
+      <span><small>VOTANDO COMO</small><b>{player.displayName}</b><em>{player.team === "BLUE" ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</em></span>
       <p>Sua identidade foi confirmada pela conta associada. Você não poderá selecionar a si mesmo.</p>
       <button type="button" className="ghost" onClick={onLogout} disabled={busy}>Trocar conta</button>
     </div>
@@ -213,7 +214,8 @@ function VoteAccessState({ title, description, actionHref, actionLabel, onLogout
 }
 
 function VoteContributions({ contributions }: any) {
-  return <section className="career-contribution-summary vote-contribution-summary"><header className="vote-contribution-title"><span>ARTILHARIA DA PARTIDA</span><h2>Gols e assistências</h2></header><div>{contributions.map((goal: any, index: number) => <span className={`goal-${String(goal.team).toLowerCase()} ${goal.ownGoal ? "own-goal" : ""}`} key={`${goal.team}-${index}`}><i>{goal.team === "BLUE" ? "Time Azul" : "Time Amarelo"}</i>{goal.ownGoal ? <><b>GC</b><strong>{goal.scorerName}</strong></> : <><strong>{goal.scorerName}</strong>{goal.assistName ? <small><em>Assistência</em>{goal.assistName}</small> : <small className="no-assist">Sem assistência</small>}</>}</span>)}</div></section>;
+  const { config: brand } = useInstanceBranding();
+  return <section className="career-contribution-summary vote-contribution-summary"><header className="vote-contribution-title"><span>ARTILHARIA DA PARTIDA</span><h2>Gols e assistências</h2></header><div>{contributions.map((goal: any, index: number) => <span className={`goal-${String(goal.team).toLowerCase()} ${goal.ownGoal ? "own-goal" : ""}`} key={`${goal.team}-${index}`}><i>{goal.team === "BLUE" ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</i>{goal.ownGoal ? <><b>GC</b><strong>{goal.scorerName}</strong></> : <><strong>{goal.scorerName}</strong>{goal.assistName ? <small><em>Assistência</em>{goal.assistName}</small> : <small className="no-assist">Sem assistência</small>}</>}</span>)}</div></section>;
 }
 
 function Podium({ title, subtitle, tone, fields: podiumFields, votes, setVotes, options }: any) {

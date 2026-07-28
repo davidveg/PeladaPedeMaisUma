@@ -7,23 +7,26 @@ import { apiFetch } from "@/api";
 import { Card, EmptyState, ErrorState, Header, Screen, UpdatedAt } from "@/components";
 import { formatDate } from "@/sharing";
 import { colors } from "@/theme";
+import { useMobileBranding } from "@/branding";
 import type { Separation } from "@/types";
 
 function MatchScore({ blue, yellow }: { blue: number; yellow: number }) {
-  return <View accessibilityLabel={`Placar: Azul ${blue}, Amarelo ${yellow}`} style={styles.score}>
+  const { config: brand } = useMobileBranding();
+  return <View accessibilityLabel={`Placar: ${brand.teamBlueName} ${blue}, ${brand.teamYellowName} ${yellow}`} style={styles.score}>
     <View style={[styles.scoreTeam, styles.scoreBlue]}>
-      <Text style={[styles.scoreLabel, { color: colors.blue }]}>AZUL</Text>
+      <Text style={[styles.scoreLabel, { color: colors.blue }]}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text>
       <Text style={[styles.scoreValue, { color: colors.blue }]}>{blue}</Text>
     </View>
     <Text style={styles.scoreSeparator}>×</Text>
     <View style={[styles.scoreTeam, styles.scoreYellow]}>
-      <Text style={[styles.scoreLabel, { color: colors.yellow }]}>AMARELO</Text>
+      <Text style={[styles.scoreLabel, { color: colors.yellow }]}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text>
       <Text style={[styles.scoreValue, { color: colors.yellow }]}>{yellow}</Text>
     </View>
   </View>;
 }
 
 export default function Separations() {
+  const { config: brand } = useMobileBranding();
   const router = useRouter();
   const network = useNetInfo();
   const query = useQuery({
@@ -78,8 +81,8 @@ export default function Separations() {
                   : <Text style={styles.pending}>Resultado pendente</Text>}
               </View>
               <View style={styles.teams}>
-                <Text style={styles.blueTeam}>Azul {item.snapshot.blue.length}</Text>
-                <Text style={styles.yellowTeam}>Amarelo {item.snapshot.yellow.length}</Text>
+                <Text style={styles.blueTeam}>{brand.teamBlueName} {item.snapshot.blue.length}</Text>
+                <Text style={styles.yellowTeam}>{brand.teamYellowName} {item.snapshot.yellow.length}</Text>
               </View>
               {item.career ? <Text style={item.career.status === "CLOSED" ? styles.closed : item.career.viewerCanVote ? styles.votePending : styles.open}>{
                 item.career.status === "CLOSED"

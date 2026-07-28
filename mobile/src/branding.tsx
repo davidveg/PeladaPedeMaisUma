@@ -10,6 +10,10 @@ export type MobileInstanceConfiguration = {
   appSecondaryColor: string;
   appBackgroundColor: string;
   appTextColor: string;
+  teamBlueName: string;
+  teamYellowName: string;
+  teamBlueColor: string;
+  teamYellowColor: string;
   logoUrl?: string | null;
   defaultMatchTitle: string;
   defaultMatchWeekday: number;
@@ -25,6 +29,10 @@ const defaultConfiguration: MobileInstanceConfiguration = {
   appSecondaryColor: "#D9F36B",
   appBackgroundColor: defaults.cream,
   appTextColor: defaults.text,
+  teamBlueName: "Azul",
+  teamYellowName: "Amarelo",
+  teamBlueColor: defaults.blue,
+  teamYellowColor: defaults.yellow,
   logoUrl: null,
   defaultMatchTitle: "Pelada",
   defaultMatchWeekday: 0,
@@ -71,7 +79,10 @@ export function MobileBrandingProvider({ children }: PropsWithChildren) {
     greenLight: config.appPrimaryColor,
     cream: config.appBackgroundColor,
     text: config.appTextColor,
-    yellow: config.appSecondaryColor,
+    blue: config.teamBlueColor,
+    blueSoft: `${config.teamBlueColor}20`,
+    yellow: config.teamYellowColor,
+    yellowSoft: `${config.teamYellowColor}20`,
   }), [config]);
   const value = useMemo(() => ({ config, palette, loading, refresh }), [config, palette, loading, refresh]);
   return <MobileBrandingContext.Provider value={value}>{children}</MobileBrandingContext.Provider>;

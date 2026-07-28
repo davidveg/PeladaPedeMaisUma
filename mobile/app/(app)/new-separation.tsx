@@ -8,6 +8,7 @@ import { BalanceDetails } from "@/balance-details";
 import { Button, Card, Field, Header, Screen } from "@/components";
 import { recalculateTeamResult } from "@/team-balance";
 import { colors } from "@/theme";
+import { useMobileBranding } from "@/branding";
 import type { Player, TeamResult } from "@/types";
 
 type TeamKey = "blue" | "yellow";
@@ -20,6 +21,7 @@ type Proposal = {
 };
 
 export default function NewSeparation() {
+  const { config: brand } = useMobileBranding();
   const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const [step, setStep] = useState(matchId ? 2 : 1);
   const [text, setText] = useState("");
@@ -185,7 +187,7 @@ export default function NewSeparation() {
       {step === 4 && proposal ? <>
         <Card style={styles.gap}>
           {matchId ? <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={styles.official}>A lista será fechada somente após esta confirmação.</Text></> : <><Field label="Título" value={title} onChangeText={setTitle}/><Field label="Data (AAAA-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none"/><Field label="Local (opcional)" value={location} onChangeText={setLocation}/></>}
-          <Text style={styles.muted}>{proposal.result.blue.length} no Azul · {proposal.result.yellow.length} no Amarelo · {manual ? "Ajuste manual" : "Proposta oficial"} · {proposal.result.rating}</Text>
+          <Text style={styles.muted}>{proposal.result.blue.length} no {brand.teamBlueName} · {proposal.result.yellow.length} no {brand.teamYellowName} · {manual ? "Ajuste manual" : "Proposta oficial"} · {proposal.result.rating}</Text>
         </Card>
         <Button title={matchId ? "Fechar lista e salvar" : "Confirmar e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(matchId ? "Fechar lista e salvar?" : "Salvar separação?", matchId ? "A partida será encerrada com esta proposta. Os presentes e os indicadores serão validados novamente." : "Os times e os indicadores atuais serão gravados na mesma base da aplicação web.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate() }])}/>
         <Button title="Voltar aos times" variant="secondary" onPress={() => setStep(3)}/>
@@ -195,8 +197,9 @@ export default function NewSeparation() {
 }
 
 function TeamEditor({ team, players, selectedId, onSelect, onMove }: { team: TeamKey; players: Player[]; selectedId: string | null; onSelect: (id: string) => void; onMove: (id: string) => void }) {
+  const { config: brand } = useMobileBranding();
   const blue = team === "blue", color = blue ? colors.blue : colors.yellow, soft = blue ? colors.blueSoft : colors.yellowSoft;
-  const title = blue ? "AZUL" : "AMARELO", destination = blue ? "Amarelo" : "Azul";
+  const title = (blue ? brand.teamBlueName : brand.teamYellowName).toLocaleUpperCase("pt-BR"), destination = blue ? brand.teamYellowName : brand.teamBlueName;
   return <Card style={[styles.team, { borderColor: color }]}>
     <View style={styles.teamHeader}><Text style={[styles.teamTitle, { color }]}>TIME {title}</Text><Text style={[styles.teamCount, { color, backgroundColor: soft }]}>{players.length} jogadores</Text></View>
     {players.map(player => {

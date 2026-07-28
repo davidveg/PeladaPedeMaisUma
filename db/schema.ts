@@ -120,6 +120,8 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   mutedColor: text("muted_color").notNull().default("#68756F"),
   teamBlueColor: text("team_blue_color").notNull().default("#1768E5"),
   teamYellowColor: text("team_yellow_color").notNull().default("#F4BF20"),
+  teamBlueName: text("team_blue_name").notNull().default("Azul"),
+  teamYellowName: text("team_yellow_name").notNull().default("Amarelo"),
   appName: text("app_name").notNull().default("Pelada Pede Mais Uma"),
   appTagline: text("app_tagline").notNull().default("Entre para a partida"),
   appPrimaryColor: text("app_primary_color").notNull().default("#0B3D2E"),

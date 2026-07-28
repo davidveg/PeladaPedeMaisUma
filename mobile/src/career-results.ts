@@ -8,7 +8,7 @@ function publicSeparationUrl(publicBaseUrl: string, separationId: string) {
   return url.toString();
 }
 
-export function careerResultsMessage(item: Separation, publicBaseUrl: string) {
+export function careerResultsMessage(item: Separation, publicBaseUrl: string, branding: { siteName?: string; teamBlueName?: string; teamYellowName?: string } = {}) {
   if (!item.career || item.career.status !== "CLOSED") throw new Error("A votação ainda não foi encerrada.");
   const results = item.career.results;
   const names = Object.fromEntries([...item.snapshot.blue, ...item.snapshot.yellow].map(player => [player.id, player.displayName]));
@@ -20,6 +20,7 @@ export function careerResultsMessage(item: Separation, publicBaseUrl: string) {
     ? `${String.fromCodePoint(0x1f3c6)} *Man of the Match*\n${podium(results?.motm)}\n\n${String.fromCodePoint(0x26a0, 0xfe0f)} *Deception of the Match*\n${podium(results?.dotm)}`
     : "Votação encerrada sem votos válidos.";
   const url = publicSeparationUrl(publicBaseUrl, item.id);
+  const siteName = branding.siteName || "Pelada Pede Mais Uma", teamBlueName = branding.teamBlueName || "Azul", teamYellowName = branding.teamYellowName || "Amarelo";
 
-  return `${String.fromCodePoint(0x26bd, 0xfe0f)} *PELADA PEDE MAIS UMA*\n\n${String.fromCodePoint(0x1f3c6)} *Resultado da votação*\n${item.matchTitle.replace(/\*/g, "").trim()}\n\n*Placar:* Azul ${item.career.blueScore} × ${item.career.yellowScore} Amarelo\n*Votos registrados:* ${voteCount}\n\n${details}\n\n${String.fromCodePoint(0x1f4ca)} *Veja os detalhes da partida:*\n${url}`;
+  return `${String.fromCodePoint(0x26bd, 0xfe0f)} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${String.fromCodePoint(0x1f3c6)} *Resultado da votação*\n${item.matchTitle.replace(/\*/g, "").trim()}\n\n*Placar:* ${teamBlueName} ${item.career.blueScore} × ${item.career.yellowScore} ${teamYellowName}\n*Votos registrados:* ${voteCount}\n\n${details}\n\n${String.fromCodePoint(0x1f4ca)} *Veja os detalhes da partida:*\n${url}`;
 }
