@@ -51,6 +51,13 @@ const worker = {
         response = await handler.fetch(request, env, ctx);
       }
 
+      const contentType = response.headers.get("content-type") || "";
+      if (request.method === "GET" && (contentType.includes("text/html") || contentType.includes("text/x-component"))) {
+        const headers = new Headers(response.headers);
+        headers.set("cache-control", "no-cache, must-revalidate");
+        response = new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+      }
+
       const level = url.pathname === "/api/health" ? "debug" : response.status >= 500 ? "error" : response.status >= 400 ? "warn" : "info";
       logEvent(level, "http_request", { requestId, method: request.method, path: url.pathname, status: response.status, durationMs: Math.round((performance.now() - startedAt) * 100) / 100 });
       return response;

@@ -38,10 +38,16 @@ type Stage = "import" | "review" | "result" | "history" | "players";
 type InitialStage = Extract<Stage, "history" | "players">;
 type GuestDraft = { displayName: string; fullName: string; nickname: string; type: ImportedPlayerType; primaryPosition: string; speed: number; skill: number; marking: number; goalkeeperPositioning: number; goalExit: number; notes: string };
 type MatchSeparationSource = { id: string; title: string; matchAt: string; date: string; location?: string | null; presentCount: number };
+function stageForCurrentRoute(fallback?: InitialStage): InitialStage | undefined {
+  if (window.location.pathname === "/jogadores") return "players";
+  if (window.location.pathname === "/separacoes-salvas") return "history";
+  return fallback;
+}
 
 export default function FootballApp({ initialStage }: { initialStage?: InitialStage }) {
   const initialized = useRef(false);
   const previousInitialStage = useRef<InitialStage | undefined>(initialStage);
+  const previousAdministrator = useRef<boolean | undefined>(undefined);
   const [stage, setStage] = useState<Stage>(initialStage ?? "history");
   const [isAdmin, setIsAdmin] = useState<boolean | undefined>(undefined);
   const [text, setText] = useState(sample);
@@ -72,6 +78,8 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
       fetch("/api/public-players", { cache: "no-store" }).then((response) => response.json()),
     ]);
     const administrator = Boolean(auth.admin);
+    const authenticationChanged = previousAdministrator.current !== undefined && previousAdministrator.current !== administrator;
+    const routeInitialStage = stageForCurrentRoute(initialStage);
     setIsAdmin(administrator);
     const separations = h.separations || [];
     const searchParams = new URLSearchParams(window.location.search);
@@ -99,7 +107,10 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
       };
       setConfig(nextConfig);
       setCareerConfig(career.config || null);
-      if (!initialized.current) {
+      if (!initialized.current || authenticationChanged) {
+        setHistoryDetail(null);
+        setDetail(null);
+        setGuestDraft(null);
         if(requested){setStage("history");setHistoryDetail(requested)}
         else if (requestedMatchId) {
           const proposalResponse = await fetch("/api/mobile/separations/proposal", {
@@ -122,15 +133,27 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
           }
         } else {
           setMatchSource(null);
-          setStage(initialStage ?? "import");
+          setStage(routeInitialStage ?? "import");
         }
       }
     } else {
       setPlayers([]);
       setConfig(defaultConfig);
       setCareerConfig(null);
-      if (!initialized.current) {setStage(initialStage ?? "history");if(requested){setStage("history");setHistoryDetail(requested)}}
+      if (!initialized.current || authenticationChanged) {
+        setParsed(null);
+        setSelected([]);
+        setResult(null);
+        setMatchSource(null);
+        setManual(false);
+        setGuestDraft(null);
+        setDetail(null);
+        setHistoryDetail(null);
+        setStage(routeInitialStage ?? "history");
+        if(requested){setStage("history");setHistoryDetail(requested)}
+      }
     }
+    previousAdministrator.current = administrator;
     initialized.current = true;
     return separations;
   };

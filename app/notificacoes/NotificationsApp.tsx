@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from "react";
+import { accountSignInHref } from "../../lib/site-navigation";
 import { SiteHeader } from "../components/SiteHeader";
 
 type Notice = { id: string; type: string; title: string; body: string; matchId?: string | null; actionUrl?: string | null; readAt?: string | null; createdAt: string };
@@ -42,10 +43,17 @@ export default function NotificationsApp() {
   useEffect(() => { void load(page, pageSize); }, [page, pageSize]);
 
   async function read(item?: Notice) {
-    await api("/api/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(item ? { id: item.id } : { all: true }) });
-    if (item?.actionUrl) window.location.assign(item.actionUrl);
-    else if (item?.matchId) window.location.assign(`/partidas#${encodeURIComponent(item.matchId)}`);
-    else await load();
+    try {
+      await api("/api/notifications", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(item ? { id: item.id } : { all: true }) });
+      if (item?.actionUrl) window.location.assign(item.actionUrl);
+      else if (item?.matchId) window.location.assign(`/partidas#${encodeURIComponent(item.matchId)}`);
+      else await load();
+    } catch (cause: any) {
+      if (cause.status === 401) {
+        setUnauthorized(true);
+        window.location.assign(accountSignInHref("/notificacoes", true));
+      } else setError(cause.message);
+    }
   }
 
   const first = data.total ? (data.page - 1) * data.pageSize + 1 : 0;

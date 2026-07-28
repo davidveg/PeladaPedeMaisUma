@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from "react";
+import { accountSignInHref } from "../../lib/site-navigation";
 import { SiteHeader } from "../components/SiteHeader";
 
 type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "ABSENT"; changeCount: number };
@@ -41,7 +42,12 @@ export default function MatchesApp() {
       const result = await api("/api/matches", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ matchId: item.id, status }) });
       setNotice(result.changed ? "Sua resposta foi registrada e os participantes foram notificados." : "Esta resposta já estava registrada.");
       await load();
-    } catch (cause: any) { setError(cause.message); } finally { setBusy(""); }
+    } catch (cause: any) {
+      if (cause.status === 401) {
+        setUnauthorized(true);
+        window.location.assign(accountSignInHref("/partidas", true));
+      } else setError(cause.message);
+    } finally { setBusy(""); }
   }
   if (loading) return <div className="member-loading">Carregando partidas…</div>;
   if (unauthorized) return <div className="member-page"><SiteHeader active="matches"/><main className="member-main"><div className="member-access-card match-login-required"><div className="ball">📅</div><h2>Entre para confirmar</h2><p>Use sua conta de jogador ou administrador para confirmar presença.</p><a className="primary" href="/conta?returnTo=/partidas">Entrar na minha conta</a></div></main></div>;

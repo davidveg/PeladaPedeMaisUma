@@ -2,9 +2,16 @@ import { audit, currentPlayerAccount, db, ensureDb, hashPassword, verifyPassword
 
 const emailPattern = /^\S+@\S+\.\S+$/;
 const cookie = (name: string, value: string, maxAge: number) => `${name}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
+const noStoreHeaders = () => new Headers({ "content-type": "application/json", "cache-control": "no-store, max-age=0", pragma: "no-cache" });
 
 export async function GET(request: Request) {
-  return Response.json({ member: await currentPlayerAccount(request) }, { headers: { "cache-control": "no-store" } });
+  const member = await currentPlayerAccount(request);
+  const headers = noStoreHeaders();
+  if (!member && /(?:^|;\s*)ppm_(?:member_)?session=/.test(request.headers.get("cookie") || "")) {
+    headers.append("set-cookie", cookie("ppm_member_session", "", 0));
+    headers.append("set-cookie", cookie("ppm_session", "", 0));
+  }
+  return new Response(JSON.stringify({ member }), { headers });
 }
 
 export async function POST(request: Request) {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Config, Player } from "../../lib/football";
 import { defaultConfig, score } from "../../lib/football";
 import { playerCardTier, playerCardTierLabel } from "../../lib/player-card-tier";
+import { safeSiteReturnTo } from "../../lib/site-navigation";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 import { SiteHeader } from "../components/SiteHeader";
 
@@ -28,10 +29,11 @@ export default function MemberApp() {
   async function load() {
     const auth = await api("/api/member-auth");
     setMember(auth.member);
-    if (!auth.member) { setPlayer(null); setAvailable([]); return; }
+    if (!auth.member) { setPlayer(null); setAvailable([]); return { member: null, player: null }; }
     const profile = await api("/api/member-profile");
     setMember(profile.member); setPlayer(profile.player); setConfig({ ...defaultConfig, ...(profile.config || {}) });
     if (!profile.player) setAvailable((await api("/api/member-players")).players || []); else setAvailable([]);
+    return { member: profile.member, player: profile.player };
   }
   useEffect(() => { load().catch((cause) => setError(cause.message)); }, []);
   async function logout() { await api("/api/member-auth", { method: "DELETE" }); setMember(null); setPlayer(null); }
@@ -86,13 +88,12 @@ function NotificationPreferencesCard() {
 
 function safeReturnTo() {
   if (typeof window === "undefined") return "";
-  const value = new URLSearchParams(window.location.search).get("returnTo") || "";
-  return value.startsWith("/") && !value.startsWith("//") ? value : "";
+  return safeSiteReturnTo(new URLSearchParams(window.location.search).get("returnTo"));
 }
 
-function MemberAccess({ onDone }: { onDone: () => Promise<void> }) {
+function MemberAccess({ onDone }: { onDone: () => Promise<{ member: any; player: Player | null }> }) {
   const initialResetToken = memberResetToken();
-  const [mode, setMode] = useState<"login" | "register" | "request" | "reset">(initialResetToken ? "reset" : "login"), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [confirmation, setConfirmation] = useState(""), [resetToken] = useState(initialResetToken), [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"login" | "register" | "request" | "reset">(initialResetToken ? "reset" : "login"), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [confirmation, setConfirmation] = useState(""), [resetToken] = useState(initialResetToken), [error, setError] = useState(""), [notice, setNotice] = useState(sessionExpiredNotice), [busy, setBusy] = useState(false);
   const changeMode = (next: "login" | "register" | "request") => { setMode(next); setError(""); setNotice(""); setPassword(""); setConfirmation(""); };
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError(""); setBusy(true);
@@ -107,6 +108,11 @@ function MemberAccess({ onDone }: { onDone: () => Promise<void> }) {
       } else {
         await api("/api/member-auth", { method: mode === "login" ? "POST" : "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password, confirmation }) });
         await onDone();
+        const returnTo = safeReturnTo();
+        if (returnTo) {
+          window.location.assign(returnTo);
+          return;
+        }
       }
     } catch (cause: any) { setError(cause.message); } finally { setBusy(false); }
   }
@@ -130,6 +136,13 @@ function MemberAccess({ onDone }: { onDone: () => Promise<void> }) {
 function memberResetToken() {
   if (typeof window === "undefined") return "";
   return new URLSearchParams(window.location.search).get("reset") || "";
+}
+
+function sessionExpiredNotice() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("reason") === "session-expired"
+    ? "Sua sessão expirou. Entre novamente para continuar."
+    : "";
 }
 
 function AssociationPicker({ players, onSelect }: { players: any[]; onSelect: (player: any) => void }) {
