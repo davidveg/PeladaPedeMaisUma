@@ -4,7 +4,7 @@ import type { MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity } from "../InstanceBranding";
 
-type SiteSection = "home" | "players" | "separations" | "matches" | "notifications" | "account" | "admin";
+type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "notifications" | "account" | "admin";
 
 async function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -45,6 +45,7 @@ export function SiteHeader({
       <nav aria-label="Navegação principal">
         {link("home", "/", isAdmin ? "Montar times" : "Início")}
         {link("players", "/jogadores", "Jogadores")}
+        {link("statistics", "/estatisticas", "Estatísticas")}
         {link("separations", "/separacoes-salvas", isAdmin ? "Separações salvas" : "Últimas separações")}
         {link("matches", "/partidas", "Partidas")}
         {link("notifications", "/notificacoes", "Notificações")}
