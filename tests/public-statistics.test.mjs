@@ -30,3 +30,13 @@ test("versus considera somente equipes opostas e mostra vitórias e empates", ()
   assert.equal(result.versus.draws, 1);
   assert.deepEqual(result.versus.matches.map(match => match.id), ["m1", "m2"]);
 });
+
+test("ranking de assiduidade conta uma presença por seleção com resultado", () => {
+  const duplicated = [{ ...matches[0], blueIds: ["a", "a"] }, ...matches.slice(1)];
+  const result = buildPublicStatistics(players, duplicated, []);
+  assert.deepEqual(result.attendance.map(entry => [entry.player.id, entry.presences, entry.rate]), [
+    ["a", 3, 100],
+    ["b", 3, 100],
+    ["c", 3, 100],
+  ]);
+});

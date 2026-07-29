@@ -14,7 +14,14 @@ export type StatisticsMatch = {
 
 export function buildPublicStatistics(players: StatisticsPlayer[], matches: StatisticsMatch[], contributions: StatisticsContribution[], playerA?: string, playerB?: string) {
   const totals = new Map(players.map(player => [player.id, { player, goals: 0, assists: 0 }]));
+  const attendanceTotals = new Map(players.map(player => [player.id, { player, presences: 0 }]));
   const matchIds = new Set(matches.map(match => match.id));
+  for (const match of matches) {
+    for (const playerId of new Set([...match.blueIds, ...match.yellowIds])) {
+      const attendance = attendanceTotals.get(playerId);
+      if (attendance) attendance.presences += 1;
+    }
+  }
   for (const contribution of contributions) {
     if (!matchIds.has(contribution.matchId)) continue;
     if (!contribution.ownGoal) {
@@ -27,6 +34,10 @@ export function buildPublicStatistics(players: StatisticsPlayer[], matches: Stat
   const leaderboard = [...totals.values()]
     .filter(entry => entry.goals || entry.assists)
     .sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.player.displayName.localeCompare(b.player.displayName, "pt-BR"));
+  const attendance = [...attendanceTotals.values()]
+    .filter(entry => entry.presences > 0)
+    .map(entry => ({ ...entry, rate: matches.length ? Math.round(entry.presences / matches.length * 1000) / 10 : 0 }))
+    .sort((a, b) => b.presences - a.presences || a.player.displayName.localeCompare(b.player.displayName, "pt-BR"));
 
   const versusMatches = playerA && playerB && playerA !== playerB ? matches.flatMap(match => {
     const teamA = match.blueIds.includes(playerA) ? "BLUE" : match.yellowIds.includes(playerA) ? "YELLOW" : null;
@@ -38,6 +49,7 @@ export function buildPublicStatistics(players: StatisticsPlayer[], matches: Stat
 
   return {
     leaderboard,
+    attendance,
     coverage: {
       matches: matches.length,
       matchesWithContributions: new Set(contributions.filter(entry => matchIds.has(entry.matchId)).map(entry => entry.matchId)).size,
