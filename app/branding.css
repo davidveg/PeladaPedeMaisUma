@@ -65,6 +65,26 @@
   gap: 14px;
 }
 
+.instance-logo-preview > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.instance-logo-preview .photo-upload,
+.instance-logo-preview .ghost {
+  box-sizing: border-box;
+  min-width: 170px;
+  height: 44px;
+  margin: 0 !important;
+  padding: 0 16px !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: center;
+}
+
 .instance-logo-preview img {
   width: 72px;
   height: 72px;
@@ -84,5 +104,19 @@
   .instance-settings-grid,
   .instance-color-grid {
     grid-template-columns: 1fr;
+  }
+
+  .instance-logo-preview {
+    align-items: flex-start;
+  }
+
+  .instance-logo-preview > div {
+    align-items: stretch;
+    flex: 1;
+  }
+
+  .instance-logo-preview .photo-upload,
+  .instance-logo-preview .ghost {
+    width: 100%;
   }
 }
