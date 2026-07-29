@@ -16,7 +16,9 @@ export type ScheduledMatch = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: "OPEN" | "CLOSED" | "CANCELLED"; acceptingResponses: boolean; separationId?: string | null;
   counts: { present: number; absent: number; pending: number }; attendance: MatchAttendance[];
-  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean };
+  goalkeepers?: { present: number; max: number };
+  shareMessage?: string;
+  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; isGoalkeeper?: boolean };
   createdAt: string; updatedAt: string;
 };
 export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string };

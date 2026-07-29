@@ -1,4 +1,4 @@
-export type StatisticsPlayer = { id: string; displayName: string; photoUrl?: string | null };
+export type StatisticsPlayer = { id: string; displayName: string; photoUrl?: string | null; type?: string | null };
 export type StatisticsContribution = { matchId: string; scorerPlayerId: string; assistPlayerId?: string | null; ownGoal?: boolean };
 export type StatisticsMatch = {
   id: string;

@@ -3,9 +3,9 @@ import test from "node:test";
 import { buildPublicStatistics } from "../lib/public-statistics.ts";
 
 const players = [
-  { id: "a", displayName: "Ana" },
-  { id: "b", displayName: "Bia" },
-  { id: "c", displayName: "Caio" },
+  { id: "a", displayName: "Ana", type: "monthly" },
+  { id: "b", displayName: "Bia", type: "monthly" },
+  { id: "c", displayName: "Caio", type: "guest" },
 ];
 const matches = [
   { id: "m1", separationId: "s1", title: "Rodada 1", date: "2026-07-05", blueScore: 2, yellowScore: 1, winnerTeam: "BLUE", blueIds: ["a"], yellowIds: ["b", "c"] },
@@ -20,6 +20,7 @@ test("calcula artilharia, assistências e ignora gol contra", () => {
     { matchId: "m3", scorerPlayerId: "a", assistPlayerId: "b" },
   ]);
   assert.deepEqual(result.leaderboard.map(entry => [entry.player.id, entry.goals, entry.assists]), [["a", 2, 0], ["b", 0, 1], ["c", 0, 1]]);
+  assert.equal(result.leaderboard.find(entry => entry.player.id === "c")?.player.type, "guest");
   assert.deepEqual(result.coverage, { matches: 3, matchesWithContributions: 2 });
 });
 

@@ -3,13 +3,16 @@
 import { playerAccountRequired } from "../../../lib/database";
 import { broadcastAccountNotification } from "../../../lib/account-notifications";
 import { loadScheduledMatches, setAttendance } from "../../../lib/scheduled-matches";
+import { resolvePublicBaseUrl } from "../../../lib/public-url";
+import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 
 const noStore = { "cache-control": "no-store" };
 
 export async function GET(request: Request) {
   const account: any = await playerAccountRequired(request);
   if (!account) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
-  return Response.json(await loadScheduledMatches(account), { headers: noStore });
+  const baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
+  return Response.json(await loadScheduledMatches(account, false, baseUrl), { headers: noStore });
 }
 
 export async function PUT(request: Request) {

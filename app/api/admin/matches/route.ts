@@ -3,13 +3,16 @@
 import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
 import { broadcastAccountNotification } from "../../../../lib/account-notifications";
 import { createSeparationFromMatch, loadScheduledMatches, setAttendance } from "../../../../lib/scheduled-matches";
+import { resolvePublicBaseUrl } from "../../../../lib/public-url";
+import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 
 const noStore = { "cache-control": "no-store" };
 
 export async function GET(request: Request) {
   const admin: any = await adminRequired(request);
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
-  return Response.json(await loadScheduledMatches(admin, true), { headers: noStore });
+  const baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
+  return Response.json(await loadScheduledMatches(admin, true, baseUrl), { headers: noStore });
 }
 
 export async function POST(request: Request) {

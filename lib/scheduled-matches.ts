@@ -2,23 +2,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb } from "./database";
 import { balanceTeams, calculateTeamDelta, defaultConfig, type Config, type Player } from "./football";
+import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
 
-export async function loadScheduledMatches(account: any, includePlayers = false) {
+export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "") {
   await ensureDb();
-  const [matchResult, totalActive] = await Promise.all([db().prepare(
+  const [matchResult, totalActive, allPlayerResult] = await Promise.all([db().prepare(
     `SELECT m.*,s.match_title separation_title
      FROM scheduled_matches m
      LEFT JOIN team_separations s ON s.id=m.separation_id
      ORDER BY CASE m.status WHEN 'OPEN' THEN 0 ELSE 1 END,
               CASE WHEN m.status='OPEN' THEN m.match_at END ASC,
               m.match_at DESC`,
-  ).all(), db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>()]);
+  ).all(), db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>(),
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all()]);
   const rows = matchResult.results as any[];
-  const playerRows = includePlayers
-    ? (await db().prepare(`SELECT * FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all()).results as any[]
-    : [];
+  const playerRows = allPlayerResult.results as any[];
   const matches = [];
   for (const row of rows) {
     const attendance = (await db().prepare(
@@ -26,11 +26,11 @@ export async function loadScheduledMatches(account: any, includePlayers = false)
        FROM match_attendance a JOIN players p ON p.id=a.player_id
        WHERE a.match_id=? ORDER BY p.display_name`,
     ).bind(row.id).all()).results as any[];
-    matches.push(publicMatch(row, attendance, account, Number(totalActive?.total || 0)));
+    matches.push(publicMatch(row, attendance, account, Number(totalActive?.total || 0), playerRows, publicBaseUrl));
   }
   return {
     matches,
-    players: playerRows.map(publicPlayer),
+    players: includePlayers ? playerRows.map(publicPlayer) : undefined,
     serverNow: new Date().toISOString(),
   };
 }
@@ -56,7 +56,7 @@ export async function setAttendance(params: {
   }
   if (administratorOverride && account.accountType !== "administrator") throw statusError("Não autorizado.", 401);
   const player: any = await db().prepare(
-    `SELECT id,display_name FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`,
+    `SELECT id,display_name,type,primary_position FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`,
   ).bind(playerId).first();
   if (!player) throw statusError("Jogador não encontrado ou inativo.", 404);
   const previous: any = await db().prepare(
@@ -64,6 +64,10 @@ export async function setAttendance(params: {
   ).bind(matchId, playerId).first();
   if (previous?.status === status) {
     return { changed: false, attendance: mapAttendance(previous, player.display_name, match.max_changes) };
+  }
+  const goalkeeperConfirmation = status === "PRESENT" && (player.type === "goalkeeper" || player.primary_position === "Goleiro");
+  if (goalkeeperConfirmation && await confirmedGoalkeeperCount(matchId, playerId) >= 2) {
+    throw statusError("Esta partida já possui 2 goleiros confirmados. Aguarde a desistência de um deles.", 409);
   }
   const nextChanges = previous ? Number(previous.change_count || 0) + 1 : 0;
   if (!administratorOverride && nextChanges > Number(match.max_changes)) {
@@ -75,17 +79,42 @@ export async function setAttendance(params: {
       `UPDATE match_attendance
        SET status=?,change_count=?,responded_by_account_type=?,responded_by_account_id=?,
            updated_by_administrator_id=?,updated_at=?
-       WHERE id=? AND status=? AND change_count=?`,
-    ).bind(status, nextChanges, account.accountType, account.id, administratorOverride ? account.id : null, now, id, previous.status, previous.change_count).run();
-    if (Number(updated.meta?.changes || 0) !== 1) throw statusError("A resposta foi alterada em outro dispositivo. Atualize e tente novamente.", 409);
+       WHERE id=? AND status=? AND change_count=?
+         AND (?=0 OR (
+           SELECT COUNT(*) FROM match_attendance slots
+           JOIN players goalkeepers ON goalkeepers.id=slots.player_id
+           WHERE slots.match_id=? AND slots.status='PRESENT' AND slots.player_id<>?
+             AND goalkeepers.active=1 AND goalkeepers.deleted_at IS NULL
+             AND (goalkeepers.type='goalkeeper' OR goalkeepers.primary_position='Goleiro')
+         )<2)`,
+    ).bind(status, nextChanges, account.accountType, account.id, administratorOverride ? account.id : null, now, id, previous.status, previous.change_count,
+      goalkeeperConfirmation ? 1 : 0, matchId, playerId).run();
+    if (Number(updated.meta?.changes || 0) !== 1) {
+      if (goalkeeperConfirmation && await confirmedGoalkeeperCount(matchId, playerId) >= 2) {
+        throw statusError("Esta partida já possui 2 goleiros confirmados. Aguarde a desistência de um deles.", 409);
+      }
+      throw statusError("A resposta foi alterada em outro dispositivo. Atualize e tente novamente.", 409);
+    }
   } else {
     try {
-      await db().prepare(
+      const inserted = await db().prepare(
         `INSERT INTO match_attendance
          (id,match_id,player_id,status,change_count,responded_by_account_type,responded_by_account_id,updated_by_administrator_id,created_at,updated_at)
-         VALUES (?,?,?,?,0,?,?,?,?,?)`,
-      ).bind(id, matchId, playerId, status, account.accountType, account.id, administratorOverride ? account.id : null, now, now).run();
+         SELECT ?,?,?,?,0,?,?,?,?,?
+         WHERE (?=0 OR (
+           SELECT COUNT(*) FROM match_attendance slots
+           JOIN players goalkeepers ON goalkeepers.id=slots.player_id
+           WHERE slots.match_id=? AND slots.status='PRESENT'
+             AND goalkeepers.active=1 AND goalkeepers.deleted_at IS NULL
+             AND (goalkeepers.type='goalkeeper' OR goalkeepers.primary_position='Goleiro')
+         )<2)`,
+      ).bind(id, matchId, playerId, status, account.accountType, account.id, administratorOverride ? account.id : null, now, now,
+        goalkeeperConfirmation ? 1 : 0, matchId).run();
+      if (Number(inserted.meta?.changes || 0) !== 1) {
+        throw statusError("Esta partida já possui 2 goleiros confirmados. Aguarde a desistência de um deles.", 409);
+      }
     } catch (error: any) {
+      if (Number(error?.status) === 409) throw error;
       if (String(error?.message || error).toLowerCase().includes("unique")) throw statusError("A resposta foi registrada em outro dispositivo. Atualize para continuar.", 409);
       throw error;
     }
@@ -99,6 +128,18 @@ export async function setAttendance(params: {
     attendance: { id, playerId, playerName: player.display_name, status, changeCount: nextChanges, maxChanges: Number(match.max_changes) },
     match,
   };
+}
+
+async function confirmedGoalkeeperCount(matchId: string, excludedPlayerId = "") {
+  const result: any = await db().prepare(
+    `SELECT COUNT(*) total
+     FROM match_attendance attendance
+     JOIN players player ON player.id=attendance.player_id
+     WHERE attendance.match_id=? AND attendance.status='PRESENT' AND attendance.player_id<>?
+       AND player.active=1 AND player.deleted_at IS NULL
+       AND (player.type='goalkeeper' OR player.primary_position='Goleiro')`,
+  ).bind(matchId, excludedPlayerId).first();
+  return Number(result?.total || 0);
 }
 
 export async function createMatchSeparationProposal(matchId: string, nonce = 0) {
@@ -212,8 +253,11 @@ function validateAndRebuildResult(input: any, players: Player[], config: Config,
   return { ...generated, blue, yellow, ...metrics, cost, rating, extraId: undefined };
 }
 
-function publicMatch(row: any, attendance: any[], account: any, totalActive: number) {
+function publicMatch(row: any, attendance: any[], account: any, totalActive: number, players: any[], publicBaseUrl: string) {
   const own = attendance.find(item => String(item.player_id) === String(account?.playerId || ""));
+  const viewerPlayer = players.find(item => String(item.id) === String(account?.playerId || ""));
+  const presentPlayerIds = new Set(attendance.filter(item => item.status === "PRESENT").map(item => String(item.player_id)));
+  const goalkeepersPresent = players.filter(item => presentPlayerIds.has(String(item.id)) && (item.type === "goalkeeper" || item.primary_position === "Goleiro")).length;
   return {
     id: String(row.id), title: String(row.title), matchAt: String(row.match_at),
     confirmationDeadline: String(row.confirmation_deadline), location: row.location ? String(row.location) : null,
@@ -226,12 +270,22 @@ function publicMatch(row: any, attendance: any[], account: any, totalActive: num
       absent: attendance.filter(item => item.status === "ABSENT").length,
       pending: Math.max(0, totalActive - attendance.length),
     },
+    goalkeepers: { present: goalkeepersPresent, max: 2 },
     attendance: attendance.map(item => mapAttendance(item, item.display_name, row.max_changes)),
+    shareMessage: buildMatchAttendanceShareMessage({
+      title: String(row.title), matchAt: String(row.match_at), location: row.location ? String(row.location) : null,
+      players: players.map(publicPlayer),
+      attendance: attendance.map(item => ({ playerId: String(item.player_id), status: item.status })),
+      confirmationUrl: publicBaseUrl
+        ? `${publicBaseUrl.replace(/\/$/, "")}/partidas?match=${encodeURIComponent(String(row.id))}`
+        : null,
+    }),
     viewer: {
       playerId: account?.playerId ? String(account.playerId) : null,
       status: own?.status || null,
       changeCount: Number(own?.change_count || 0),
       changesRemaining: Math.max(0, Number(row.max_changes) - Number(own?.change_count || 0)),
+      isGoalkeeper: Boolean(viewerPlayer && (viewerPlayer.type === "goalkeeper" || viewerPlayer.primary_position === "Goleiro")),
       canRespond: Boolean(account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()),
     },
   };

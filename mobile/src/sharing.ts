@@ -8,7 +8,8 @@ function ensurePublicHttps(url: string) {
   return url;
 }
 
-export async function shareText(message: string) {
+export async function shareText(message?: string | null) {
+  if (!message?.trim()) throw new Error("A mensagem de compartilhamento não está disponível. Atualize os dados e tente novamente.");
   const whatsapp = `whatsapp://send?text=${encodeURIComponent(message)}`;
   if (await Linking.canOpenURL(whatsapp)) return Linking.openURL(whatsapp);
   await Share.share({ message });

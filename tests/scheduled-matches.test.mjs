@@ -46,6 +46,12 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
     }, "ppm_session=match-admin-session"));
     assert.equal(creation.status, 201);
     const matchId = (await creation.json()).id;
+    const initialList = await matches.GET(new Request("https://pelada.example/api/matches", { headers: { cookie: "ppm_member_session=match-member-session" } }));
+    const initialMatch = (await initialList.json()).matches.find(item => item.id === matchId);
+    assert.equal(typeof initialMatch.shareMessage, "string");
+    assert.match(initialMatch.shareMessage, /PELADA DE DOMINGO/);
+    assert.match(initialMatch.shareMessage, new RegExp(`https://pelada\\.example/partidas\\?match=${matchId}`));
+    assert.doesNotMatch(initialMatch.shareMessage, /undefined/);
 
     assert.equal((await matches.PUT(jsonRequest("https://pelada.example/api/matches", { matchId, status: "PRESENT" }, "ppm_member_session=match-member-session"))).status, 200);
     assert.equal((await matches.PUT(bearerRequest("https://pelada.example/api/matches", { matchId, status: "ABSENT" }, mobileAccess))).status, 200);

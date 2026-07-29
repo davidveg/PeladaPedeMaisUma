@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
 import { useEffect, useMemo, useState } from "react";
+import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
 type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any };
@@ -11,6 +12,8 @@ type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: string; separationId?: string | null;
   counts: { present: number; absent: number; pending: number }; attendance: Attendance[];
+  goalkeepers?: { present: number; max: number };
+  shareMessage?: string;
 };
 type Player = { id: string; displayName: string; type: string; primaryPosition: string };
 
@@ -70,10 +73,12 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props
 
 function MatchAdminDetail({ match, players, onAttendance, onEdit, onClose, onCancel }: any) {
   const byPlayer = useMemo(() => Object.fromEntries(match.attendance.map((item: Attendance) => [item.playerId, item])), [match.attendance]);
+  const goalkeepersPresent = match.goalkeepers?.present ?? players.filter((player: Player) => (player.type === "goalkeeper" || player.primaryPosition === "Goleiro") && byPlayer[player.id]?.status === "PRESENT").length;
+  const share = () => match.shareMessage?.trim() && window.open(buildWhatsAppShareUrl(match.shareMessage), "_blank", "noopener,noreferrer");
   return <section className="admin-card match-admin-detail"><div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
-    <div className="match-attendance-summary"><span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span><span><b>{match.counts.pending}</b>Pendentes</span></div>
-    <div className="match-player-admin-list">{players.map((player: Player) => { const answer = byPlayer[player.id]; return <div key={player.id}><span><b>{player.displayName}</b><small>{player.primaryPosition} · {answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta"}</small></span><div><button className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button><button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div></div>})}</div>
-    <div className="match-admin-actions">{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <><button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
+    <div className="match-attendance-summary"><span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span><span><b>{match.counts.pending}</b>Pendentes</span><span><b>{goalkeepersPresent}/2</b>Goleiros</span></div>
+    <div className="match-player-admin-list">{players.map((player: Player) => { const answer = byPlayer[player.id], guest = player.type === "guest", goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro", goalkeeperBlocked = goalkeeper && answer?.status !== "PRESENT" && goalkeepersPresent >= 2; return <div className={guest ? "guest" : ""} key={player.id}><span><b>{player.displayName}{guest && <em>Convidado</em>}</b><small>{player.primaryPosition} · {answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta"}</small></span><div><button disabled={goalkeeperBlocked} title={goalkeeperBlocked ? "Os dois lugares de goleiro já estão preenchidos." : undefined} className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button><button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div></div>})}</div>
+    <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost" onClick={share}>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <><button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
   </section>;
 }
 
