@@ -1,175 +1,442 @@
 # Pelada Pede Mais Uma
 
-Para operar vários grupos com o mesmo codebase, consulte [Operação de múltiplas peladas](docs/MULTI_INSTANCE.md).
+Aplicação web responsiva e aplicativo Expo/React Native para organizar peladas, confirmar presenças, montar times equilibrados, registrar resultados e acompanhar a evolução dos jogadores.
 
-Aplicação web responsiva para importar confirmações do WhatsApp, identificar jogadores e criar dois times equilibrados — Time Azul e Time Amarelo. A aplicação inclui área pública, histórico persistente e painel administrativo.
+O mesmo código pode atender vários grupos em implantações independentes. Cada instância mantém identidade visual, agenda, banco de dados, uploads e configurações próprias.
 
-## Recursos implementados
+Documentação complementar:
 
-- Parser de listas do WhatsApp: reconhece ✅, ❌, campos vazios, caracteres invisíveis, data, título, ausentes, duplicidades e as seções Goleiros, Mensalistas e Convidados.
-- Correspondência por nome de exibição, nome completo, apelido e aliases; sugestões ambíguas nunca são vinculadas automaticamente.
-- Cadastro reutilizável de mensalistas, convidados e goleiros, com o tipo sugerido automaticamente pela seção da lista e notas decimais de 1 a 5. Jogadores de linha usam velocidade, habilidade e marcação; goleiros usam habilidade (reflexos e agilidade), posicionamento e saída de gol (coragem), além do momentum.
-- Algoritmo heurístico que testa milhares de combinações e prioriza quantidade, posições, velocidade, habilidade, marcação, médias e proteção do quartil superior no caso ímpar.
-- Propostas temporárias, nova proposta, ajuste manual, métricas, confirmação e snapshots históricos imutáveis.
-- Montagem e confirmação de times exclusivas para administradores autenticados; visitantes acessam somente as separações confirmadas e seus detalhes por links públicos permanentes, copiáveis e compartilháveis.
-- Ordem de chegada persistente e independente para cada equipe nas separações salvas, editável somente por administradores e exibida do primeiro ao último jogador de cada time em campo.
-- Compartilhamento pelo clipboard em formato simples ou com pontuações.
-- Banco D1 e R2 no ambiente Cloudflare; SQLite e filesystem na edição self-hosted em Node.
-- Painel administrativo com jogadores, administradores, configurações e exclusão lógica.
-- Contas para mensalistas e convidados, com associação exclusiva a um jogador, card pessoal e atualização de foto, nome completo, apelido, posição e observações.
-- Gestão administrativa das associações entre logins e jogadores, incluindo contas administrativas, vínculo próprio pela área Minha conta e desassociação para correção.
-- Primeiro administrador `admin` / `admin`, com troca obrigatória por e-mail válido e senha de 8+ caracteres.
-- Senhas com PBKDF2-SHA-256, salt aleatório e 210 mil iterações; sessão em cookie HTTP-only/SameSite.
-- Auditoria de operações administrativas.
-- Partidas agendadas com data, local, prazo de confirmação, limite configurável de remarcações e respostas sincronizadas entre site e aplicativo.
-- Central de notificações por conta e push para Android/iOS quando uma partida é criada, editada, cancelada, encerrada ou recebe uma nova resposta de presença.
-- Confirmação administrativa para jogadores sem conta vinculada e fechamento antecipado da lista com geração automática de uma separação equilibrada; o importador do WhatsApp continua disponível em paralelo.
-- Modo Carreira com placar confirmado por administrador, momentum de vitória/derrota, registro opcional de gols e assistências, votação dos destaques por QR Code e encerramento automático ou antecipado.
+- [Aplicativo mobile](mobile/README.md)
+- [API mobile em OpenAPI](docs/mobile-openapi.yaml)
+- [Operação de múltiplas peladas](docs/MULTI_INSTANCE.md)
+- [Notas da versão 1.0](RELEASE_NOTES_1.0.0.md)
 
-## Execução local
+## Visão geral
 
-Requer Node.js 22.13 ou superior.
+### Área pública
+
+- Lista pública de jogadores separada entre jogadores de linha e goleiros.
+- Ordenação crescente e decrescente por nome, tipo, posição, atributos, momentum, histórico e overall.
+- Cards completos com foto, atributos, overall com uma casa decimal, jogos, vitórias, derrotas, gols e assistências.
+- Cards opcionais por nível — Bronze, Prata, Ouro e Lendário — com limites configuráveis.
+- Separações salvas com link público permanente, times, regras utilizadas, ordem de chegada, placar, súmula e resultado da votação.
+- Página pública de estatísticas com período mensal, anual ou personalizado:
+  - ranking de gols, assistências e participações;
+  - ranking de assiduidade;
+  - comparação direta entre dois jogadores;
+  - opção de incluir ou ocultar convidados.
+- Página oficial para download das versões Android e iOS publicadas pelos administradores.
+
+### Jogadores e contas
+
+- Cadastro de mensalistas, convidados e goleiros.
+- Correspondência por nome de exibição, nome completo, apelido e aliases.
+- Foto individual com avatar padrão quando não houver imagem.
+- Notas decimais entre 1 e 5:
+  - jogadores de linha: Velocidade, Habilidade e Marcação;
+  - goleiros: Habilidade, Posicionamento e Saída de Gol;
+  - todos os jogadores: Momentum.
+- Contas comuns e administrativas podem ser associadas a um jogador.
+- Cada conta aceita um único jogador e cada jogador aceita um único login, independentemente do tipo da conta.
+- A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição e observações.
+- Recuperação de senha por e-mail para administradores e contas de jogadores.
+- Administradores podem redefinir uma senha temporária de conta de jogador e revogar todas as sessões anteriores.
+
+### Agenda, presenças e notificações
+
+- Criação administrativa de partidas com título, data, horário, local e prazo de confirmação.
+- Confirmação de presença ou ausência pelo jogador associado.
+- Limite configurável de alterações da resposta.
+- Respostas compartilhadas entre site e aplicativo.
+- Administradores podem responder por jogadores sem conta vinculada.
+- Fechamento antecipado da lista e geração automática de uma separação equilibrada.
+- Cancelamento e edição de partidas com auditoria.
+- Central de notificações por conta, com paginação e marcação de itens lidos.
+- Preferências individuais para:
+  - partidas e alterações;
+  - confirmações de presença;
+  - separações geradas;
+  - atualizações do aplicativo;
+  - lembretes de votação do Modo Carreira.
+- Push Android/iOS via Expo quando disponível. A central interna continua funcionando mesmo sem push.
+
+### Importação e separação dos times
+
+- Parser de listas do WhatsApp com suporte a confirmações, ausências, campos vazios, caracteres Unicode invisíveis, datas, títulos e duplicidades.
+- Reconhecimento das seções **Goleiros**, **Mensalistas** e **Convidados**.
+- Jogadores desconhecidos ou ambíguos nunca são vinculados automaticamente.
+- Propostas calculadas pelo algoritmo oficial do servidor.
+- Nova proposta, troca manual entre equipes, métricas e indicador de equilíbrio.
+- Nomes e cores das duas equipes configuráveis por instância; os padrões são Time Azul e Time Amarelo.
+- Criação e confirmação de separações exclusivas para administradores.
+- Snapshot histórico das equipes e das regras utilizadas, preservando a partida mesmo após alterações futuras nos cadastros.
+- Ordem de chegada independente para cada equipe, editável e confirmável novamente.
+- Compartilhamento dos times e do link público pelo WhatsApp.
+
+### Modo Carreira
+
+- Confirmação administrativa do placar.
+- Bônus de momentum para a equipe vencedora e ônus para a perdedora.
+- Empates não alteram o momentum das equipes.
+- Rascunho de súmula otimizado para celular e tablet.
+- Registro opcional de gols, assistências e gols contra.
+- Correção administrativa posterior de placar e súmula sem duplicar momentum.
+- Estatísticas acumuladas de jogos, vitórias, derrotas, gols e assistências.
+- Votação dos três melhores e três piores jogadores da partida.
+- Link compartilhável e QR Code para a votação.
+- Encerramento automático pelo prazo ou antecipado pelo administrador.
+- Revisão e remoção administrativa de votos somente enquanto a votação estiver aberta.
+- Compartilhamento do resultado final da votação pelo WhatsApp.
+- Multiplicador de Momentum configurável no cálculo do overall.
+
+#### Regras da votação
+
+A votação exige autenticação. O servidor usa exclusivamente o jogador associado à sessão web ou ao token do aplicativo; a identidade não é escolhida pelo navegador.
+
+Para votar, a conta deve:
+
+1. estar autenticada;
+2. possuir um jogador associado;
+3. ter participado da separação;
+4. ainda não ter votado;
+5. estar dentro do prazo configurado.
+
+O jogador não pode votar em si mesmo, não pode repetir candidatos entre os seis lugares e não pode votar duas vezes usando site e aplicativo. Cada voto fica associado ao jogador e à conta autenticada.
+
+O 1º lugar recebe 3 pontos, o 2º recebe 2 e o 3º recebe 1. Empates são resolvidos por quantidade de votos em 1º, depois em 2º e em 3º. Após o encerramento, novos votos e remoções são bloqueados e o momentum é aplicado uma única vez.
+
+### Painel administrativo
+
+O painel possui:
+
+- visão geral com jogadores, convidados, separações, administradores, contas, pesos do algoritmo e estados do Modo Carreira;
+- jogadores e goleiros em tabelas separadas e ordenáveis;
+- partidas e presenças;
+- versões do aplicativo Android/iOS;
+- separações salvas;
+- administradores;
+- contas de jogadores e associações;
+- identidade, agenda, nomes e cores das equipes;
+- configurações de equilíbrio;
+- configurações, votos e encerramento do Modo Carreira;
+- auditoria pesquisável, filtrável e paginada.
+
+A auditoria carrega 10 eventos por página por padrão e permite 10, 25, 50 ou 100 eventos.
+
+### Aplicativo mobile
+
+O diretório [`mobile/`](mobile/) contém um aplicativo Expo/React Native para iOS e Android. O backend web continua sendo a fonte oficial dos dados e das regras.
+
+O aplicativo oferece:
+
+- login de jogador ou administrador;
+- tokens nativos com refresh rotativo;
+- partidas, confirmações de presença e notificações;
+- separações salvas e card do jogador;
+- criação de separações para administradores;
+- ordem de chegada por equipe;
+- rascunho e confirmação de resultado;
+- compartilhamento pelo WhatsApp;
+- ajuste administrativo dos pesos de Velocidade, Habilidade e Marcação;
+- cache offline somente para leitura;
+- push notifications em development builds e builds distribuídos;
+- verificação da versão instalada e orientação para atualização.
+
+Administradores publicam versão, build mínimo, links Android/iOS e notas da versão pelo painel. A publicação atualiza a página `/baixar-app` e notifica os usuários. O rodapé do site também aponta para essa página.
+
+## Tecnologias
+
+### Aplicação web e API
+
+- Node.js 22
+- React 19
+- Next.js/Vinext
+- TypeScript
+- Cloudflare D1 e R2 no ambiente hospedado
+- SQLite e filesystem no ambiente self-hosted
+- Drizzle ORM/Kit para definição e evolução do schema
+- Nodemailer para SMTP
+- QRCode para links de votação
+
+### Aplicativo
+
+- Expo SDK 56 e React Native
+- Expo Router
+- TanStack Query
+- React Hook Form e Zod
+- SecureStore
+- Expo Notifications e Expo Updates
+- EAS Build
+
+## Execução local da aplicação web
+
+Requer Node.js `22.13` ou superior.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Abra a URL local mostrada no terminal. No primeiro acesso administrativo use `admin` / `admin`; a aplicação exigirá a troca imediata.
+Abra a URL exibida no terminal. No primeiro acesso self-hosted, use `admin` / `admin`; o sistema exige imediatamente um e-mail válido e uma senha de pelo menos 8 caracteres.
 
-Para validar:
+Validação:
 
 ```bash
 npm test
 npm run build
 ```
 
+## Execução local do aplicativo
+
+```bash
+cd mobile
+cp .env.example .env
+npm ci
+npm start
+```
+
+Configure `EXPO_PUBLIC_API_BASE_URL` e `EXPO_PUBLIC_WEB_BASE_URL` com um endereço que o aparelho consiga alcançar. Em um telefone físico, `localhost` aponta para o próprio telefone; durante o desenvolvimento, use o IP da máquina na rede local.
+
+Comandos úteis:
+
+```bash
+npm run android
+npm run ios
+npm run typecheck
+npm test
+```
+
+Consulte [mobile/README.md](mobile/README.md) para builds EAS, testes Maestro, segurança dos tokens e publicação nas lojas.
+
+## Configuração de ambiente
+
+Copie `.env.example` ou `.env.docker.example` conforme o ambiente. Nunca versione segredos.
+
+| Variável | Finalidade |
+| --- | --- |
+| `APP_BASE_URL` | URL HTTPS canônica usada em links públicos, votação, redefinição de senha e notificações |
+| `SMTP_HOST` | Servidor SMTP |
+| `SMTP_PORT` | Porta SMTP |
+| `SMTP_SECURE` | Ativa TLS direto, normalmente `true` na porta 465 |
+| `SMTP_USER` | Usuário SMTP |
+| `SMTP_PASSWORD` | Senha de aplicativo ou segredo SMTP |
+| `SMTP_FROM` | Nome e endereço do remetente |
+| `LOG_LEVEL` | `debug`, `info`, `warn` ou `error` |
+| `HOST_PORT` | Porta publicada pelo Compose |
+| `INSTANCE_DATA_PATH` | Diretório persistente exclusivo da instância no OMV |
+| `LOGGING_JOB_NAME` | Identificador usado por Promtail/Grafana Alloy |
+
+### Gmail
+
+Para enviar com uma conta Google:
+
+1. ative a verificação em duas etapas;
+2. gere uma [senha de app do Google](https://support.google.com/mail/answer/185833?hl=pt-BR);
+3. configure a senha de app em `SMTP_PASSWORD`;
+4. não use a senha normal da conta e não versione o segredo.
+
+Exemplo:
+
+```dotenv
+APP_BASE_URL=https://pelada.seudominio.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=peladapedemaisuma@gmail.com
+SMTP_PASSWORD=senha-de-app
+SMTP_FROM="Pelada Pede Mais Uma <peladapedemaisuma@gmail.com>"
+LOG_LEVEL=info
+```
+
+Os links de redefinição são de uso único, armazenados somente como hash e expiram em 30 minutos. Uma redefinição concluída revoga as sessões anteriores.
+
 ## Banco de dados e migrações
 
-O schema declarativo está em `db/schema.ts`; a migração inicial está em `drizzle/0000_initial.sql`. Em desenvolvimento, as tabelas também são inicializadas de forma idempotente na primeira requisição. Para gerar uma nova migração após alterar o schema:
+O schema declarativo está em [`db/schema.ts`](db/schema.ts) e as migrações incrementais em [`drizzle/`](drizzle/).
 
 ```bash
 npm run db:generate
 ```
 
-O uso de consultas preparadas protege contra injeção SQL. Separações salvam um snapshot JSON completo, portanto alterações futuras no cadastro não mudam partidas antigas. Exclusões de jogadores e separações são lógicas.
+Em desenvolvimento e no runtime self-hosted, a inicialização também verifica e cria estruturas ausentes de forma idempotente.
 
-### Backup
+Características de persistência:
 
-No ambiente hospedado, exporte o banco D1 com as ferramentas de backup/exportação da plataforma antes de mudanças estruturais. Na edição self-hosted, pare o container e copie todo o conteúdo de `/data`: o banco fica em `/data/pelada.sqlite` e as fotos em `/data/uploads`. Copiar o diretório com o serviço parado também preserva corretamente os arquivos auxiliares WAL do SQLite.
+- consultas preparadas;
+- UUIDs em texto;
+- datas em ISO 8601;
+- snapshots JSON das separações;
+- exclusão lógica de jogadores e separações;
+- associação exclusiva entre conta e jogador;
+- idempotência nas mutações administrativas do aplicativo;
+- armazenamento apenas de hashes dos tokens de recuperação e refresh.
 
-### Evolução para PostgreSQL
+### Backup self-hosted
 
-As entidades e o acesso estão isolados em `db/` e `lib/database.ts`. Para migrar: crie o schema PostgreSQL equivalente, exporte jogadores/configurações/admins/separações, converta inteiros booleanos, importe snapshots sem transformá-los, troque o driver Drizzle e execute testes de contagem e integridade. IDs UUID em texto e datas ISO evitam acoplamento ao SQLite.
+Pare o container e copie todo o diretório montado em `/data`:
 
-## URL pública, compartilhamento e SMTP
+- banco: `/data/pelada.sqlite`;
+- fotos: `/data/uploads`;
+- arquivos auxiliares SQLite/WAL no mesmo diretório.
 
-No OMV, `APP_BASE_URL` define o endereço público usado nos links de votação compartilhados pelo WhatsApp e na recuperação de senha. Informe a URL HTTPS acessível pelos jogadores, sem `/votacao` no final. A recuperação envia um link de uso único para o e-mail do administrador. O token é armazenado somente como hash, expira em 30 minutos, invalida todas as sessões após a troca e limita novas solicitações a uma por minuto e cinco por hora por conta.
+Copiar a pasta com o serviço parado garante um backup consistente. Para restaurar, devolva a pasta, confirme o proprietário usado pelo container e inicie o serviço.
 
-Para enviar pela conta `peladapedemaisuma@gmail.com`:
+## Algoritmo de equilíbrio
 
-1. Ative a verificação em duas etapas na conta Google.
-2. Gere uma [senha de app do Google](https://support.google.com/mail/answer/185833?hl=pt-BR) com um nome como `Pelada OMV`.
-3. No arquivo de ambiente da pilha do OMV, configure apenas o segredo e a URL pública real:
+Para jogadores de linha, o overall base usa:
 
-```dotenv
-APP_BASE_URL=https://pelada.seudominio.com
-SMTP_PASSWORD=senha-de-app-de-16-caracteres
+```text
+Velocidade × pesoVelocidade
++ Habilidade × pesoHabilidade
++ Marcação × pesoMarcação
++ Momentum × multiplicadorMomentum
 ```
 
-O `docker-compose.omv.yml` já define `smtp.gmail.com`, porta `465`, TLS, usuário e remetente. Não use a senha normal da conta Google e nunca versione a senha de app. Caso a senha principal da conta seja alterada, o Google revoga as senhas de app e será necessário gerar outra.
+Goleiros usam Habilidade, Posicionamento e Saída de Gol na mesma escala. O resultado final é limitado entre 1 e 5 e arredondado para uma casa decimal.
 
-## Logs operacionais
+Pesos padrão:
 
-A aplicação escreve eventos em JSON, uma linha por evento, diretamente em stdout/stderr. Os campos principais são `timestamp`, `level`, `service`, `event`, `requestId`, `method`, `path`, `status` e `durationMs`; exceções incluem nome, mensagem e stack. E-mails, senhas, tokens, cookies, corpos e query strings não são registrados.
+- Velocidade: 48%;
+- Habilidade: 32%;
+- Marcação: 20%;
+- Multiplicador de Momentum: 1,0.
 
-No OMV, `LOG_LEVEL` aceita `debug`, `info`, `warn` ou `error` e usa `info` por padrão. O Compose mantém cinco arquivos de log de até 10 MB cada e adiciona labels para descoberta por Promtail ou Grafana Alloy. Com os logs enviados ao Loki, uma consulta LogQL inicial é:
+O algoritmo testa milhares de combinações, prioriza a diferença de quantidade, penaliza desequilíbrio de posições e compara atributos e médias. Em listas ímpares, protege por padrão o quartil superior contra a equipe excedente. Administradores podem gerar novas propostas e fazer ajustes manuais antes de confirmar.
+
+## Gols, assistências e histórico
+
+Quando a funcionalidade estiver ativa, cada gol do placar exige um evento correspondente:
+
+- gol normal pode ter assistência opcional do mesmo time;
+- o autor não pode assistir o próprio gol;
+- gol contra é marcado como **GC**;
+- GC entra no placar, não aceita assistência e não entra no histórico de gols do jogador.
+
+Somente a confirmação oficial do resultado atualiza estatísticas e momentum. O rascunho da súmula não produz efeitos definitivos.
+
+## Páginas principais
+
+| Página | Finalidade |
+| --- | --- |
+| `/` | Organização e criação de times para administradores |
+| `/jogadores` | Lista pública e cards |
+| `/separacoes-salvas` | Histórico público das separações |
+| `/estatisticas` | Rankings e confrontos |
+| `/partidas` | Agenda e confirmação de presença |
+| `/notificacoes` | Central da conta autenticada |
+| `/conta` | Login, associação e perfil |
+| `/votacao?token=...` | Votação autenticada do Modo Carreira |
+| `/sumula?separationId=...` | Rascunho administrativo |
+| `/baixar-app` | Versões oficiais Android/iOS |
+| `/admin` | Painel administrativo |
+
+## API
+
+As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa Bearer tokens opacos emitidos por `/api/mobile/auth`.
+
+### Públicas
+
+- `GET /api/public-config` — URL canônica, identidade, agenda, nomes e cores das equipes.
+- `GET /api/public-players` — jogadores e estatísticas esportivas públicas.
+- `GET /api/public-statistics` — rankings, assiduidade e confrontos por período.
+- `GET /api/separations` — separações confirmadas.
+- `GET /api/mobile/version` — versão e link oficial por plataforma.
+- `GET /api/health` — saúde da aplicação e banco.
+
+### Contas
+
+- `GET/POST/PUT/DELETE /api/member-auth` — sessão, login, cadastro e logout.
+- `POST/PUT /api/member-password-reset` — recuperação de senha de jogador.
+- `GET/POST /api/member-players` — jogadores disponíveis e associação.
+- `GET/PUT /api/member-profile` — card e perfil associado.
+- `GET/PUT /api/notification-preferences` — preferências da conta.
+- `GET/PATCH /api/notifications` — central interna.
+
+### Partidas e separações
+
+- `GET/PUT /api/matches` — agenda e confirmação do jogador.
+- `GET/POST/PATCH /api/admin/matches` — gestão administrativa das partidas.
+- `GET/POST/PATCH/DELETE /api/separations` — histórico, criação, chegada e exclusão lógica.
+- `GET/PUT /api/career/draft` — rascunho de súmula.
+- `POST/PUT /api/career/match` — confirmação e correção de resultado.
+- `GET/POST /api/career/vote` — consulta da votação e voto autenticado.
+- `GET/PUT/POST/DELETE /api/career/admin` — configuração, acompanhamento e encerramento.
+
+### Administração
+
+- `GET/POST/PUT/DELETE /api/players` — jogadores.
+- `GET/POST/PUT /api/administrators` — administradores.
+- `GET/DELETE /api/member-associations` — associações.
+- `PUT /api/member-associations/password` — senha temporária de jogador.
+- `GET/PUT /api/config` — equilíbrio.
+- `GET/PUT /api/instance-config` — identidade, agenda e equipes.
+- `GET/PUT/POST /api/admin/mobile-release` — versões Android/iOS.
+- `GET /api/audit` — auditoria paginada.
+- `GET/POST /api/upload` — fotos validadas.
+
+### Mobile
+
+- `GET/POST/PUT/DELETE /api/mobile/auth` — login, refresh rotativo e revogação.
+- `GET/POST/PATCH /api/mobile/separations` — separações.
+- `POST /api/mobile/separations/proposal` — parser e algoritmo oficial.
+- `GET/PUT /api/mobile/config` — os três pesos editáveis.
+- `POST/PUT /api/mobile/career/match` — resultado idempotente.
+- `POST/DELETE /api/mobile/notifications` — registro e desativação de push.
+
+O contrato detalhado está em [docs/mobile-openapi.yaml](docs/mobile-openapi.yaml).
+
+## Segurança
+
+- PBKDF2-SHA-256 com salt aleatório e 210 mil iterações para senhas.
+- Cookies HTTP-only/SameSite no site.
+- Access tokens mobile de curta duração e refresh tokens rotativos.
+- Refresh tokens e tokens de redefinição persistidos somente como hash.
+- Reutilização de refresh token revoga as sessões mobile da conta.
+- Autorização validada no servidor em todas as ações protegidas.
+- A votação deriva o jogador da conta autenticada e ignora identidades enviadas pelo cliente.
+- Fotos limitadas a JPEG, PNG e WebP de até 5 MB.
+- Logs não incluem senhas, cookies, tokens, corpos ou query strings.
+- Auditoria para logins, contas, jogadores, configurações, partidas, votos, placares e operações mobile.
+
+Em produção, use HTTPS, segredos fora do repositório, rate limiting no proxy e backups antes de mudanças estruturais.
+
+## Logs e observabilidade
+
+A aplicação escreve JSON em stdout/stderr, uma linha por evento. Os campos principais incluem:
+
+- `timestamp`;
+- `level`;
+- `service`;
+- `event`;
+- `requestId`;
+- `method`;
+- `path`;
+- `status`;
+- `durationMs`.
+
+Exemplo de consulta no Loki:
 
 ```logql
 {container="pelada-pede-mais-uma"} | json
 ```
 
-Para mostrar apenas falhas:
+Somente erros:
 
 ```logql
 {container="pelada-pede-mais-uma"} | json | level="error"
 ```
 
-O nome exato do label `container` depende das regras configuradas no coletor. O endpoint `/api/health` informa a situação do banco e se o SMTP está configurado, mas a ausência de SMTP não torna o serviço indisponível.
+O Compose do OMV mantém cinco arquivos de log de até 10 MB. O nome real dos labels depende da configuração do Promtail ou Grafana Alloy.
 
-## API
+## Containers
 
-As rotas retornam JSON:
-
-- `GET/POST/PUT/DELETE /api/players` — cadastro de jogadores, restrito a administradores.
-- `GET/POST/PUT/DELETE /api/member-auth` — sessão e cadastro de contas de jogadores.
-- `GET/POST /api/member-players` — jogadores disponíveis e associação exclusiva da própria conta.
-- `GET/PUT /api/member-profile` — leitura do card e atualização limitada do perfil associado.
-- `GET/DELETE /api/member-associations` — consulta e desassociação, restritas a administradores.
-- `GET /api/separations` — histórico público com snapshots confirmados; `POST/DELETE` exigem administrador.
-- `GET/PUT /api/config` — critérios de equilíbrio, restritos a administradores.
-- `GET/POST/PUT/DELETE /api/auth` — sessão, login, primeiro acesso e logout.
-- `POST/PUT /api/password-reset` — solicitação e conclusão da redefinição de senha.
-- `PUT /api/profile/password` — troca autenticada da própria senha administrativa.
-- `GET/POST/PUT /api/administrators` — administração de contas.
-- `GET/POST /api/upload` — leitura e envio validado de fotos ao R2.
-- `POST /api/career/match` — confirmação administrativa do placar e abertura da votação.
-- `GET/POST /api/career/vote` — consulta pública pelo token e registro de um voto por participante.
-- `GET/PUT/POST/DELETE /api/career/admin` — configurações, acompanhamento, encerramento e remoção de votos abertos.
-
-Exemplo de criação de jogador:
-
-```json
-{
-  "fullName": "João da Silva",
-  "displayName": "João",
-  "nickname": "Joca",
-  "aliases": ["João S."],
-  "type": "guest",
-  "primaryPosition": "Meio-campo",
-  "speed": 3.5,
-  "skill": 4.25,
-  "active": true
-}
-```
-
-## Algoritmo
-
-A nota individual é `velocidade × pesoVelocidade + habilidade × pesoHabilidade + marcação × pesoMarcação + (momentum × multiplicadorMomentum)`, limitada à escala de 1 a 5 e arredondada para uma casa decimal. Os padrões dos três atributos são 48%, 32% e 20%, enquanto o multiplicador de momentum começa em `1,0`. Os pesos e o multiplicador podem ser ajustados na área administrativa. Cada tentativa monta times com tamanhos alternados, trata goleiros separadamente e calcula custo com penalidade máxima para quantidade, muito alta para posições e ponderada pelos atributos e pelo momentum. A melhor combinação é escolhida; aleatoriedade controlada produz propostas alternativas sem aceitar uma degradação grande. Em total ímpar, o excedente é escolhido entre jogadores fora do grupo superior protegido (25% por padrão).
-
-## Modo Carreira
-
-O recurso vem ativado. Em uma separação salva com pelo menos 7 jogadores, um administrador confirma o placar; os jogadores da equipe vencedora recebem `+0,1` de momentum e os da perdedora `-0,1` (empates não alteram as equipes). Essa confirmação cria um link com token aleatório e QR Code. Somente jogadores presentes nos dois times aparecem como votantes e candidatos, cada participante registra um único voto e não pode escolher a si próprio nem repetir nomes entre os seis lugares.
-
-Cada voto ordena três jogadores em **Man of the Match** e três em **Deception of the Match**. Para apuração, o 1º lugar vale 3 pontos, o 2º vale 2 e o 3º vale 1; empates são resolvidos por mais votos em 1º, depois em 2º e em 3º. Ao encerrar, os três mais votados recebem `+0,3`, `+0,2` e `+0,1`, e os três destaques negativos recebem `-0,3`, `-0,2` e `-0,1`. Todos os valores, o multiplicador aplicado ao overall e o prazo padrão de 5 dias são configuráveis em **Painel administrativo → Modo Carreira**.
-
-Nessa mesma tela, a opção **Cards por nível** pode variar o visual da carta conforme o overall final arredondado para uma casa decimal. Os limites máximos de bronze, prata e ouro são configuráveis e começam em `2,4`, `3,9` e `4,5`; acima do limite ouro, o card é lendário. A lista pública usa a mesma classificação para colorir cada linha. A opção vem desativada por padrão; nesse estado, todas as cartas mantêm o visual ouro tradicional e as linhas da lista permanecem sem cores de nível.
-
-Depois do encerramento, a separação salva oferece o botão **Compartilhar resultado no WhatsApp**, que monta uma mensagem com placar, quantidade de votos, os dois pódios, ajustes de momentum e o link público da partida.
-
-Enquanto a votação estiver aberta, administradores podem revisar e remover votos, liberando o participante para votar novamente. O encerramento, automático pelo prazo ou antecipado por um administrador, aplica o momentum uma única vez, invalida novos envios e torna votos e resultado imutáveis. Cada partida guarda uma cópia dos parâmetros vigentes na abertura, portanto mudanças posteriores nas configurações não alteram a premiação daquela votação.
-
-O acompanhamento de **gols e assistências** também é configurado nessa tela e vem ativado por padrão. Quando ativo, cada gol do placar exige um autor do time correspondente e aceita opcionalmente um jogador do mesmo time como assistente; o autor não pode assistir o próprio gol. Gols contra são marcados como **GC**, entram somente no placar, não permitem assistência e não aumentam o histórico individual do jogador responsável. Os totais acumulados aparecem nos cards dos jogadores. Desativar a opção apenas oculta o formulário e as estatísticas, preservando todos os registros anteriores.
-
-Antes de confirmar o resultado, um administrador pode abrir o **Rascunho da súmula** pela separação salva. A página foi preparada para celular e tablet: cada gol adicionado atualiza o placar automaticamente e permite informar autor, assistência ou gol contra. O rascunho fica salvo na própria separação e pode ser carregado na tela de confirmação para uma última revisão; somente a confirmação oficial aplica estatísticas, momentum e abre a votação.
-
-Administradores podem corrigir o placar, os gols e as assistências de uma partida já confirmada pela própria separação salva. A correção substitui os registros individuais e ajusta o momentum das equipes somente pela diferença entre o resultado anterior e o novo, sem duplicar bônus ou ônus; a votação existente permanece aberta ou encerrada no estado em que já se encontrava.
-
-## Segurança e produção
-
-Use HTTPS, mantenha cookies `Secure` no ambiente de produção, aplique rate limiting no gateway às rotas `/api/auth` e de recuperação, configure política de acesso administrativo, monitore auditoria e faça rotação de segredos. Fotos aceitam somente JPEG, PNG e WebP até 5 MB e recebem nomes aleatórios. A aplicação não retorna hashes nem tokens em APIs.
-
-## Contêineres
-
-O projeto mantém somente três arquivos Compose, um para cada cenário suportado:
-
-| Arquivo | Uso | Runtime e persistência |
+| Arquivo | Uso | Runtime |
 | --- | --- | --- |
-| `docker-compose.yml` | Execução padrão em PC/servidor compatível | Wrangler/workerd com D1 e R2 locais |
-| `docker-compose.dev.yml` | Desenvolvimento com recarga automática | Vinext, código montado e volumes de desenvolvimento |
-| `docker-compose.omv.yml` | Raspberry Pi ARM64 com OMV 7 | Node 22, SQLite e fotos no filesystem |
+| `docker-compose.yml` | PC ou servidor compatível | Wrangler/workerd |
+| `docker-compose.dev.yml` | Desenvolvimento com recarga | Vinext |
+| `docker-compose.omv.yml` | Raspberry Pi ARM64 com OMV 7 | Node 22 self-hosted |
 
-### Execução padrão
+### Compose padrão
 
 ```bash
 cp .env.docker.example .env
@@ -177,37 +444,47 @@ docker compose up -d --build
 docker compose logs -f app
 ```
 
-Acesse `http://localhost:3000`. O Compose padrão usa `Dockerfile.multiarch` e requer um kernel compatível com workerd. O binário ARM64 oficial exige `crc32` e espaço virtual de 48 bits; no Raspberry/OMV com espaço virtual de 39 bits, use exclusivamente o Compose do OMV.
+Acesse `http://localhost:3000`.
 
-Para encerrar sem apagar os dados:
+O runtime workerd ARM64 exige suporte de CPU e espaço virtual compatíveis. Em Raspberry Pi/OMV com espaço virtual de 39 bits, use o Compose self-hosted do OMV.
 
-```bash
-docker compose down
-```
-
-Use `docker compose down -v` somente quando quiser apagar definitivamente o volume persistente.
-
-### Desenvolvimento com recarga automática
+### Desenvolvimento em container
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-O código-fonte é montado no container, enquanto dependências e estado local ficam em volumes nomeados. Na inicialização, o container compara o `package-lock.json` com o volume de dependências e executa `npm ci` automaticamente quando novos pacotes forem adicionados.
+O código é montado no container e as dependências ficam em volume separado.
 
 ### Raspberry Pi ARM64 com OMV 7
 
-No terminal do Raspberry Pi, confirme primeiro que o OMV está executando em 64 bits:
+Confirme o sistema de 64 bits:
 
 ```bash
 uname -m
 ```
 
-O resultado deve ser `aarch64` ou `arm64`. `armv7l` indica um sistema de 32 bits e não é compatível com o runtime; nesse caso é necessário instalar uma versão ARM64 do Raspberry Pi OS/OMV.
+O resultado deve ser `aarch64` ou `arm64`.
 
-Use `Dockerfile.selfhost.omv` e o modelo completo `docker-compose.omv.yml`. A execução usa somente Node, portanto funciona também no kernel Raspberry com espaço virtual de 39 bits.
+O plugin Compose deve manter a pilha um nível acima do checkout:
 
-O sandbox padrão do BuildKit desse OMV encerra o npm com `SIGSYS` durante o build. Antes do primeiro build, crie uma única vez o builder dedicado abaixo como `root`:
+```text
+pelada-pede-mais-uma/
+├── docker-compose.yml       # conteúdo de docker-compose.omv.yml
+└── source/                  # checkout do repositório
+    ├── Dockerfile.selfhost.omv
+    └── ...
+```
+
+Crie o diretório persistente:
+
+```bash
+mkdir -p /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
+chown -R 1000:100 /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
+chmod 750 /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
+```
+
+O sandbox BuildKit de algumas instalações OMV encerra o npm com `SIGSYS`. Nesses casos, crie uma vez o builder:
 
 ```bash
 docker buildx create \
@@ -221,26 +498,32 @@ docker buildx use --global pelada-arm64
 docker buildx inspect pelada-arm64 --bootstrap
 ```
 
-Na saída, `Flags` deve conter `--allow-insecure-entitlement security.insecure`. Essa autorização vale para o builder. No runtime, o modelo do OMV mantém o usuário `1000:100`, remove todas as capabilities e ativa `no-new-privileges`; ele também usa `seccomp:unconfined` porque o perfil seccomp desse Docker/OMV encerra o Node no Raspberry com `SIGSYS` (código 159), antes da emissão de logs.
+No plugin, execute **Check**, **Build** e **Up**. Não use **Pull** para a imagem local `pelada-pede-mais-uma:selfhost-arm64`.
 
-Antes de subir o serviço, crie o diretório persistente usando o caminho real do compartilhamento `DockerData` configurado no OMV:
+O modelo do OMV:
 
-```bash
-mkdir -p /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
-chown -R 1000:100 /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
-chmod 750 /srv/dev-disk-by-uuid-SEU_UUID/DockerData/pelada-pede-mais-uma
-```
+- usa Node sem workerd;
+- executa como usuário `1000:100`;
+- remove capabilities;
+- ativa `no-new-privileges`;
+- usa `seccomp:unconfined` para evitar o `SIGSYS` observado nesse ambiente;
+- persiste banco e fotos em `/data`.
 
-No plugin Compose, mantenha o arquivo da pilha um nível acima do checkout:
+Acesse `http://IP_DO_RASPBERRY:3000`. Os logs devem registrar `application_starting` e `database_ready`.
 
-```text
-pelada-pede-mais-uma/
-├── docker-compose.yml       # conteúdo de docker-compose.omv.yml
-└── source/                  # checkout do repositório
-    ├── Dockerfile.selfhost.omv
-    └── ...
-```
+## Múltiplas instâncias
 
-No OMV, execute **Check**, **Build** e **Up**, nessa ordem. Não use **Pull**: a imagem `pelada-pede-mais-uma:selfhost-arm64` é construída localmente e não existe em um registry. Acesse `http://IP_DO_RASPBERRY:3000`. Na inicialização, os logs JSON devem mostrar os eventos `application_starting` e `database_ready`.
+Uma única imagem pode atender vários grupos, desde que cada Compose use valores exclusivos para:
 
-O primeiro login administrativo continua sendo `admin` / `admin`, com troca obrigatória no primeiro acesso. Para backup, pare o serviço e copie a pasta `pelada-pede-mais-uma` dentro de `DockerData`. Para restaurar, devolva a pasta ao mesmo caminho, confirme o proprietário `1000:100` e inicie o serviço.
+- `COMPOSE_PROJECT_NAME`;
+- `CONTAINER_NAME`;
+- `HOST_PORT`;
+- `INSTANCE_DATA_PATH`;
+- `APP_BASE_URL`;
+- `LOGGING_JOB_NAME`.
+
+Nunca compartilhe `INSTANCE_DATA_PATH` entre grupos. Consulte [docs/MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md) para configuração da identidade, agenda e builds personalizados do aplicativo.
+
+## Licença e operação
+
+O projeto é privado. Antes de publicar binários ou abrir o serviço na internet, revise política de privacidade, termos de uso, URLs de suporte e requisitos da App Store/Google Play.
