@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "803695603500",
+    "project_id": "pelada-pede-mais-uma",
+    "storage_bucket": "pelada-pede-mais-uma.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803695603500:android:de63bfa14d2e9596fa8689",
+        "android_client_info": {
+          "package_name": "br.com.peladapedemaisuma.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvxbmvffP3Nyg5uUpCl51CVh6qHaXwqM8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
