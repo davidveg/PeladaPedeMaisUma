@@ -62,10 +62,13 @@ export default function NotificationsApp() {
     <div className="member-account-head"><div><div className="eyebrow">ATUALIZAÇÕES DA PELADA</div><h1>Notificações</h1><p>{data.unread ? `${data.unread} não lida${data.unread === 1 ? "" : "s"}` : "Tudo em dia"}</p></div>{data.unread > 0 && <button className="ghost" onClick={() => read()}>Marcar todas como lidas</button>}</div>
     {loading && !data.notifications.length ? <div className="member-loading">Carregando…</div> : unauthorized ? <div className="alert">Entre na sua conta para consultar as notificações. <a href="/conta?returnTo=/notificacoes">Entrar</a></div> : error ? <div className="alert error">{error}</div> : <>
       <div className="notification-site-toolbar"><span>{first}–{last} de {data.total}</span><label>Por página<select value={pageSize || data.pageSize} onChange={event => { setPage(1); setPageSize(Number(event.target.value)); }}><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label></div>
-      <div className="notification-site-list">{data.notifications.length ? data.notifications.map(item => <button key={item.id} className={item.readAt ? "notification-site-item" : "notification-site-item unread"} onClick={() => read(item)}><span>{noticeIcon(item.type)}</span><div><b>{item.title}</b><p>{item.body}</p><small>{new Date(item.createdAt).toLocaleString("pt-BR")}</small></div>{(item.matchId || item.actionUrl) && <i>›</i>}</button>) : <div className="empty">Nenhuma notificação ainda.</div>}</div>
+      <div className="notification-site-list">{data.notifications.length ? data.notifications.map(item => <button key={item.id} className={item.readAt ? "notification-site-item" : "notification-site-item unread"} onClick={() => read(item)}><span>{noticeIcon(item.type, item.title)}</span><div><b>{item.title}</b><p>{item.body}</p><small>{new Date(item.createdAt).toLocaleString("pt-BR")}</small></div>{(item.matchId || item.actionUrl) && <i>›</i>}</button>) : <div className="empty">Nenhuma notificação ainda.</div>}</div>
       {data.totalPages > 1 && <nav className="notification-pagination" aria-label="Paginação das notificações"><button className="ghost" disabled={!data.hasPrevious || loading} onClick={() => setPage(current => current - 1)}>← Anterior</button><span>Página {data.page} de {data.totalPages}</span><button className="ghost" disabled={!data.hasNext || loading} onClick={() => setPage(current => current + 1)}>Próxima →</button></nav>}
     </>}
   </main></div>;
 }
 
-function noticeIcon(type: string) { return type === "APP_RELEASED" ? "⬆️" : type === "MATCH_CREATED" ? "📅" : type === "ATTENDANCE_CHANGED" ? "✅" : type === "MATCH_CANCELLED" ? "🚫" : "📣"; }
+function noticeIcon(type: string, title: string) {
+  if (type === "ATTENDANCE_CHANGED") return title === "Ausência informada" ? "❌" : "✅";
+  return type === "APP_RELEASED" ? "⬆️" : type === "MATCH_CREATED" ? "📅" : type === "MATCH_CANCELLED" ? "🚫" : "📣";
+}
