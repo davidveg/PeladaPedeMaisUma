@@ -198,7 +198,7 @@ function VoteIdentity({ player, onLogout, busy }: any) {
   const { config: brand } = useInstanceBranding();
   return (
     <div className="vote-identity">
-      <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-identity-photo" />
+      <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-identity-photo" previewSize={280} />
       <span><small>VOTANDO COMO</small><b>{player.displayName}</b><em>{player.team === "BLUE" ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</em></span>
       <p>Sua identidade foi confirmada pela conta associada. Você não poderá selecionar a si mesmo.</p>
       <button type="button" className="ghost" onClick={onLogout} disabled={busy}>Trocar conta</button>
@@ -246,12 +246,12 @@ function VotePlayerSelect({ field, label, value, players, onChange }: { field: F
 
   return <div className={`vote-player-select ${open ? "open" : ""}`} ref={root}>
     <button type="button" className="vote-player-trigger" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} onClick={() => setOpen(current => !current)}>
-      {selected ? <PlayerPhoto photoUrl={selected.photoUrl} name={selected.displayName} className="vote-option-photo" /> : <span className="vote-empty-photo" aria-hidden="true">👤</span>}
+      {selected ? <PlayerPhoto photoUrl={selected.photoUrl} name={selected.displayName} className="vote-option-photo" previewSize={280} /> : <span className="vote-empty-photo" aria-hidden="true">👤</span>}
       <b>{selected?.displayName || "Selecionar jogador"}</b><i aria-hidden="true">{open ? "⌃" : "⌄"}</i>
     </button>
     {open && <div className="vote-player-options" id={listId} role="listbox" aria-label={label}>
       {players.map(player => <button type="button" role="option" aria-selected={player.id === value} className={player.id === value ? "selected" : ""} key={player.id} onClick={() => { onChange(player.id); setOpen(false); }}>
-        <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-option-photo" />
+        <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-option-photo" previewSize={280} />
         <b>{player.displayName}</b>{player.id === value && <span aria-hidden="true">✓</span>}
       </button>)}
     </div>}
