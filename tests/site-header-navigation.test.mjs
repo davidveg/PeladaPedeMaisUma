@@ -13,6 +13,7 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.match(source, /event\.ctrlKey/);
   assert.match(source, /fetch\("\/api\/member-auth"/);
   assert.match(source, /accountSignInHref\(href, true\)/);
+  assert.match(source, /config\.manualSeparationEnabled/);
   assert.match(worker, /text\/html/);
   assert.match(worker, /text\/x-component/);
   assert.match(worker, /no-cache, must-revalidate/);

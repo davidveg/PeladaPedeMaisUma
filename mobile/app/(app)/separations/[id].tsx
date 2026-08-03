@@ -12,6 +12,7 @@ import { CareerVotingResults } from "@/career-voting-results";
 import { CareerVoting } from "@/career-voting";
 import { colors } from "@/theme";
 import { useMobileBranding } from "@/branding";
+import { playerMomentumContribution } from "@/player-card";
 import type { Contribution, Player, Separation, TeamResult } from "@/types";
 import { careerResultsMessage, formatDate, separationMessage, shareText, votingMessage } from "@/sharing";
 
@@ -50,7 +51,7 @@ export default function SeparationDetail() {
 }
 
 function TeamCard({ title, color, soft, players, config }: { title: string; color: string; soft: string; players: Player[]; config: TeamResult }) { return <Card style={{ gap: 7, borderColor: color }}><Text style={{ color, fontSize: 18, fontWeight: "900" }}>{title}</Text>{players.map((player, index) => <View key={player.id} style={{ minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, padding: 8, backgroundColor: soft, borderRadius: 9 }}><Text style={{ color, fontWeight: "900", width: 22 }}>{index + 1}</Text><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: "800" }}>{player.displayName}</Text><Text style={{ color: colors.muted }}>{player.primaryPosition} · overall registrado {registeredOverall(player, config).toFixed(1)}</Text></View></View>)}</Card>; }
-const registeredOverall = (player: Player, config: TeamResult) => { const goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro", speed = goalkeeper ? player.goalkeeperPositioning ?? player.speed : player.speed, marking = goalkeeper ? player.goalExit ?? player.marking ?? 3 : player.marking ?? 3, raw = speed * Number(config.speedWeight ?? .48) + player.skill * Number(config.skillWeight ?? .32) + marking * Number(config.markingWeight ?? .2) + (player.momentum ?? 0) * Number(config.momentumMultiplier ?? 1); return Math.round(Math.max(1, Math.min(5, raw)) * 10) / 10; };
+const registeredOverall = (player: Player, config: TeamResult) => { const goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro", speed = goalkeeper ? player.goalkeeperPositioning ?? player.speed : player.speed, marking = goalkeeper ? player.goalExit ?? player.marking ?? 3 : player.marking ?? 3, raw = speed * Number(config.speedWeight ?? .48) + player.skill * Number(config.skillWeight ?? .32) + marking * Number(config.markingWeight ?? .2) + playerMomentumContribution(player,Number(config.momentumMultiplier??1),Number(config.resultMomentumMultiplier??1)); return Math.round(Math.max(1, Math.min(5, raw)) * 10) / 10; };
 
 function ArrivalEditor({ item, onSaved }: { item: Separation; onSaved: () => void }) {
   const { config: brand } = useMobileBranding();

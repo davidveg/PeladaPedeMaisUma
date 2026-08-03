@@ -28,5 +28,5 @@ export async function PUT(request: Request) {
     .bind(...instanceConfigurationValues(validation.config), now).run();
   const next = { ...validation.config, updatedAt: now };
   await audit(String(admin.id), "UPDATE_INSTANCE_CONFIGURATION", "instance_configuration", "1", next, previous);
-  return Response.json({ ok: true, config: next, message: "Identidade e agenda da instância atualizadas." });
+  return Response.json({ ok: true, config: next, message: "Configurações da instância atualizadas." });
 }

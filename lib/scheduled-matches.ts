@@ -156,13 +156,14 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
   if (presentRows.length < 4) throw statusError("São necessários pelo menos 4 jogadores presentes para gerar a separação.", 409);
   const [systemConfig, careerConfig] = await Promise.all([
     db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),
-    db().prepare(`SELECT momentum_multiplier FROM career_configuration WHERE id=1`).first<any>(),
+    db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier FROM career_configuration WHERE id=1`).first<any>(),
   ]);
   const config: Config = {
     ...defaultConfig,
     speedWeight: Number(systemConfig?.speed_weight ?? defaultConfig.speedWeight),
     skillWeight: Number(systemConfig?.skill_weight ?? defaultConfig.skillWeight),
     markingWeight: Number(systemConfig?.marking_weight ?? defaultConfig.markingWeight),
+    resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1),
     momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1),
     maximumPositionDifference: Number(systemConfig?.maximum_position_difference ?? 1),
     protectedTopPlayersPercentage: Number(systemConfig?.protected_top_players_percentage ?? .25),
@@ -312,6 +313,7 @@ function mapPlayer(row: any): Player {
     primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill),
     marking: Number(row.marking ?? 3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3),
     goalExit: Number(row.goal_exit ?? row.marking ?? 3), momentum: Number(row.momentum ?? 0),
+    resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0),
     photoUrl: row.photo_url, active: Boolean(row.active),
   };
 }

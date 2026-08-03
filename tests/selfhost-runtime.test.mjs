@@ -248,6 +248,22 @@ test("migração adiciona multiplicador de momentum preservando o efeito atual",
   }
 });
 
+test("migração separa as origens do momentum sem alterar o total legado", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-momentum-sources-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE players (id TEXT PRIMARY KEY, momentum REAL NOT NULL DEFAULT 0)").run();
+    await bindings.DB.prepare("INSERT INTO players (id,momentum) VALUES ('one',0.4)").run();
+    const migration = await readFile(new URL("../drizzle/0022_split_momentum_sources.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const player = await bindings.DB.prepare("SELECT momentum,result_momentum,voting_momentum FROM players WHERE id='one'").first();
+    assert.deepEqual({ ...player }, { momentum: 0.4, result_momentum: 0, voting_momentum: 0 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("migração adiciona atributos de goleiro preservando as notas anteriores", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-goalkeeper-attributes-"));
   const bindings = await createSelfhostBindings(directory);

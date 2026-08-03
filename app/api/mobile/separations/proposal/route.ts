@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const [playerRows, systemConfig, careerConfig] = await Promise.all([
     db().prepare(`SELECT * FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
     db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),
-    db().prepare(`SELECT momentum_multiplier FROM career_configuration WHERE id=1`).first<any>(),
+    db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier FROM career_configuration WHERE id=1`).first<any>(),
   ]);
   const players = playerRows.results.map(mapPlayer), nonce = Math.max(0, Math.floor(Number(payload.nonce) || 0));
   let selected: Player[] = [], parsed: ReturnType<typeof parseWhatsApp> | null = null, matches: ReturnType<typeof matchPlayers> = [];
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   }
   const config: Config = {
     speedWeight: Number(systemConfig.speed_weight), skillWeight: Number(systemConfig.skill_weight), markingWeight: Number(systemConfig.marking_weight),
-    momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1), maximumPositionDifference: Number(systemConfig.maximum_position_difference),
+    resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1), momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1), maximumPositionDifference: Number(systemConfig.maximum_position_difference),
     protectedTopPlayersPercentage: Number(systemConfig.protected_top_players_percentage), algorithmAttempts: Number(systemConfig.algorithm_attempts),
   };
   try {
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 }
 
 function mapPlayer(row: any): Player {
-  return { id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, aliases: JSON.parse(row.aliases || "[]"), type: row.type, primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), momentum: Number(row.momentum ?? 0), photoUrl: row.photo_url, active: Boolean(row.active) } as Player;
+  return { id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, aliases: JSON.parse(row.aliases || "[]"), type: row.type, primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), momentum: Number(row.momentum ?? 0), resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), photoUrl: row.photo_url, active: Boolean(row.active) } as Player;
 }
 
 function publicMatch(match: any) {

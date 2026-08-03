@@ -1,5 +1,11 @@
 import type { Player, TeamDelta, TeamMetrics, TeamResult } from "./types";
 
+function playerMomentumContribution(player: Player, votingMultiplier: number, resultMultiplier: number) {
+  const hasSeparatedSources = player.resultMomentum != null || player.votingMomentum != null;
+  if (!hasSeparatedSources) return (player.momentum ?? 0) * votingMultiplier;
+  return (player.resultMomentum ?? 0) * resultMultiplier + (player.votingMomentum ?? 0) * votingMultiplier;
+}
+
 function attributes(player: Player) {
   const goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
   return {
@@ -14,7 +20,7 @@ function playerScore(player: Player, result: TeamResult) {
   const raw = value.speed * Number(result.speedWeight ?? .48)
     + value.skill * Number(result.skillWeight ?? .32)
     + value.marking * Number(result.markingWeight ?? .2)
-    + (player.momentum ?? 0) * Number(result.momentumMultiplier ?? 1);
+    + playerMomentumContribution(player, Number(result.momentumMultiplier ?? 1), Number(result.resultMomentumMultiplier ?? 1));
   return Math.round(Math.max(1, Math.min(5, raw)) * 10) / 10;
 }
 
@@ -27,7 +33,7 @@ export function calculateMobileTeamMetrics(team: Player[], result: TeamResult): 
     speed += value.speed;
     skill += value.skill;
     marking += value.marking;
-    momentum += player.momentum ?? 0;
+    momentum += playerMomentumContribution(player, Number(result.momentumMultiplier ?? 1), Number(result.resultMomentumMultiplier ?? 1));
     total += playerScore(player, result);
   }
   const count = team.length, average = (value: number) => count ? value / count : 0;

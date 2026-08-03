@@ -11,6 +11,8 @@ const map = (row: any) => ({
   goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3),
   goalExit: Number(row.goal_exit ?? row.marking ?? 3),
   momentum: Number(row.momentum ?? 0),
+  resultMomentum: Number(row.result_momentum ?? 0),
+  votingMomentum: Number(row.voting_momentum ?? 0),
   aliases: JSON.parse(row.aliases || "[]"),
   active: Boolean(row.active),
 });

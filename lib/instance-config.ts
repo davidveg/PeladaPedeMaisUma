@@ -24,6 +24,7 @@ export type InstanceConfiguration = {
   defaultMatchWeekday: number;
   defaultMatchTime: string;
   confirmationLeadMinutes: number;
+  manualSeparationEnabled: boolean;
   timezone: string;
   updatedAt?: string;
 };
@@ -54,6 +55,7 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   defaultMatchWeekday: 0,
   defaultMatchTime: "09:00",
   confirmationLeadMinutes: 60,
+  manualSeparationEnabled: false,
   timezone: "America/Sao_Paulo",
 };
 
@@ -88,6 +90,7 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     defaultMatchWeekday: Number(row.default_match_weekday ?? DEFAULT_INSTANCE_CONFIGURATION.defaultMatchWeekday),
     defaultMatchTime: value("default_match_time", DEFAULT_INSTANCE_CONFIGURATION.defaultMatchTime),
     confirmationLeadMinutes: Number(row.confirmation_lead_minutes ?? DEFAULT_INSTANCE_CONFIGURATION.confirmationLeadMinutes),
+    manualSeparationEnabled: Boolean(row.manual_separation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.manualSeparationEnabled),
     timezone: value("timezone", DEFAULT_INSTANCE_CONFIGURATION.timezone),
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
   };
@@ -129,6 +132,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     defaultMatchWeekday: Number(source.defaultMatchWeekday ?? DEFAULT_INSTANCE_CONFIGURATION.defaultMatchWeekday),
     defaultMatchTime: String(source.defaultMatchTime ?? DEFAULT_INSTANCE_CONFIGURATION.defaultMatchTime).trim(),
     confirmationLeadMinutes: Number(source.confirmationLeadMinutes ?? DEFAULT_INSTANCE_CONFIGURATION.confirmationLeadMinutes),
+    manualSeparationEnabled: source.manualSeparationEnabled === true,
     timezone: text("timezone", 80, DEFAULT_INSTANCE_CONFIGURATION.timezone),
   };
 
@@ -164,7 +168,7 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "primary_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
   "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
-  "default_match_weekday", "default_match_time", "confirmation_lead_minutes", "timezone",
+  "default_match_weekday", "default_match_time", "confirmation_lead_minutes", "manual_separation_enabled", "timezone",
 ] as const;
 
 export function instanceConfigurationValues(config: InstanceConfiguration) {
@@ -174,6 +178,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.confirmationLeadMinutes,
+    Number(config.manualSeparationEnabled),
     config.timezone,
   ];
 }

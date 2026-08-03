@@ -9,6 +9,7 @@ import { useAuth } from "@/auth";
 import { colors } from "@/theme";
 import type { MatchListPayload, Separation } from "@/types";
 import { useMobileBranding } from "@/branding";
+import { manualSeparationEntryVisible } from "@/separation-access";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -19,7 +20,7 @@ function TabIcon({ focused, color, active, inactive }: { focused: boolean; color
 }
 
 export default function AppLayout() {
-  const { palette } = useMobileBranding();
+  const { palette, config: instanceConfig } = useMobileBranding();
   const { account, loading } = useAuth();
   const insets = useSafeAreaInsets();
   const separationsQuery = useQuery({
@@ -89,7 +90,7 @@ export default function AppLayout() {
     }}/>
     <Tabs.Screen name="new-separation" options={{
       title: "Nova",
-      href: admin ? undefined : null,
+      href: manualSeparationEntryVisible(account.role, instanceConfig.manualSeparationEnabled) ? undefined : null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="add-circle" inactive="add-circle-outline"/>,
     }}/>
     <Tabs.Screen name="config" options={{

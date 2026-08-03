@@ -9,6 +9,8 @@ import { Button, Card, Field, Header, Screen } from "@/components";
 import { recalculateTeamResult } from "@/team-balance";
 import { colors } from "@/theme";
 import { useMobileBranding } from "@/branding";
+import { useAuth } from "@/auth";
+import { separationBuilderAllowed } from "@/separation-access";
 import type { Player, TeamResult } from "@/types";
 
 type TeamKey = "blue" | "yellow";
@@ -21,7 +23,8 @@ type Proposal = {
 };
 
 export default function NewSeparation() {
-  const { config: brand } = useMobileBranding();
+  const { config: brand, loading: brandingLoading } = useMobileBranding();
+  const { account } = useAuth();
   const { matchId } = useLocalSearchParams<{ matchId?: string }>();
   const [step, setStep] = useState(matchId ? 2 : 1);
   const [text, setText] = useState("");
@@ -35,7 +38,8 @@ export default function NewSeparation() {
   const [location, setLocation] = useState("");
   const loadedMatch = useRef("");
   const router = useRouter(), client = useQueryClient();
-  const playersQuery = useQuery({ queryKey: ["admin-players"], queryFn: () => apiFetch<{ players: Player[] }>("/api/players"), enabled: !matchId });
+  const builderAllowed = separationBuilderAllowed(account?.role, brand.manualSeparationEnabled, matchId);
+  const playersQuery = useQuery({ queryKey: ["admin-players"], queryFn: () => apiFetch<{ players: Player[] }>("/api/players"), enabled: builderAllowed && !matchId });
   const proposalMutation = useMutation({
     mutationFn: (body: unknown) => apiFetch<Proposal>("/api/mobile/separations/proposal", jsonMutation("POST", body)),
     onError: (error: Error) => Alert.alert("Revise a lista", error.message),
@@ -140,6 +144,17 @@ export default function NewSeparation() {
   };
 
   const reviewPlayers = matchId ? proposal?.players || [] : playersQuery.data?.players || [];
+
+  if (!builderAllowed) return <Screen>
+    <Header eyebrow="MONTAGEM DE TIMES" title={brandingLoading ? "Carregando configuração" : "Importação manual desativada"}/>
+    <View style={styles.content}>
+      <Card style={styles.gap}>
+        <Text style={styles.sectionTitle}>{brandingLoading ? "Aguarde um instante" : "Use as presenças da partida"}</Text>
+        <Text style={styles.muted}>{brandingLoading ? "Consultando as configurações desta pelada." : "A importação da lista copiada do WhatsApp está oculta. Acesse Partidas, registre as presenças e feche a lista para gerar os times."}</Text>
+      </Card>
+      {!brandingLoading&&<Button title="Ir para Partidas" onPress={() => router.replace("/matches")}/>}
+    </View>
+  </Screen>;
 
   return <Screen>
     <Header eyebrow={`${matchId ? "PARTIDA · " : ""}ETAPA ${step} DE 4`} title={step === 1 ? "Importar confirmações" : step === 2 ? matchId ? "Revisar presentes" : "Revisar jogadores" : step === 3 ? "Ajuste fino dos times" : "Confirmar e salvar"}/>

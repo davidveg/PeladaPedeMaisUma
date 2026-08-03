@@ -100,6 +100,49 @@
   gap: 10px;
 }
 
+.instance-feature-settings {
+  align-content: start;
+  order: 3;
+}
+
+.instance-settings-grid > fieldset:nth-of-type(4) {
+  order: 2;
+}
+
+.instance-settings-grid > fieldset:nth-of-type(5) {
+  order: 1;
+}
+
+.instance-settings .instance-feature-toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafbf9;
+}
+
+.instance-feature-toggle span {
+  display: grid;
+  gap: 5px;
+}
+
+.instance-feature-toggle small,
+.instance-feature-settings > p {
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.instance-settings .instance-feature-toggle input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  accent-color: var(--green);
+}
+
 @media (max-width: 760px) {
   .instance-settings-grid,
   .instance-color-grid {

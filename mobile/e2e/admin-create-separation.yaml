@@ -1,5 +1,6 @@
 appId: br.com.peladapedemaisuma.app
-name: Administrador cria separação
+name: Administrador importa lista com recurso manual habilitado
+# Pré-requisito: habilitar "Lista copiada do WhatsApp" na configuração da instância.
 ---
 - launchApp:
     clearState: true

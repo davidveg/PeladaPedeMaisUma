@@ -217,7 +217,7 @@ paths:
       summary: URL pública canônica para links compartilháveis
       security: []
       responses:
-        "200": { description: URL pública, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri } } } } } }
+        "200": { description: URL pública e configuração compartilhada pelo site e aplicativo, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri }, instance: { type: object, properties: { manualSeparationEnabled: { type: boolean, default: false, description: Exibe a importação manual de uma lista do WhatsApp; a montagem iniciada por Partidas permanece disponível. } } } } } } } } }
   /api/health:
     get:
       summary: Disponibilidade do servidor e banco

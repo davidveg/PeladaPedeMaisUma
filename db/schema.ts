@@ -10,7 +10,7 @@ export const players = sqliteTable("players", {
   nickname: text("nickname"), aliases: text("aliases").notNull().default("[]"), type: text("type").notNull().default("monthly"),
   primaryPosition: text("primary_position").notNull(), speed: real("speed").notNull(), skill: real("skill").notNull(), marking: real("marking").notNull().default(3),
   goalkeeperPositioning: real("goalkeeper_positioning").notNull().default(3), goalExit: real("goal_exit").notNull().default(3),
-  momentum: real("momentum").notNull().default(0), photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
+  momentum: real("momentum").notNull().default(0), resultMomentum: real("result_momentum").notNull().default(0), votingMomentum: real("voting_momentum").notNull().default(0), photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
   deletedAt: text("deleted_at"), ...timestamps,
 });
 
@@ -132,6 +132,7 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   defaultMatchWeekday: integer("default_match_weekday").notNull().default(0),
   defaultMatchTime: text("default_match_time").notNull().default("09:00"),
   confirmationLeadMinutes: integer("confirmation_lead_minutes").notNull().default(60),
+  manualSeparationEnabled: integer("manual_separation_enabled", { mode: "boolean" }).notNull().default(false),
   timezone: text("timezone").notNull().default("America/Sao_Paulo"),
   updatedAt: text("updated_at").notNull(),
 });
@@ -145,6 +146,7 @@ export const careerConfiguration = sqliteTable("career_configuration", {
   cardBronzeMax: real("card_bronze_max").notNull().default(2.4),
   cardSilverMax: real("card_silver_max").notNull().default(3.9),
   cardGoldMax: real("card_gold_max").notNull().default(4.5),
+  resultMomentumMultiplier: real("result_momentum_multiplier").notNull().default(1),
   momentumMultiplier: real("momentum_multiplier").notNull().default(1),
   winnerBonus: real("winner_bonus").notNull().default(.1), loserPenalty: real("loser_penalty").notNull().default(-.1),
   motmThird: real("motm_third").notNull().default(.1), motmSecond: real("motm_second").notNull().default(.2), motmFirst: real("motm_first").notNull().default(.3),

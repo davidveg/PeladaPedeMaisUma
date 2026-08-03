@@ -1,0 +1,2 @@
+ALTER TABLE players ADD COLUMN result_momentum REAL NOT NULL DEFAULT 0;
+ALTER TABLE players ADD COLUMN voting_momentum REAL NOT NULL DEFAULT 0;

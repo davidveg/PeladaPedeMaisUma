@@ -10,8 +10,9 @@ No painel administrativo, abra **Identidade e agenda** para alterar:
 - paleta do site, cores dos times e paleta do aplicativo;
 - título e frase exibidos pelo aplicativo;
 - título padrão das partidas, dia da semana, horário, antecedência das confirmações e fuso horário.
+- disponibilidade da importação manual de confirmações copiadas do WhatsApp no site e no aplicativo.
 
-Os valores antigos de “Pelada Pede Mais Uma” e domingo às 09:00 são os padrões. Por isso, a instância atual continua funcionando da mesma forma após a atualização.
+Os valores antigos de “Pelada Pede Mais Uma” e domingo às 09:00 são os padrões. A importação manual fica desativada por padrão; a criação de times pelas presenças de **Partidas** continua disponível e o recurso antigo pode ser reativado a qualquer momento.
 
 O site consulta essa configuração no banco da instância. O aplicativo consulta a mesma configuração pública ao iniciar. Se estiver temporariamente sem conexão, ele usa a identidade padrão embarcada até conseguir sincronizar.
 

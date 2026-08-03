@@ -62,6 +62,9 @@ Documentação complementar:
 
 ### Importação e separação dos times
 
+- O fluxo principal parte das presenças registradas em **Partidas**: o administrador fecha a lista e gera os times com os jogadores confirmados.
+- A importação manual de uma lista copiada do WhatsApp é opcional, vem desativada por padrão e pode ser reativada em **Painel administrativo → Identidade e agenda → Formas de montar times**.
+- Ao desativar a importação manual, o site oculta **Montar times** e o aplicativo oculta **Nova**, preservando integralmente a geração iniciada por uma partida e todas as separações já salvas.
 - Parser de listas do WhatsApp com suporte a confirmações, ausências, campos vazios, caracteres Unicode invisíveis, datas, títulos e duplicidades.
 - Reconhecimento das seções **Goleiros**, **Mensalistas** e **Convidados**.
 - Jogadores desconhecidos ou ambíguos nunca são vinculados automaticamente.
@@ -87,7 +90,8 @@ Documentação complementar:
 - Encerramento automático pelo prazo ou antecipado pelo administrador.
 - Revisão e remoção administrativa de votos somente enquanto a votação estiver aberta.
 - Compartilhamento do resultado final da votação pelo WhatsApp.
-- Multiplicador de Momentum configurável no cálculo do overall.
+- Momentum separado por origem: resultados de partidas e votações.
+- Multiplicador configurável aplicado somente ao Momentum das votações; vitórias e derrotas mantêm peso 1.
 
 #### Regras da votação
 
@@ -117,6 +121,7 @@ O painel possui:
 - administradores;
 - contas de jogadores e associações;
 - identidade, agenda, nomes e cores das equipes;
+- ativação opcional da importação manual por lista do WhatsApp, compartilhada entre site e aplicativo;
 - configurações de equilíbrio;
 - configurações, votos e encerramento do Modo Carreira;
 - auditoria pesquisável, filtrável e paginada.
@@ -133,7 +138,8 @@ O aplicativo oferece:
 - tokens nativos com refresh rotativo;
 - partidas, confirmações de presença e notificações;
 - separações salvas e card do jogador;
-- criação de separações para administradores;
+- criação de separações para administradores a partir das presenças de uma partida;
+- importação manual por lista do WhatsApp quando habilitada na configuração da instância;
 - ordem de chegada por equipe;
 - rascunho e confirmação de resultado;
 - compartilhamento pelo WhatsApp;
@@ -289,7 +295,8 @@ Para jogadores de linha, o overall base usa:
 Velocidade × pesoVelocidade
 + Habilidade × pesoHabilidade
 + Marcação × pesoMarcação
-+ Momentum × multiplicadorMomentum
++ Momentum de vitórias e derrotas
++ Momentum das votações × multiplicadorMomentum
 ```
 
 Goleiros usam Habilidade, Posicionamento e Saída de Gol na mesma escala. O resultado final é limitado entre 1 e 5 e arredondado para uma casa decimal.
@@ -299,7 +306,8 @@ Pesos padrão:
 - Velocidade: 48%;
 - Habilidade: 32%;
 - Marcação: 20%;
-- Multiplicador de Momentum: 1,0.
+- Peso do Momentum de vitórias e derrotas: 1,0 (fixo);
+- Multiplicador do Momentum das votações: 1,0.
 
 O algoritmo testa milhares de combinações, prioriza a diferença de quantidade, penaliza desequilíbrio de posições e compara atributos e médias. Em listas ímpares, protege por padrão o quartil superior contra a equipe excedente. Administradores podem gerar novas propostas e fazer ajustes manuais antes de confirmar.
 

@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
-import { BrandIdentity } from "../InstanceBranding";
+import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 
 type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "notifications" | "account" | "admin";
 
@@ -31,6 +31,7 @@ export function SiteHeader({
   active?: SiteSection;
   isAdmin?: boolean;
 }) {
+  const { config } = useInstanceBranding();
   const link = (section: SiteSection, href: string, label: string) => (
     <a className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       {label}
@@ -43,7 +44,7 @@ export function SiteHeader({
         <BrandIdentity/>
       </a>
       <nav aria-label="Navegação principal">
-        {link("home", "/", isAdmin ? "Montar times" : "Início")}
+        {(!isAdmin || config.manualSeparationEnabled) && link("home", "/", isAdmin ? "Montar times" : "Início")}
         {link("players", "/jogadores", "Jogadores")}
         {link("statistics", "/estatisticas", "Estatísticas")}
         {link("separations", "/separacoes-salvas", isAdmin ? "Separações salvas" : "Últimas separações")}

@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   DEFAULT_INSTANCE_CONFIGURATION,
+  INSTANCE_CONFIGURATION_COLUMNS,
   instanceConfigurationFromRow,
+  instanceConfigurationValues,
   validateInstanceConfiguration,
 } from "../lib/instance-config.ts";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
@@ -19,6 +21,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.confirmationLeadMinutes, 60);
   assert.equal(config.teamBlueName, "Azul");
   assert.equal(config.teamYellowName, "Amarelo");
+  assert.equal(config.manualSeparationEnabled, false);
 });
 
 test("aceita identidade, cores e dia da semana personalizados", () => {
@@ -33,12 +36,21 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     confirmationLeadMinutes: 180,
     teamBlueName: "Camisa",
     teamYellowName: "Sem camisa",
+    manualSeparationEnabled: true,
   });
   assert.equal(result.error, undefined);
   assert.equal(result.config.siteName, "Futebol de Quarta");
   assert.equal(result.config.defaultMatchWeekday, 3);
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
+  assert.equal(result.config.manualSeparationEnabled, true);
+});
+
+test("mantém colunas e valores alinhados ao salvar a configuração", () => {
+  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true };
+  assert.equal(INSTANCE_CONFIGURATION_COLUMNS.length, instanceConfigurationValues(config).length);
+  const index = INSTANCE_CONFIGURATION_COLUMNS.indexOf("manual_separation_enabled");
+  assert.equal(instanceConfigurationValues(config)[index], 1);
 });
 
 test("rejeita cores, horários e logotipos externos inseguros", () => {
@@ -56,6 +68,21 @@ test("migração acrescenta nomes retrocompatíveis às instâncias existentes",
     await bindings.DB.exec(await readFile(new URL("../drizzle/0020_team_names.sql", import.meta.url), "utf8"));
     const row = await bindings.DB.prepare("SELECT team_blue_name,team_yellow_name FROM instance_configuration WHERE id=1").first();
     assert.deepEqual({ ...row }, { team_blue_name: "Azul", team_yellow_name: "Amarelo" });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração mantém a importação manual desativada por padrão", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-manual-separation-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0020_team_names.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0021_manual_separation_toggle.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT manual_separation_enabled FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { manual_separation_enabled: 0 });
   } finally {
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });

@@ -5,6 +5,12 @@ export type CardConfig = ProfilePayload["config"];
 
 export const isKeeper = (player: Player) => player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
 
+export function playerMomentumContribution(player: Player, votingMultiplier = 1, resultMultiplier = 1) {
+  const hasSeparatedSources = player.resultMomentum != null || player.votingMomentum != null;
+  if (!hasSeparatedSources) return (player.momentum ?? 0) * votingMultiplier;
+  return (player.resultMomentum ?? 0) * resultMultiplier + (player.votingMomentum ?? 0) * votingMultiplier;
+}
+
 export function playerAttributes(player: Player): [string, number][] {
   return isKeeper(player)
     ? [
@@ -27,7 +33,7 @@ export function playerOverall(player: Player, config: CardConfig) {
   const raw = speed * (config?.speedWeight ?? 0.48)
     + player.skill * (config?.skillWeight ?? 0.32)
     + marking * (config?.markingWeight ?? 0.2)
-    + (player.momentum ?? 0) * (config?.momentumMultiplier ?? 1);
+    + playerMomentumContribution(player, config?.momentumMultiplier ?? 1, config?.resultMomentumMultiplier ?? 1);
   return Math.round(Math.max(1, Math.min(5, raw)) * 10) / 10;
 }
 

@@ -10,6 +10,7 @@ Aplicativo Expo/React Native com uma única base TypeScript para iOS e Android. 
 - Uma resposta `401` provoca uma única tentativa compartilhada de refresh; falha remove a sessão local e volta ao login.
 - Mutações usam `networkMode: online`, não são enfileiradas, e confirmações críticas usam `Idempotency-Key`.
 - O servidor interpreta a lista e chama o algoritmo oficial. O cliente apenas apresenta a proposta e permite trocas manuais.
+- A aba **Nova** para importar uma lista do WhatsApp segue a configuração pública da instância e fica oculta por padrão. O fechamento de uma Partida continua abrindo o mesmo construtor com os presentes confirmados.
 - Datas são apresentadas em `America/Sao_Paulo`; os contratos continuam usando ISO 8601.
 - O compartilhamento tenta WhatsApp e cai no compartilhamento nativo. Links são rejeitados se não forem HTTPS públicos.
 - Partidas e presenças usam a mesma API do site; mudar a resposta em qualquer cliente consome a mesma contagem de remarcações.
@@ -37,7 +38,7 @@ npm run typecheck
 npm test
 ```
 
-Os fluxos declarativos em `e2e/` usam [Maestro](https://maestro.mobile.dev/). Com um development build aberto, forneça as variáveis indicadas em cada YAML e execute `maestro test e2e`. Eles cobrem login, separações, ordem de chegada, rascunho, confirmação de resultado e pesos.
+Os fluxos declarativos em `e2e/` usam [Maestro](https://maestro.mobile.dev/). Com um development build aberto, forneça as variáveis indicadas em cada YAML e execute `maestro test e2e`. Eles cobrem login, separações, ordem de chegada, rascunho, confirmação de resultado e pesos. O cenário `admin-create-separation.yaml` testa especificamente a importação manual e exige que **Lista copiada do WhatsApp** esteja habilitada no painel da instância.
 
 ## Builds
 

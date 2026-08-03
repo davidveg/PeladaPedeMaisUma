@@ -14,6 +14,10 @@ export function publicPlayer(row: any): Player {
     goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.goalkeeperPositioning ?? row.speed ?? 3),
     goalExit: Number(row.goal_exit ?? row.goalExit ?? row.marking ?? 3),
     momentum: Number(row.momentum ?? 0),
+    ...(row.result_momentum != null || row.voting_momentum != null || row.resultMomentum != null || row.votingMomentum != null ? {
+      resultMomentum: Number(row.result_momentum ?? row.resultMomentum ?? 0),
+      votingMomentum: Number(row.voting_momentum ?? row.votingMomentum ?? 0),
+    } : {}),
     photoUrl: row.photo_url ?? row.photoUrl ?? null,
     active: true,
   };
