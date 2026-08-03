@@ -34,9 +34,15 @@ export async function GET(request: Request) {
   const headers = { "cache-control": "no-store, max-age=0" };
   if (!data) return Response.json({ error: "Link de votação inválido." }, { status: 404, headers });
 
-  const [config, account] = await Promise.all([getCareerConfig(), currentPlayerAccount(request)]) as [any, any];
+  const [config, account, currentPlayerRows] = await Promise.all([
+    getCareerConfig(),
+    currentPlayerAccount(request),
+    db().prepare(`SELECT id,photo_url FROM players WHERE deleted_at IS NULL`).all(),
+  ]) as [any, any, { results: any[] }];
   const match = careerMatchFromRow(data.row);
   const names = Object.fromEntries(data.players.map((player: any) => [player.id, player.displayName]));
+  const currentPhotos = new Map(currentPlayerRows.results.map(player => [String(player.id), player.photo_url ? String(player.photo_url) : null]));
+  const photoFor = (player: any) => currentPhotos.has(String(player.id)) ? currentPhotos.get(String(player.id)) : player.photoUrl || null;
   const voterPlayerId = String(account?.playerId || "");
   const voterPlayer = data.players.find((player: any) => player.id === voterPlayerId);
   const accountType = account?.accountType === "administrator" ? "administrator" : "member";
@@ -73,14 +79,14 @@ export async function GET(request: Request) {
       id: player.id,
       displayName: player.displayName,
       primaryPosition: player.primaryPosition,
-      photoUrl: player.photoUrl,
+      photoUrl: photoFor(player),
       team: player.team,
     })),
     viewer: {
       authenticated: Boolean(account),
       accountType: account?.accountType || null,
       hasPlayerAssociation: Boolean(voterPlayerId),
-      player: voterPlayer ? { id: voterPlayer.id, displayName: voterPlayer.displayName, team: voterPlayer.team } : null,
+      player: voterPlayer ? { id: voterPlayer.id, displayName: voterPlayer.displayName, photoUrl: photoFor(voterPlayer), team: voterPlayer.team } : null,
       isParticipant: Boolean(voterPlayer),
       hasVoted: Boolean(existingVote),
       canVote: Boolean(account && voterPlayer && !existingVote && config.enabled && data.row.status === "OPEN" && !expired),

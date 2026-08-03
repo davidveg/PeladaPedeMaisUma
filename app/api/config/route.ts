@@ -1,8 +1,10 @@
 import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
+import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 
 export async function GET(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
+  await ensureCareerSeasonCurrent();
   const c: any = await db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first();
   const career: any = await db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier FROM career_configuration WHERE id=1`).first();
   return Response.json({

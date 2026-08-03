@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInstanceBranding } from "../InstanceBranding";
+import { PlayerPhoto } from "../components/PlayerPhoto";
 
 const fields = ["motmThirdId", "motmSecondId", "motmFirstId", "dotmThirdId", "dotmSecondId", "dotmFirstId"] as const;
 type Field = typeof fields[number];
+type VotePlayer = { id: string; displayName: string; photoUrl?: string | null; team: "BLUE" | "YELLOW" };
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options);
@@ -196,6 +198,7 @@ function VoteIdentity({ player, onLogout, busy }: any) {
   const { config: brand } = useInstanceBranding();
   return (
     <div className="vote-identity">
+      <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-identity-photo" />
       <span><small>VOTANDO COMO</small><b>{player.displayName}</b><em>{player.team === "BLUE" ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</em></span>
       <p>Sua identidade foi confirmada pela conta associada. Você não poderá selecionar a si mesmo.</p>
       <button type="button" className="ghost" onClick={onLogout} disabled={busy}>Trocar conta</button>
@@ -220,7 +223,39 @@ function VoteContributions({ contributions }: any) {
 
 function Podium({ title, subtitle, tone, fields: podiumFields, votes, setVotes, options }: any) {
   const places = ["3º lugar", "2º lugar", "1º lugar"];
-  return <fieldset className={`vote-podium ${tone}`}><legend>{title}<small>{subtitle} · escolha do 3º ao 1º lugar</small></legend><div>{podiumFields.map((field: Field, index: number) => <label key={field}><span>{places[index]}</span><select value={votes[field]} onChange={event => setVotes((current: any) => ({ ...current, [field]: event.target.value }))} required><option value="">Selecione</option>{options(field).map((player: any) => <option key={player.id} value={player.id}>{player.displayName}</option>)}</select></label>)}</div></fieldset>;
+  return <fieldset className={`vote-podium ${tone}`}><legend>{title}<small>{subtitle} · escolha do 3º ao 1º lugar</small></legend><div>{podiumFields.map((field: Field, index: number) => <div className="vote-podium-field" key={field}><span>{places[index]}</span><VotePlayerSelect field={field} label={`${places[index]} de ${title}`} value={votes[field]} players={options(field)} onChange={(playerId:string)=>setVotes((current:any)=>({...current,[field]:playerId}))}/></div>)}</div></fieldset>;
+}
+
+function VotePlayerSelect({ field, label, value, players, onChange }: { field: Field; label: string; value: string; players: VotePlayer[]; onChange: (playerId: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const selected = players.find(player => player.id === value);
+  const listId = `vote-options-${field}`;
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return <div className={`vote-player-select ${open ? "open" : ""}`} ref={root}>
+    <button type="button" className="vote-player-trigger" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} onClick={() => setOpen(current => !current)}>
+      {selected ? <PlayerPhoto photoUrl={selected.photoUrl} name={selected.displayName} className="vote-option-photo" /> : <span className="vote-empty-photo" aria-hidden="true">👤</span>}
+      <b>{selected?.displayName || "Selecionar jogador"}</b><i aria-hidden="true">{open ? "⌃" : "⌄"}</i>
+    </button>
+    {open && <div className="vote-player-options" id={listId} role="listbox" aria-label={label}>
+      {players.map(player => <button type="button" role="option" aria-selected={player.id === value} className={player.id === value ? "selected" : ""} key={player.id} onClick={() => { onChange(player.id); setOpen(false); }}>
+        <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-option-photo" />
+        <b>{player.displayName}</b>{player.id === value && <span aria-hidden="true">✓</span>}
+      </button>)}
+    </div>}
+  </div>;
 }
 
 function ClosedResults({ match, names }: any) {

@@ -1,12 +1,14 @@
 /* D1 and untrusted JSON payloads are narrowed explicitly at each use. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { adminRequired, db, ensureDb } from "../../../../../lib/database";
+import { ensureCareerSeasonCurrent } from "../../../../../lib/career-season";
 import { balanceTeams, matchPlayers, parseWhatsApp, type Config, type Player } from "../../../../../lib/football";
 import { createMatchSeparationProposal } from "../../../../../lib/scheduled-matches";
 
 export async function POST(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
   await ensureDb();
+  await ensureCareerSeasonCurrent();
   const payload = await request.json().catch(() => ({})) as any;
   if (payload.matchId) {
     try {

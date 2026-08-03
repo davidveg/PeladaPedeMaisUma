@@ -3,8 +3,9 @@ import { careerConfigFromRow, matchWinner, rankCareerVotes, teamMomentumForResul
 import { logEvent } from "./logger";
 import { validateMatchContributions, type MatchContributionInput } from "./match-contributions";
 import { notifyOpenCareerVote } from "./push-notifications";
+import { ensureCareerSeasonCurrent } from "./career-season";
 
-export async function getCareerConfig() { await ensureDb(); return careerConfigFromRow(await db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first()); }
+export async function getCareerConfig() { await ensureDb(); await ensureCareerSeasonCurrent(); return careerConfigFromRow(await db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first()); }
 
 export function careerMatchFromRow(row: any) {
   if (!row) return null;
@@ -48,7 +49,8 @@ export async function editCareerMatch(matchId:string,blueScore:number,yellowScor
   if(validation.error)throw new Error(validation.error);
   const previousContributions=(await db().prepare(`SELECT scorer_player_id,assist_player_id,team,is_own_goal FROM career_match_contributions WHERE career_match_id=? ORDER BY created_at`).bind(matchId).all()).results as any[];
   const oldWinner=row.winner_team as "BLUE"|"YELLOW"|"DRAW",newWinner=matchWinner(blueScore,yellowScore),rules={winnerBonus:.1,loserPenalty:-.1,...JSON.parse(row.config_snapshot||"{}")},now=new Date().toISOString(),statements:any[]=[];
-  for(const [team,ids] of [["BLUE",blueIds],["YELLOW",yellowIds]] as const){const adjustment=teamMomentumForResult(newWinner,team,rules.winnerBonus,rules.loserPenalty)-teamMomentumForResult(oldWinner,team,rules.winnerBonus,rules.loserPenalty);if(adjustment)for(const playerId of ids)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),result_momentum=ROUND(result_momentum+?,3),updated_at=? WHERE id=?`).bind(adjustment,adjustment,now,playerId))}
+  const belongsToCurrentSeason=Number(rules.seasonNumber??1)===Number(currentConfig.seasonNumber??1);
+  if(belongsToCurrentSeason)for(const [team,ids] of [["BLUE",blueIds],["YELLOW",yellowIds]] as const){const adjustment=teamMomentumForResult(newWinner,team,rules.winnerBonus,rules.loserPenalty)-teamMomentumForResult(oldWinner,team,rules.winnerBonus,rules.loserPenalty);if(adjustment)for(const playerId of ids)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),result_momentum=ROUND(result_momentum+?,3),updated_at=? WHERE id=?`).bind(adjustment,adjustment,now,playerId))}
   statements.push(db().prepare(`UPDATE career_matches SET blue_score=?,yellow_score=?,winner_team=?,updated_at=? WHERE id=?`).bind(blueScore,yellowScore,newWinner,now,matchId));
   if(currentConfig.trackContributions||blueScore!==Number(row.blue_score)||yellowScore!==Number(row.yellow_score))statements.push(db().prepare(`DELETE FROM career_match_contributions WHERE career_match_id=?`).bind(matchId));
   if(currentConfig.trackContributions)for(const goal of validation.contributions)statements.push(db().prepare(`INSERT INTO career_match_contributions (id,career_match_id,scorer_player_id,assist_player_id,team,is_own_goal,created_at) VALUES (?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),matchId,goal.scorerPlayerId,goal.assistPlayerId||null,goal.team,goal.ownGoal?1:0,now));
@@ -69,14 +71,13 @@ export async function finalizeCareerMatch(matchId: string, administratorId: stri
   try {
     const votes=(await db().prepare(`SELECT * FROM career_votes WHERE career_match_id=?`).bind(matchId).all()).results;
     const motm=rankCareerVotes(votes,"motm"),dotm=rankCareerVotes(votes,"dotm"),config=JSON.parse(row.config_snapshot) as CareerConfig;
-    const motmPoints=[config.motmFirst,config.motmSecond,config.motmThird],dotmPoints=[config.dotmFirst,config.dotmSecond,config.dotmThird],now=new Date().toISOString();
+    const currentConfig=await getCareerConfig(),belongsToCurrentSeason=Number(config.seasonNumber??1)===Number(currentConfig.seasonNumber??1),motmPoints=[config.motmFirst,config.motmSecond,config.motmThird],dotmPoints=[config.dotmFirst,config.dotmSecond,config.dotmThird],now=new Date().toISOString();
     const statements:any[]=[];
-    motm.forEach((entry,index)=>statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(motmPoints[index],motmPoints[index],now,entry.playerId)));
-    dotm.forEach((entry,index)=>statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(dotmPoints[index],dotmPoints[index],now,entry.playerId)));
+    if(belongsToCurrentSeason){motm.forEach((entry,index)=>statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(motmPoints[index],motmPoints[index],now,entry.playerId)));dotm.forEach((entry,index)=>statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(dotmPoints[index],dotmPoints[index],now,entry.playerId)));}
     const results={voteCount:votes.length,motm:motm.map((entry,index)=>({...entry,momentum:motmPoints[index]})),dotm:dotm.map((entry,index)=>({...entry,momentum:dotmPoints[index]}))};
     statements.push(db().prepare(`UPDATE career_matches SET status='CLOSED',closed_at=?,results_snapshot=?,votes_momentum_applied=1,updated_at=? WHERE id=? AND status='FINALIZING'`).bind(now,JSON.stringify(results),now,matchId));
     await db().batch(statements);
-    await audit(administratorId,"CAREER_VOTING_CLOSED","career_match",matchId,{voteCount:votes.length,automatic:!administratorId,results});
+    await audit(administratorId,"CAREER_VOTING_CLOSED","career_match",matchId,{voteCount:votes.length,automatic:!administratorId,momentumApplied:belongsToCurrentSeason,results});
     logEvent("info","career_voting_closed",{careerMatchId:matchId,voteCount:votes.length,automatic:!administratorId});
   } catch(error) {
     await db().prepare(`UPDATE career_matches SET status='OPEN',updated_at=? WHERE id=? AND status='FINALIZING'`).bind(new Date().toISOString(),matchId).run();

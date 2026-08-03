@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, jsonMutation } from "./api";
+import { API_BASE_URL, apiFetch, jsonMutation } from "./api";
 import { Button, Card, ErrorState, Header } from "./components";
 import { colors } from "./theme";
 import { useMobileBranding } from "./branding";
@@ -13,7 +13,7 @@ type VoteField =
   | "dotmThirdId"
   | "dotmSecondId"
   | "dotmFirstId";
-type VotePlayer = { id: string; displayName: string; primaryPosition?: string; team: "BLUE" | "YELLOW" };
+type VotePlayer = { id: string; displayName: string; photoUrl?: string | null; primaryPosition?: string; team: "BLUE" | "YELLOW" };
 type VoteState = Record<VoteField, string>;
 type VoteContext = {
   enabled: boolean;
@@ -22,7 +22,7 @@ type VoteContext = {
   viewer: {
     authenticated: boolean;
     hasPlayerAssociation: boolean;
-    player: { id: string; displayName: string; team: "BLUE" | "YELLOW" } | null;
+    player: { id: string; displayName: string; photoUrl?: string | null; team: "BLUE" | "YELLOW" } | null;
     isParticipant: boolean;
     hasVoted: boolean;
     canVote: boolean;
@@ -109,10 +109,11 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
           style={({ pressed }) => ({
             minHeight: 54, padding: 12, borderRadius: 12, borderWidth: 1,
             borderColor: vote[field] ? podium.tone : colors.border, backgroundColor: "#fff",
-            flexDirection: "row", alignItems: "center", opacity: pressed ? .75 : 1,
+            flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? .75 : 1,
           })}
         >
           <Text style={{ width: 76, color: podium.tone, fontWeight: "900" }}>{place}</Text>
+          {vote[field] ? <VotePlayerPhoto player={data.players.find(player => player.id === vote[field])} size={38}/> : null}
           <Text style={{ flex: 1, color: vote[field] ? colors.text : colors.muted, fontWeight: vote[field] ? "800" : "600" }}>{names[vote[field]] || "Selecionar jogador"}</Text>
           <Text style={{ color: colors.muted }}>›</Text>
         </Pressable>)}
@@ -162,10 +163,10 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
             opacity: pressed ? .75 : 1,
           })}
         >
-          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: color }}/>
+          <VotePlayerPhoto player={player}/>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: "900" }}>{player.displayName}</Text>
-            <Text style={{ color }}>{blue ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}{player.primaryPosition ? ` · ${player.primaryPosition}` : ""}</Text>
+            <Text style={{ color }}>{blue ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</Text>
           </View>
           {player.id === selectedId ? <Text style={{ color, fontWeight: "900" }}>✓</Text> : null}
         </Pressable>;
@@ -173,4 +174,14 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
       <Button title="Cancelar" variant="secondary" onPress={onClose}/>
     </ScrollView>
   </Modal>;
+}
+
+function VotePlayerPhoto({ player, size = 46 }: { player?: VotePlayer; size?: number }) {
+  const photoUrl = player?.photoUrl;
+  const style = { width: size, height: size, borderRadius: Math.round(size * .27), backgroundColor: "#E4EEE8" };
+  if (photoUrl) {
+    const uri = photoUrl.startsWith("http") ? photoUrl : `${API_BASE_URL}${photoUrl}`;
+    return <Image accessibilityLabel={`Foto de ${player?.displayName || "jogador"}`} source={{ uri }} style={style}/>;
+  }
+  return <View accessibilityLabel={`Foto padrão de ${player?.displayName || "jogador"}`} style={[style, { alignItems: "center", justifyContent: "center" }]}><Text style={{ fontSize: Math.round(size * .43) }}>👤</Text></View>;
 }

@@ -86,12 +86,16 @@ Documentação complementar:
 - Correção administrativa posterior de placar e súmula sem duplicar momentum.
 - Estatísticas acumuladas de jogos, vitórias, derrotas, gols e assistências.
 - Votação dos três melhores e três piores jogadores da partida.
+- Seletores de votação com foto atual, nome e avatar padrão para facilitar a identificação dos participantes no site e no aplicativo.
 - Link compartilhável e QR Code para a votação.
 - Encerramento automático pelo prazo ou antecipado pelo administrador.
 - Revisão e remoção administrativa de votos somente enquanto a votação estiver aberta.
 - Compartilhamento do resultado final da votação pelo WhatsApp.
 - Momentum separado por origem: resultados de partidas e votações.
-- Multiplicador configurável aplicado somente ao Momentum das votações; vitórias e derrotas mantêm peso 1.
+- Multiplicadores independentes e configuráveis para o Momentum de resultados e o Momentum das votações.
+- Temporadas automáticas com duração configurável entre 1 e 120 meses; a primeira virada é agendada por padrão para o fim do ano corrente.
+- Na virada da temporada, os dois saldos de Momentum são zerados sem apagar jogos, vitórias, derrotas, gols, assistências ou o histórico das partidas.
+- Partidas e votações de temporadas anteriores permanecem consultáveis, mas não reaplicam Momentum na temporada atual.
 
 #### Regras da votação
 

@@ -25,6 +25,7 @@ test("voto exige conta autenticada, usa o jogador associado e é único entre si
     const players = Array.from({ length: 7 }, (_, index) => ({ id: `p${index + 1}`, displayName: `Jogador ${index + 1}`, primaryPosition: "Ataque" }));
     await db().prepare(`INSERT INTO players (id,full_name,display_name,aliases,type,primary_position,speed,skill,marking,goalkeeper_positioning,goal_exit,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(playerId, "Jogador 1", "Jogador 1", "[]", "monthly", "Ataque", 3, 3, 3, 3, 3, 1, now, now).run();
+    await db().prepare(`UPDATE players SET photo_url='/api/uploads/players/jogador-1.png' WHERE id=?`).bind(playerId).run();
     await db().prepare(`INSERT INTO member_accounts (id,email,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,?,?)`)
       .bind(accountId, "voter@example.com", await hashPassword(password), 1, now, now).run();
     await db().prepare(`INSERT INTO player_account_links (player_id,account_type,account_id,created_at) VALUES (?,?,?,?)`)
@@ -48,6 +49,8 @@ test("voto exige conta autenticada, usa o jogador associado e é único entre si
     const state = await careerVote.GET(authorized("https://pelada.example/api/career/vote?token=token-vote", session.accessToken));
     const payload = await state.json();
     assert.equal(payload.viewer.player.id, playerId);
+    assert.equal(payload.viewer.player.photoUrl, "/api/uploads/players/jogador-1.png");
+    assert.equal(payload.players.find(player => player.id === playerId).photoUrl, "/api/uploads/players/jogador-1.png");
     assert.equal(payload.viewer.hasVoted, true);
     assert.equal(payload.viewer.canVote, false);
 

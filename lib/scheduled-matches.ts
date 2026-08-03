@@ -1,6 +1,7 @@
 /* Scheduled match rows and snapshots are narrowed at the service boundary. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb } from "./database";
+import { ensureCareerSeasonCurrent } from "./career-season";
 import { balanceTeams, calculateTeamDelta, defaultConfig, type Config, type Player } from "./football";
 import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
 
@@ -144,6 +145,7 @@ async function confirmedGoalkeeperCount(matchId: string, excludedPlayerId = "") 
 
 export async function createMatchSeparationProposal(matchId: string, nonce = 0) {
   await ensureDb();
+  await ensureCareerSeasonCurrent();
   const match: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first();
   if (!match) throw statusError("Partida não encontrada.", 404);
   if (match.separation_id) throw statusError("Esta partida já possui uma separação confirmada.", 409);

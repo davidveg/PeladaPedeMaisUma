@@ -2,9 +2,11 @@ import { db, ensureDb } from "../../../lib/database";
 import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { publicPlayer } from "../../../lib/public-player";
+import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 
 export async function GET() {
   await ensureDb();
+  await ensureCareerSeasonCurrent();
   const [players, careerStats, configuration, careerConfiguration] = await Promise.all([
     db().prepare(`SELECT id,display_name,type,primary_position,speed,skill,marking,goalkeeper_positioning,goal_exit,momentum,result_momentum,voting_momentum,photo_url FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
     loadPlayerCareerStats(),

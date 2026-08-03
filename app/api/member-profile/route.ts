@@ -1,12 +1,14 @@
 import { audit, db, playerAccountRequired } from "../../../lib/database";
 import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
+import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 
 const positions = new Set(["Defesa", "Meio-campo", "Ataque", "Goleiro"]);
 
 export async function GET(request: Request) {
   const member: any = await playerAccountRequired(request);
   if (!member) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  await ensureCareerSeasonCurrent();
   if (!member.playerId) return Response.json({ member, player: null });
   const [row, careerStats, configuration, careerConfiguration] = await Promise.all([
     db().prepare(`SELECT * FROM players WHERE id=? AND deleted_at IS NULL`).bind(member.playerId).first<any>(),

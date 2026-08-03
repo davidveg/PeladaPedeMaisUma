@@ -248,6 +248,21 @@ test("migração adiciona multiplicador de momentum preservando o efeito atual",
   }
 });
 
+test("migração adiciona o calendário de temporadas do Modo Carreira", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-career-seasons-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO career_configuration (id) VALUES (1)").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0024_career_seasons.sql", import.meta.url), "utf8"));
+    const config = await bindings.DB.prepare("SELECT season_duration_months,season_started_at,next_season_reset_at,season_number FROM career_configuration WHERE id=1").first();
+    assert.deepEqual({ ...config }, { season_duration_months: 12, season_started_at: null, next_season_reset_at: null, season_number: 1 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("migração separa as origens do momentum sem alterar o total legado", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-momentum-sources-"));
   const bindings = await createSelfhostBindings(directory);

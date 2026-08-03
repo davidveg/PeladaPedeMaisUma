@@ -1,5 +1,6 @@
 import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
 import { normalizeName } from "../../../lib/football";
+import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 
 const map = (row: any) => ({
   ...row,
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
   const admin: any = await adminRequired(request);
   if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
+  await ensureCareerSeasonCurrent();
   const payload = await request.json() as any;
   const displayName = String(payload.displayName || "").trim();
   const speed = Math.round(Number(payload.speed) * 10) / 10;

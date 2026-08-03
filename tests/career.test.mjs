@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { careerVoteForAuthenticatedPlayer, defaultCareerConfig, matchWinner, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
+import { addSeasonMonths, careerVoteForAuthenticatedPlayer, defaultCareerConfig, defaultSeasonResetAt, matchWinner, nextSeasonResetAt, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
 
 const participantIds=["a","b","c","d","e","f","g"];
 const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",dotmThirdId:"e",dotmSecondId:"f",dotmFirstId:"g"};
@@ -16,6 +16,9 @@ test("calcula o momentum da equipe e a diferença necessária ao corrigir o resu
 test("valida os valores padrão do Modo Carreira",()=>assert.equal(validateCareerConfig(defaultCareerConfig),true));
 test("limita o multiplicador de momentum entre zero e cinco",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:0}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:-.1}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,momentumMultiplier:5.1}),false)});
 test("limita também o multiplicador de vitórias e derrotas entre zero e cinco",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,resultMomentumMultiplier:0}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,resultMomentumMultiplier:5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,resultMomentumMultiplier:-.1}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,resultMomentumMultiplier:5.1}),false)});
+test("limita a duração da temporada entre um e cento e vinte meses inteiros",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,seasonDurationMonths:1}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,seasonDurationMonths:120}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,seasonDurationMonths:0}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,seasonDurationMonths:12.5}),false)});
+test("agenda a primeira virada para o fim do ano corrente no fuso da pelada",()=>assert.equal(defaultSeasonResetAt(new Date("2026-08-03T12:00:00.000Z")).toISOString(),"2027-01-01T03:00:00.000Z"));
+test("avança a temporada por meses, respeitando fim do mês e períodos vencidos",()=>{assert.equal(addSeasonMonths("2026-01-31T03:00:00.000Z",1).toISOString(),"2026-02-28T03:00:00.000Z");assert.equal(nextSeasonResetAt("2026-01-01T03:00:00.000Z",6,new Date("2027-02-01T00:00:00.000Z")).toISOString(),"2027-07-01T03:00:00.000Z")});
 test("valida os limites crescentes dos níveis de card",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,cardBronzeMax:2.4,cardSilverMax:3.9,cardGoldMax:4.5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,cardBronzeMax:4,cardSilverMax:3.9}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,cardGoldMax:5}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,cardSilverMax:3.95}),false)});
 test("impede auto voto, repetição entre categorias e não participantes",()=>{
  assert.match(validateCareerVote({...valid,motmFirstId:"a"},participantIds),/si mesmo/);
