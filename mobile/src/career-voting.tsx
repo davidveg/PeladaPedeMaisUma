@@ -91,11 +91,15 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
 
   return <>
     <Card style={{ gap: 14 }}>
-      <View style={{ gap: 4 }}>
-        <Text style={{ color: colors.greenLight, fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>VOTAÇÃO ABERTA</Text>
-        <Text style={{ color: colors.text, fontSize: 21, fontWeight: "900" }}>Destaques da partida</Text>
-        <Text style={{ color: colors.muted }}>Você vota como {data.viewer.player?.displayName}. Cada jogador pode aparecer apenas uma vez.</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <VotePlayerPhoto player={data.viewer.player || undefined} size={54}/>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ color: colors.greenLight, fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>VOTAÇÃO ABERTA</Text>
+          <Text style={{ color: colors.text, fontSize: 21, fontWeight: "900" }}>Destaques da partida</Text>
+          <Text style={{ color: colors.muted }}>Você vota como <Text style={{ color: colors.text, fontWeight: "800" }}>{data.viewer.player?.displayName}</Text>.</Text>
+        </View>
       </View>
+      <Text style={{ color: colors.muted }}>Toque em cada posição para ver a foto e escolher o jogador. Cada pessoa pode aparecer apenas uma vez.</Text>
       {podiums.map(podium => <View key={podium.title} style={{ gap: 8 }}>
         <View>
           <Text style={{ color: podium.tone, fontSize: 17, fontWeight: "900" }}>{podium.title}</Text>
@@ -113,7 +117,7 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
           })}
         >
           <Text style={{ width: 76, color: podium.tone, fontWeight: "900" }}>{place}</Text>
-          {vote[field] ? <VotePlayerPhoto player={data.players.find(player => player.id === vote[field])} size={38}/> : null}
+          {vote[field] ? <VotePlayerPhoto player={data.players.find(player => player.id === vote[field])} size={46}/> : null}
           <Text style={{ flex: 1, color: vote[field] ? colors.text : colors.muted, fontWeight: vote[field] ? "800" : "600" }}>{names[vote[field]] || "Selecionar jogador"}</Text>
           <Text style={{ color: colors.muted }}>›</Text>
         </Pressable>)}
@@ -158,12 +162,12 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
           key={player.id} accessibilityRole="radio" accessibilityState={{ selected: player.id === selectedId }}
           onPress={() => onSelect(player.id)}
           style={({ pressed }) => ({
-            minHeight: 56, padding: 12, borderRadius: 12, borderWidth: player.id === selectedId ? 2 : 1,
+            minHeight: 76, padding: 10, borderRadius: 14, borderWidth: player.id === selectedId ? 2 : 1,
             borderColor: color, backgroundColor: soft, flexDirection: "row", alignItems: "center", gap: 10,
             opacity: pressed ? .75 : 1,
           })}
         >
-          <VotePlayerPhoto player={player}/>
+          <VotePlayerPhoto player={player} size={60}/>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: "900" }}>{player.displayName}</Text>
             <Text style={{ color }}>{blue ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</Text>
@@ -178,10 +182,16 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
 
 function VotePlayerPhoto({ player, size = 46 }: { player?: VotePlayer; size?: number }) {
   const photoUrl = player?.photoUrl;
-  const style = { width: size, height: size, borderRadius: Math.round(size * .27), backgroundColor: "#E4EEE8" };
-  if (photoUrl) {
-    const uri = photoUrl.startsWith("http") ? photoUrl : `${API_BASE_URL}${photoUrl}`;
-    return <Image accessibilityLabel={`Foto de ${player?.displayName || "jogador"}`} source={{ uri }} style={style}/>;
+  const [failed, setFailed] = useState(false);
+  const style = { width: size, height: size, borderRadius: Math.round(size * .27), backgroundColor: "#E4EEE8", borderWidth: 1, borderColor: colors.border };
+
+  useEffect(() => setFailed(false), [photoUrl]);
+
+  if (photoUrl && !failed) {
+    const uri = /^https?:\/\//i.test(photoUrl)
+      ? photoUrl
+      : `${API_BASE_URL.replace(/\/$/, "")}/${photoUrl.replace(/^\//, "")}`;
+    return <Image accessibilityLabel={`Foto de ${player?.displayName || "jogador"}`} source={{ uri }} resizeMode="cover" onError={() => setFailed(true)} style={style}/>;
   }
   return <View accessibilityLabel={`Foto padrão de ${player?.displayName || "jogador"}`} style={[style, { alignItems: "center", justifyContent: "center" }]}><Text style={{ fontSize: Math.round(size * .43) }}>👤</Text></View>;
 }
