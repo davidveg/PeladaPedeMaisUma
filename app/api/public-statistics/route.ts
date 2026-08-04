@@ -14,7 +14,8 @@ export async function GET(request: Request) {
   if (from > to) return Response.json({ error: "A data inicial deve ser anterior à data final." }, { status: 400 });
 
   const [playerRows, matchRows, contributionRows] = await Promise.all([
-    db().prepare(`SELECT id,display_name,photo_url,type FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all(),
+    // Jogadores excluídos logicamente continuam aqui para preservar rankings e confrontos históricos.
+    db().prepare(`SELECT id,display_name,photo_url,type FROM players ORDER BY display_name`).all(),
     db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
