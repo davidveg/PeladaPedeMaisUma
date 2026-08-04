@@ -1,20 +1,8 @@
 import { adminRequired, memberRequired } from "../../../lib/database";
+import { detectImageType } from "../../../lib/image-upload";
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 
 const MAX_FILE_SIZE = 5_000_000;
-
-function detectImageType(bytes: Uint8Array) {
-  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) {
-    return { contentType: "image/png", extension: "png" };
-  }
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return { contentType: "image/jpeg", extension: "jpg" };
-  }
-  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP") {
-    return { contentType: "image/webp", extension: "webp" };
-  }
-  return null;
-}
 
 export async function POST(request: Request) {
   const purpose = request.headers.get("x-upload-purpose") === "branding" ? "branding" : "players";
@@ -29,7 +17,7 @@ export async function POST(request: Request) {
     const buffer = await request.arrayBuffer();
     if (!buffer.byteLength || buffer.byteLength > MAX_FILE_SIZE) return Response.json({ error: "A imagem deve ter entre 1 byte e 5 MB." }, { status: 413 });
     const detected = detectImageType(new Uint8Array(buffer));
-    if (!detected) return Response.json({ error: "O arquivo não é uma imagem PNG, JPEG ou WebP válida." }, { status: 400 });
+    if (!detected) return Response.json({ error: "O arquivo não é uma imagem ICO, PNG, JPEG ou WebP válida." }, { status: 400 });
 
     const key = `${purpose}/${crypto.randomUUID()}.${detected.extension}`;
     await getRuntimeBindings().UPLOADS.put(key, buffer, { httpMetadata: { contentType: detected.contentType } });

@@ -4,6 +4,7 @@ export type InstanceConfiguration = {
   siteTagline: string;
   footerText: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
   shareImageUrl: string | null;
   primaryColor: string;
   secondaryColor: string;
@@ -36,6 +37,7 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   siteTagline: "Times equilibrados. Resenha garantida.",
   footerText: "Times equilibrados. Resenha garantida.",
   logoUrl: null,
+  faviconUrl: null,
   shareImageUrl: null,
   primaryColor: "#174D3B",
   secondaryColor: "#D9F36B",
@@ -72,6 +74,7 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     siteTagline: value("site_tagline", DEFAULT_INSTANCE_CONFIGURATION.siteTagline),
     footerText: value("footer_text", DEFAULT_INSTANCE_CONFIGURATION.footerText),
     logoUrl: row.logo_url ? String(row.logo_url) : null,
+    faviconUrl: row.favicon_url ? String(row.favicon_url) : null,
     shareImageUrl: row.share_image_url ? String(row.share_image_url) : null,
     primaryColor: value("primary_color", DEFAULT_INSTANCE_CONFIGURATION.primaryColor),
     secondaryColor: value("secondary_color", DEFAULT_INSTANCE_CONFIGURATION.secondaryColor),
@@ -115,6 +118,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     siteTagline: text("siteTagline", 180, DEFAULT_INSTANCE_CONFIGURATION.siteTagline),
     footerText: text("footerText", 240, DEFAULT_INSTANCE_CONFIGURATION.footerText),
     logoUrl: String(source.logoUrl ?? "").trim().slice(0, 500) || null,
+    faviconUrl: String(source.faviconUrl ?? "").trim().slice(0, 500) || null,
     shareImageUrl: String(source.shareImageUrl ?? "").trim().slice(0, 500) || null,
     primaryColor: color("primaryColor", DEFAULT_INSTANCE_CONFIGURATION.primaryColor),
     secondaryColor: color("secondaryColor", DEFAULT_INSTANCE_CONFIGURATION.secondaryColor),
@@ -164,6 +168,9 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   if (config.logoUrl && !config.logoUrl.startsWith("/api/upload?key=branding%2F") && !/^https:\/\//i.test(config.logoUrl)) {
     return { error: "O logotipo deve ser um upload do sistema ou uma URL HTTPS." };
   }
+  if (config.faviconUrl && !config.faviconUrl.startsWith("/api/upload?key=branding%2F") && !/^https:\/\//i.test(config.faviconUrl)) {
+    return { error: "O favicon deve ser um upload do sistema ou uma URL HTTPS." };
+  }
   if (config.shareImageUrl && !config.shareImageUrl.startsWith("/api/upload?key=branding%2F") && !/^https:\/\//i.test(config.shareImageUrl)) {
     return { error: "A imagem de compartilhamento deve ser um upload do sistema ou uma URL HTTPS." };
   }
@@ -171,7 +178,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
 }
 
 export const INSTANCE_CONFIGURATION_COLUMNS = [
-  "site_name", "site_short_name", "site_tagline", "footer_text", "logo_url", "share_image_url",
+  "site_name", "site_short_name", "site_tagline", "footer_text", "logo_url", "favicon_url", "share_image_url",
   "primary_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
   "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
@@ -180,7 +187,7 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
 
 export function instanceConfigurationValues(config: InstanceConfiguration) {
   return [
-    config.siteName, config.siteShortName, config.siteTagline, config.footerText, config.logoUrl, config.shareImageUrl,
+    config.siteName, config.siteShortName, config.siteTagline, config.footerText, config.logoUrl, config.faviconUrl, config.shareImageUrl,
     config.primaryColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
     config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,

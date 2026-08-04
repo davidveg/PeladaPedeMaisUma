@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { db, ensureDb } from "../lib/database";
 import { DEFAULT_INSTANCE_CONFIGURATION, instanceConfigurationFromRow } from "../lib/instance-config";
-import { instanceShareImageUrl } from "../lib/instance-metadata";
+import { instanceFaviconUrl, instanceShareImageUrl } from "../lib/instance-metadata";
 import { getRuntimeBindings } from "../lib/runtime-bindings";
 import { InstanceBrandingProvider } from "./InstanceBranding";
 import "./globals.css";
@@ -35,11 +35,12 @@ export async function generateMetadata(): Promise<Metadata> {
     // Mantém metadados válidos enquanto os bindings ainda não estiverem disponíveis no build.
   }
   const image = instanceShareImageUrl(instance, base);
+  const favicon = instanceFaviconUrl(instance);
   return {
     metadataBase: new URL(base),
     title: instance.siteName,
     description: instance.siteTagline,
-    icons: siteIcons,
+    icons: favicon ? { icon: [{ url: favicon }], shortcut: favicon, apple: [{ url: favicon }] } : siteIcons,
     openGraph: { type: "website", url: base, siteName: instance.siteName, title: instance.siteName, description: instance.siteTagline, images: [{ url: image }], ...(instance.updatedAt ? { modifiedTime: instance.updatedAt } : {}) },
     twitter: { card: "summary_large_image", title: instance.siteName, description: instance.siteTagline, images: [image] },
   };

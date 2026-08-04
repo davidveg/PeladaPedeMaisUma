@@ -104,6 +104,26 @@
   gap: 14px;
 }
 
+.instance-favicon-preview {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: center;
+  gap: 14px;
+}
+
+.instance-favicon-preview > img {
+  width: 72px;
+  height: 72px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  object-fit: contain;
+  background: #fff;
+}
+
 .instance-share-preview > img {
   width: 100%;
   aspect-ratio: 1.91 / 1;
@@ -113,18 +133,21 @@
   background: #fff;
 }
 
-.instance-share-preview > div {
+.instance-share-preview > div,
+.instance-favicon-preview > div {
   display: grid;
   gap: 8px;
 }
 
-.instance-share-preview small {
+.instance-share-preview small,
+.instance-favicon-preview small {
   color: var(--muted);
   font-weight: 500;
   line-height: 1.45;
 }
 
-.instance-share-preview > div > div {
+.instance-share-preview > div > div,
+.instance-favicon-preview > div > div {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -132,7 +155,9 @@
 }
 
 .instance-share-preview .photo-upload,
-.instance-share-preview .ghost {
+.instance-share-preview .ghost,
+.instance-favicon-preview .photo-upload,
+.instance-favicon-preview .ghost {
   box-sizing: border-box;
   min-width: 170px;
   height: 44px;
@@ -217,12 +242,24 @@
     grid-template-columns: 1fr;
   }
 
-  .instance-share-preview > div > div {
+  .instance-share-preview > div > div,
+  .instance-favicon-preview > div > div {
     align-items: stretch;
   }
 
   .instance-share-preview .photo-upload,
-  .instance-share-preview .ghost {
+  .instance-share-preview .ghost,
+  .instance-favicon-preview .photo-upload,
+  .instance-favicon-preview .ghost {
     width: 100%;
+  }
+
+  .instance-favicon-preview {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .instance-favicon-preview > img {
+    width: 64px;
+    height: 64px;
   }
 }

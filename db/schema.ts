@@ -112,6 +112,7 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   siteTagline: text("site_tagline").notNull().default("Times equilibrados. Resenha garantida."),
   footerText: text("footer_text").notNull().default("Times equilibrados. Resenha garantida."),
   logoUrl: text("logo_url"),
+  faviconUrl: text("favicon_url"),
   shareImageUrl: text("share_image_url"),
   primaryColor: text("primary_color").notNull().default("#174D3B"),
   secondaryColor: text("secondary_color").notNull().default("#D9F36B"),
