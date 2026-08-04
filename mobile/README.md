@@ -47,6 +47,8 @@ Os perfis em `eas.json` são:
 - `development`: development client interno;
 - `preview`: homologação distribuída internamente;
 - `production`: binário de loja com versão incrementada.
+- `agriao-preview`: APK interno da Pelada do Agrião, ligado exclusivamente ao backend e ao projeto EAS do Agrião;
+- `agriao-production`: binário de loja/TestFlight da Pelada do Agrião.
 
 Cadastre `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_WEB_BASE_URL` e `EXPO_PUBLIC_APP_ENV` nos ambientes EAS correspondentes e execute:
 
@@ -54,6 +56,43 @@ Cadastre `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_WEB_BASE_URL` e `EXPO_PUBLIC_A
 eas build --profile development --platform all
 eas build --profile preview --platform all
 eas build --profile production --platform all
+```
+
+### Pelada do Agrião
+
+Os perfis do Agrião usam o package/bundle `br.com.peladadoagriao.app`, o projeto EAS `5c7cc851-84df-4e97-8405-35091dc56fa0`, o Firebase de `google-services-agriao.json` e a API `https://peladadoagriao.vegaalameda.com`. Eles não substituem nem recebem atualizações do aplicativo Pelada Pede Mais Uma.
+
+```bash
+eas build --profile agriao-preview --platform android
+eas build --profile agriao-production --platform android
+eas build --profile agriao-production --platform ios
+```
+
+O EAS Update não recebe um perfil de build. Antes de publicar uma atualização OTA do Agrião no PowerShell, defina explicitamente a identidade do projeto para impedir que o update seja enviado ao aplicativo anterior:
+
+```powershell
+$env:EXPO_APP_VARIANT="agriao"
+$env:EXPO_APP_NAME="Pelada do Agrião"
+$env:EXPO_APP_SLUG="pelada-do-agriao"
+$env:EXPO_APP_SCHEME="peladadoagriao"
+$env:EXPO_ANDROID_PACKAGE="br.com.peladadoagriao.app"
+$env:EXPO_IOS_BUNDLE_IDENTIFIER="br.com.peladadoagriao.app"
+$env:EXPO_EAS_PROJECT_ID="5c7cc851-84df-4e97-8405-35091dc56fa0"
+$env:EXPO_UPDATES_URL="https://u.expo.dev/5c7cc851-84df-4e97-8405-35091dc56fa0"
+$env:EXPO_PUBLIC_API_BASE_URL="https://peladadoagriao.vegaalameda.com"
+$env:EXPO_PUBLIC_WEB_BASE_URL="https://peladadoagriao.vegaalameda.com"
+$env:EXPO_PUBLIC_APP_ENV="preview"
+$env:EXPO_APP_ICON="./assets/icon-agriao.png"
+$env:EXPO_ADAPTIVE_ICON="./assets/icon-agriao.png"
+$env:EXPO_NOTIFICATION_ICON="./assets/icon-agriao.png"
+$env:EXPO_GOOGLE_SERVICES_FILE="./google-services-agriao.json"
+$env:EXPO_PRIMARY_COLOR="#0B3D2E"
+
+npx eas-cli@latest update `
+  --channel preview `
+  --environment preview `
+  --platform android `
+  --message "Atualização Pelada do Agrião"
 ```
 
 Troque os identificadores `br.com.peladapedemaisuma.app` antes da primeira publicação caso esse domínio não pertença ao projeto.

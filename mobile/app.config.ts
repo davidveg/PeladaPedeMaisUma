@@ -9,6 +9,8 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => {
   const primaryColor = process.env.EXPO_PRIMARY_COLOR || "#0B3D2E";
   const appName = process.env.EXPO_APP_NAME || config.name || "Pelada Pede Mais Uma";
   const projectId = process.env.EXPO_EAS_PROJECT_ID || config.extra?.eas?.projectId;
+  const googleServicesFile = process.env.EXPO_GOOGLE_SERVICES_FILE || config.android?.googleServicesFile;
+  const notificationIcon = process.env.EXPO_NOTIFICATION_ICON || "./assets/adaptive-icon-football-beer.png";
   return {
     ...config,
     name: appName,
@@ -29,6 +31,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => {
       ...config.android,
       package: process.env.EXPO_ANDROID_PACKAGE || config.android?.package || "br.com.peladapedemaisuma.app",
       versionCode: number(process.env.EXPO_ANDROID_VERSION_CODE, config.android?.versionCode || 1),
+      googleServicesFile,
       adaptiveIcon: {
         ...config.android?.adaptiveIcon,
         foregroundImage: process.env.EXPO_ADAPTIVE_ICON || config.android?.adaptiveIcon?.foregroundImage || "./assets/adaptive-icon-football-beer.png",
@@ -37,7 +40,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: (config.plugins || []).map((plugin) => {
       if (!Array.isArray(plugin) || plugin[0] !== "expo-notifications") return plugin;
-      return [plugin[0], { ...(plugin[1] as Record<string, unknown>), color: primaryColor }];
+      return [plugin[0], { ...(plugin[1] as Record<string, unknown>), icon: notificationIcon, color: primaryColor }];
     }),
     extra: {
       ...config.extra,

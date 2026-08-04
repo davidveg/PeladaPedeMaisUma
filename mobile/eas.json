@@ -3,7 +3,51 @@
   "build": {
     "development": { "developmentClient": true, "distribution": "internal", "environment": "development", "channel": "development" },
     "preview": { "distribution": "internal", "environment": "preview", "channel": "preview", "autoIncrement": true },
-    "production": { "autoIncrement": true, "environment": "production", "channel": "production" }
+    "production": { "autoIncrement": true, "environment": "production", "channel": "production" },
+    "agriao-preview": {
+      "extends": "preview",
+      "env": {
+        "EXPO_APP_VARIANT": "agriao",
+        "EXPO_APP_NAME": "Pelada do Agrião",
+        "EXPO_APP_SLUG": "pelada-do-agriao",
+        "EXPO_APP_SCHEME": "peladadoagriao",
+        "EXPO_ANDROID_PACKAGE": "br.com.peladadoagriao.app",
+        "EXPO_IOS_BUNDLE_IDENTIFIER": "br.com.peladadoagriao.app",
+        "EXPO_EAS_PROJECT_ID": "5c7cc851-84df-4e97-8405-35091dc56fa0",
+        "EXPO_UPDATES_URL": "https://u.expo.dev/5c7cc851-84df-4e97-8405-35091dc56fa0",
+        "EXPO_OWNER": "davidvegabr",
+        "EXPO_PUBLIC_API_BASE_URL": "https://peladadoagriao.vegaalameda.com",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://peladadoagriao.vegaalameda.com",
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_APP_ICON": "./assets/icon-agriao.png",
+        "EXPO_ADAPTIVE_ICON": "./assets/icon-agriao.png",
+        "EXPO_NOTIFICATION_ICON": "./assets/icon-agriao.png",
+        "EXPO_GOOGLE_SERVICES_FILE": "./google-services-agriao.json",
+        "EXPO_PRIMARY_COLOR": "#0B3D2E"
+      }
+    },
+    "agriao-production": {
+      "extends": "production",
+      "env": {
+        "EXPO_APP_VARIANT": "agriao",
+        "EXPO_APP_NAME": "Pelada do Agrião",
+        "EXPO_APP_SLUG": "pelada-do-agriao",
+        "EXPO_APP_SCHEME": "peladadoagriao",
+        "EXPO_ANDROID_PACKAGE": "br.com.peladadoagriao.app",
+        "EXPO_IOS_BUNDLE_IDENTIFIER": "br.com.peladadoagriao.app",
+        "EXPO_EAS_PROJECT_ID": "5c7cc851-84df-4e97-8405-35091dc56fa0",
+        "EXPO_UPDATES_URL": "https://u.expo.dev/5c7cc851-84df-4e97-8405-35091dc56fa0",
+        "EXPO_OWNER": "davidvegabr",
+        "EXPO_PUBLIC_API_BASE_URL": "https://peladadoagriao.vegaalameda.com",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://peladadoagriao.vegaalameda.com",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_APP_ICON": "./assets/icon-agriao.png",
+        "EXPO_ADAPTIVE_ICON": "./assets/icon-agriao.png",
+        "EXPO_NOTIFICATION_ICON": "./assets/icon-agriao.png",
+        "EXPO_GOOGLE_SERVICES_FILE": "./google-services-agriao.json",
+        "EXPO_PRIMARY_COLOR": "#0B3D2E"
+      }
+    }
   },
-  "submit": { "production": {} }
+  "submit": { "production": {}, "agriao-production": {} }
 }

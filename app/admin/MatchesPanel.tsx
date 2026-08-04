@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
 import { useEffect, useMemo, useState } from "react";
+import { brazilianDateInput, brazilianDateTimeIso, brazilianDateTimeParts, brazilianTimeInput } from "../../lib/brazilian-date-time";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 
@@ -85,21 +86,26 @@ function MatchAdminDetail({ match, players, onAttendance, onEdit, onClose, onCan
 
 function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { match: Match | null; api: Api; instanceConfig?: any; onClose(): void; onSaved(message: string): Promise<void> }) {
   const defaults = nextMatchDefaults(instanceConfig);
+  const matchParts = match ? brazilianDateTimeParts(match.matchAt) : defaults.match;
+  const deadlineParts = match ? brazilianDateTimeParts(match.confirmationDeadline) : defaults.deadline;
   const [title, setTitle] = useState(match?.title || instanceConfig?.defaultMatchTitle || "Pelada");
-  const [matchAt, setMatchAt] = useState(localInput(match?.matchAt) || defaults.matchAt);
-  const [deadline, setDeadline] = useState(localInput(match?.confirmationDeadline) || defaults.deadline);
+  const [matchDate, setMatchDate] = useState(matchParts.date), [matchTime, setMatchTime] = useState(matchParts.time);
+  const [deadlineDate, setDeadlineDate] = useState(deadlineParts.date), [deadlineTime, setDeadlineTime] = useState(deadlineParts.time);
   const [location, setLocation] = useState(match?.location || "");
   const [maxChanges, setMaxChanges] = useState(match?.maxChanges ?? 2);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
-      const body = { ...(match ? { action: "update", matchId: match.id } : {}), title, matchAt: new Date(matchAt).toISOString(), confirmationDeadline: new Date(deadline).toISOString(), location, maxChanges };
+      const matchAt = brazilianDateTimeIso(matchDate, matchTime), confirmationDeadline = brazilianDateTimeIso(deadlineDate, deadlineTime);
+      if (!matchAt || !confirmationDeadline) throw new Error("Use datas no formato DD/MM/AAAA e horários no formato HH:MM.");
+      if (new Date(confirmationDeadline).getTime() > new Date(matchAt).getTime()) throw new Error("O prazo de confirmação deve terminar antes do início do jogo.");
+      const body = { ...(match ? { action: "update", matchId: match.id } : {}), title, matchAt, confirmationDeadline, location, maxChanges };
       const result = await api("/api/admin/matches", { method: match ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       await onSaved(result.message);
     } catch (cause: any) { setError(cause.message); } finally { setBusy(false); }
   }
-  return <div className="modal-back"><form className="editor match-editor" onSubmit={submit}><button type="button" className="close" onClick={onClose}>×</button><div className="ball">📅</div><h2>{match ? "Editar partida" : "Criar partida"}</h2><p>Todos os usuários serão avisados no aplicativo e, quando disponível, por push.</p>{error && <div className="alert error">{error}</div>}<div className="form-grid"><label className="wide">Título<input value={title} onChange={event => setTitle(event.target.value)} required maxLength={120}/></label><label>Data e hora do jogo<input type="datetime-local" value={matchAt} onChange={event => setMatchAt(event.target.value)} required/></label><label>Confirmar presença até<input type="datetime-local" value={deadline} onChange={event => setDeadline(event.target.value)} required/></label><label>Local<input value={location} onChange={event => setLocation(event.target.value)} maxLength={160}/></label><label>Máximo de remarcações<input type="number" min="0" max="20" value={maxChanges} onChange={event => setMaxChanges(Number(event.target.value))} required/></label></div><div className="editor-actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary" disabled={busy}>{busy ? "Salvando…" : match ? "Salvar alterações" : "Criar e notificar"}</button></div></form></div>;
+  return <div className="modal-back"><form className="editor match-editor" onSubmit={submit}><button type="button" className="close" onClick={onClose}>×</button><div className="ball">📅</div><h2>{match ? "Editar partida" : "Criar partida"}</h2><p>Todos os usuários serão avisados no aplicativo e, quando disponível, por push.</p>{error && <div className="alert error">{error}</div>}<div className="form-grid"><label className="wide">Título<input value={title} onChange={event => setTitle(event.target.value)} required maxLength={120}/></label><label>Data do jogo (DD/MM/AAAA)<input value={matchDate} onChange={event => setMatchDate(brazilianDateInput(event.target.value))} inputMode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxLength={10} required/></label><label>Hora do jogo (HH:MM)<input value={matchTime} onChange={event => setMatchTime(brazilianTimeInput(event.target.value))} inputMode="numeric" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}" maxLength={5} required/></label><label>Confirmar até (DD/MM/AAAA)<input value={deadlineDate} onChange={event => setDeadlineDate(brazilianDateInput(event.target.value))} inputMode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxLength={10} required/></label><label>Horário limite (HH:MM)<input value={deadlineTime} onChange={event => setDeadlineTime(brazilianTimeInput(event.target.value))} inputMode="numeric" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}" maxLength={5} required/></label><label>Local<input value={location} onChange={event => setLocation(event.target.value)} maxLength={160}/></label><label>Máximo de remarcações<input type="number" min="0" max="20" value={maxChanges} onChange={event => setMaxChanges(Number(event.target.value))} required/></label></div><div className="editor-actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary" disabled={busy}>{busy ? "Salvando…" : match ? "Salvar alterações" : "Criar e notificar"}</button></div></form></div>;
 }
 
 function nextMatchDefaults(config?: any) {
@@ -110,8 +116,7 @@ function nextMatchDefaults(config?: any) {
   if (days === 0 && todayMatch.getTime() <= now.getTime()) days = 7;
   const match = new Date(now); match.setDate(now.getDate() + days); match.setHours(hour, minute, 0, 0);
   const deadline = new Date(match.getTime() - Number(config?.confirmationLeadMinutes ?? 60) * 60_000);
-  return { matchAt: localInput(match.toISOString()), deadline: localInput(deadline.toISOString()) };
+  return { match: brazilianDateTimeParts(match.toISOString()), deadline: brazilianDateTimeParts(deadline.toISOString()) };
 }
-function localInput(value?: string | null) { if (!value) return ""; const date = new Date(value); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 function statusLabel(status: string) { return status === "OPEN" ? "Confirmações abertas" : status === "CLOSED" ? "Lista encerrada" : "Cancelada"; }

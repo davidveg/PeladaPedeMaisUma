@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "4875839152",
+    "project_id": "pelada-do-agriao",
+    "storage_bucket": "pelada-do-agriao.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:4875839152:android:de98a63b9f0a24be2ffd75",
+        "android_client_info": {
+          "package_name": "br.com.peladadoagriao.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-vRjq-bAr1GhljsY4VcxBLf-0ljO-jrA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
