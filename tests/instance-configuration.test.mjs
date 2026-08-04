@@ -8,6 +8,7 @@ import {
   instanceConfigurationValues,
   validateInstanceConfiguration,
 } from "../lib/instance-config.ts";
+import { instanceShareImageUrl } from "../lib/instance-metadata.ts";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -22,6 +23,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.teamBlueName, "Azul");
   assert.equal(config.teamYellowName, "Amarelo");
   assert.equal(config.manualSeparationEnabled, false);
+  assert.equal(config.shareImageUrl, null);
 });
 
 test("aceita identidade, cores e dia da semana personalizados", () => {
@@ -37,6 +39,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     teamBlueName: "Camisa",
     teamYellowName: "Sem camisa",
     manualSeparationEnabled: true,
+    shareImageUrl: "/api/upload?key=branding%2Fsocial.png",
   });
   assert.equal(result.error, undefined);
   assert.equal(result.config.siteName, "Futebol de Quarta");
@@ -44,6 +47,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
   assert.equal(result.config.manualSeparationEnabled, true);
+  assert.equal(result.config.shareImageUrl, "/api/upload?key=branding%2Fsocial.png");
 });
 
 test("mantém colunas e valores alinhados ao salvar a configuração", () => {
@@ -57,7 +61,15 @@ test("rejeita cores, horários e logotipos externos inseguros", () => {
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, primaryColor: "verde" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, defaultMatchTime: "25:00" }).error, /HH:MM/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, logoUrl: "http://inseguro.example/logo.png" }).error, /logotipo/);
+  assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, shareImageUrl: "http://inseguro.example/social.png" }).error, /compartilhamento/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, teamYellowName: "Azul" }).error, /diferentes/);
+});
+
+test("prioriza a imagem social e mantém fallbacks seguros por instância", () => {
+  const base = "https://peladadoagriao.example";
+  assert.equal(instanceShareImageUrl({ ...DEFAULT_INSTANCE_CONFIGURATION, shareImageUrl: "/api/upload?key=branding%2Fsocial.png" }, base), "https://peladadoagriao.example/api/upload?key=branding%2Fsocial.png");
+  assert.equal(instanceShareImageUrl({ ...DEFAULT_INSTANCE_CONFIGURATION, logoUrl: "/api/upload?key=branding%2Flogo.png" }, base), "https://peladadoagriao.example/api/upload?key=branding%2Flogo.png");
+  assert.equal(instanceShareImageUrl(DEFAULT_INSTANCE_CONFIGURATION, base), "https://peladadoagriao.example/og.png");
 });
 
 test("migração acrescenta nomes retrocompatíveis às instâncias existentes", async () => {
@@ -83,6 +95,21 @@ test("migração mantém a importação manual desativada por padrão", async ()
     await bindings.DB.exec(await readFile(new URL("../drizzle/0021_manual_separation_toggle.sql", import.meta.url), "utf8"));
     const row = await bindings.DB.prepare("SELECT manual_separation_enabled FROM instance_configuration WHERE id=1").first();
     assert.deepEqual({ ...row }, { manual_separation_enabled: 0 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração adiciona imagem de compartilhamento sem alterar a identidade existente", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-share-image-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE instance_configuration SET site_name='Pelada do Agrião' WHERE id=1").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0025_instance_share_image.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT site_name,share_image_url FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { site_name: "Pelada do Agrião", share_image_url: null });
   } finally {
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });

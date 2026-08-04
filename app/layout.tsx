@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { db, ensureDb } from "../lib/database";
+import { DEFAULT_INSTANCE_CONFIGURATION, instanceConfigurationFromRow } from "../lib/instance-config";
+import { instanceShareImageUrl } from "../lib/instance-metadata";
+import { getRuntimeBindings } from "../lib/runtime-bindings";
 import { InstanceBrandingProvider } from "./InstanceBranding";
 import "./globals.css";
 import "./branding.css";
@@ -13,23 +17,31 @@ const siteIcons: Metadata["icons"] = {
   apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
 };
 
-export const metadata: Metadata = {
-  title: "Pelada Pede Mais Uma",
-  description: "Monte times de futebol equilibrados a partir da lista do WhatsApp.",
-  icons: siteIcons,
-};
-
 export async function generateMetadata(): Promise<Metadata> {
   const incoming = await headers();
   const host = incoming.get("x-forwarded-host") || incoming.get("host") || "localhost:3000";
   const protocol = incoming.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
-  const base = `${protocol}://${host}`;
+  let configuredBase = "";
+  try { configuredBase = getRuntimeBindings().APP_BASE_URL?.trim() || ""; } catch { /* Usa os cabeçalhos da requisição durante o build local. */ }
+  let base = `${protocol}://${host}`;
+  if (configuredBase) {
+    try { base = new URL(configuredBase).toString().replace(/\/$/, ""); } catch { /* Ignora APP_BASE_URL inválida e usa a origem recebida. */ }
+  }
+  let instance = DEFAULT_INSTANCE_CONFIGURATION;
+  try {
+    await ensureDb();
+    instance = instanceConfigurationFromRow(await db().prepare("SELECT * FROM instance_configuration WHERE id=1").first());
+  } catch {
+    // Mantém metadados válidos enquanto os bindings ainda não estiverem disponíveis no build.
+  }
+  const image = instanceShareImageUrl(instance, base);
   return {
-    title: "Pelada Pede Mais Uma",
-    description: "Times equilibrados. Resenha garantida.",
+    metadataBase: new URL(base),
+    title: instance.siteName,
+    description: instance.siteTagline,
     icons: siteIcons,
-    openGraph: { title: "Pelada Pede Mais Uma", description: "Times equilibrados. Resenha garantida.", images: [{ url: `${base}/og.png`, width: 1734, height: 897 }] },
-    twitter: { card: "summary_large_image", title: "Pelada Pede Mais Uma", description: "Times equilibrados. Resenha garantida.", images: [`${base}/og.png`] },
+    openGraph: { type: "website", url: base, siteName: instance.siteName, title: instance.siteName, description: instance.siteTagline, images: [{ url: image }], ...(instance.updatedAt ? { modifiedTime: instance.updatedAt } : {}) },
+    twitter: { card: "summary_large_image", title: instance.siteName, description: instance.siteTagline, images: [image] },
   };
 }
 
