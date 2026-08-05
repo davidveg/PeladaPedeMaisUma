@@ -165,6 +165,14 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
     speedWeight: Number(systemConfig?.speed_weight ?? defaultConfig.speedWeight),
     skillWeight: Number(systemConfig?.skill_weight ?? defaultConfig.skillWeight),
     markingWeight: Number(systemConfig?.marking_weight ?? defaultConfig.markingWeight),
+    tacticalIntelligenceWeight: Number(systemConfig?.tactical_intelligence_weight ?? defaultConfig.tacticalIntelligenceWeight),
+    competitivenessWeight: Number(systemConfig?.competitiveness_weight ?? defaultConfig.competitivenessWeight),
+    goalkeeperDefensesWeight: Number(systemConfig?.goalkeeper_defenses_weight ?? defaultConfig.goalkeeperDefensesWeight),
+    goalkeeperPositioningWeight: Number(systemConfig?.goalkeeper_positioning_weight ?? defaultConfig.goalkeeperPositioningWeight),
+    goalkeeperSafetyWeight: Number(systemConfig?.goalkeeper_safety_weight ?? defaultConfig.goalkeeperSafetyWeight),
+    goalkeeperFootworkWeight: Number(systemConfig?.goalkeeper_footwork_weight ?? defaultConfig.goalkeeperFootworkWeight),
+    goalkeeperLeadershipWeight: Number(systemConfig?.goalkeeper_leadership_weight ?? defaultConfig.goalkeeperLeadershipWeight),
+    ratingSystemVersion: 2,
     resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1),
     momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1),
     maximumPositionDifference: Number(systemConfig?.maximum_position_difference ?? 1),
@@ -241,15 +249,13 @@ function validateAndRebuildResult(input: any, players: Player[], config: Config,
   }
   if (!manuallyAdjusted) return generated;
   const byId = new Map(players.map(player => [player.id, player]));
-  const blue = blueIds.map(id => byId.get(id)!), yellow = yellowIds.map(id => byId.get(id)!);
+  const blue = blueIds.map((id:string) => byId.get(id)!), yellow = yellowIds.map((id:string) => byId.get(id)!);
   const metrics = calculateTeamDelta(blue, yellow, config);
   const positionDifferences = [metrics.delta.defenders, metrics.delta.midfielders, metrics.delta.attackers];
   const positionDifference = positionDifferences.reduce((sum, value) => sum + value, 0);
   const maximumPositionDifference = Number(generated.maximumPositionDifference ?? config.maximumPositionDifference ?? 1);
   const positionExcess = positionDifferences.reduce((sum, value) => sum + Math.max(0, value - maximumPositionDifference), 0);
-  const attributeDifference = metrics.delta.speed * config.speedWeight
-    + metrics.delta.skill * config.skillWeight
-    + metrics.delta.marking * config.markingWeight;
+  const attributeDifference = Math.abs((metrics.blueMetrics.total-metrics.blueMetrics.momentum)-(metrics.yellowMetrics.total-metrics.yellowMetrics.momentum));
   const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120
     + attributeDifference * 14 + Math.abs(metrics.blueMetrics.scoreAvg - metrics.yellowMetrics.scoreAvg) * 18;
   const rating = cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
@@ -313,8 +319,8 @@ function mapPlayer(row: any): Player {
     id: String(row.id), fullName: String(row.full_name), displayName: String(row.display_name),
     nickname: row.nickname, aliases: JSON.parse(row.aliases || "[]"), type: row.type,
     primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill),
-    marking: Number(row.marking ?? 3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3),
-    goalExit: Number(row.goal_exit ?? row.marking ?? 3), momentum: Number(row.momentum ?? 0),
+    marking: Number(row.marking ?? 3), tacticalIntelligence:Number(row.tactical_intelligence??3), competitiveness:Number(row.competitiveness??3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3),
+    goalExit: Number(row.goal_exit ?? row.marking ?? 3), goalkeeperSafety:Number(row.goalkeeper_safety??3), goalkeeperLeadership:Number(row.goalkeeper_leadership??3), momentum: Number(row.momentum ?? 0),
     resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0),
     photoUrl: row.photo_url, active: Boolean(row.active),
   };

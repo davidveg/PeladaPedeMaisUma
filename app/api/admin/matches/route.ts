@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   await broadcastAccountNotification({
     type: "MATCH_CREATED",
     title: "Nova partida criada",
-    body: `${validation.title}: confirme sua presença até ${formatDate(validation.deadline)}.`,
+    body: `${validation.title}: confirme sua presença até ${formatDate(String(validation.deadline))}.`,
     matchId: id,
   });
   return Response.json({ id, message: "Partida criada e participantes notificados." }, { status: 201, headers: noStore });

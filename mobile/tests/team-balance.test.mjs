@@ -11,7 +11,7 @@ test("recalcula uma divisão equivalente como excelente", () => {
   const next = recalculateTeamResult(result, blue, yellow);
   assert.equal(next.rating, "Excelente equilíbrio");
   assert.equal(next.cost, 0);
-  assert.deepEqual(next.delta, { players: 0, defenders: 0, midfielders: 0, attackers: 0, speed: 0, skill: 0, marking: 0, momentum: 0, score: 0 });
+  assert.deepEqual(next.delta, { players: 0, defenders: 0, midfielders: 0, attackers: 0, speed: 0, skill: 0, marking: 0, tacticalIntelligence:0, competitiveness:0, momentum: 0, score: 0 });
   assert.equal(next.blueMetrics.scoreAvg, 3);
   assert.equal(next.yellowMetrics.scoreAvg, 3);
 });

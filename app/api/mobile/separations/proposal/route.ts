@@ -46,6 +46,8 @@ export async function POST(request: Request) {
   }
   const config: Config = {
     speedWeight: Number(systemConfig.speed_weight), skillWeight: Number(systemConfig.skill_weight), markingWeight: Number(systemConfig.marking_weight),
+    tacticalIntelligenceWeight:Number(systemConfig.tactical_intelligence_weight??.2), competitivenessWeight:Number(systemConfig.competitiveness_weight??.05),
+    goalkeeperDefensesWeight:Number(systemConfig.goalkeeper_defenses_weight??.4), goalkeeperPositioningWeight:Number(systemConfig.goalkeeper_positioning_weight??.25), goalkeeperSafetyWeight:Number(systemConfig.goalkeeper_safety_weight??.2), goalkeeperFootworkWeight:Number(systemConfig.goalkeeper_footwork_weight??.1), goalkeeperLeadershipWeight:Number(systemConfig.goalkeeper_leadership_weight??.05), ratingSystemVersion:2,
     resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1), momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1), maximumPositionDifference: Number(systemConfig.maximum_position_difference),
     protectedTopPlayersPercentage: Number(systemConfig.protected_top_players_percentage), algorithmAttempts: Number(systemConfig.algorithm_attempts),
   };
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
 }
 
 function mapPlayer(row: any): Player {
-  return { id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, aliases: JSON.parse(row.aliases || "[]"), type: row.type, primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), momentum: Number(row.momentum ?? 0), resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), photoUrl: row.photo_url, active: Boolean(row.active) } as Player;
+  return { id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, aliases: JSON.parse(row.aliases || "[]"), type: row.type, primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), tacticalIntelligence:Number(row.tactical_intelligence??3), competitiveness:Number(row.competitiveness??3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), goalkeeperSafety:Number(row.goalkeeper_safety??3), goalkeeperLeadership:Number(row.goalkeeper_leadership??3), momentum: Number(row.momentum ?? 0), resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), photoUrl: row.photo_url, active: Boolean(row.active) } as Player;
 }
 
 function publicMatch(match: any) {

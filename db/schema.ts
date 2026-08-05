@@ -9,7 +9,9 @@ export const players = sqliteTable("players", {
   id: text("id").primaryKey(), fullName: text("full_name").notNull(), displayName: text("display_name").notNull(),
   nickname: text("nickname"), aliases: text("aliases").notNull().default("[]"), type: text("type").notNull().default("monthly"),
   primaryPosition: text("primary_position").notNull(), speed: real("speed").notNull(), skill: real("skill").notNull(), marking: real("marking").notNull().default(3),
+  tacticalIntelligence: real("tactical_intelligence").notNull().default(3), competitiveness: real("competitiveness").notNull().default(3),
   goalkeeperPositioning: real("goalkeeper_positioning").notNull().default(3), goalExit: real("goal_exit").notNull().default(3),
+  goalkeeperSafety: real("goalkeeper_safety").notNull().default(3), goalkeeperLeadership: real("goalkeeper_leadership").notNull().default(3),
   momentum: real("momentum").notNull().default(0), resultMomentum: real("result_momentum").notNull().default(0), votingMomentum: real("voting_momentum").notNull().default(0), photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
   deletedAt: text("deleted_at"), ...timestamps,
 });
@@ -100,7 +102,10 @@ export const separations = sqliteTable("team_separations", {
 
 export const configurations = sqliteTable("system_configuration", {
   id: integer("id").primaryKey().default(1), defaultPlayerCount: integer("default_player_count").notNull().default(22), minimumRecommendedPlayers: integer("minimum_recommended_players").notNull().default(14),
-  maximumRecommendedPlayers: integer("maximum_recommended_players").notNull().default(30), speedWeight: real("speed_weight").notNull().default(.48), skillWeight: real("skill_weight").notNull().default(.32), markingWeight: real("marking_weight").notNull().default(.2),
+  maximumRecommendedPlayers: integer("maximum_recommended_players").notNull().default(30), speedWeight: real("speed_weight").notNull().default(.35), skillWeight: real("skill_weight").notNull().default(.25), markingWeight: real("marking_weight").notNull().default(.15),
+  tacticalIntelligenceWeight: real("tactical_intelligence_weight").notNull().default(.2), competitivenessWeight: real("competitiveness_weight").notNull().default(.05),
+  goalkeeperDefensesWeight: real("goalkeeper_defenses_weight").notNull().default(.4), goalkeeperPositioningWeight: real("goalkeeper_positioning_weight").notNull().default(.25),
+  goalkeeperSafetyWeight: real("goalkeeper_safety_weight").notNull().default(.2), goalkeeperFootworkWeight: real("goalkeeper_footwork_weight").notNull().default(.1), goalkeeperLeadershipWeight: real("goalkeeper_leadership_weight").notNull().default(.05),
   maximumPositionDifference: integer("maximum_position_difference").notNull().default(1), protectedTopPlayersPercentage: real("protected_top_players_percentage").notNull().default(.25),
   defaultReserveCount: integer("default_reserve_count").notNull().default(0), algorithmAttempts: integer("algorithm_attempts").notNull().default(2500), updatedAt: text("updated_at").notNull(),
 });

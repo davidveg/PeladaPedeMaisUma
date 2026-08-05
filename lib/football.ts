@@ -1,12 +1,13 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
 export type PlayerCareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
-export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; goalkeeperPositioning?: number; goalExit?: number; momentum?: number; resultMomentum?: number; votingMomentum?: number; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
-export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; resultMomentumMultiplier?: number; momentumMultiplier?: number; showContributions?: boolean; cardTiersEnabled?: boolean; cardBronzeMax?: number; cardSilverMax?: number; cardGoldMax?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
+export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; tacticalIntelligence?: number; competitiveness?: number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?: number; goalkeeperLeadership?: number; momentum?: number; resultMomentum?: number; votingMomentum?: number; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
+export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; tacticalIntelligenceWeight?: number; competitivenessWeight?: number; goalkeeperDefensesWeight?: number; goalkeeperPositioningWeight?: number; goalkeeperSafetyWeight?: number; goalkeeperFootworkWeight?: number; goalkeeperLeadershipWeight?: number; ratingSystemVersion?: number; resultMomentumMultiplier?: number; momentumMultiplier?: number; showContributions?: boolean; cardTiersEnabled?: boolean; cardBronzeMax?: number; cardSilverMax?: number; cardGoldMax?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
-export const defaultConfig: Config = { speedWeight: .48, skillWeight: .32, markingWeight: .2, resultMomentumMultiplier: 1, momentumMultiplier: 1, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
+export const defaultConfig: Config = { speedWeight: .35, skillWeight: .25, markingWeight: .15, tacticalIntelligenceWeight: .2, competitivenessWeight: .05, goalkeeperDefensesWeight: .4, goalkeeperPositioningWeight: .25, goalkeeperSafetyWeight: .2, goalkeeperFootworkWeight: .1, goalkeeperLeadershipWeight: .05, ratingSystemVersion: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
+const modernRatingSystem = (c: Config) => c.ratingSystemVersion === 2 || c.tacticalIntelligenceWeight != null;
 export const playerAttributes = (p: Player) => p.primaryPosition === "Goleiro" || p.type === "goalkeeper"
-  ? { speed: p.goalkeeperPositioning ?? p.speed ?? 3, skill: p.skill, marking: p.goalExit ?? p.marking ?? 3 }
-  : { speed: p.speed, skill: p.skill, marking: p.marking ?? 3 };
+  ? { speed: p.goalkeeperPositioning ?? p.speed ?? 3, skill: p.skill, marking: p.goalExit ?? p.marking ?? 3, tacticalIntelligence: p.goalkeeperSafety ?? 3, competitiveness: p.goalkeeperLeadership ?? 3 }
+  : { speed: p.speed, skill: p.skill, marking: p.marking ?? 3, tacticalIntelligence: p.tacticalIntelligence ?? 3, competitiveness: p.competitiveness ?? 3 };
 export const momentumContribution = (p: Player, c: Config = defaultConfig) => {
   const hasSeparatedSources = p.resultMomentum != null || p.votingMomentum != null;
   if (!hasSeparatedSources) return (p.momentum ?? 0) * (c.momentumMultiplier ?? 1);
@@ -14,7 +15,16 @@ export const momentumContribution = (p: Player, c: Config = defaultConfig) => {
 };
 export const score = (p: Player, c = defaultConfig) => {
   const attributes=playerAttributes(p);
-  const raw=attributes.speed*c.speedWeight+attributes.skill*c.skillWeight+attributes.marking*c.markingWeight+momentumContribution(p,c);
+  const goalkeeper=p.primaryPosition==="Goleiro"||p.type==="goalkeeper";
+  const hasExpandedRatings=goalkeeper?(p.goalkeeperSafety!=null||p.goalkeeperLeadership!=null):(p.tacticalIntelligence!=null||p.competitiveness!=null);
+  const base=modernRatingSystem(c)&&!hasExpandedRatings
+    ? attributes.speed*.48+attributes.skill*.32+attributes.marking*.2
+    : !modernRatingSystem(c)
+    ? attributes.speed*c.speedWeight+attributes.skill*c.skillWeight+attributes.marking*c.markingWeight
+    : goalkeeper
+      ? attributes.skill*(c.goalkeeperDefensesWeight??.4)+attributes.speed*(c.goalkeeperPositioningWeight??.25)+attributes.tacticalIntelligence*(c.goalkeeperSafetyWeight??.2)+attributes.marking*(c.goalkeeperFootworkWeight??.1)+attributes.competitiveness*(c.goalkeeperLeadershipWeight??.05)
+      : attributes.speed*c.speedWeight+attributes.skill*c.skillWeight+attributes.marking*c.markingWeight+attributes.tacticalIntelligence*(c.tacticalIntelligenceWeight??.2)+attributes.competitiveness*(c.competitivenessWeight??.05);
+  const raw=base+momentumContribution(p,c);
   return Math.round(Math.max(1,Math.min(5,raw))*10)/10;
 };
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
@@ -62,8 +72,8 @@ export function matchPlayers(names: string[], players: Player[]) {
 export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig) {
   const positions = { Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 };
   team.forEach(p => positions[p.primaryPosition]++);
-  const speed = team.reduce((s,p)=>s+playerAttributes(p).speed,0), skill = team.reduce((s,p)=>s+playerAttributes(p).skill,0), marking = team.reduce((s,p)=>s+playerAttributes(p).marking,0),momentum=team.reduce((s,p)=>s+momentumContribution(p,c),0), total = team.reduce((s,p)=>s+score(p,c),0);
-  return { count: team.length, positions, speed, skill, marking, momentum, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, momentumAvg:momentum/team.length||0, scoreAvg: total/team.length||0 };
+  const speed = team.reduce((s,p)=>s+playerAttributes(p).speed,0), skill = team.reduce((s,p)=>s+playerAttributes(p).skill,0), marking = team.reduce((s,p)=>s+playerAttributes(p).marking,0), tacticalIntelligence=team.reduce((s,p)=>s+playerAttributes(p).tacticalIntelligence,0), competitiveness=team.reduce((s,p)=>s+playerAttributes(p).competitiveness,0),momentum=team.reduce((s,p)=>s+momentumContribution(p,c),0), total = team.reduce((s,p)=>s+score(p,c),0);
+  return { count: team.length, positions, speed, skill, marking, tacticalIntelligence, competitiveness, momentum, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, tacticalIntelligenceAvg:tacticalIntelligence/team.length||0, competitivenessAvg:competitiveness/team.length||0, momentumAvg:momentum/team.length||0, scoreAvg: total/team.length||0 };
 }
 
 export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config = defaultConfig) {
@@ -76,6 +86,8 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
     speed: Math.abs(blueMetrics.speed-yellowMetrics.speed),
     skill: Math.abs(blueMetrics.skill-yellowMetrics.skill),
     marking: Math.abs(blueMetrics.marking-yellowMetrics.marking),
+    tacticalIntelligence: Math.abs(blueMetrics.tacticalIntelligence-yellowMetrics.tacticalIntelligence),
+    competitiveness: Math.abs(blueMetrics.competitiveness-yellowMetrics.competitiveness),
     momentum: Math.abs(blueMetrics.momentum-yellowMetrics.momentum),
     score: Math.abs(blueMetrics.total-yellowMetrics.total),
   };
@@ -96,11 +108,11 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
     if (goalkeepers[0]) blue.push(goalkeepers[0]); if (goalkeepers[1]) yellow.push(goalkeepers[1]); goalkeepers.slice(2).forEach((p,i)=>(i%2?yellow:blue).push(p));
     const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDifferences = ["Defesa","Meio-campo","Ataque"].map(k=>Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions])),positionDiff=positionDifferences.reduce((sum,value)=>sum+value,0),positionExcess=positionDifferences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0);
     const larger = blue.length>yellow.length?blue:yellow; const extra = input.length%2 ? [...larger].sort((a,b)=>score(a,config)-score(b,config)).find(p=>!protectedIds.has(p.id) && p.primaryPosition!=="Goleiro") : undefined;
-    const attributeDifference = Math.abs(bm.speed-ym.speed)*config.speedWeight + Math.abs(bm.skill-ym.skill)*config.skillWeight + Math.abs(bm.marking-ym.marking)*config.markingWeight;
+    const attributeDifference = Math.abs(bm.total-bm.momentum-ym.total+ym.momentum);
     const cost = Math.abs(blue.length-yellow.length)*1000 + positionExcess*2000 + positionDiff*120 + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
     if (!best || cost < best.cost) best={blue,yellow,cost,extraId:extra?.id};
   }
   const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, maximumPositionDifference, protectedTopPlayersPercentage: config.protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
+  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, maximumPositionDifference, protectedTopPlayersPercentage: config.protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
 }

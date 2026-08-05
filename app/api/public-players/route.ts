@@ -8,18 +8,26 @@ export async function GET() {
   await ensureDb();
   await ensureCareerSeasonCurrent();
   const [players, careerStats, configuration, careerConfiguration] = await Promise.all([
-    db().prepare(`SELECT id,display_name,type,primary_position,speed,skill,marking,goalkeeper_positioning,goal_exit,momentum,result_momentum,voting_momentum,photo_url FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
+    db().prepare(`SELECT id,display_name,type,primary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,momentum,result_momentum,voting_momentum,photo_url FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
     loadPlayerCareerStats(),
-    db().prepare(`SELECT speed_weight,skill_weight,marking_weight FROM system_configuration WHERE id=1`).first<any>(),
+    db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),
     db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier,track_contributions,card_tiers_enabled,card_bronze_max,card_silver_max,card_gold_max FROM career_configuration WHERE id=1`).first<any>(),
   ]);
 
   return Response.json({
     players: players.results.map(row => attachPlayerCareerStats(publicPlayer(row), careerStats)),
     config: {
-      speedWeight: Number(configuration?.speed_weight ?? .48),
-      skillWeight: Number(configuration?.skill_weight ?? .32),
-      markingWeight: Number(configuration?.marking_weight ?? .2),
+      speedWeight: Number(configuration?.speed_weight ?? .35),
+      skillWeight: Number(configuration?.skill_weight ?? .25),
+      markingWeight: Number(configuration?.marking_weight ?? .15),
+      tacticalIntelligenceWeight: Number(configuration?.tactical_intelligence_weight ?? .2),
+      competitivenessWeight: Number(configuration?.competitiveness_weight ?? .05),
+      goalkeeperDefensesWeight: Number(configuration?.goalkeeper_defenses_weight ?? .4),
+      goalkeeperPositioningWeight: Number(configuration?.goalkeeper_positioning_weight ?? .25),
+      goalkeeperSafetyWeight: Number(configuration?.goalkeeper_safety_weight ?? .2),
+      goalkeeperFootworkWeight: Number(configuration?.goalkeeper_footwork_weight ?? .1),
+      goalkeeperLeadershipWeight: Number(configuration?.goalkeeper_leadership_weight ?? .05),
+      ratingSystemVersion: 2,
       resultMomentumMultiplier: Number(careerConfiguration?.result_momentum_multiplier ?? 1),
       momentumMultiplier: Number(careerConfiguration?.momentum_multiplier ?? 1),
       showContributions: Boolean(careerConfiguration?.track_contributions ?? 1),

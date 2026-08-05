@@ -1,23 +1,27 @@
-/* D1 and untrusted JSON payloads are narrowed explicitly at each use. */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
 
+const columns = ["speed_weight", "skill_weight", "marking_weight", "tactical_intelligence_weight", "competitiveness_weight", "goalkeeper_defenses_weight", "goalkeeper_positioning_weight", "goalkeeper_safety_weight", "goalkeeper_footwork_weight", "goalkeeper_leadership_weight"];
+const keys = ["speedWeight", "skillWeight", "markingWeight", "tacticalIntelligenceWeight", "competitivenessWeight", "goalkeeperDefensesWeight", "goalkeeperPositioningWeight", "goalkeeperSafetyWeight", "goalkeeperFootworkWeight", "goalkeeperLeadershipWeight"];
+
 export async function GET(request: Request) {
-  if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
-  const row: any = await db().prepare(`SELECT speed_weight,skill_weight,marking_weight,updated_at FROM system_configuration WHERE id=1`).first();
-  return Response.json({ speedWeight: Number(row.speed_weight), skillWeight: Number(row.skill_weight), markingWeight: Number(row.marking_weight), updatedAt: row.updated_at }, { headers: { "cache-control": "no-store" } });
+  const row: any = await db().prepare(`SELECT ${columns.join(",")},updated_at FROM system_configuration WHERE id=1`).first();
+  return Response.json({ ...Object.fromEntries(keys.map((key, index) => [key, Number(row[columns[index]])])), ratingSystemVersion: 2, updatedAt: row.updated_at }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function PUT(request: Request) {
   const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401 });
-  const payload = await request.json().catch(() => ({})) as any;
-  const weights = [Number(payload.speedWeight), Number(payload.skillWeight), Number(payload.markingWeight)];
-  if (weights.some(value => !Number.isFinite(value) || value < 0 || value > 1) || Math.abs(weights.reduce((sum, value) => sum + value, 0) - 1) > .0001) return Response.json({ error: "Os três pesos devem somar 100%." }, { status: 400 });
-  const previous: any = await db().prepare(`SELECT speed_weight speedWeight,skill_weight skillWeight,marking_weight markingWeight FROM system_configuration WHERE id=1`).first(), now = new Date().toISOString();
-  await db().prepare(`UPDATE system_configuration SET speed_weight=?,skill_weight=?,marking_weight=?,updated_at=? WHERE id=1`).bind(...weights, now).run();
-  const next = { speedWeight: weights[0], skillWeight: weights[1], markingWeight: weights[2], updatedAt: now };
-  await audit(admin.id, "MOBILE_UPDATE_WEIGHTS", "configuration", "1", next, previous);
-  return Response.json({ ok: true, config: next, message: "Pesos atualizados com sucesso." });
+  if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
+  await ensureDb();
+  const payload = await request.json() as any;
+  const weights = keys.map(key => Number(payload[key]));
+  if (!valid(weights.slice(0, 5)) || !valid(weights.slice(5))) return Response.json({ error: "Cada grupo de cinco pesos deve somar 100%." }, { status: 400 });
+  const previous = await db().prepare(`SELECT ${columns.join(",")} FROM system_configuration WHERE id=1`).first();
+  const now = new Date().toISOString();
+  await db().prepare(`UPDATE system_configuration SET ${columns.map(column => `${column}=?`).join(",")},updated_at=? WHERE id=1`).bind(...weights, now).run();
+  await audit(admin.id, "UPDATE", "configuration", "1", { ...Object.fromEntries(keys.map((key, index) => [key, weights[index]])), source: "mobile" }, previous);
+  return Response.json({ ...Object.fromEntries(keys.map((key, index) => [key, weights[index]])), ratingSystemVersion: 2, updatedAt: now });
 }
+
+function valid(weights: number[]) { return weights.every(value => Number.isFinite(value) && value >= 0 && value <= 1) && Math.abs(weights.reduce((sum, value) => sum + value, 0) - 1) <= .0001; }

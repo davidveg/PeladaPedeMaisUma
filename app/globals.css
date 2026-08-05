@@ -157,3 +157,61 @@
 /* Exclusão lógica de jogadores */
 .player-editor-actions{align-items:flex-end;justify-content:space-between}.player-editor-actions>div:last-child{display:flex;gap:9px;flex:0 0 auto}.player-delete-action{display:grid;justify-items:start;gap:5px;max-width:390px}.player-delete-action small{color:var(--muted);font-size:10px;line-height:1.45}.player-delete-action em{color:#a23a2a;font-size:10px;font-style:normal;font-weight:750}.player-delete-action .danger{padding:10px 13px}.player-delete-action .danger:disabled{cursor:not-allowed;opacity:.5}
 @media(max-width:650px){.player-editor-actions{align-items:stretch;flex-direction:column-reverse}.player-editor-actions>div:last-child{justify-content:flex-end}.player-delete-action{max-width:none}}
+/* Expanded player and goalkeeper disciplines */
+.rating-slider>span{display:flex!important;align-items:center;gap:6px}
+.tr.line-player-tr{grid-template-columns:2.2fr 1fr 1.1fr .7fr .7fr .7fr 1fr .9fr .75fr .75fr!important;min-width:1120px!important}
+.tr.goalkeeper-tr{grid-template-columns:2.2fr .8fr 1fr 1.15fr .8fr .8fr .8fr .75fr!important;min-width:920px!important}
+.expanded-weights .weight-group{display:flex;flex-direction:column}
+.public-players{max-width:1480px}
+.public-player-tr.line{grid-template-columns:minmax(220px,2.2fr) minmax(90px,.9fr) minmax(100px,1fr) repeat(5,minmax(96px,.8fr)) minmax(88px,.75fr) minmax(88px,.9fr) minmax(70px,.65fr)!important;min-width:1240px!important}
+.public-player-tr.goalkeeper{grid-template-columns:minmax(230px,2.2fr) repeat(5,minmax(105px,.95fr)) minmax(88px,.8fr) minmax(90px,1fr) minmax(70px,.7fr)!important;min-width:1080px!important}
+
+/* Player card alignment for the expanded discipline set */
+.card-role span{min-height:62px;justify-content:center;text-align:center;gap:4px;padding:10px 12px}
+.card-role b{margin-top:0;line-height:1.25}
+.card-stats{grid-template-columns:repeat(3,minmax(0,1fr));padding-top:0}
+.card-stats span{min-width:0;min-height:72px;justify-content:center;padding:12px 8px;text-align:center;border-left:0!important;border-top:0}
+.card-stats span:nth-child(3n+2),.card-stats span:nth-child(3n+3){border-left:1px solid #66531f70!important}
+.card-stats span:nth-child(n+4){border-top:1px solid #66531f70}
+.card-stats small{display:flex;align-items:flex-start;justify-content:center;min-height:20px;margin-top:6px;line-height:1.25;text-align:center;overflow-wrap:anywhere}
+.card-career-stats span{min-width:0;min-height:58px;justify-content:center;padding:9px 5px;text-align:center}
+.card-career-stats small{display:flex;align-items:center;justify-content:center;min-height:20px;line-height:1.2;text-align:center;overflow-wrap:anywhere}
+.card-career-stats .assists small{font-size:7px;letter-spacing:.45px;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.tier-legendary .card-stats span:nth-child(3n+2),.tier-legendary .card-stats span:nth-child(3n+3),.tier-legendary .card-stats span:nth-child(n+4){border-color:#f3d87573!important}
+@media(max-width:520px){.card-stats span{min-height:68px;padding:11px 5px}.card-stats b{font-size:21px}.card-stats small{font-size:7px;letter-spacing:.75px}.card-career-stats small{font-size:7px;letter-spacing:.75px}}
+
+/* Public player list becomes readable cards on mobile while keeping sorting available. */
+@media(max-width:760px){
+ .public-players{width:100%;max-width:none;padding-inline:14px}
+ .public-player-search{max-width:none;margin-bottom:22px}
+ .public-player-list-title{align-items:center}
+ .public-player-list-title>div{min-width:0;flex:1}
+ .public-player-list-title p{line-height:1.45}
+ .public-player-table{border:0;background:transparent;overflow:visible}
+ .public-player-tr.th{display:flex!important;flex-wrap:wrap;gap:6px;min-width:0!important;min-height:0;margin-bottom:10px;padding:9px;border:1px solid var(--line);border-radius:12px;background:#f1f5f2}
+ .public-sort-header{flex:0 0 auto;border:1px solid #d8e1db;border-radius:9px;background:#fff;padding:8px 9px;font-size:8px}
+ .public-sort-header.active{border-color:#84aa97;background:#e7f1eb}
+ .public-player-tr.line:not(.th),.public-player-tr.goalkeeper:not(.th){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px;min-width:0!important;min-height:0;margin-bottom:10px;padding:12px!important;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+ .public-player-tr:not(.th):last-child{margin-bottom:0}
+ .public-player-identity{grid-column:1/-1;padding-bottom:11px;border-bottom:1px solid #dfe6e1}
+ .public-player-tr:not(.th)>span:not(.public-player-identity),.public-player-tr:not(.th)>strong{display:flex;flex-direction:column;align-items:center;justify-content:center;justify-self:stretch;min-height:54px;padding:8px 6px;border:1px solid #dfe6e180;border-radius:9px;background:#ffffff70;text-align:center}
+ .public-player-tr:not(.th)>span:not(.public-player-identity)::before,.public-player-tr:not(.th)>strong::before{margin-bottom:4px;color:#718078;font-size:7px;font-weight:900;letter-spacing:.8px;text-transform:uppercase}
+ .public-player-tr.line:not(.th)>span:nth-child(2)::before{content:"Tipo"}
+ .public-player-tr.line:not(.th)>span:nth-child(3)::before{content:"Posição"}
+ .public-player-tr.line:not(.th)>span:nth-child(4)::before{content:"Físico"}
+ .public-player-tr.line:not(.th)>span:nth-child(5)::before{content:"Técnica"}
+ .public-player-tr.line:not(.th)>span:nth-child(6)::before{content:"Marcação"}
+ .public-player-tr.line:not(.th)>span:nth-child(7)::before{content:"Inteligência tática"}
+ .public-player-tr.line:not(.th)>span:nth-child(8)::before{content:"Competitividade"}
+ .public-player-tr.line:not(.th)>span:nth-child(9)::before{content:"Momentum"}
+ .public-player-tr.line:not(.th)>span:nth-child(10)::before{content:"J / V / D"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(2)::before{content:"Defesas"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(3)::before{content:"Posicionamento"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(4)::before{content:"Jogo com os pés"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(5)::before{content:"Segurança"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(6)::before{content:"Liderança"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(7)::before{content:"Momentum"}
+ .public-player-tr.goalkeeper:not(.th)>span:nth-child(8)::before{content:"J / V / D"}
+ .public-player-tr:not(.th)>strong::before{content:"Overall"}
+ .public-player-tr:not(.th)>strong{font-size:16px}
+}
