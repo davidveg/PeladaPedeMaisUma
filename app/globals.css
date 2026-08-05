@@ -251,3 +251,20 @@
  .player-table .goalkeeper-tr:not(.th)>span:nth-child(8)::before{content:"Status"}
  .player-table .player-tr:not(.th)>.status.active{background:#e4f3e9;color:#247b4d}
 }
+
+/* Discipline help: constrained tooltips in editors and public player cards. */
+.rating-slider:has(.help-tip:hover),.rating-slider:has(.help-tip:focus-within){z-index:25}
+.rating-slider .help-tip{position:static}
+.rating-slider .help-tip>[role=tooltip]{left:12px;right:12px;top:calc(100% + 7px);width:auto;max-width:none;transform:translateY(-4px);border:1px solid #ffffff24;border-radius:11px;padding:11px 13px;line-height:1.5;box-shadow:0 12px 30px #071b1460}
+.rating-slider .help-tip>[role=tooltip]:before{display:none}
+.rating-slider .help-tip:hover>[role=tooltip],.rating-slider .help-tip:focus-within>[role=tooltip]{transform:translateY(0)}
+.card-stats{isolation:isolate}
+.card-stats>span:has(.card-stat-help:hover),.card-stats>span:has(.card-stat-help:focus-within){z-index:10}
+.card-stat-label{display:flex!important;flex-flow:row nowrap;align-items:center!important;justify-content:center;gap:4px;width:100%;min-width:0}
+.card-stats .card-stat-label>span{display:block;min-width:0;min-height:0;padding:0;border:0!important;text-align:center;line-height:1.25}
+.card-stats .card-stat-help{position:static;display:inline-flex;flex:0 0 auto;flex-direction:row;min-width:0;min-height:0;padding:0;border:0!important}
+.card-stat-help>button{width:15px;height:15px;border-color:currentColor;background:#ffffff70;color:inherit;font-size:9px;opacity:.86}
+.card-stats .card-stat-help>[role=tooltip]{display:block;left:10px;right:10px;top:auto;bottom:calc(100% + 8px);width:auto;max-width:none;min-width:0;min-height:0;transform:translateY(4px);border:1px solid #ffffff30!important;border-radius:11px;padding:11px 13px;color:#fff;font-size:10.5px;font-style:normal;letter-spacing:0;line-height:1.5;text-align:left;text-transform:none;box-shadow:0 12px 30px #071b1460}
+.card-stats .card-stat-help>[role=tooltip]:before{display:none}
+.card-stats .card-stat-help:hover>[role=tooltip],.card-stats .card-stat-help:focus-within>[role=tooltip]{transform:translateY(0)}
+@media(max-width:520px){.rating-slider .help-tip>[role=tooltip]{left:8px;right:8px}.card-stats .card-stat-help>[role=tooltip]{left:6px;right:6px;font-size:10px}.card-stat-help>button{width:14px;height:14px}}
