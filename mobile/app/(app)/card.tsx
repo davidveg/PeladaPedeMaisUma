@@ -1,11 +1,12 @@
+import { useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, API_BASE_URL } from "@/api";
-import { EmptyState, ErrorState, Header, Screen, UpdatedAt } from "@/components";
+import { Button, Card, EmptyState, ErrorState, Field, Header, Screen, UpdatedAt } from "@/components";
 import {
   playerAttributes,
   playerCardTier,
@@ -14,7 +15,7 @@ import {
   type PlayerCardTier,
 } from "@/player-card";
 import { colors } from "@/theme";
-import type { ProfilePayload } from "@/types";
+import type { Player, ProfilePayload } from "@/types";
 
 const palettes = {
   default: {
@@ -62,10 +63,12 @@ const palettes = {
 type StatTone = "default" | "positive" | "negative" | "special";
 type PhotoAction = "choose" | "remove";
 type PhotoResult = { cancelled: true } | { cancelled: false; photoUrl: string | null };
+type ProfileDraft = { fullName: string; nickname: string; primaryPosition: string; notes: string };
 const MAX_PHOTO_SIZE = 5_000_000;
 
 export default function MyCard() {
   const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
   const query = useQuery({
     queryKey: ["profile"],
     queryFn: () => apiFetch<ProfilePayload>("/api/member-profile"),
@@ -219,8 +222,59 @@ export default function MyCard() {
           </View>)}
         </View>
       </LinearGradient>
+      <Card style={styles.profileCard}>
+        <View style={styles.profileHeading}>
+          <Text style={styles.profileEyebrow}>MEU PERFIL</Text>
+          <Text accessibilityRole="header" style={styles.profileTitle}>Informações do jogador</Text>
+          <Text style={styles.profileDescription}>Mantenha seus dados pessoais atualizados. As notas esportivas e o Momentum continuam sob responsabilidade dos administradores.</Text>
+        </View>
+        <View style={styles.profileGrid}>
+          <ProfileInfo label="Nome completo" value={player.fullName || player.displayName}/>
+          <ProfileInfo label="Apelido" value={player.nickname || "Não informado"}/>
+          <ProfileInfo label="Posição" value={player.primaryPosition}/>
+          <ProfileInfo label="Observações" value={player.notes || "Nenhuma observação"}/>
+        </View>
+        <Button title="Editar minhas informações" onPress={() => setEditing(true)}/>
+      </Card>
     </ScrollView>
+    {editing ? <ProfileEditor player={player} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void queryClient.invalidateQueries({ queryKey: ["profile"] }); }}/> : null}
   </Screen>;
+}
+
+function ProfileInfo({ label, value }: { label: string; value: string }) {
+  return <View style={styles.profileInfo}><Text style={styles.profileInfoLabel}>{label}</Text><Text style={styles.profileInfoValue}>{value}</Text></View>;
+}
+
+function ProfileEditor({ player, onClose, onSaved }: { player: Player; onClose(): void; onSaved(): void }) {
+  const [draft, setDraft] = useState<ProfileDraft>({
+    fullName: player?.fullName || player?.displayName || "",
+    nickname: player?.nickname || "",
+    primaryPosition: player?.primaryPosition || "Meio-campo",
+    notes: player?.notes || "",
+  });
+  const save = useMutation({
+    mutationFn: () => apiFetch<{ message: string }>("/api/member-profile", {
+      method: "PUT",
+      body: JSON.stringify({ ...draft, photoUrl: player?.photoUrl || null }),
+    }),
+    onSuccess: result => { Alert.alert("Perfil atualizado", result.message); onSaved(); },
+    onError: (error: Error) => Alert.alert("Não foi possível atualizar o perfil", error.message),
+  });
+  const set = (key: keyof ProfileDraft, value: string) => setDraft(current => ({ ...current, [key]: value }));
+  const valid = draft.fullName.trim().length >= 2 && draft.fullName.trim().length <= 120 && draft.nickname.trim().length <= 60 && draft.notes.trim().length <= 1000;
+  return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.editorScreen}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.editorContent}>
+        <View style={styles.editorHeading}><View style={{ flex: 1 }}><Text style={styles.profileEyebrow}>MEU PERFIL</Text><Text accessibilityRole="header" style={styles.editorTitle}>Editar informações</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Fechar edição" onPress={onClose} style={styles.editorClose}><Ionicons name="close" size={24} color={colors.text}/></Pressable></View>
+        <Text style={styles.profileDescription}>Você pode editar seus dados pessoais. As avaliações esportivas são alteradas somente pelos administradores.</Text>
+        <Field label="Nome completo" value={draft.fullName} maxLength={120} autoCapitalize="words" onChangeText={value => set("fullName", value)}/>
+        <Field label="Apelido" value={draft.nickname} maxLength={60} autoCapitalize="words" onChangeText={value => set("nickname", value)}/>
+        <View style={styles.positionField}><Text style={styles.positionLabel}>Posição</Text><View style={styles.positionOptions}>{["Defesa", "Meio-campo", "Ataque", "Goleiro"].map(position => <Pressable key={position} accessibilityRole="radio" accessibilityState={{ checked: draft.primaryPosition === position }} onPress={() => set("primaryPosition", position)} style={[styles.positionOption, draft.primaryPosition === position && styles.positionOptionSelected]}><Text style={[styles.positionOptionText, draft.primaryPosition === position && styles.positionOptionTextSelected]}>{position}</Text></Pressable>)}</View></View>
+        <Field label="Observações" value={draft.notes} maxLength={1000} multiline numberOfLines={5} onChangeText={value => set("notes", value)}/>
+        <View style={styles.editorActions}><Button title="Cancelar" variant="secondary" disabled={save.isPending} onPress={onClose}/><Button title="Salvar alterações" busy={save.isPending} disabled={!valid} onPress={() => save.mutate()}/></View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </Modal>;
 }
 
 function statColor(tier: PlayerCardTier, tone: StatTone, fallback: string) {
@@ -234,7 +288,7 @@ function statColor(tier: PlayerCardTier, tone: StatTone, fallback: string) {
 const typeLabel = (value: string) => value === "goalkeeper" ? "Goleiro" : value === "monthly" ? "Mensalista" : "Convidado";
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingTop: 8, paddingBottom: 32 },
+  content: { padding: 20, paddingTop: 8, paddingBottom: 28, gap: 16 },
   playerCard: { borderWidth: 5, borderRadius: 28, overflow: "hidden", padding: 18, gap: 18 },
   shine: { position: "absolute", width: 500, height: 70, top: 105, left: -115, transform: [{ rotate: "-24deg" }] },
   glow: { position: "absolute", width: 180, height: 180, borderRadius: 90 },
@@ -263,4 +317,26 @@ const styles = StyleSheet.create({
   careerStat: { flex: 1, minWidth: 0, alignItems: "center" },
   careerValue: { fontSize: 21, fontWeight: "900" },
   careerLabel: { marginTop: 3, fontSize: 10, fontWeight: "600" },
+  profileCard: { gap: 16 },
+  profileHeading: { gap: 5 },
+  profileEyebrow: { color: colors.green, fontSize: 11, fontWeight: "900", letterSpacing: 1.2 },
+  profileTitle: { color: colors.text, fontSize: 22, lineHeight: 27, fontWeight: "900" },
+  profileDescription: { color: colors.muted, lineHeight: 20 },
+  profileGrid: { gap: 9 },
+  profileInfo: { backgroundColor: "#F1F5F2", borderRadius: 12, padding: 13, gap: 4 },
+  profileInfoLabel: { color: colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 0.7, textTransform: "uppercase" },
+  profileInfoValue: { color: colors.text, fontSize: 14, lineHeight: 20, fontWeight: "800" },
+  editorScreen: { flex: 1, backgroundColor: colors.cream },
+  editorContent: { flexGrow: 1, padding: 22, paddingBottom: 36, gap: 16 },
+  editorHeading: { flexDirection: "row", alignItems: "center", gap: 12 },
+  editorTitle: { color: colors.text, fontSize: 27, lineHeight: 33, fontWeight: "900" },
+  editorClose: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#E8EEEA", alignItems: "center", justifyContent: "center" },
+  positionField: { gap: 8 },
+  positionLabel: { color: colors.text, fontWeight: "700" },
+  positionOptions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  positionOption: { minHeight: 42, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  positionOptionSelected: { borderColor: colors.green, backgroundColor: "#E5F0E9" },
+  positionOptionText: { color: colors.muted, fontWeight: "700" },
+  positionOptionTextSelected: { color: colors.green, fontWeight: "900" },
+  editorActions: { gap: 10, marginTop: 4 },
 });

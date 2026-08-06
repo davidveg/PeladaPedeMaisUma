@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Redirect, Tabs, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, View, type ColorValue } from "react-native";
+import { Redirect, Tabs } from "expo-router";
+import { ActivityIndicator, StyleSheet, View, type ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api";
@@ -23,7 +23,6 @@ export default function AppLayout() {
   const { palette, config: instanceConfig } = useMobileBranding();
   const { account, loading } = useAuth();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const separationsQuery = useQuery({
     queryKey: ["separations"],
     queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
@@ -87,8 +86,6 @@ export default function AppLayout() {
     <Tabs.Screen name="card" options={{
       title: "Meu card",
       href: account.playerId ? undefined : null,
-      tabBarStyle: { display: "none" },
-      headerLeft: () => <Pressable accessibilityRole="button" accessibilityLabel="Voltar às separações" hitSlop={12} onPress={() => router.replace("/separations")} style={({pressed})=>[styles.headerBack,pressed&&styles.headerBackPressed]}><Ionicons name="arrow-back" size={24} color="#fff"/></Pressable>,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="id-card" inactive="id-card-outline"/>,
     }}/>
     <Tabs.Screen name="new-separation" options={{
@@ -114,7 +111,5 @@ const styles = StyleSheet.create({
   tabLabel: { marginTop: 2, fontWeight: "800", fontSize: 10 },
   iconPill: { width: 42, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   iconPillActive: { backgroundColor: "#E5F0E9" },
-  headerBack: { width: 42, height: 42, marginLeft: 4, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-  headerBackPressed: { backgroundColor: "rgba(255,255,255,0.14)" },
   badge: { backgroundColor: colors.danger, color: "#fff", fontWeight: "900" },
 });
