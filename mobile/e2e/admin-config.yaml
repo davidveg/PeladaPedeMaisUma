@@ -9,9 +9,10 @@ name: Pesos administrativos preservam 100%
 - inputText: ${ADMIN_PASSWORD}
 - tapOn: Entrar
 - tapOn: Pesos
-- assertVisible: Total configurado
+- assertVisible: Jogadores de linha
+- assertVisible: Goleiros
 - assertVisible: 100%
-- tapOn: Peso da Velocidade
+- tapOn: Peso de Físico
 - eraseText
 - inputText: "50"
 - assertVisible: 100%

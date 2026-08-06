@@ -160,7 +160,6 @@ export default function MyCard() {
   ];
 
   return <Screen>
-    <Header eyebrow="SEU DESEMPENHO" title="Meu card"/>
     <UpdatedAt value={query.dataUpdatedAt}/>
     <ScrollView contentContainerStyle={styles.content}>
       <LinearGradient
