@@ -99,20 +99,31 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
   const maximumPositionDifference = Number.isFinite(config.maximumPositionDifference) ? Number(config.maximumPositionDifference) : defaultConfig.maximumPositionDifference!;
   const goalkeepers = input.filter(p=>p.primaryPosition === "Goleiro"), line = input.filter(p=>p.primaryPosition !== "Goleiro");
   let best: { blue: Player[]; yellow: Player[]; cost: number; extraId?: string } | null = null;
-  const protectedCount = Math.ceil(line.length * config.protectedTopPlayersPercentage);
-  const protectedIds = new Set([...line].sort((a,b)=>score(b,config)-score(a,config)).slice(0,protectedCount).map(p=>p.id));
+  const configuredProtectedPercentage=Number(config.protectedTopPlayersPercentage),protectedTopPlayersPercentage=Number.isFinite(configuredProtectedPercentage)?Math.min(1,Math.max(0,configuredProtectedPercentage)):defaultConfig.protectedTopPlayersPercentage;
+  const protectedPerTeam = Math.min(Math.floor(line.length/2), Math.ceil(line.length * protectedTopPlayersPercentage / 2));
+  const protectedPlayers = [...line].sort((a,b)=>score(b,config)-score(a,config)).slice(0,protectedPerTeam*2);
+  const protectedIds = new Set(protectedPlayers.map(p=>p.id));
+  const remainingPlayers = line.filter(player=>!protectedIds.has(player.id));
   for (let attempt=0; attempt<Math.max(300, config.algorithmAttempts); attempt++) {
-    const shuffled = [...line].sort((a,b)=>Math.sin((attempt+1)*(a.id.charCodeAt(0)+nonce+17)) - Math.sin((attempt+1)*(b.id.charCodeAt(0)+nonce+17)));
     const blue: Player[] = [], yellow: Player[] = [];
+    for(let pairIndex=0;pairIndex<protectedPlayers.length;pairIndex+=2){
+      const first=protectedPlayers[pairIndex],second=protectedPlayers[pairIndex+1];
+      const invert=Math.sin((attempt+1)*(pairIndex+1)*12.9898+(nonce+1)*78.233)<0;
+      (invert?yellow:blue).push(first);
+      (invert?blue:yellow).push(second);
+    }
+    const shuffled = [...remainingPlayers].sort((a,b)=>Math.sin((attempt+1)*(playerSeed(a.id)+nonce+17)) - Math.sin((attempt+1)*(playerSeed(b.id)+nonce+17)));
     shuffled.forEach(p => (blue.length <= yellow.length ? blue : yellow).push(p));
     if (goalkeepers[0]) blue.push(goalkeepers[0]); if (goalkeepers[1]) yellow.push(goalkeepers[1]); goalkeepers.slice(2).forEach((p,i)=>(i%2?yellow:blue).push(p));
     const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDifferences = ["Defesa","Meio-campo","Ataque"].map(k=>Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions])),positionDiff=positionDifferences.reduce((sum,value)=>sum+value,0),positionExcess=positionDifferences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0);
-    const larger = blue.length>yellow.length?blue:yellow; const extra = input.length%2 ? [...larger].sort((a,b)=>score(a,config)-score(b,config)).find(p=>!protectedIds.has(p.id) && p.primaryPosition!=="Goleiro") : undefined;
+    const larger = blue.length>yellow.length?blue:yellow; const rankedExtraCandidates=[...larger].filter(p=>p.primaryPosition!=="Goleiro").sort((a,b)=>score(a,config)-score(b,config)); const extra = input.length%2 ? rankedExtraCandidates.find(p=>!protectedIds.has(p.id))??rankedExtraCandidates[0] : undefined;
     const attributeDifference = Math.abs(bm.total-bm.momentum-ym.total+ym.momentum);
     const cost = Math.abs(blue.length-yellow.length)*1000 + positionExcess*2000 + positionDiff*120 + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
     if (!best || cost < best.cost) best={blue,yellow,cost,extraId:extra?.id};
   }
   const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, maximumPositionDifference, protectedTopPlayersPercentage: config.protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
+  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, maximumPositionDifference, protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
 }
+
+function playerSeed(id:string){return [...id].reduce((seed,character,index)=>seed+character.charCodeAt(0)*(index+1),0)}
