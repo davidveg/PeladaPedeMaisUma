@@ -31,7 +31,18 @@ function MatchCard({ item, onPress }: { item: ScheduledMatch; onPress(): void })
     <View style={styles.top}><View style={{ flex: 1 }}><Text style={[styles.state, item.status === "OPEN" ? styles.open : item.status === "CANCELLED" ? styles.cancelledState : styles.closed]}>{status(item.status, item.acceptingResponses)}</Text><Text style={styles.title}>{item.title}</Text><Text style={styles.date}>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</Text></View><View style={styles.count}><Text style={styles.countValue}>{item.counts.present}</Text><Text style={styles.countLabel}>presentes</Text></View></View>
     <View style={styles.summary}><Text style={styles.present}>{item.counts.present} presentes</Text><Text style={styles.absent}>{item.counts.absent} ausentes</Text><Text style={styles.pending}>{item.counts.pending} pendentes</Text></View>
     <Text style={[styles.viewer, !item.viewer.status && item.status === "OPEN" && styles.viewerPending]}>{own}</Text>
+    <CompactWeather weather={item.weather}/>
   </Card></Pressable>;
+}
+function CompactWeather({ weather }: { weather?: ScheduledMatch["weather"] }) {
+  if (!weather || weather.status !== "AVAILABLE") return null;
+  const temperature = weather.temperatureMin === weather.temperatureMax ? `${weather.temperatureMin}°` : `${weather.temperatureMin}–${weather.temperatureMax}°`;
+  return <View style={styles.weatherSummary}>
+    <Text style={styles.weatherItem}>{weather.icon || "🌤️"} {temperature}</Text>
+    <Text style={styles.weatherItem}>💧 {weather.precipitationProbability ?? 0}%</Text>
+    <Text style={styles.weatherItem}>💨 {weather.windSpeed ?? 0} km/h</Text>
+    <Text style={styles.weatherItem}>🌧️ {weather.precipitation ?? 0} mm</Text>
+  </View>;
 }
 function status(value: string, accepting: boolean) { return value === "OPEN" ? accepting ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : value === "CLOSED" ? "LISTA ENCERRADA" : "CANCELADA"; }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
@@ -45,4 +56,6 @@ const styles = StyleSheet.create({
   summary: { flexDirection: "row", flexWrap: "wrap", gap: 6 }, present: { color: colors.success, backgroundColor: "#E5F4EA", padding: 6, borderRadius: 8, fontWeight: "800" },
   absent: { color: colors.danger, backgroundColor: colors.dangerSoft, padding: 6, borderRadius: 8, fontWeight: "800" }, pending: { color: colors.muted, backgroundColor: "#EEF1EF", padding: 6, borderRadius: 8, fontWeight: "800" },
   viewer: { color: colors.green, fontWeight: "800" }, viewerPending: { color: colors.danger },
+  weatherSummary: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: 9 },
+  weatherItem: { color: colors.muted, fontSize: 11, fontWeight: "700" },
 });

@@ -8,9 +8,10 @@ import { QueryProvider } from "@/query-provider";
 import { NotificationCoordinator } from "@/notifications";
 import { AppUpdateCoordinator } from "@/app-updates";
 import { MobileBrandingProvider, useMobileBranding } from "@/branding";
+import { ServerConnectionGate } from "@/server-connection-gate";
 
 export default function RootLayout() {
-  return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><MobileBrandingProvider><QueryProvider><AuthProvider><AppUpdateCoordinator/><NotificationCoordinator/><BrandedStack/></AuthProvider></QueryProvider></MobileBrandingProvider></SafeAreaProvider></GestureHandlerRootView>;
+  return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><ServerConnectionGate><MobileBrandingProvider><QueryProvider><AuthProvider><AppUpdateCoordinator/><NotificationCoordinator/><BrandedStack/></AuthProvider></QueryProvider></MobileBrandingProvider></ServerConnectionGate></SafeAreaProvider></GestureHandlerRootView>;
 }
 
 function BrandedStack() {
