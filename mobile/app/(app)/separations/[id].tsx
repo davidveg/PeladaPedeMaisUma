@@ -13,6 +13,7 @@ import { CareerVoting } from "@/career-voting";
 import { colors } from "@/theme";
 import { useMobileBranding } from "@/branding";
 import { playerOverall } from "@/player-card";
+import { recalculateTeamResult } from "@/team-balance";
 import type { Contribution, Player, Separation, TeamResult } from "@/types";
 import { careerResultsMessage, formatDate, separationMessage, shareText, votingMessage } from "@/sharing";
 
@@ -41,6 +42,7 @@ export default function SeparationDetail() {
   if (!item) return <Screen><Header title="Detalhes"/><EmptyState title="Separação não encontrada" message="Atualize a lista e tente novamente."/></Screen>;
   return <Screen><Header eyebrow={formatDate(item.matchDate || item.confirmedAt)} title={item.matchTitle}/><ScrollView refreshControl={<RefreshControl refreshing={listQuery.isRefetching} onRefresh={listQuery.refetch} tintColor={colors.green}/>} contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 14 }}>
     {item.career ? <Card style={{ alignItems: "center", gap: 4 }}><Text style={{ color: colors.muted }}>PLACAR CONFIRMADO</Text><Text style={{ fontSize: 39, fontWeight: "900", color: colors.text }}><Text style={{ color: colors.blue }}>{item.career.blueScore}</Text> × <Text style={{ color: colors.yellow }}>{item.career.yellowScore}</Text></Text><Text style={{ color: colors.muted }}>Votação {item.career.status === "OPEN" ? `aberta até ${formatDate(item.career.closesAt)}` : "encerrada"}</Text></Card> : <Card><Text style={{ color: colors.yellow, textAlign: "center", fontWeight: "800" }}>Resultado pendente</Text></Card>}
+    {admin && !item.career ? <TeamAssignmentEditor key={`${item.snapshot.blue.map(player=>player.id).join("-")}|${item.snapshot.yellow.map(player=>player.id).join("-")}`} item={item} onSaved={() => client.invalidateQueries({ queryKey: ["separations"] })}/> : null}
     {item.career?.status === "OPEN" ? <CareerVoting token={item.career.votingToken} onChanged={refreshSeparations}/> : null}
     {item.career?.status === "CLOSED" ? <CareerVotingResults item={item}/> : null}
     <TeamCard title={`TIME ${brand.teamBlueName.toLocaleUpperCase("pt-BR")}`} color={colors.blue} soft={colors.blueSoft} players={item.snapshot.blue} config={item.snapshot}/><TeamCard title={`TIME ${brand.teamYellowName.toLocaleUpperCase("pt-BR")}`} color={colors.yellow} soft={colors.yellowSoft} players={item.snapshot.yellow} config={item.snapshot}/>
@@ -52,6 +54,32 @@ export default function SeparationDetail() {
 
 function TeamCard({ title, color, soft, players, config }: { title: string; color: string; soft: string; players: Player[]; config: TeamResult }) { return <Card style={{ gap: 7, borderColor: color }}><Text style={{ color, fontSize: 18, fontWeight: "900" }}>{title}</Text>{players.map((player, index) => <View key={player.id} style={{ minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, padding: 8, backgroundColor: soft, borderRadius: 9 }}><Text style={{ color, fontWeight: "900", width: 22 }}>{index + 1}</Text><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: "800" }}>{player.displayName}</Text><Text style={{ color: colors.muted }}>{player.primaryPosition} · overall registrado {registeredOverall(player, config).toFixed(1)}</Text></View></View>)}</Card>; }
 const registeredOverall = (player: Player, config: TeamResult) => playerOverall(player,config as any);
+
+function TeamAssignmentEditor({ item, onSaved }: { item: Separation; onSaved: () => void }) {
+  const { config: brand } = useMobileBranding();
+  const [editing, setEditing] = useState(false), [draft, setDraft] = useState(item.snapshot);
+  const mutation = useMutation({
+    mutationFn: () => apiFetch<{ snapshot: TeamResult; message: string }>("/api/mobile/separations", jsonMutation("PATCH", { action: "teams", id: item.id, blue: draft.blue.map(player => player.id), yellow: draft.yellow.map(player => player.id) })),
+    onSuccess: result => { setDraft(result.snapshot); setEditing(false); onSaved(); Alert.alert("Times atualizados", result.message); },
+    onError: (error: Error) => Alert.alert("Não foi possível atualizar", error.message),
+  });
+  const move = (from: "blue" | "yellow", playerId: string) => {
+    const source = draft[from];
+    if (source.length <= 1) return Alert.alert("Movimento indisponível", "Os dois times precisam ter pelo menos um jogador.");
+    const player = source.find(value => value.id === playerId);
+    if (!player) return;
+    const blue = from === "blue" ? draft.blue.filter(value => value.id !== playerId) : [...draft.blue, player];
+    const yellow = from === "yellow" ? draft.yellow.filter(value => value.id !== playerId) : [...draft.yellow, player];
+    setDraft(recalculateTeamResult(draft, blue, yellow));
+  };
+  if (!editing) return <Card style={styles.teamEditorIntro}><View style={{ flex: 1, gap: 4 }}><Text style={styles.teamEditorEyebrow}>AJUSTE ANTES DO RESULTADO</Text><Text style={styles.teamEditorTitle}>Distribuição dos jogadores</Text><Text style={styles.teamEditorHelp}>Transfira jogadores caso um time fique desfalcado. Depois que o resultado for salvo, os times serão bloqueados.</Text></View><Button title="Editar times" variant="secondary" onPress={() => setEditing(true)}/></Card>;
+  const confirm = () => Alert.alert("Salvar novos times?", "A ordem de chegada e um eventual rascunho de súmula serão limpos para evitar inconsistências.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => mutation.mutate() }]);
+  return <Card style={styles.teamEditor}><Text style={styles.teamEditorTitle}>Editar distribuição</Text><Text style={styles.teamEditorHelp}>Use a seta ao lado do jogador para transferi-lo ao outro time.</Text><EditableTeam title={brand.teamBlueName} color={colors.blue} soft={colors.blueSoft} direction="→" players={draft.blue} onMove={id => move("blue", id)}/><EditableTeam title={brand.teamYellowName} color={colors.yellow} soft={colors.yellowSoft} direction="←" players={draft.yellow} onMove={id => move("yellow", id)}/><BalanceDetails result={draft}/><View style={styles.teamEditorActions}><Button title="Cancelar" variant="secondary" disabled={mutation.isPending} onPress={() => { setDraft(item.snapshot); setEditing(false); }}/><Button title="Salvar times" busy={mutation.isPending} onPress={confirm}/></View></Card>;
+}
+
+function EditableTeam({ title, color, soft, direction, players, onMove }: { title: string; color: string; soft: string; direction: string; players: Player[]; onMove: (id: string) => void }) {
+  return <View style={[styles.editableTeam, { borderColor: color }]}><View style={styles.editableTeamHead}><Text style={{ color, fontWeight: "900" }}>TIME {title.toLocaleUpperCase("pt-BR")}</Text><Text style={{ color }}>{players.length} jogadores</Text></View>{players.map(player => <View key={player.id} style={[styles.editablePlayer, { backgroundColor: soft }]}><View style={{ flex: 1 }}><Text style={styles.editablePlayerName}>{player.displayName}</Text><Text style={styles.editablePlayerPosition}>{player.primaryPosition}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Transferir ${player.displayName} para o outro time`} onPress={() => onMove(player.id)} style={[styles.transferButton, { borderColor: color }]}><Text style={{ color, fontSize: 21, fontWeight: "900" }}>{direction}</Text></Pressable></View>)}</View>;
+}
 
 function ArrivalEditor({ item, onSaved }: { item: Separation; onSaved: () => void }) {
   const { config: brand } = useMobileBranding();
@@ -120,3 +148,18 @@ function TeamButton({ team, selected, onPress }: { team: "BLUE" | "YELLOW"; sele
 }
 
 function Choice({ selected, label, onPress }: { selected: boolean; label: string; onPress: () => void }) { return <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ minHeight: 48, borderRadius: 10, padding: 12, backgroundColor: selected ? colors.green : "#fff", borderWidth: 1, borderColor: selected ? colors.green : colors.border }}><Text style={{ color: selected ? "#fff" : colors.text, fontWeight: "700" }}>{label}</Text></Pressable>; }
+
+const styles = {
+  teamEditorIntro: { gap: 12 } as const,
+  teamEditor: { gap: 12 } as const,
+  teamEditorEyebrow: { color: colors.green, fontSize: 10, fontWeight: "900" as const, letterSpacing: 1 },
+  teamEditorTitle: { color: colors.text, fontSize: 18, fontWeight: "900" as const },
+  teamEditorHelp: { color: colors.muted, lineHeight: 19 },
+  editableTeam: { gap: 7, padding: 10, borderWidth: 1, borderRadius: 12 },
+  editableTeamHead: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingBottom: 3 },
+  editablePlayer: { minHeight: 52, flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingLeft: 11, borderRadius: 10, overflow: "hidden" as const },
+  editablePlayerName: { color: colors.text, fontWeight: "800" as const },
+  editablePlayerPosition: { color: colors.muted, fontSize: 11, marginTop: 2 },
+  transferButton: { width: 52, alignSelf: "stretch" as const, alignItems: "center" as const, justifyContent: "center" as const, borderLeftWidth: 1, backgroundColor: "#fff" },
+  teamEditorActions: { flexDirection: "row" as const, gap: 9 },
+};
