@@ -2,6 +2,10 @@ export interface PeladaRuntimeBindings {
   DB: D1Database;
   UPLOADS: R2Bucket;
   APP_BASE_URL?: string;
+  WEATHER_GEOCODING_URL?: string;
+  WEATHER_FORECAST_URL?: string;
+  WEATHER_FALLBACK_FORECAST_URL?: string;
+  WEATHER_CONTACT_EMAIL?: string;
   MAILER?: {
     configured: boolean;
     sendPasswordReset(message: { to: string; token: string; portal?: "admin" | "member" }): Promise<{ messageId?: string }>;

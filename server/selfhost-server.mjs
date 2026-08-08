@@ -8,6 +8,10 @@ const dataDirectory = resolve(process.env.DATA_DIR ?? "/data");
 const bindings = await createSelfhostBindings(dataDirectory);
 bindings.MAILER = createSmtpMailer(process.env);
 bindings.APP_BASE_URL = process.env.APP_BASE_URL?.trim();
+bindings.WEATHER_GEOCODING_URL = process.env.WEATHER_GEOCODING_URL?.trim();
+bindings.WEATHER_FORECAST_URL = process.env.WEATHER_FORECAST_URL?.trim();
+bindings.WEATHER_FALLBACK_FORECAST_URL = process.env.WEATHER_FALLBACK_FORECAST_URL?.trim();
+bindings.WEATHER_CONTACT_EMAIL = process.env.WEATHER_CONTACT_EMAIL?.trim();
 
 globalThis.__PELADA_RUNTIME_BINDINGS__ = bindings;
 globalThis.__PELADA_LOG_LEVEL__ = process.env.LOG_LEVEL ?? "info";

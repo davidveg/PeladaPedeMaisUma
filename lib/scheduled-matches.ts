@@ -4,12 +4,14 @@ import { audit, db, ensureDb } from "./database";
 import { ensureCareerSeasonCurrent } from "./career-season";
 import { balanceTeams, calculateTeamDelta, defaultConfig, type Config, type Player } from "./football";
 import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
+import { instanceConfigurationFromRow } from "./instance-config";
+import { refreshMatchWeather, weatherFromRow } from "./match-weather";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
 
 export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "") {
   await ensureDb();
-  const [matchResult, totalActive, allPlayerResult] = await Promise.all([db().prepare(
+  const [matchResult, totalActive, allPlayerResult, instanceRow] = await Promise.all([db().prepare(
     `SELECT m.*,s.match_title separation_title
      FROM scheduled_matches m
      LEFT JOIN team_separations s ON s.id=m.separation_id
@@ -17,11 +19,20 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
               CASE WHEN m.status='OPEN' THEN m.match_at END ASC,
               m.match_at DESC`,
   ).all(), db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>(),
-    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all()]);
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
+    db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first()]);
   const rows = matchResult.results as any[];
+  const instance = instanceConfigurationFromRow(instanceRow as any);
   const playerRows = allPlayerResult.results as any[];
   const matches = [];
   for (const row of rows) {
+    if (row.status === "OPEN") {
+      try {
+        row.weather_snapshot = JSON.stringify(await refreshMatchWeather(row, instance.defaultMatchLocation));
+      } catch {
+        // Weather is auxiliary: match and attendance data must remain available.
+      }
+    }
     const attendance = (await db().prepare(
       `SELECT a.*,p.display_name,p.photo_url,p.type,p.primary_position
        FROM match_attendance a JOIN players p ON p.id=a.player_id
@@ -274,6 +285,7 @@ function publicMatch(row: any, attendance: any[], account: any, totalActive: num
     acceptingResponses: row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now(),
     separationId: row.separation_id ? String(row.separation_id) : null,
     createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+    weather: weatherFromRow(row),
     counts: {
       present: attendance.filter(item => item.status === "PRESENT").length,
       absent: attendance.filter(item => item.status === "ABSENT").length,

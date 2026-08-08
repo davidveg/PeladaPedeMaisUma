@@ -15,6 +15,10 @@ services:
       NODE_ENV: production
       PORT: ${PORT:-3000}
       APP_BASE_URL: ${APP_BASE_URL:-}
+      WEATHER_GEOCODING_URL: ${WEATHER_GEOCODING_URL:-https://nominatim.openstreetmap.org/search}
+      WEATHER_FORECAST_URL: ${WEATHER_FORECAST_URL:-https://api.met.no/weatherapi/locationforecast/2.0/compact}
+      WEATHER_FALLBACK_FORECAST_URL: ${WEATHER_FALLBACK_FORECAST_URL:-https://api.open-meteo.com/v1/forecast}
+      WEATHER_CONTACT_EMAIL: ${WEATHER_CONTACT_EMAIL:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

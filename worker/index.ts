@@ -9,6 +9,10 @@ interface Env {
   DB: D1Database;
   UPLOADS: R2Bucket;
   APP_BASE_URL?: string;
+  WEATHER_GEOCODING_URL?: string;
+  WEATHER_FORECAST_URL?: string;
+  WEATHER_FALLBACK_FORECAST_URL?: string;
+  WEATHER_CONTACT_EMAIL?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

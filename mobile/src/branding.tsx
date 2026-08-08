@@ -18,6 +18,7 @@ export type MobileInstanceConfiguration = {
   defaultMatchTitle: string;
   defaultMatchWeekday: number;
   defaultMatchTime: string;
+  defaultMatchLocation: string;
   confirmationLeadMinutes: number;
   manualSeparationEnabled: boolean;
   timezone: string;
@@ -38,6 +39,7 @@ const defaultConfiguration: MobileInstanceConfiguration = {
   defaultMatchTitle: "Pelada",
   defaultMatchWeekday: 0,
   defaultMatchTime: "09:00",
+  defaultMatchLocation: "Rio de Janeiro, Brasil",
   confirmationLeadMinutes: 60,
   manualSeparationEnabled: false,
   timezone: "America/Sao_Paulo",

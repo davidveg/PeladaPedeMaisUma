@@ -12,12 +12,14 @@ export type TeamResult = { blue: Player[]; yellow: Player[]; rating: string; cos
 export type Separation = { id: string; matchTitle: string; matchDate?: string | null; location?: string | null; snapshot: TeamResult; balanceClassification: string; balanceScore: number; confirmedAt: string; arrivalOrder?: { blue: string[]; yellow: string[] } | null; career?: { id: string; blueScore: number; yellowScore: number; votingToken: string; votingUrl?: string; status: string; closesAt: string; closedAt?: string | null; results?: CareerVotingResults | null; contributions?: Contribution[]; viewerIsParticipant?: boolean; viewerHasVoted?: boolean; viewerCanVote?: boolean } };
 export type ProfilePayload = { member: { id: string; email: string; accountType: "administrator" | "member"; playerId?: string | null }; player: Player | null; config?: { speedWeight:number;skillWeight:number;markingWeight:number;tacticalIntelligenceWeight:number;competitivenessWeight:number;goalkeeperDefensesWeight:number;goalkeeperPositioningWeight:number;goalkeeperSafetyWeight:number;goalkeeperFootworkWeight:number;goalkeeperLeadershipWeight:number;ratingSystemVersion?:number;resultMomentumMultiplier:number;momentumMultiplier:number;showContributions:boolean;cardTiersEnabled:boolean;cardBronzeMax:number;cardSilverMax:number;cardGoldMax:number } };
 export type MatchAttendance = { id: string; playerId: string; playerName: string; photoUrl?: string | null; status: "PRESENT" | "ABSENT"; changeCount: number; maxChanges: number; updatedAt: string; administratorOverride?: boolean };
+export type MatchWeather = { status: "AVAILABLE" | "OUT_OF_RANGE" | "LOCATION_NOT_FOUND" | "UNAVAILABLE"; fetchedAt: string; requestedAddress: string; resolvedAddress?: string; usedDefaultLocation?: boolean; temperatureMin?: number; temperatureMax?: number; apparentTemperature?: number; precipitationProbability?: number; precipitation?: number; windSpeed?: number; description?: string; icon?: string; message?: string; source?: string };
 export type ScheduledMatch = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: "OPEN" | "CLOSED" | "CANCELLED"; acceptingResponses: boolean; separationId?: string | null;
   counts: { present: number; absent: number; pending: number }; attendance: MatchAttendance[];
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
+  weather?: MatchWeather | null;
   viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; isGoalkeeper?: boolean };
   createdAt: string; updatedAt: string;
 };

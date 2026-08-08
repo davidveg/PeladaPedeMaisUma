@@ -5,6 +5,8 @@ import { broadcastAccountNotification } from "../../../../lib/account-notificati
 import { createSeparationFromMatch, loadScheduledMatches, setAttendance } from "../../../../lib/scheduled-matches";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
+import { instanceConfigurationFromRow } from "../../../../lib/instance-config";
+import { refreshMatchWeather } from "../../../../lib/match-weather";
 
 const noStore = { "cache-control": "no-store" };
 
@@ -20,7 +22,8 @@ export async function POST(request: Request) {
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
-  const validation = validateMatch(payload);
+  const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+  const validation = validateMatch(payload, instance.defaultMatchLocation);
   if (validation.error) return Response.json({ error: validation.error }, { status: 400, headers: noStore });
   const id = crypto.randomUUID(), now = new Date().toISOString();
   await db().prepare(
@@ -28,6 +31,8 @@ export async function POST(request: Request) {
      (id,title,match_at,confirmation_deadline,location,max_changes,status,created_by_administrator_id,created_at,updated_at)
      VALUES (?,?,?,?,?,?,'OPEN',?,?,?)`,
   ).bind(id, validation.title, validation.matchAt, validation.deadline, validation.location, validation.maxChanges, admin.id, now, now).run();
+  const created: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
+  if (created) await refreshMatchWeather(created, instance.defaultMatchLocation, true).catch(() => undefined);
   await audit(admin.id, "MATCH_CREATED", "scheduled_match", id, validation);
   await broadcastAccountNotification({
     type: "MATCH_CREATED",
@@ -90,12 +95,15 @@ export async function PATCH(request: Request) {
     const id = String(payload.matchId || ""), previous: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
     if (!previous) return Response.json({ error: "Partida não encontrada." }, { status: 404, headers: noStore });
     if (previous.status !== "OPEN") return Response.json({ error: "Somente partidas abertas podem ser editadas." }, { status: 409, headers: noStore });
-    const validation = validateMatch(payload);
+    const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+    const validation = validateMatch(payload, instance.defaultMatchLocation);
     if (validation.error) return Response.json({ error: validation.error }, { status: 400, headers: noStore });
     const now = new Date().toISOString();
     await db().prepare(
-      `UPDATE scheduled_matches SET title=?,match_at=?,confirmation_deadline=?,location=?,max_changes=?,updated_at=? WHERE id=?`,
+      `UPDATE scheduled_matches SET title=?,match_at=?,confirmation_deadline=?,location=?,max_changes=?,weather_snapshot=NULL,weather_updated_at=NULL,updated_at=? WHERE id=?`,
     ).bind(validation.title, validation.matchAt, validation.deadline, validation.location, validation.maxChanges, now, id).run();
+    const updated: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
+    if (updated) await refreshMatchWeather(updated, instance.defaultMatchLocation, true).catch(() => undefined);
     await audit(admin.id, "MATCH_UPDATED", "scheduled_match", id, validation, previous);
     await broadcastAccountNotification({
       type: "MATCH_UPDATED", title: "Partida atualizada",
@@ -108,7 +116,7 @@ export async function PATCH(request: Request) {
   }
 }
 
-function validateMatch(payload: any) {
+function validateMatch(payload: any, defaultLocation: string) {
   const title = String(payload.title || "").trim().slice(0, 120);
   const matchAt = validIso(payload.matchAt), deadline = validIso(payload.confirmationDeadline);
   const maxChanges = Math.floor(Number(payload.maxChanges));
@@ -116,7 +124,7 @@ function validateMatch(payload: any) {
   if (!matchAt || !deadline) return { error: "Informe datas e horários válidos." };
   if (new Date(deadline).getTime() > new Date(matchAt).getTime()) return { error: "O prazo de confirmação deve terminar antes do início da partida." };
   if (!Number.isInteger(maxChanges) || maxChanges < 0 || maxChanges > 20) return { error: "O limite de remarcações deve ficar entre 0 e 20." };
-  return { title, matchAt, deadline, maxChanges, location: String(payload.location || "").trim().slice(0, 160) || null, error: "" };
+  return { title, matchAt, deadline, maxChanges, location: String(payload.location || "").trim().slice(0, 300) || defaultLocation, error: "" };
 }
 
 function validIso(value: unknown) {

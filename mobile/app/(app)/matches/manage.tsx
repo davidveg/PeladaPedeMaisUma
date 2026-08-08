@@ -24,7 +24,7 @@ function MatchForm({ existing, onSaved, onCancel }: { existing?: ScheduledMatch;
   const [defaults] = useState(() => nextMatchDefaults(instance));
   const matchParts = existing ? dateParts(existing.matchAt) : defaults.match;
   const deadlineParts = existing ? dateParts(existing.confirmationDeadline) : defaults.deadline;
-  const [title, setTitle] = useState(existing?.title || instance.defaultMatchTitle || "Pelada"), [location, setLocation] = useState(existing?.location || "");
+  const [title, setTitle] = useState(existing?.title || instance.defaultMatchTitle || "Pelada"), [location, setLocation] = useState(existing?.location || instance.defaultMatchLocation || "Rio de Janeiro, Brasil");
   const [matchDate, setMatchDate] = useState(matchParts.date), [matchTime, setMatchTime] = useState(matchParts.time);
   const [deadlineDate, setDeadlineDate] = useState(deadlineParts.date), [deadlineTime, setDeadlineTime] = useState(deadlineParts.time);
   const [maxChanges, setMaxChanges] = useState(String(existing?.maxChanges ?? 2)), [validation, setValidation] = useState("");

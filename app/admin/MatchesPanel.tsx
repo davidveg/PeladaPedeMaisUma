@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { brazilianDateInput, brazilianDateTimeIso, brazilianDateTimeParts, brazilianTimeInput } from "../../lib/brazilian-date-time";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
+import { WeatherPreview } from "../components/WeatherPreview";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
 type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any };
@@ -16,6 +17,7 @@ type Match = {
   counts: { present: number; absent: number; pending: number }; attendance: Attendance[];
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
+  weather?: any;
 };
 type Player = { id: string; displayName: string; type: string; primaryPosition: string };
 
@@ -78,6 +80,7 @@ function MatchAdminDetail({ match, players, onAttendance, onEdit, onClose, onCan
   const goalkeepersPresent = match.goalkeepers?.present ?? players.filter((player: Player) => (player.type === "goalkeeper" || player.primaryPosition === "Goleiro") && byPlayer[player.id]?.status === "PRESENT").length;
   const share = () => match.shareMessage?.trim() && window.open(buildWhatsAppShareUrl(match.shareMessage), "_blank", "noopener,noreferrer");
   return <section className="admin-card match-admin-detail"><div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
+    <WeatherPreview weather={match.weather}/>
     <div className="match-attendance-summary"><span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span><span><b>{match.counts.pending}</b>Pendentes</span><span><b>{goalkeepersPresent}/2</b>Goleiros</span></div>
     <div className="match-player-admin-list">{players.map((player: Player) => { const answer = byPlayer[player.id], guest = player.type === "guest", goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro", goalkeeperBlocked = goalkeeper && answer?.status !== "PRESENT" && goalkeepersPresent >= 2; return <div className={guest ? "guest" : ""} key={player.id}><span><b>{player.displayName}{guest && <em>Convidado</em>}</b><small>{player.primaryPosition} · {answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta"}</small></span><div><button disabled={goalkeeperBlocked} title={goalkeeperBlocked ? "Os dois lugares de goleiro já estão preenchidos." : undefined} className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button><button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div></div>})}</div>
     <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <><button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
@@ -91,7 +94,7 @@ function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { match: 
   const [title, setTitle] = useState(match?.title || instanceConfig?.defaultMatchTitle || "Pelada");
   const [matchDate, setMatchDate] = useState(matchParts.date), [matchTime, setMatchTime] = useState(matchParts.time);
   const [deadlineDate, setDeadlineDate] = useState(deadlineParts.date), [deadlineTime, setDeadlineTime] = useState(deadlineParts.time);
-  const [location, setLocation] = useState(match?.location || "");
+  const [location, setLocation] = useState(match?.location || instanceConfig?.defaultMatchLocation || "Rio de Janeiro, Brasil");
   const [maxChanges, setMaxChanges] = useState(match?.maxChanges ?? 2);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   async function submit(event: React.FormEvent) {

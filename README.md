@@ -225,6 +225,10 @@ Copie `.env.example` ou `.env.docker.example` conforme o ambiente. Nunca version
 | Variável | Finalidade |
 | --- | --- |
 | `APP_BASE_URL` | URL HTTPS canônica usada em links públicos, votação, redefinição de senha e notificações |
+| `WEATHER_GEOCODING_URL` | Endpoint Nominatim usado para resolver o endereço da partida; pode apontar para uma instância própria |
+| `WEATHER_FORECAST_URL` | Endpoint Locationforecast 2.0 do MET Norway ou proxy compatível |
+| `WEATHER_FALLBACK_FORECAST_URL` | Endpoint secundário Open-Meteo usado automaticamente quando o provedor principal não responde |
+| `WEATHER_CONTACT_EMAIL` | Contato enviado aos provedores no `User-Agent`; recomendado para identificar corretamente a instância |
 | `SMTP_HOST` | Servidor SMTP |
 | `SMTP_PORT` | Porta SMTP |
 | `SMTP_SECURE` | Ativa TLS direto, normalmente `true` na porta 465 |
@@ -259,6 +263,12 @@ LOG_LEVEL=info
 ```
 
 Os links de redefinição são de uso único, armazenados somente como hash e expiram em 30 minutos. Uma redefinição concluída revoga as sessões anteriores.
+
+### Previsão do tempo
+
+A previsão usa o endereço completo da partida e, quando ele não é localizado, o endereço padrão salvo em **Partidas** no painel administrativo. O servidor persiste coordenadas e previsão no banco da própria instância e renova o resultado no máximo uma vez por hora. Partidas com mais de nove dias exibem uma mensagem até entrarem na janela do provedor.
+
+O padrão usa Nominatim/OpenStreetMap para geocodificação e MET Norway Locationforecast 2.0 para clima. Se o geocodificador estiver temporariamente inacessível, a localização padrão do Rio de Janeiro ainda possui coordenadas de contingência; se o MET Norway falhar, o servidor tenta automaticamente o Open-Meteo. O Nominatim público limita o uso a uma requisição por segundo e exige cache e identificação; o serviço implementa essas proteções. Para uma operação com volume maior, configure `WEATHER_GEOCODING_URL` para uma instância própria ou outro endpoint compatível.
 
 ## Banco de dados e migrações
 
