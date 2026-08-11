@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb } from "./database";
 import { ensureCareerSeasonCurrent } from "./career-season";
-import { balanceTeams, calculateTeamDelta, defaultConfig, type Config, type Player } from "./football";
+import { balanceTeams, calculateTeamDelta, defaultConfig, guestBalancePenalty, type Config, type Player } from "./football";
 import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
 import { instanceConfigurationFromRow } from "./instance-config";
 import { refreshMatchWeather, weatherFromRow } from "./match-weather";
@@ -267,7 +267,7 @@ function validateAndRebuildResult(input: any, players: Player[], config: Config,
   const maximumPositionDifference = Number(generated.maximumPositionDifference ?? config.maximumPositionDifference ?? 1);
   const positionExcess = positionDifferences.reduce((sum, value) => sum + Math.max(0, value - maximumPositionDifference), 0);
   const attributeDifference = Math.abs((metrics.blueMetrics.total-metrics.blueMetrics.momentum)-(metrics.yellowMetrics.total-metrics.yellowMetrics.momentum));
-  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120
+  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120 + guestBalancePenalty(blue, yellow)
     + attributeDifference * 14 + Math.abs(metrics.blueMetrics.scoreAvg - metrics.yellowMetrics.scoreAvg) * 18;
   const rating = cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
   return { ...generated, blue, yellow, ...metrics, cost, rating, extraId: undefined };

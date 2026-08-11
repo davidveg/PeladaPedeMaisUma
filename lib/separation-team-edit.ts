@@ -1,6 +1,6 @@
 /* Saved snapshots remain schema-flexible for historical compatibility. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { calculateTeamDelta, defaultConfig, type Config, type Player } from "./football.ts";
+import { calculateTeamDelta, defaultConfig, guestBalancePenalty, type Config, type Player } from "./football.ts";
 
 export function rebuildEditedSeparation(snapshot: any, blueInput: unknown, yellowInput: unknown) {
   const currentBlue = Array.isArray(snapshot?.blue) ? snapshot.blue as Player[] : [];
@@ -21,7 +21,7 @@ export function rebuildEditedSeparation(snapshot: any, blueInput: unknown, yello
   const positionDifference = positionDifferences.reduce((sum, value) => sum + value, 0);
   const positionExcess = positionDifferences.reduce((sum, value) => sum + Math.max(0, value - maximumPositionDifference), 0);
   const attributeDifference = Math.abs((metrics.blueMetrics.total - metrics.blueMetrics.momentum) - (metrics.yellowMetrics.total - metrics.yellowMetrics.momentum));
-  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120
+  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120 + guestBalancePenalty(blue, yellow)
     + attributeDifference * 14 + Math.abs(metrics.blueMetrics.scoreAvg - metrics.yellowMetrics.scoreAvg) * 18;
   const rating = cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
   const preserved = { ...snapshot };

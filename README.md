@@ -323,7 +323,7 @@ Pesos padrão:
 - Peso do Momentum de vitórias e derrotas: 1,0 (fixo);
 - Multiplicador do Momentum das votações: 1,0.
 
-O algoritmo testa milhares de combinações, prioriza a diferença de quantidade, penaliza desequilíbrio de posições e compara atributos e médias. Em listas ímpares, protege por padrão o quartil superior contra a equipe excedente. Administradores podem gerar novas propostas e fazer ajustes manuais antes de confirmar.
+O algoritmo testa milhares de combinações, prioriza a diferença de quantidade, penaliza desequilíbrio de posições e compara atributos e médias. Quando há dois ou mais convidados, também distribui esse grupo com a menor diferença possível entre as equipes (por exemplo, dois convidados ficam em uma divisão 1 × 1 e cinco convidados em 3 × 2). Em listas ímpares, protege por padrão o quartil superior contra a equipe excedente. Administradores podem gerar novas propostas e fazer ajustes manuais antes de confirmar.
 
 ## Gols, assistências e histórico
 
