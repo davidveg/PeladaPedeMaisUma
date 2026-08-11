@@ -50,3 +50,20 @@ test("omite a seção de convidados quando nenhum deles confirmou presença", ()
   assert.doesNotMatch(message, /Convidados:|Marcos/);
   assert.match(message, /✅ 0 confirmados · ❌ 0 ausentes · ⏳ 1 pendentes/);
 });
+
+test("exibe convidados na lista de espera sem check e sem contá-los como presentes ou pendentes", () => {
+  const message = buildMatchAttendanceShareMessage({
+    title: "Pelada XPTO",
+    matchAt: "2026-08-16T09:00:00-03:00",
+    players: [
+      { id: "m1", displayName: "William", type: "monthly", primaryPosition: "Defesa" },
+      { id: "c1", displayName: "Bruno Varella", type: "guest", primaryPosition: "Ataque" },
+      { id: "c2", displayName: "Edu Fraga", type: "guest", primaryPosition: "Meio-campo" },
+    ],
+    attendance: [{ playerId: "m1", status: "PRESENT" }],
+    preconfirmedGuestIds: ["c1", "c2"],
+  });
+  assert.match(message, /✅ 1 confirmados · ❌ 0 ausentes · ⏳ 0 pendentes/);
+  assert.match(message, /Convidados:\n1 - Bruno Varella: \n2 - Edu Fraga: /);
+  assert.doesNotMatch(message, /Bruno Varella: ✅|Edu Fraga: ✅/);
+});

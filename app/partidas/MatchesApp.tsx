@@ -13,11 +13,13 @@ type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "A
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: string; separationId?: string | null;
-  counts: { present: number; absent: number; pending: number }; attendance: Attendance[];
+  counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: Attendance[];
+  guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
+  preconfirmedGuests?: { playerId: string; playerName: string; photoUrl?: string | null }[];
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
   weather?: any;
-  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; isGoalkeeper?: boolean };
+  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean };
 };
 
 async function api(url: string, options?: RequestInit) {
@@ -79,10 +81,36 @@ export default function MatchesApp() {
 }
 
 function MatchSiteCard({ item, busy, onAnswer, onShare }: { item: Match; busy: string; onAnswer(item: Match, status: "PRESENT" | "ABSENT"): void; onShare(item: Match): void }) {
-  return <article id={item.id} className={`match-site-card ${item.status.toLowerCase()}`}><div className="match-site-head"><div><span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span><h2>{item.title}</h2><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p></div><div className="match-site-count"><b>{item.counts.present}</b><span>confirmados</span></div></div><div className="match-site-deadline">Confirmações até <b>{dateTime(item.confirmationDeadline)}</b> · {item.maxChanges} remarcações permitidas</div><WeatherPreview weather={item.weather}/><div className="match-site-roster"><Roster title="Presentes" entries={item.attendance.filter(entry => entry.status === "PRESENT")}/><Roster title="Ausentes" entries={item.attendance.filter(entry => entry.status === "ABSENT")}/></div>{item.viewer.playerId ? <div className="match-site-answer"><span>{goalkeeperLimitReached(item) ? "Os dois lugares de goleiro já estão preenchidos." : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Presente" : "Ausente"} · ${item.viewer.changesRemaining} remarcações restantes` : "Você ainda não respondeu."}</span>{item.status === "OPEN" && <div><button disabled={busy === item.id || !item.viewer.canRespond || goalkeeperLimitReached(item)} className={item.viewer.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAnswer(item, "PRESENT")}>✓ Vou jogar</button><button disabled={busy === item.id || !item.viewer.canRespond} className={item.viewer.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAnswer(item, "ABSENT")}>× Não vou</button></div>}</div> : <div className="alert">Sua conta ainda não está associada a um jogador. Faça a associação em “Minha conta” para responder.</div>}{item.status === "OPEN" && item.shareMessage ? <div className="match-site-share"><button type="button" className="ghost whatsapp-button" onClick={() => onShare(item)}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button></div> : null}{item.separationId && <a className="ghost match-separation-link" href={`/separacoes-salvas?separation=${encodeURIComponent(item.separationId)}`}>Ver times gerados ↗</a>}</article>;
+  const waiting = item.preconfirmedGuests || [];
+  const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest);
+  const answerText = guestManaged
+    ? item.viewer.status === "PRESENT" ? "Sua presença foi aprovada pelo administrador."
+      : item.viewer.preconfirmed ? "Você está na lista de espera e aguarda aprovação do administrador."
+      : item.viewer.status === "ABSENT" ? "Sua resposta: Ausente."
+      : "A presença de convidados é gerenciada pelos administradores."
+    : goalkeeperLimitReached(item) ? "Os dois lugares de goleiro já estão preenchidos."
+      : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Presente" : "Ausente"} · ${item.viewer.changesRemaining} remarcações restantes`
+      : "Você ainda não respondeu.";
+  return <article id={item.id} className={`match-site-card ${item.status.toLowerCase()}`}>
+    <div className="match-site-head"><div><span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span><h2>{item.title}</h2><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p></div><div className="match-site-count"><b>{item.counts.present}</b><span>confirmados</span></div></div>
+    <div className="match-site-deadline">Confirmações até <b>{dateTime(item.confirmationDeadline)}</b> · {item.maxChanges} remarcações permitidas</div>
+    <WeatherPreview weather={item.weather}/>
+    <div className="match-site-roster">
+      <Roster title="Presentes" entries={item.attendance.filter(entry => entry.status === "PRESENT")}/>
+      {item.guestPreconfirmation?.enabled && <WaitingRoster entries={waiting}/>}
+      <Roster title="Ausentes" entries={item.attendance.filter(entry => entry.status === "ABSENT")}/>
+    </div>
+    {item.viewer.playerId ? <div className="match-site-answer"><span>{answerText}</span>{item.status === "OPEN" && <div>
+      {!guestManaged && <button disabled={busy === item.id || !item.viewer.canConfirmPresence || goalkeeperLimitReached(item)} className={item.viewer.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAnswer(item, "PRESENT")}>✓ Vou jogar</button>}
+      <button disabled={busy === item.id || !item.viewer.canRespond} className={item.viewer.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAnswer(item, "ABSENT")}>× Não vou</button>
+    </div>}</div> : <div className="alert">Sua conta ainda não está associada a um jogador. Faça a associação em “Minha conta” para responder.</div>}
+    {item.status === "OPEN" && item.shareMessage ? <div className="match-site-share"><button type="button" className="ghost whatsapp-button" onClick={() => onShare(item)}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button></div> : null}
+    {item.separationId && <a className="ghost match-separation-link" href={`/separacoes-salvas?separation=${encodeURIComponent(item.separationId)}`}>Ver times gerados ↗</a>}
+  </article>;
 }
 
 function Roster({ title, entries }: { title: string; entries: Attendance[] }) { return <div><b>{title} ({entries.length})</b><p>{entries.length ? entries.map(item => item.playerName).join(", ") : "Ninguém ainda"}</p></div>; }
+function WaitingRoster({ entries }: { entries: { playerId: string; playerName: string }[] }) { return <div className="waiting"><b>Lista de espera ({entries.length})</b><p>{entries.length ? entries.map(item => item.playerName).join(", ") : "Ninguém aguardando"}</p></div>; }
 function goalkeeperLimitReached(item: Match) { return Boolean(item.viewer.isGoalkeeper && item.viewer.status !== "PRESENT" && (item.goalkeepers?.present || 0) >= (item.goalkeepers?.max || 2)); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 function statusLabel(status: string) { return status === "OPEN" ? "Confirmações abertas" : status === "CLOSED" ? "Lista encerrada" : "Cancelada"; }

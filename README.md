@@ -49,6 +49,9 @@ Documentação complementar:
 - Limite configurável de alterações da resposta.
 - Respostas compartilhadas entre site e aplicativo.
 - Administradores podem responder por jogadores sem conta vinculada.
+- Lista de espera opcional para convidados, desativada por padrão e configurável em **Identidade e agenda**.
+- Quando ativada, somente administradores colocam convidados na lista de espera e aprovam sua presença após presentes + espera atingirem o limite configurado (16 por padrão).
+- Convidados na espera aparecem na parcial do WhatsApp sem `✅`, não contam como presentes ou pendentes e não entram na geração dos times até a aprovação final.
 - Fechamento antecipado da lista e geração automática de uma separação equilibrada.
 - Cancelamento e edição de partidas com auditoria.
 - Central de notificações por conta, com paginação e marcação de itens lidos.
@@ -125,6 +128,7 @@ O painel possui:
 - administradores;
 - contas de jogadores e associações;
 - identidade, agenda, nomes e cores das equipes;
+- ativação e limite da lista de espera administrativa de convidados;
 - ativação opcional da importação manual por lista do WhatsApp, compartilhada entre site e aplicativo;
 - configurações de equilíbrio;
 - configurações, votos e encerramento do Modo Carreira;
@@ -141,6 +145,7 @@ O aplicativo oferece:
 - login de jogador ou administrador;
 - tokens nativos com refresh rotativo;
 - partidas, confirmações de presença e notificações;
+- lista de espera e aprovação administrativa de convidados quando a funcionalidade estiver habilitada;
 - separações salvas e card do jogador;
 - criação de separações para administradores a partir das presenças de uma partida;
 - importação manual por lista do WhatsApp quando habilitada na configuração da instância;
@@ -377,7 +382,7 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 ### Partidas e separações
 
 - `GET/PUT /api/matches` — agenda e confirmação do jogador.
-- `GET/POST/PATCH /api/admin/matches` — gestão administrativa das partidas.
+- `GET/POST/PATCH /api/admin/matches` — gestão administrativa das partidas, presenças e lista de espera de convidados.
 - `GET/POST/PATCH/DELETE /api/separations` — histórico, criação, chegada e exclusão lógica.
 - `GET/PUT /api/career/draft` — rascunho de súmula.
 - `POST/PUT /api/career/match` — confirmação e correção de resultado.

@@ -16,11 +16,14 @@ export type MatchWeather = { status: "AVAILABLE" | "OUT_OF_RANGE" | "LOCATION_NO
 export type ScheduledMatch = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: "OPEN" | "CLOSED" | "CANCELLED"; acceptingResponses: boolean; separationId?: string | null;
-  counts: { present: number; absent: number; pending: number }; attendance: MatchAttendance[];
+  counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: MatchAttendance[];
+  guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
+  preconfirmedGuestIds?: string[];
+  preconfirmedGuests?: { playerId: string; playerName: string; photoUrl?: string | null }[];
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
   weather?: MatchWeather | null;
-  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; isGoalkeeper?: boolean };
+  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean };
   createdAt: string; updatedAt: string;
 };
 export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string };

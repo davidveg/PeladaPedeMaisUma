@@ -53,6 +53,10 @@ export const matchAttendance = sqliteTable("match_attendance", {
   respondedByAccountType: text("responded_by_account_type"), respondedByAccountId: text("responded_by_account_id"),
   updatedByAdministratorId: text("updated_by_administrator_id"), ...timestamps,
 }, table => [uniqueIndex("match_attendance_match_player_unique").on(table.matchId, table.playerId)]);
+export const matchGuestPreconfirmations = sqliteTable("match_guest_preconfirmations", {
+  id: text("id").primaryKey(), matchId: text("match_id").notNull(), playerId: text("player_id").notNull(),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), ...timestamps,
+}, table => [uniqueIndex("match_guest_preconfirmation_unique").on(table.matchId, table.playerId)]);
 export const accountNotifications = sqliteTable("account_notifications", {
   id: text("id").primaryKey(), accountType: text("account_type").notNull(), accountId: text("account_id").notNull(),
   type: text("type").notNull(), title: text("title").notNull(), body: text("body").notNull(),
@@ -140,6 +144,8 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   defaultMatchTime: text("default_match_time").notNull().default("09:00"),
   confirmationLeadMinutes: integer("confirmation_lead_minutes").notNull().default(60),
   manualSeparationEnabled: integer("manual_separation_enabled", { mode: "boolean" }).notNull().default(false),
+  guestPreconfirmationEnabled: integer("guest_preconfirmation_enabled", { mode: "boolean" }).notNull().default(false),
+  guestConfirmationThreshold: integer("guest_confirmation_threshold").notNull().default(16),
   timezone: text("timezone").notNull().default("America/Sao_Paulo"),
   updatedAt: text("updated_at").notNull(),
 });

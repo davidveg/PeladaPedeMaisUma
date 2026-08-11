@@ -38,7 +38,16 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
        FROM match_attendance a JOIN players p ON p.id=a.player_id
        WHERE a.match_id=? ORDER BY p.display_name`,
     ).bind(row.id).all()).results as any[];
-    matches.push(publicMatch(row, attendance, account, Number(totalActive?.total || 0), playerRows, publicBaseUrl));
+    const guestPreconfirmations = (await db().prepare(
+      `SELECT waiting.*,p.display_name,p.photo_url
+       FROM match_guest_preconfirmations waiting
+       JOIN players p ON p.id=waiting.player_id
+       WHERE waiting.match_id=? AND p.active=1 AND p.deleted_at IS NULL AND p.type='guest'
+       ORDER BY p.display_name`,
+    ).bind(row.id).all()).results as any[];
+    matches.push(publicMatch(
+      row, attendance, guestPreconfirmations, account, Number(totalActive?.total || 0), playerRows, publicBaseUrl, instance,
+    ));
   }
   return {
     matches,
@@ -71,11 +80,32 @@ export async function setAttendance(params: {
     `SELECT id,display_name,type,primary_position FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`,
   ).bind(playerId).first();
   if (!player) throw statusError("Jogador não encontrado ou inativo.", 404);
+  const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
   const previous: any = await db().prepare(
     `SELECT * FROM match_attendance WHERE match_id=? AND player_id=?`,
   ).bind(matchId, playerId).first();
   if (previous?.status === status) {
     return { changed: false, attendance: mapAttendance(previous, player.display_name, match.max_changes) };
+  }
+  if (instance.guestPreconfirmationEnabled && player.type === "guest" && status === "PRESENT") {
+    if (!administratorOverride) {
+      throw statusError("A presença de convidados precisa ser aprovada por um administrador.", 403);
+    }
+    const waiting: any = await db().prepare(
+      `SELECT id FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`,
+    ).bind(matchId, playerId).first();
+    if (!waiting) throw statusError("Adicione o convidado à lista de espera antes de aprovar sua presença.", 409);
+    const totals: any = await db().prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM match_attendance WHERE match_id=? AND status='PRESENT') present_total,
+         (SELECT COUNT(*) FROM match_guest_preconfirmations WHERE match_id=?) waiting_total`,
+    ).bind(matchId, matchId).first();
+    if (Number(totals?.present_total || 0) + Number(totals?.waiting_total || 0) < instance.guestConfirmationThreshold) {
+      throw statusError(
+        `A aprovação fica disponível quando presentes e convidados na espera somarem ${instance.guestConfirmationThreshold}.`,
+        409,
+      );
+    }
   }
   const goalkeeperConfirmation = status === "PRESENT" && (player.type === "goalkeeper" || player.primary_position === "Goleiro");
   if (goalkeeperConfirmation && await confirmedGoalkeeperCount(matchId, playerId) >= 2) {
@@ -134,12 +164,64 @@ export async function setAttendance(params: {
   await audit(account.accountType === "administrator" ? account.id : null, "MATCH_ATTENDANCE_CHANGED", "scheduled_match", matchId, {
     playerId, playerName: player.display_name, status, changeCount: nextChanges, administratorOverride,
   }, previous ? { status: previous.status, changeCount: previous.change_count } : undefined);
+  await db().prepare(`DELETE FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`).bind(matchId, playerId).run();
   return {
     changed: true,
     playerName: String(player.display_name),
     attendance: { id, playerId, playerName: player.display_name, status, changeCount: nextChanges, maxChanges: Number(match.max_changes) },
     match,
   };
+}
+
+export async function setGuestPreconfirmation(params: {
+  matchId: string;
+  playerId: string;
+  action: "ADD" | "REMOVE";
+  account: any;
+}) {
+  await ensureDb();
+  const { matchId, playerId, action, account } = params;
+  if (account?.accountType !== "administrator") throw statusError("Não autorizado.", 401);
+  if (!["ADD", "REMOVE"].includes(action)) throw statusError("Ação da lista de espera inválida.", 400);
+  const [match, player, instanceRow] = await Promise.all([
+    db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first<any>(),
+    db().prepare(`SELECT id,display_name,type FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`).bind(playerId).first<any>(),
+    db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first<any>(),
+  ]);
+  if (!match) throw statusError("Partida não encontrada.", 404);
+  if (match.status !== "OPEN") throw statusError("A lista de presença está fechada.", 409);
+  if (!player) throw statusError("Jogador não encontrado ou inativo.", 404);
+  if (player.type !== "guest") throw statusError("A lista de espera é exclusiva para convidados.", 409);
+  const instance = instanceConfigurationFromRow(instanceRow);
+  if (!instance.guestPreconfirmationEnabled) throw statusError("A lista de espera de convidados está desativada.", 409);
+  const previous: any = await db().prepare(
+    `SELECT * FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`,
+  ).bind(matchId, playerId).first();
+  if (action === "REMOVE") {
+    if (!previous) return { changed: false, message: "O convidado não estava na lista de espera." };
+    await db().prepare(`DELETE FROM match_guest_preconfirmations WHERE id=?`).bind(previous.id).run();
+    await audit(account.id, "MATCH_GUEST_PRECONFIRMATION_REMOVED", "scheduled_match", matchId, {
+      playerId, playerName: player.display_name,
+    }, { preconfirmed: true });
+    return { changed: true, message: "Convidado removido da lista de espera." };
+  }
+  const attendance: any = await db().prepare(
+    `SELECT * FROM match_attendance WHERE match_id=? AND player_id=?`,
+  ).bind(matchId, playerId).first();
+  if (attendance?.status === "PRESENT") throw statusError("Este convidado já está confirmado como presente.", 409);
+  if (previous) return { changed: false, message: "O convidado já está na lista de espera." };
+  const now = new Date().toISOString(), id = crypto.randomUUID();
+  await db().batch([
+    db().prepare(`DELETE FROM match_attendance WHERE match_id=? AND player_id=? AND status='ABSENT'`).bind(matchId, playerId),
+    db().prepare(
+      `INSERT INTO match_guest_preconfirmations
+       (id,match_id,player_id,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?)`,
+    ).bind(id, matchId, playerId, account.id, now, now),
+  ]);
+  await audit(account.id, "MATCH_GUEST_PRECONFIRMED", "scheduled_match", matchId, {
+    playerId, playerName: player.display_name, threshold: instance.guestConfirmationThreshold,
+  }, attendance ? { status: attendance.status } : undefined);
+  return { changed: true, message: "Convidado adicionado à lista de espera." };
 }
 
 async function confirmedGoalkeeperCount(matchId: string, excludedPlayerId = "") {
@@ -273,11 +355,24 @@ function validateAndRebuildResult(input: any, players: Player[], config: Config,
   return { ...generated, blue, yellow, ...metrics, cost, rating, extraId: undefined };
 }
 
-function publicMatch(row: any, attendance: any[], account: any, totalActive: number, players: any[], publicBaseUrl: string) {
+function publicMatch(
+  row: any,
+  attendance: any[],
+  guestPreconfirmations: any[],
+  account: any,
+  totalActive: number,
+  players: any[],
+  publicBaseUrl: string,
+  instance: ReturnType<typeof instanceConfigurationFromRow>,
+) {
   const own = attendance.find(item => String(item.player_id) === String(account?.playerId || ""));
   const viewerPlayer = players.find(item => String(item.id) === String(account?.playerId || ""));
+  const preconfirmedIds = new Set(guestPreconfirmations.map(item => String(item.player_id)));
+  const ownPreconfirmed = Boolean(account?.playerId && preconfirmedIds.has(String(account.playerId)));
   const presentPlayerIds = new Set(attendance.filter(item => item.status === "PRESENT").map(item => String(item.player_id)));
   const goalkeepersPresent = players.filter(item => presentPlayerIds.has(String(item.id)) && (item.type === "goalkeeper" || item.primary_position === "Goleiro")).length;
+  const preconfirmedCount = instance.guestPreconfirmationEnabled ? guestPreconfirmations.length : 0;
+  const presentCount = attendance.filter(item => item.status === "PRESENT").length;
   return {
     id: String(row.id), title: String(row.title), matchAt: String(row.match_at),
     confirmationDeadline: String(row.confirmation_deadline), location: row.location ? String(row.location) : null,
@@ -287,16 +382,27 @@ function publicMatch(row: any, attendance: any[], account: any, totalActive: num
     createdAt: String(row.created_at), updatedAt: String(row.updated_at),
     weather: weatherFromRow(row),
     counts: {
-      present: attendance.filter(item => item.status === "PRESENT").length,
+      present: presentCount,
       absent: attendance.filter(item => item.status === "ABSENT").length,
-      pending: Math.max(0, totalActive - attendance.length),
+      pending: Math.max(0, totalActive - attendance.length - preconfirmedCount),
+      preconfirmed: preconfirmedCount,
     },
+    guestPreconfirmation: {
+      enabled: instance.guestPreconfirmationEnabled,
+      threshold: instance.guestConfirmationThreshold,
+      canApprove: presentCount + preconfirmedCount >= instance.guestConfirmationThreshold,
+    },
+    preconfirmedGuestIds: instance.guestPreconfirmationEnabled ? [...preconfirmedIds] : [],
+    preconfirmedGuests: instance.guestPreconfirmationEnabled ? guestPreconfirmations.map(item => ({
+      playerId: String(item.player_id), playerName: String(item.display_name), photoUrl: item.photo_url || null,
+    })) : [],
     goalkeepers: { present: goalkeepersPresent, max: 2 },
     attendance: attendance.map(item => mapAttendance(item, item.display_name, row.max_changes)),
     shareMessage: buildMatchAttendanceShareMessage({
       title: String(row.title), matchAt: String(row.match_at), location: row.location ? String(row.location) : null,
       players: players.map(publicPlayer),
       attendance: attendance.map(item => ({ playerId: String(item.player_id), status: item.status })),
+      preconfirmedGuestIds: instance.guestPreconfirmationEnabled ? [...preconfirmedIds] : [],
       confirmationUrl: publicBaseUrl
         ? `${publicBaseUrl.replace(/\/$/, "")}/partidas?match=${encodeURIComponent(String(row.id))}`
         : null,
@@ -307,7 +413,13 @@ function publicMatch(row: any, attendance: any[], account: any, totalActive: num
       changeCount: Number(own?.change_count || 0),
       changesRemaining: Math.max(0, Number(row.max_changes) - Number(own?.change_count || 0)),
       isGoalkeeper: Boolean(viewerPlayer && (viewerPlayer.type === "goalkeeper" || viewerPlayer.primary_position === "Goleiro")),
+      isGuest: viewerPlayer?.type === "guest",
+      preconfirmed: ownPreconfirmed,
       canRespond: Boolean(account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()),
+      canConfirmPresence: Boolean(
+        account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()
+        && !(instance.guestPreconfirmationEnabled && viewerPlayer?.type === "guest"),
+      ),
     },
   };
 }

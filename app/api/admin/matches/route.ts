@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
 import { broadcastAccountNotification } from "../../../../lib/account-notifications";
-import { createSeparationFromMatch, loadScheduledMatches, setAttendance } from "../../../../lib/scheduled-matches";
+import { createSeparationFromMatch, loadScheduledMatches, setAttendance, setGuestPreconfirmation } from "../../../../lib/scheduled-matches";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 import { instanceConfigurationFromRow } from "../../../../lib/instance-config";
@@ -50,6 +50,15 @@ export async function PATCH(request: Request) {
   const payload = await request.json().catch(() => ({})) as any;
   const action = String(payload.action || "update");
   try {
+    if (action === "guest-preconfirmation") {
+      const result = await setGuestPreconfirmation({
+        matchId: String(payload.matchId || ""),
+        playerId: String(payload.playerId || ""),
+        action: String(payload.guestAction || "").toUpperCase() as "ADD" | "REMOVE",
+        account: admin,
+      });
+      return Response.json({ ok: true, changed: result.changed, message: result.message }, { headers: noStore });
+    }
     if (action === "attendance") {
       const result = await setAttendance({
         matchId: String(payload.matchId || ""), playerId: String(payload.playerId || ""),

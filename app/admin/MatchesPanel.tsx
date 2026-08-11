@@ -14,7 +14,9 @@ type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "A
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: string; separationId?: string | null;
-  counts: { present: number; absent: number; pending: number }; attendance: Attendance[];
+  counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: Attendance[];
+  guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
+  preconfirmedGuestIds?: string[];
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
   weather?: any;
@@ -47,6 +49,16 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props
       setNotice(result.message); await load();
     } catch (cause: any) { setError(cause.message); }
   }
+  async function guestPreconfirmation(playerId: string, guestAction: "ADD" | "REMOVE") {
+    setError("");
+    try {
+      const result = await api("/api/admin/matches", {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "guest-preconfirmation", matchId: current?.id, playerId, guestAction }),
+      });
+      setNotice(result.message); await load();
+    } catch (cause: any) { setError(cause.message); }
+  }
   function closeMatch(item: Match) {
     window.location.assign(`/?matchId=${encodeURIComponent(item.id)}`);
   }
@@ -68,21 +80,48 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props
     <div className="match-admin-layout"><div className="match-admin-list">{data.matches.length ? data.matches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
       <span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
-      <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b><b>{item.counts.pending} pendentes</b></div>
+      <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
     </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}</div>
-    <div>{current ? <MatchAdminDetail match={current} players={data.players} onAttendance={attendance} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
+    <div>{current ? <MatchAdminDetail match={current} players={data.players} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
     {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
 }
 
-function MatchAdminDetail({ match, players, onAttendance, onEdit, onClose, onCancel }: any) {
-  const byPlayer = useMemo(() => Object.fromEntries(match.attendance.map((item: Attendance) => [item.playerId, item])), [match.attendance]);
-  const goalkeepersPresent = match.goalkeepers?.present ?? players.filter((player: Player) => (player.type === "goalkeeper" || player.primaryPosition === "Goleiro") && byPlayer[player.id]?.status === "PRESENT").length;
+function MatchAdminDetail({ match, players, onAttendance, onGuestPreconfirmation, onEdit, onClose, onCancel }: any) {
+  const byPlayer = useMemo(
+    () => Object.fromEntries(match.attendance.map((item: Attendance) => [item.playerId, item])),
+    [match.attendance],
+  );
+  const waiting = useMemo(() => new Set<string>(match.preconfirmedGuestIds || []), [match.preconfirmedGuestIds]);
+  const goalkeepersPresent = match.goalkeepers?.present ?? players.filter((player: Player) =>
+    (player.type === "goalkeeper" || player.primaryPosition === "Goleiro") && byPlayer[player.id]?.status === "PRESENT"
+  ).length;
   const share = () => match.shareMessage?.trim() && window.open(buildWhatsAppShareUrl(match.shareMessage), "_blank", "noopener,noreferrer");
-  return <section className="admin-card match-admin-detail"><div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
+  return <section className="admin-card match-admin-detail">
+    <div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
     <WeatherPreview weather={match.weather}/>
-    <div className="match-attendance-summary"><span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span><span><b>{match.counts.pending}</b>Pendentes</span><span><b>{goalkeepersPresent}/2</b>Goleiros</span></div>
-    <div className="match-player-admin-list">{players.map((player: Player) => { const answer = byPlayer[player.id], guest = player.type === "guest", goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro", goalkeeperBlocked = goalkeeper && answer?.status !== "PRESENT" && goalkeepersPresent >= 2; return <div className={guest ? "guest" : ""} key={player.id}><span><b>{player.displayName}{guest && <em>Convidado</em>}</b><small>{player.primaryPosition} · {answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta"}</small></span><div><button disabled={goalkeeperBlocked} title={goalkeeperBlocked ? "Os dois lugares de goleiro já estão preenchidos." : undefined} className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button><button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div></div>})}</div>
+    <div className="match-attendance-summary">
+      <span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span>
+      {match.guestPreconfirmation?.enabled && <span><b>{match.counts.preconfirmed || 0}</b>Na espera</span>}
+      <span><b>{match.counts.pending}</b>Pendentes</span><span><b>{goalkeepersPresent}/2</b>Goleiros</span>
+    </div>
+    {match.guestPreconfirmation?.enabled && <p className="match-preconfirmation-help">Convidados entram primeiro na lista de espera. A aprovação é liberada quando presentes + espera somarem <b>{match.guestPreconfirmation.threshold}</b>.</p>}
+    <div className="match-player-admin-list">{players.map((player: Player) => {
+      const answer = byPlayer[player.id], guest = player.type === "guest", preconfirmed = waiting.has(player.id);
+      const goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
+      const goalkeeperBlocked = goalkeeper && answer?.status !== "PRESENT" && goalkeepersPresent >= 2;
+      const guestFlow = guest && match.guestPreconfirmation?.enabled;
+      const responseLabel = preconfirmed ? "Na lista de espera · aguardando aprovação" : answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta";
+      return <div className={`${guest ? "guest" : ""}${preconfirmed ? " preconfirmed" : ""}`} key={player.id}>
+        <span><b>{player.displayName}{guest && <em>Convidado</em>}</b><small>{player.primaryPosition} · {responseLabel}</small></span>
+        <div>{guestFlow && answer?.status !== "PRESENT" ? <>
+          {!preconfirmed && <button className="attendance-waiting" onClick={() => onGuestPreconfirmation(player.id, "ADD")}>⏳ Colocar na espera</button>}
+          {preconfirmed && <button className="attendance-present" disabled={!match.guestPreconfirmation.canApprove} title={!match.guestPreconfirmation.canApprove ? `Aguarde presentes e fila somarem ${match.guestPreconfirmation.threshold}.` : undefined} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Confirmar</button>}
+          {preconfirmed && <button className="attendance-waiting on" onClick={() => onGuestPreconfirmation(player.id, "REMOVE")}>Remover espera</button>}
+        </> : <button disabled={goalkeeperBlocked} title={goalkeeperBlocked ? "Os dois lugares de goleiro já estão preenchidos." : undefined} className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button>}
+        <button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div>
+      </div>;
+    })}</div>
     <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <><button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
   </section>;
 }

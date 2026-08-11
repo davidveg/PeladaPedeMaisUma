@@ -12,14 +12,18 @@ export function buildMatchAttendanceShareMessage(input: {
   location?: string | null;
   players: MatchSharePlayer[];
   attendance: MatchShareAttendance[];
+  preconfirmedGuestIds?: string[];
   confirmationUrl?: string | null;
   timezone?: string;
 }) {
   const status = new Map(input.attendance.map(entry => [entry.playerId, entry.status]));
+  const preconfirmedGuestIds = new Set(input.preconfirmedGuestIds || []);
   const isGoalkeeper = (player: MatchSharePlayer) => player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
   const ordered = (players: MatchSharePlayer[]) => players.sort((a, b) => a.displayName.localeCompare(b.displayName, "pt-BR"));
   const goalkeepers = ordered(input.players.filter(player => isGoalkeeper(player) && status.get(player.id) === "PRESENT")).slice(0, 2);
-  const linePlayers = input.players.filter(player => !isGoalkeeper(player) && (player.type !== "guest" || status.get(player.id) === "PRESENT"));
+  const linePlayers = input.players.filter(player => !isGoalkeeper(player) && (
+    player.type !== "guest" || status.get(player.id) === "PRESENT" || preconfirmedGuestIds.has(player.id)
+  ));
   const displayedPlayers = [...linePlayers, ...goalkeepers];
   const displayedPlayerIds = new Set(displayedPlayers.map(player => player.id));
   const displayedAttendance = input.attendance.filter(entry => displayedPlayerIds.has(entry.playerId));
@@ -41,8 +45,9 @@ export function buildMatchAttendanceShareMessage(input: {
   const present = displayedAttendance.filter(entry => entry.status === "PRESENT").length;
   const absent = displayedAttendance.filter(entry => entry.status === "ABSENT").length;
   const pending = Math.max(0, displayedPlayers.length - new Set(displayedAttendance.map(entry => entry.playerId)).size);
+  const answeredWaiting = displayedPlayers.filter(player => preconfirmedGuestIds.has(player.id)).length;
   const confirmation = input.confirmationUrl?.trim()
     ? `🔗 *Confirme sua presença no site:*\n${input.confirmationUrl.trim()}\n\n`
     : "";
-  return `⚽ *${header.toLocaleUpperCase("pt-BR")}*\n\n${confirmation}Aguardando confirmações de presença.\n✅ ${present} confirmados · ❌ ${absent} ausentes · ⏳ ${pending} pendentes\n\n${sections.join("\n\n")}`;
+  return `⚽ *${header.toLocaleUpperCase("pt-BR")}*\n\n${confirmation}Aguardando confirmações de presença.\n✅ ${present} confirmados · ❌ ${absent} ausentes · ⏳ ${Math.max(0, pending - answeredWaiting)} pendentes\n\n${sections.join("\n\n")}`;
 }

@@ -28,6 +28,8 @@ export type InstanceConfiguration = {
   defaultMatchLocation: string;
   confirmationLeadMinutes: number;
   manualSeparationEnabled: boolean;
+  guestPreconfirmationEnabled: boolean;
+  guestConfirmationThreshold: number;
   timezone: string;
   updatedAt?: string;
 };
@@ -62,6 +64,8 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   defaultMatchLocation: "Rio de Janeiro, Brasil",
   confirmationLeadMinutes: 60,
   manualSeparationEnabled: false,
+  guestPreconfirmationEnabled: false,
+  guestConfirmationThreshold: 16,
   timezone: "America/Sao_Paulo",
 };
 
@@ -100,6 +104,8 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     defaultMatchLocation: value("default_match_location", DEFAULT_INSTANCE_CONFIGURATION.defaultMatchLocation),
     confirmationLeadMinutes: Number(row.confirmation_lead_minutes ?? DEFAULT_INSTANCE_CONFIGURATION.confirmationLeadMinutes),
     manualSeparationEnabled: Boolean(row.manual_separation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.manualSeparationEnabled),
+    guestPreconfirmationEnabled: Boolean(row.guest_preconfirmation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.guestPreconfirmationEnabled),
+    guestConfirmationThreshold: Number(row.guest_confirmation_threshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
     timezone: value("timezone", DEFAULT_INSTANCE_CONFIGURATION.timezone),
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
   };
@@ -145,6 +151,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     defaultMatchLocation: text("defaultMatchLocation", 300, DEFAULT_INSTANCE_CONFIGURATION.defaultMatchLocation),
     confirmationLeadMinutes: Number(source.confirmationLeadMinutes ?? DEFAULT_INSTANCE_CONFIGURATION.confirmationLeadMinutes),
     manualSeparationEnabled: source.manualSeparationEnabled === true,
+    guestPreconfirmationEnabled: source.guestPreconfirmationEnabled === true,
+    guestConfirmationThreshold: Number(source.guestConfirmationThreshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
     timezone: text("timezone", 80, DEFAULT_INSTANCE_CONFIGURATION.timezone),
   };
 
@@ -163,6 +171,9 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   if (!timePattern.test(config.defaultMatchTime)) return { error: "O horário padrão deve usar o formato HH:MM." };
   if (!Number.isInteger(config.confirmationLeadMinutes) || config.confirmationLeadMinutes < 0 || config.confirmationLeadMinutes > 10080) {
     return { error: "A antecedência das confirmações deve ficar entre 0 e 10.080 minutos." };
+  }
+  if (!Number.isInteger(config.guestConfirmationThreshold) || config.guestConfirmationThreshold < 1 || config.guestConfirmationThreshold > 100) {
+    return { error: "O mínimo para confirmar convidados deve ficar entre 1 e 100 jogadores." };
   }
   try {
     new Intl.DateTimeFormat("pt-BR", { timeZone: config.timezone }).format(new Date());
@@ -186,7 +197,8 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "primary_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
   "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
-  "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled", "timezone",
+  "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
+  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "timezone",
 ] as const;
 
 export function instanceConfigurationValues(config: InstanceConfiguration) {
@@ -196,7 +208,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
-    Number(config.manualSeparationEnabled),
+    Number(config.manualSeparationEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold,
     config.timezone,
   ];
 }
