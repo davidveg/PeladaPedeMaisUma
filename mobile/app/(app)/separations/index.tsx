@@ -11,22 +11,22 @@ import { useMobileBranding } from "@/branding";
 import type { Separation } from "@/types";
 
 function MatchScore({ blue, yellow }: { blue: number; yellow: number }) {
-  const { config: brand } = useMobileBranding();
+  const { config: brand, palette } = useMobileBranding();
   return <View accessibilityLabel={`Placar: ${brand.teamBlueName} ${blue}, ${brand.teamYellowName} ${yellow}`} style={styles.score}>
-    <View style={[styles.scoreTeam, styles.scoreBlue]}>
-      <Text style={[styles.scoreLabel, { color: colors.blue }]}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text>
-      <Text style={[styles.scoreValue, { color: colors.blue }]}>{blue}</Text>
+    <View style={[styles.scoreTeam, { backgroundColor:palette.blueSoft }]}>
+      <Text style={[styles.scoreLabel, { color: palette.blue }]}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text>
+      <Text style={[styles.scoreValue, { color: palette.blue }]}>{blue}</Text>
     </View>
     <Text style={styles.scoreSeparator}>×</Text>
-    <View style={[styles.scoreTeam, styles.scoreYellow]}>
-      <Text style={[styles.scoreLabel, { color: colors.yellow }]}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text>
-      <Text style={[styles.scoreValue, { color: colors.yellow }]}>{yellow}</Text>
+    <View style={[styles.scoreTeam, { backgroundColor:palette.yellowSoft }]}>
+      <Text style={[styles.scoreLabel, { color: palette.yellow }]}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text>
+      <Text style={[styles.scoreValue, { color: palette.yellow }]}>{yellow}</Text>
     </View>
   </View>;
 }
 
 export default function Separations() {
-  const { config: brand } = useMobileBranding();
+  const { config: brand, palette } = useMobileBranding();
   const router = useRouter();
   const network = useNetInfo();
   const query = useQuery({
@@ -81,8 +81,8 @@ export default function Separations() {
                   : <Text style={styles.pending}>Resultado pendente</Text>}
               </View>
               <View style={styles.teams}>
-                <Text style={styles.blueTeam}>{brand.teamBlueName} {item.snapshot.blue.length}</Text>
-                <Text style={styles.yellowTeam}>{brand.teamYellowName} {item.snapshot.yellow.length}</Text>
+                <Text style={[styles.teamTag,{backgroundColor:palette.blueSoft,color:palette.blue}]}>{brand.teamBlueName} {item.snapshot.blue.length}</Text>
+                <Text style={[styles.teamTag,{backgroundColor:palette.yellowSoft,color:palette.yellow}]}>{brand.teamYellowName} {item.snapshot.yellow.length}</Text>
               </View>
               {item.career ? <Text style={item.career.status === "CLOSED" ? styles.closed : item.career.viewerCanVote ? styles.votePending : styles.open}>{
                 item.career.status === "CLOSED"
@@ -116,14 +116,11 @@ const styles = StyleSheet.create({
   pending: { maxWidth: 120, textAlign: "right", color: colors.yellow, fontWeight: "800" },
   score: { flexDirection: "row", alignItems: "center", gap: 4 },
   scoreTeam: { minWidth: 43, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 4, alignItems: "center" },
-  scoreBlue: { backgroundColor: colors.blueSoft },
-  scoreYellow: { backgroundColor: colors.yellowSoft },
   scoreLabel: { fontSize: 7, lineHeight: 9, fontWeight: "900", letterSpacing: 0.4 },
   scoreValue: { fontSize: 21, lineHeight: 24, fontWeight: "900" },
   scoreSeparator: { color: colors.muted, fontSize: 17, fontWeight: "800" },
   teams: { flexDirection: "row", gap: 8 },
-  blueTeam: { backgroundColor: colors.blueSoft, color: colors.blue, padding: 7, borderRadius: 8, fontWeight: "700" },
-  yellowTeam: { backgroundColor: colors.yellowSoft, color: colors.yellow, padding: 7, borderRadius: 8, fontWeight: "700" },
+  teamTag: { padding: 7, borderRadius: 8, fontWeight: "700" },
   open: { color: colors.yellow, fontWeight: "700" },
   votePending: { color: colors.danger, fontWeight: "900" },
   closed: { color: colors.success, fontWeight: "800" },

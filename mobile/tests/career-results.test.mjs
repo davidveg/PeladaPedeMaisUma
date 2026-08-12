@@ -34,3 +34,13 @@ test("compartilha o placar e o resultado consolidado da votação encerrada", ()
 test("não compartilha votação que ainda está aberta", () => {
   assert.throws(() => careerResultsMessage({ ...separation, career: { ...separation.career, status: "OPEN" } }, "https://pelada.example.com"), /ainda não foi encerrada/);
 });
+
+test("usa nomes e marcadores das cores configuradas no resultado compartilhado", () => {
+  const message = careerResultsMessage(separation, "https://pelada.example.com", {
+    teamBlueName: "Vermelho",
+    teamBlueColor: "#D62828",
+    teamYellowName: "Branco",
+    teamYellowColor: "#F5F5F5",
+  });
+  assert.match(message, /🔴 Vermelho 1 × 3 Branco ⚪/);
+});

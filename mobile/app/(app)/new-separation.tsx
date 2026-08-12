@@ -8,7 +8,7 @@ import { BalanceDetails } from "@/balance-details";
 import { Button, Card, Field, Header, Screen } from "@/components";
 import { recalculateTeamResult } from "@/team-balance";
 import { colors } from "@/theme";
-import { useMobileBranding } from "@/branding";
+import { contrastTextColor, useMobileBranding } from "@/branding";
 import { useAuth } from "@/auth";
 import { separationBuilderAllowed } from "@/separation-access";
 import type { Player, TeamResult } from "@/types";
@@ -231,8 +231,8 @@ export default function NewSeparation() {
 }
 
 function TeamEditor({ team, players, selectedId, onSelect, onMove }: { team: TeamKey; players: Player[]; selectedId: string | null; onSelect: (id: string) => void; onMove: (id: string) => void }) {
-  const { config: brand } = useMobileBranding();
-  const blue = team === "blue", color = blue ? colors.blue : colors.yellow, soft = blue ? colors.blueSoft : colors.yellowSoft;
+  const { config: brand, palette } = useMobileBranding();
+  const blue = team === "blue", color = blue ? palette.blue : palette.yellow, soft = blue ? palette.blueSoft : palette.yellowSoft, selectedText=contrastTextColor(color);
   const title = (blue ? brand.teamBlueName : brand.teamYellowName).toLocaleUpperCase("pt-BR"), destination = blue ? brand.teamYellowName : brand.teamBlueName;
   return <Card style={[styles.team, { borderColor: color }]}>
     <View style={styles.teamHeader}><Text style={[styles.teamTitle, { color }]}>TIME {title}</Text><Text style={[styles.teamCount, { color, backgroundColor: soft }]}>{players.length} jogadores</Text></View>
@@ -240,8 +240,8 @@ function TeamEditor({ team, players, selectedId, onSelect, onMove }: { team: Tea
       const selected = selectedId === player.id;
       return <View key={player.id} style={[styles.teamPlayer, { backgroundColor: selected ? color : soft }]}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={`Selecionar ${player.displayName} para troca`} onPress={() => onSelect(player.id)} style={styles.playerIdentity}>
-          <Text style={[styles.playerName, selected && styles.selectedText]}>{player.displayName}</Text>
-          <Text style={[styles.playerPosition, selected && styles.selectedText]}>{player.primaryPosition}{selected ? " · selecionado para troca" : ""}</Text>
+          <Text style={[styles.playerName, selected && { color:selectedText }]}>{player.displayName}</Text>
+          <Text style={[styles.playerPosition, selected && { color:selectedText }]}>{player.primaryPosition}{selected ? " · selecionado para troca" : ""}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={`Mover ${player.displayName} para o time ${destination}`} onPress={() => onMove(player.id)} style={[styles.moveButton, { borderColor: color }]}>
           <Text style={[styles.moveArrow, { color }]}>{blue ? "→" : "←"}</Text>

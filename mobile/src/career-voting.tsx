@@ -152,12 +152,12 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
   visible: boolean; title: string; players: VotePlayer[]; selectedId: string;
   onClose: () => void; onSelect: (playerId: string) => void;
 }) {
-  const { config: brand } = useMobileBranding();
+  const { config: brand, palette } = useMobileBranding();
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <ScrollView contentContainerStyle={{ padding: 20, gap: 10, backgroundColor: colors.cream, flexGrow: 1 }}>
       <Header title={title}/>
       {players.map(player => {
-        const blue = player.team === "BLUE", color = blue ? colors.blue : colors.yellow, soft = blue ? colors.blueSoft : colors.yellowSoft;
+        const blue = player.team === "BLUE", color = blue ? palette.blue : palette.yellow, soft = blue ? palette.blueSoft : palette.yellowSoft;
         return <Pressable
           key={player.id} accessibilityRole="radio" accessibilityState={{ selected: player.id === selectedId }}
           onPress={() => onSelect(player.id)}

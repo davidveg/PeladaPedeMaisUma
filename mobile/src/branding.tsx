@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AppState } from "react-native";
 import { API_BASE_URL } from "./api";
 import { colors as defaults } from "./theme";
+export { contrastTextColor } from "./team-colors";
 
 export type MobileInstanceConfiguration = {
   appName: string;

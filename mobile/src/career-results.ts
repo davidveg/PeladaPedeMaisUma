@@ -1,4 +1,5 @@
 import type { Separation } from "./types";
+import { teamColorMarker } from "./team-colors.ts";
 
 function publicSeparationUrl(publicBaseUrl: string, separationId: string) {
   const url = new URL(`${publicBaseUrl.replace(/\/$/, "")}/?separation=${encodeURIComponent(separationId)}`);
@@ -8,7 +9,7 @@ function publicSeparationUrl(publicBaseUrl: string, separationId: string) {
   return url.toString();
 }
 
-export function careerResultsMessage(item: Separation, publicBaseUrl: string, branding: { siteName?: string; teamBlueName?: string; teamYellowName?: string } = {}) {
+export function careerResultsMessage(item: Separation, publicBaseUrl: string, branding: { siteName?: string; teamBlueName?: string; teamYellowName?: string; teamBlueColor?: string; teamYellowColor?: string } = {}) {
   if (!item.career || item.career.status !== "CLOSED") throw new Error("A votação ainda não foi encerrada.");
   const results = item.career.results;
   const names = Object.fromEntries([...item.snapshot.blue, ...item.snapshot.yellow].map(player => [player.id, player.displayName]));
@@ -21,6 +22,7 @@ export function careerResultsMessage(item: Separation, publicBaseUrl: string, br
     : "Votação encerrada sem votos válidos.";
   const url = publicSeparationUrl(publicBaseUrl, item.id);
   const siteName = branding.siteName || "Pelada Pede Mais Uma", teamBlueName = branding.teamBlueName || "Azul", teamYellowName = branding.teamYellowName || "Amarelo";
+  const teamBlueMarker = teamColorMarker(branding.teamBlueColor || "#1768E5"), teamYellowMarker = teamColorMarker(branding.teamYellowColor || "#F4BF20");
 
-  return `${String.fromCodePoint(0x26bd, 0xfe0f)} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${String.fromCodePoint(0x1f3c6)} *Resultado da votação*\n${item.matchTitle.replace(/\*/g, "").trim()}\n\n*Placar:* ${teamBlueName} ${item.career.blueScore} × ${item.career.yellowScore} ${teamYellowName}\n*Votos registrados:* ${voteCount}\n\n${details}\n\n${String.fromCodePoint(0x1f4ca)} *Veja os detalhes da partida:*\n${url}`;
+  return `${String.fromCodePoint(0x26bd, 0xfe0f)} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${String.fromCodePoint(0x1f3c6)} *Resultado da votação*\n${item.matchTitle.replace(/\*/g, "").trim()}\n\n*Placar:* ${teamBlueMarker} ${teamBlueName} ${item.career.blueScore} × ${item.career.yellowScore} ${teamYellowName} ${teamYellowMarker}\n*Votos registrados:* ${voteCount}\n\n${details}\n\n${String.fromCodePoint(0x1f4ca)} *Veja os detalhes da partida:*\n${url}`;
 }

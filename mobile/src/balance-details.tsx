@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Card } from "./components";
 import { colors } from "./theme";
+import { useMobileBranding } from "./branding";
 import type { TeamDelta, TeamResult } from "./types";
 
 const explanations: Record<string, string> = {
@@ -18,6 +19,7 @@ function tone(rating: string) {
 }
 
 export function BalanceDetails({ result, fallbackRating }: { result: TeamResult; fallbackRating?: string }) {
+  const { config: brand, palette: teamPalette } = useMobileBranding();
   const rating = result.rating || fallbackRating || "Equilíbrio não informado", palette = tone(rating);
   const delta = result.delta || emptyDelta;
   const metrics = [
@@ -38,8 +40,8 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
       <View style={styles.metricGrid}>{metrics.map(([label, value, decimals]) => <View key={label} style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{Number(value || 0).toFixed(decimals)}</Text></View>)}</View>
     </View>
     {result.blueMetrics && result.yellowMetrics ? <View style={styles.teamAverages}>
-      <View style={[styles.teamAverage, { backgroundColor: colors.blueSoft }]}><Text style={{ color: colors.blue, fontWeight: "900" }}>AZUL</Text><Text style={styles.averageValue}>{result.blueMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
-      <View style={[styles.teamAverage, { backgroundColor: colors.yellowSoft }]}><Text style={{ color: colors.yellow, fontWeight: "900" }}>AMARELO</Text><Text style={styles.averageValue}>{result.yellowMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
+      <View style={[styles.teamAverage, { backgroundColor: teamPalette.blueSoft }]}><Text style={{ color: teamPalette.blue, fontWeight: "900" }}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{result.blueMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
+      <View style={[styles.teamAverage, { backgroundColor: teamPalette.yellowSoft }]}><Text style={{ color: teamPalette.yellow, fontWeight: "900" }}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{result.yellowMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
     </View> : null}
     <View style={styles.section}>
       <Text style={styles.heading}>Como o algoritmo classificou</Text>
