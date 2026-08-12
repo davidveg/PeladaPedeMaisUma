@@ -3,7 +3,7 @@
 import { adminRequired, db, ensureDb } from "../../../../../lib/database";
 import { ensureCareerSeasonCurrent } from "../../../../../lib/career-season";
 import { balanceTeams, matchPlayers, parseWhatsApp, type Config, type Player } from "../../../../../lib/football";
-import { createMatchSeparationProposal } from "../../../../../lib/scheduled-matches";
+import { createMatchSeparationProposal, loadMatchSeparationDraft } from "../../../../../lib/scheduled-matches";
 
 export async function POST(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
@@ -12,7 +12,9 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({})) as any;
   if (payload.matchId) {
     try {
-      const proposal = await createMatchSeparationProposal(String(payload.matchId), Number(payload.nonce) || 0);
+      const proposal = payload.loadDraft
+        ? await loadMatchSeparationDraft(String(payload.matchId))
+        : await createMatchSeparationProposal(String(payload.matchId), Number(payload.nonce) || 0);
       return Response.json({
         parsed: { title: proposal.match.title, date: proposal.match.date },
         ...proposal,

@@ -95,7 +95,10 @@ export async function PATCH(request: Request) {
       if (!previous) return Response.json({ error: "Partida não encontrada." }, { status: 404, headers: noStore });
       if (previous.status !== "OPEN") return Response.json({ error: "Somente partidas abertas podem ser canceladas." }, { status: 409, headers: noStore });
       const now = new Date().toISOString();
-      await db().prepare(`UPDATE scheduled_matches SET status='CANCELLED',closed_at=?,updated_at=? WHERE id=?`).bind(now, now, id).run();
+      await db().batch([
+        db().prepare(`UPDATE scheduled_matches SET status='CANCELLED',closed_at=?,updated_at=? WHERE id=?`).bind(now, now, id),
+        db().prepare(`DELETE FROM match_separation_drafts WHERE match_id=?`).bind(id),
+      ]);
       await audit(admin.id, "MATCH_CANCELLED", "scheduled_match", id, { status: "CANCELLED" }, previous);
       await broadcastAccountNotification({ type: "MATCH_CANCELLED", title: "Partida cancelada", body: `${previous.title} foi cancelada.`, matchId: id });
       return Response.json({ ok: true, message: "Partida cancelada." }, { headers: noStore });

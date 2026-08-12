@@ -73,6 +73,9 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   const [publicBaseUrl, setPublicBaseUrl] = useState("");
   const [matchSource, setMatchSource] = useState<MatchSeparationSource | null>(null);
   const [manualSeparationEnabled, setManualSeparationEnabled] = useState(false);
+  const [separationDraftsEnabled, setSeparationDraftsEnabled] = useState(false);
+  const [draftMode, setDraftMode] = useState(false);
+  const [loadedDraft, setLoadedDraft] = useState<any>(null);
 
   const load = async () => {
     const [auth, h, publicConfig, publicPlayersPayload] = await Promise.all([
@@ -89,10 +92,14 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     const searchParams = new URLSearchParams(window.location.search);
     const requestedSeparation=searchParams.get("separation");
     const requestedMatchId=searchParams.get("matchId");
+    const requestedDraftMode=searchParams.get("draft")==="1";
     const requested=separations.find((separation:any)=>separation.id===requestedSeparation);
     const manualEnabled=Boolean(publicConfig.instance?.manualSeparationEnabled);
+    const draftsEnabled=Boolean(publicConfig.instance?.separationDraftsEnabled);
     setHistory(separations);
     setManualSeparationEnabled(manualEnabled);
+    setSeparationDraftsEnabled(draftsEnabled);
+    setDraftMode(Boolean(requestedMatchId&&requestedDraftMode));
     setPublicBaseUrl(publicConfig.baseUrl || window.location.origin);
     setPublicPlayers(publicPlayersPayload.players || []);
     setPublicPlayerConfig({ ...defaultConfig, ...(publicPlayersPayload.config || {}) });
@@ -122,7 +129,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
           const proposalResponse = await fetch("/api/mobile/separations/proposal", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ matchId: requestedMatchId, nonce: 0 }),
+            body: JSON.stringify({ matchId: requestedMatchId, nonce: 0, loadDraft: requestedDraftMode }),
           });
           const proposal = await proposalResponse.json().catch(() => ({}));
           if (!proposalResponse.ok) {
@@ -132,10 +139,12 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
             setMatchSource(proposal.match);
             setSelected(proposal.players || []);
             setResult(proposal.result);
+            setLoadedDraft(proposal.draft||null);
             setNonce(Math.max(0, Number(proposal.result?.proposal || 1) - 1));
-            setManual(false);
+            setManual(Boolean(proposal.draft?.exists&&!proposal.draft?.stale&&proposal.draft?.manuallyAdjusted));
             setText("");
             setStage("result");
+            if(proposal.draft?.stale)setToast("O rascunho anterior ficou desatualizado. Uma nova proposta foi gerada com os presentes atuais.");
           }
         } else {
           setMatchSource(null);
@@ -247,9 +256,18 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     setManual(true);
   }
 
-  async function confirmSeparation() {
+  async function confirmSeparation(mode:"save-draft"|"publish"="publish") {
+    if(matchSource&&draftMode&&mode==="save-draft"){
+      if(!separationDraftsEnabled){setToast("Os rascunhos de separação estão desativados.");return}
+      if(!confirm(`Salvar esta proposta como rascunho de ${matchSource.title}? A lista continuará aberta e ninguém será notificado.`))return;
+      const snapshot={...result,...config,ratingSystemVersion:2};
+      const response=await fetch('/api/admin/separation-drafts',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({matchId:matchSource.id,result:snapshot,manuallyAdjusted:manual})});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok){setToast(payload.error||'Não foi possível salvar o rascunho.');return}
+      setResult(payload.result||result);setLoadedDraft(payload.draft||null);setToast(payload.message||'Rascunho salvo. Você pode continuar ajustando ou publicar a separação.');return;
+    }
     const confirmation = matchSource
-      ? `Deseja fechar a lista de ${matchSource.title} e salvar esta proposta no histórico?`
+      ? `Deseja fechar a lista de ${matchSource.title}, publicar esta separação e notificar os jogadores?`
       : "Deseja confirmar esta separação? Os times serão salvos no histórico.";
     if (!confirm(confirmation)) return;
     const snapshot = { ...result, ...config, ratingSystemVersion:2 };
@@ -332,7 +350,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
         <div className="review-grid"><div className="panel"><h3>Confirmados encontrados <span>{matches.length - missing.length}</span></h3>{matches.filter((match) => match.status === "found").map((match: any) => <PlayerRow key={match.name} player={match.player} onClick={() => showPlayer(match.player)} />)}</div><div className="panel"><h3>Sem cadastro <span>{missing.length}</span></h3>{missing.map((match: any) => <div className="missing" key={match.name}><PlayerAvatar name={match.name} /><div><b>{match.name}</b><small>{match.status === "ambiguous" ? "Possível correspondência ambígua" : `${playerTypeLabel(importedPlayerType(parsed,match.name))} sem cadastro`}</small></div><button onClick={() => openGuest(match.name)}>+ Cadastrar {playerTypeLabel(importedPlayerType(parsed,match.name)).toLowerCase()}</button></div>)}</div></div>
         <div className="action-bar"><span>{selected.length} jogadores prontos</span><button className="primary" disabled={selected.length < 4 || missing.length > 0 || parsed.duplicates.length > 0} onClick={() => generate()}>Gerar times equilibrados →</button></div>
       </section>}
-      {isAdmin && (manualSeparationEnabled || Boolean(matchSource)) && stage === "result" && result && <ResultPresentation result={result} source={matchSource} manuallyAdjusted={manual} onBack={matchSource ? () => window.history.back() : undefined} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onConfirm={confirmSeparation} />}
+      {isAdmin && (manualSeparationEnabled || Boolean(matchSource)) && stage === "result" && result && <ResultPresentation result={result} source={matchSource} manuallyAdjusted={manual} draftMode={draftMode} loadedDraft={loadedDraft} onBack={matchSource ? () => window.history.back() : undefined} onPlayer={(player:Player)=>showPlayer(player)} onMove={move} onNew={() => generate(true)} onCopy={() => copyTeams(result, true)} onSaveDraft={()=>confirmSeparation("save-draft")} onConfirm={()=>confirmSeparation("publish")} />}
       {stage === "players" && <PublicPlayersView players={publicPlayers} config={publicPlayerConfig} onPlayer={(player:Player)=>showPlayer(player,publicPlayerConfig)} />}
       {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Separações salvas":"Últimas separações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada separação."}</p></div>{isAdmin&&(manualSeparationEnabled?<a className="primary" href="/">+ Nova separação</a>:<a className="primary" href="/partidas">Gerenciar partidas</a>)}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma separação confirmada ainda.</div> : history.map((item) => <article key={item.id}><a className="history-open" href={`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`} onClick={event=>{event.preventDefault();openSavedSeparation(item)}}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></a><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar times</button><button onClick={()=>shareSavedSeparation(item)}>Compartilhar link</button></div></article>)}</div></section>}
       {stage === "history" && historyDetail && <SavedSeparation key={`${historyDetail.id}:${historyDetail.updatedAt || historyDetail.confirmedAt}`} item={historyDetail} isAdmin={isAdmin} careerConfig={careerConfig} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onEditCareer={editCareerResult} onSaveArrivalOrder={saveArrivalOrder} onSaveTeams={saveSeparationTeams} onBack={closeSavedSeparation} onShareLink={()=>shareSavedSeparation(historyDetail)} onPlayer={(player:Player)=>showPlayer(player,{...resultConfig(historyDetail.snapshot),showContributions:publicPlayerConfig.showContributions,cardTiersEnabled:publicPlayerConfig.cardTiersEnabled,cardBronzeMax:publicPlayerConfig.cardBronzeMax,cardSilverMax:publicPlayerConfig.cardSilverMax,cardGoldMax:publicPlayerConfig.cardGoldMax})} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
@@ -382,8 +400,8 @@ function comparePublicPlayers(a:Player,b:Player,sort:PublicPlayerSort,config:any
   const aValue=value(a),bValue=value(b);let result=typeof aValue==="number"&&typeof bValue==="number"?aValue-bValue:String(aValue).localeCompare(String(bValue),"pt-BR",{sensitivity:"base",numeric:true});if(result===0)result=a.displayName.localeCompare(b.displayName,"pt-BR",{sensitivity:"base",numeric:true});return sort.direction==="asc"?result:-result;
 }
 
-function ResultPresentation({ result, source, manuallyAdjusted, onBack, onPlayer, onMove, onNew, onCopy, onConfirm }: any) {
-  return <section className="content"><div className="section-head"><div><div className="eyebrow">{source ? `${source.presentCount} PRESENTES · ` : ""}PROPOSTA {result.proposal}</div><h2>Times prontos para o jogo</h2><p>{source ? `${source.title} · proposta criada somente com as presenças confirmadas.` : manuallyAdjusted ? "Separação ajustada manualmente" : "O algoritmo comparou milhares de combinações."}</p></div><BalanceBadge rating={result.rating} /></div><TeamGrid result={result} onPlayer={onPlayer} onMove={onMove} /><BalanceMetrics delta={result.delta} /><div className="result-actions">{onBack && <button className="ghost" onClick={onBack}>← Voltar às presenças</button>}<button className="ghost" onClick={onNew}>↻ Gerar nova separação</button><button className="ghost" onClick={onCopy}>Copiar com pontuações</button><button className="primary" onClick={onConfirm}>{source ? "Fechar lista e confirmar" : "Confirmar separação"}</button></div></section>;
+function ResultPresentation({ result, source, manuallyAdjusted, draftMode, loadedDraft, onBack, onPlayer, onMove, onNew, onCopy, onSaveDraft, onConfirm }: any) {
+  return <section className="content"><div className="section-head"><div><div className="eyebrow">{draftMode?"RASCUNHO · ":""}{source ? `${source.presentCount} PRESENTES · ` : ""}PROPOSTA {result.proposal}</div><h2>{draftMode?"Planejamento dos times":"Times prontos para o jogo"}</h2><p>{source ? `${source.title} · proposta criada somente com as presenças confirmadas.${draftMode?" Salve para continuar depois ou publique quando os times estiverem definidos.":""}` : manuallyAdjusted ? "Separação ajustada manualmente" : "O algoritmo comparou milhares de combinações."}</p>{draftMode&&loadedDraft?.updatedAt&&<small className="draft-updated">Rascunho atualizado em {new Date(loadedDraft.updatedAt).toLocaleString('pt-BR')}. A lista permanece aberta.</small>}</div><BalanceBadge rating={result.rating} /></div><TeamGrid result={result} onPlayer={onPlayer} onMove={onMove} /><BalanceMetrics delta={result.delta} /><div className="result-actions">{onBack && <button className="ghost" onClick={onBack}>← Voltar às presenças</button>}<button className="ghost" onClick={onNew}>↻ Gerar nova separação</button><button className="ghost" onClick={onCopy}>Copiar com pontuações</button>{draftMode&&<button className="ghost" onClick={onSaveDraft}>Salvar rascunho</button>}<button className="primary" onClick={onConfirm}>{draftMode?"Fechar lista e publicar":source ? "Fechar lista e confirmar" : "Confirmar separação"}</button></div></section>;
 }
 
 function SavedSeparation({ item, isAdmin, careerConfig, publicBaseUrl, onConfirmCareer, onEditCareer, onSaveArrivalOrder, onSaveTeams, onBack, onShareLink, onPlayer, onCopy }: any) {

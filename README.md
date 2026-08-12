@@ -72,6 +72,11 @@ Documentação complementar:
 - Reconhecimento das seções **Goleiros**, **Mensalistas** e **Convidados**.
 - Jogadores desconhecidos ou ambíguos nunca são vinculados automaticamente.
 - Propostas calculadas pelo algoritmo oficial do servidor.
+- Rascunhos de Separação opcionais, desativados por padrão e configuráveis em **Painel administrativo → Separações**.
+- Quando ativados, a partida mantém o caminho direto **Fechar lista e gerar times** e ganha o caminho adicional **Criar/Editar rascunho de separação**. Site e aplicativo compartilham o mesmo rascunho.
+- Dentro do rascunho, o administrador pode apenas salvá-lo — mantendo a lista aberta e sem notificações — ou usar **Fechar lista e publicar**, que cria a separação oficial e notifica os jogadores.
+- A configuração dos rascunhos é independente do Modo Carreira e não altera o estado das demais funcionalidades.
+- Se a lista de presentes mudar, o rascunho é marcado como desatualizado e uma nova proposta precisa ser validada antes da publicação oficial.
 - Nova proposta, troca manual entre equipes, métricas e indicador de equilíbrio.
 - Nomes e cores das duas equipes configuráveis por instância; os padrões são Time Azul e Time Amarelo.
 - Criação e confirmação de separações exclusivas para administradores.
@@ -383,6 +388,7 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 
 - `GET/PUT /api/matches` — agenda e confirmação do jogador.
 - `GET/POST/PATCH /api/admin/matches` — gestão administrativa das partidas, presenças e lista de espera de convidados.
+- `GET/PUT /api/admin/separation-drafts` — consulta e gravação privada dos rascunhos de separação.
 - `GET/POST/PATCH/DELETE /api/separations` — histórico, criação, chegada e exclusão lógica.
 - `GET/PUT /api/career/draft` — rascunho de súmula.
 - `POST/PUT /api/career/match` — confirmação e correção de resultado.

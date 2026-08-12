@@ -21,6 +21,7 @@ export type MobileInstanceConfiguration = {
   defaultMatchLocation: string;
   confirmationLeadMinutes: number;
   manualSeparationEnabled: boolean;
+  separationDraftsEnabled: boolean;
   guestPreconfirmationEnabled: boolean;
   guestConfirmationThreshold: number;
   timezone: string;
@@ -44,6 +45,7 @@ const defaultConfiguration: MobileInstanceConfiguration = {
   defaultMatchLocation: "Rio de Janeiro, Brasil",
   confirmationLeadMinutes: 60,
   manualSeparationEnabled: false,
+  separationDraftsEnabled: false,
   guestPreconfirmationEnabled: false,
   guestConfirmationThreshold: 16,
   timezone: "America/Sao_Paulo",

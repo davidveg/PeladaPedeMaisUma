@@ -94,6 +94,7 @@ paths:
               oneOf:
                 - { type: object, required: [originalText], properties: { originalText: { type: string }, nonce: { type: integer, minimum: 0 } } }
                 - { type: object, required: [playerIds], properties: { playerIds: { type: array, minItems: 4, items: { type: string } }, nonce: { type: integer, minimum: 0 } } }
+                - { type: object, required: [matchId], properties: { matchId: { type: string }, nonce: { type: integer, minimum: 0 }, loadDraft: { type: boolean, description: Carrega o rascunho persistido quando a funcionalidade estiver ativa. } } }
       responses:
         "200": { description: Proposta oficial com jogadores e configuração, content: { application/json: { schema: { type: object, properties: { result: { $ref: "#/components/schemas/TeamProposal" } } } } } }
         "422": { description: Nome ausente, ambíguo, duplicado ou jogador inativo }
@@ -166,6 +167,22 @@ paths:
         "200": { description: Operação concluída e auditada }
         "409": { description: Estado da partida incompatível ou menos de quatro presentes }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/admin/separation-drafts:
+    get:
+      summary: Consulta o rascunho privado de uma partida aberta (administrador)
+      parameters: [{ in: query, name: matchId, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Rascunho atual ou proposta inicial, incluindo indicador de desatualização }
+        "403": { description: Funcionalidade desativada }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      summary: Salva uma proposta sem fechar a lista ou notificar participantes (administrador)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [matchId, result], properties: { matchId: { type: string }, result: { $ref: "#/components/schemas/TeamProposal" }, manuallyAdjusted: { type: boolean } } } } } }
+      responses:
+        "200": { description: Rascunho validado e persistido }
+        "403": { description: Funcionalidade desativada }
+        "409": { description: Lista de presentes alterada ou partida fechada }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/notifications:
     get:
       summary: Central interna de notificações da conta
@@ -217,7 +234,7 @@ paths:
       summary: URL pública canônica para links compartilháveis
       security: []
       responses:
-        "200": { description: URL pública e configuração compartilhada pelo site e aplicativo, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri }, instance: { type: object, properties: { manualSeparationEnabled: { type: boolean, default: false, description: Exibe a importação manual de uma lista do WhatsApp; a montagem iniciada por Partidas permanece disponível. } } } } } } } } }
+        "200": { description: URL pública e configuração compartilhada pelo site e aplicativo, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri }, instance: { type: object, properties: { manualSeparationEnabled: { type: boolean, default: false, description: Exibe a importação manual de uma lista do WhatsApp; a montagem iniciada por Partidas permanece disponível. }, separationDraftsEnabled: { type: boolean, default: false, description: Permite que administradores salvem propostas privadas antes do fechamento da lista. } } } } } } } } }
   /api/health:
     get:
       summary: Disponibilidade do servidor e banco

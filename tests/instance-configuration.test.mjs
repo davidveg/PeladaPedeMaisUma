@@ -23,6 +23,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.teamBlueName, "Azul");
   assert.equal(config.teamYellowName, "Amarelo");
   assert.equal(config.manualSeparationEnabled, false);
+  assert.equal(config.separationDraftsEnabled, false);
   assert.equal(config.guestPreconfirmationEnabled, false);
   assert.equal(config.guestConfirmationThreshold, 16);
   assert.equal(config.shareImageUrl, null);
@@ -42,6 +43,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     teamBlueName: "Camisa",
     teamYellowName: "Sem camisa",
     manualSeparationEnabled: true,
+    separationDraftsEnabled: true,
     guestPreconfirmationEnabled: true,
     guestConfirmationThreshold: 18,
     shareImageUrl: "/api/upload?key=branding%2Fsocial.png",
@@ -53,6 +55,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
   assert.equal(result.config.manualSeparationEnabled, true);
+  assert.equal(result.config.separationDraftsEnabled, true);
   assert.equal(result.config.guestPreconfirmationEnabled, true);
   assert.equal(result.config.guestConfirmationThreshold, 18);
   assert.equal(result.config.shareImageUrl, "/api/upload?key=branding%2Fsocial.png");
@@ -60,10 +63,11 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
 });
 
 test("mantém colunas e valores alinhados ao salvar a configuração", () => {
-  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20 };
+  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20 };
   assert.equal(INSTANCE_CONFIGURATION_COLUMNS.length, instanceConfigurationValues(config).length);
   const index = INSTANCE_CONFIGURATION_COLUMNS.indexOf("manual_separation_enabled");
   assert.equal(instanceConfigurationValues(config)[index], 1);
+  assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("separation_drafts_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_preconfirmation_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_confirmation_threshold")], 20);
 });
@@ -76,6 +80,22 @@ test("rejeita cores, horários e logotipos externos inseguros", () => {
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, faviconUrl: "http://inseguro.example/favicon.ico" }).error, /favicon/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, teamYellowName: "Azul" }).error, /diferentes/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, guestConfirmationThreshold: 0 }).error, /mínimo/);
+});
+
+test("migração cria rascunhos de separação desativados por padrão", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-separation-drafts-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0029_separation_drafts.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT separation_drafts_enabled FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { separation_drafts_enabled: 0 });
+    const table = await bindings.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='match_separation_drafts'").first();
+    assert.equal(table.name, "match_separation_drafts");
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("migração cria a lista de espera desativada e isolada por partida", async () => {

@@ -12,9 +12,11 @@ export type AttendanceStatus = "PRESENT" | "ABSENT";
 export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "") {
   await ensureDb();
   const [matchResult, totalActive, allPlayerResult, instanceRow] = await Promise.all([db().prepare(
-    `SELECT m.*,s.match_title separation_title
+    `SELECT m.*,s.match_title separation_title,draft.id separation_draft_id,
+            draft.updated_at separation_draft_updated_at,draft.present_player_ids separation_draft_player_ids
      FROM scheduled_matches m
      LEFT JOIN team_separations s ON s.id=m.separation_id
+     LEFT JOIN match_separation_drafts draft ON draft.match_id=m.id
      ORDER BY CASE m.status WHEN 'OPEN' THEN 0 ELSE 1 END,
               CASE WHEN m.status='OPEN' THEN m.match_at END ASC,
               m.match_at DESC`,
@@ -286,6 +288,57 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
   };
 }
 
+export async function loadMatchSeparationDraft(matchId: string) {
+  await ensureDb();
+  const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+  if (!instance.separationDraftsEnabled) throw statusError("Os rascunhos de separação estão desativados.", 403);
+  const stored: any = await db().prepare(`SELECT * FROM match_separation_drafts WHERE match_id=?`).bind(matchId).first();
+  const proposalNumber = Math.max(1, Math.floor(Number(stored?.proposal_number) || 1));
+  const proposal = await createMatchSeparationProposal(matchId, proposalNumber - 1);
+  if (!stored) return { ...proposal, draft: null };
+  const currentIds = proposal.players.map(player => player.id).sort();
+  const storedIds = parseIds(stored.present_player_ids);
+  const stale = currentIds.length !== storedIds.length || currentIds.some((id, index) => id !== storedIds[index]);
+  if (stale) return {
+    ...proposal,
+    draft: { exists: true, stale: true, manuallyAdjusted: Boolean(stored.manually_adjusted), updatedAt: String(stored.updated_at) },
+  };
+  return {
+    ...proposal,
+    result: JSON.parse(stored.snapshot),
+    draft: { exists: true, stale: false, manuallyAdjusted: Boolean(stored.manually_adjusted), updatedAt: String(stored.updated_at) },
+  };
+}
+
+export async function saveMatchSeparationDraft(matchId: string, admin: any, input: { result?: any; manuallyAdjusted?: boolean }) {
+  await ensureDb();
+  const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+  if (!instance.separationDraftsEnabled) throw statusError("Os rascunhos de separação estão desativados.", 403);
+  if (!input?.result) throw statusError("Gere uma proposta antes de salvar o rascunho.", 400);
+  const proposalNumber = Math.max(1, Math.floor(Number(input.result.proposal) || 1));
+  const proposal = await createMatchSeparationProposal(matchId, proposalNumber - 1);
+  const manuallyAdjusted = Boolean(input.manuallyAdjusted);
+  const result = validateAndRebuildResult(input.result, proposal.players, proposal.config, proposal.result, manuallyAdjusted);
+  const playerIds = proposal.players.map(player => player.id).sort(), now = new Date().toISOString(), id = crypto.randomUUID();
+  const previous: any = await db().prepare(`SELECT * FROM match_separation_drafts WHERE match_id=?`).bind(matchId).first();
+  await db().prepare(
+    `INSERT INTO match_separation_drafts
+     (id,match_id,snapshot,manually_adjusted,present_player_ids,proposal_number,created_by_administrator_id,created_at,updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(match_id) DO UPDATE SET snapshot=excluded.snapshot,manually_adjusted=excluded.manually_adjusted,
+       present_player_ids=excluded.present_player_ids,proposal_number=excluded.proposal_number,
+       created_by_administrator_id=excluded.created_by_administrator_id,updated_at=excluded.updated_at`,
+  ).bind(id, matchId, JSON.stringify(result), manuallyAdjusted ? 1 : 0, JSON.stringify(playerIds), proposalNumber, admin.id, now, now).run();
+  await audit(admin.id, previous ? "MATCH_SEPARATION_DRAFT_UPDATED" : "MATCH_SEPARATION_DRAFT_CREATED", "separation_draft", matchId, {
+    presentPlayers: playerIds.length, proposal: proposalNumber, manuallyAdjusted,
+  }, previous ? { proposal: Number(previous.proposal_number), manuallyAdjusted: Boolean(previous.manually_adjusted) } : undefined);
+  return { result, draft: { exists: true, stale: false, manuallyAdjusted, updatedAt: now } };
+}
+
+function parseIds(value: unknown) {
+  try { return (JSON.parse(String(value || "[]")) as unknown[]).map(String).sort(); } catch { return []; }
+}
+
 export async function createSeparationFromMatch(
   matchId: string,
   admin: any,
@@ -311,6 +364,7 @@ export async function createSeparationFromMatch(
     ).bind(id, match.title, date, match.location || null, "", JSON.stringify(result), manuallyAdjusted ? 1 : 0, result.cost, result.rating, now, now, now),
     db().prepare(`UPDATE scheduled_matches SET status='CLOSED',separation_id=?,closed_at=?,updated_at=? WHERE id=? AND status='OPEN' AND separation_id IS NULL`)
       .bind(id, now, now, matchId),
+    db().prepare(`DELETE FROM match_separation_drafts WHERE match_id=?`).bind(matchId),
   ]);
   if (Number((batch[1] as any)?.meta?.changes || 0) !== 1) {
     await db().prepare(`DELETE FROM team_separations WHERE id=?`).bind(id).run();
@@ -379,6 +433,15 @@ function publicMatch(
     maxChanges: Number(row.max_changes), status: String(row.status),
     acceptingResponses: row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now(),
     separationId: row.separation_id ? String(row.separation_id) : null,
+    separationDraft: {
+      enabled: instance.separationDraftsEnabled,
+      exists: Boolean(row.separation_draft_id),
+      updatedAt: row.separation_draft_updated_at ? String(row.separation_draft_updated_at) : null,
+      stale: Boolean(row.separation_draft_id) && (() => {
+        const current = [...presentPlayerIds].sort(), stored = parseIds(row.separation_draft_player_ids);
+        return current.length !== stored.length || current.some((id, index) => id !== stored[index]);
+      })(),
+    },
     createdAt: String(row.created_at), updatedAt: String(row.updated_at),
     weather: weatherFromRow(row),
     counts: {

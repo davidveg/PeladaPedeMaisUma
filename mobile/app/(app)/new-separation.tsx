@@ -14,18 +14,21 @@ import { separationBuilderAllowed } from "@/separation-access";
 import type { Player, TeamResult } from "@/types";
 
 type TeamKey = "blue" | "yellow";
+type SaveMode = "draft" | "publish";
 type Proposal = {
   parsed?: { title: string; date: string };
   match?: { id: string; title: string; date: string; location?: string | null; presentCount: number };
   players: Player[];
   result: TeamResult;
   config: Record<string, unknown>;
+  draft?: { exists: boolean; stale: boolean; manuallyAdjusted?: boolean; updatedAt?: string | null } | null;
 };
 
 export default function NewSeparation() {
   const { config: brand, loading: brandingLoading } = useMobileBranding();
   const { account } = useAuth();
-  const { matchId } = useLocalSearchParams<{ matchId?: string }>();
+  const { matchId, draft } = useLocalSearchParams<{ matchId?: string; draft?: string }>();
+  const draftMode = Boolean(matchId && draft === "1");
   const [step, setStep] = useState(matchId ? 2 : 1);
   const [text, setText] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -45,29 +48,42 @@ export default function NewSeparation() {
     onError: (error: Error) => Alert.alert("Revise a lista", error.message),
   });
   const saveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mode: SaveMode) => {
       if (matchId) {
+        if (draftMode && mode === "draft") {
+          const saved = await apiFetch<{ result: TeamResult; draft: Proposal["draft"] }>("/api/admin/separation-drafts", jsonMutation("PUT", {
+            matchId, result: proposal?.result, manuallyAdjusted: manual,
+          }));
+          return { ...saved, mode };
+        }
         const closed = await apiFetch<{ separationId: string }>("/api/admin/matches", jsonMutation("PATCH", {
           action: "close", matchId, result: proposal?.result, manuallyAdjusted: manual,
         }));
-        return { id: closed.separationId };
+        return { id: closed.separationId, mode: "publish" as const };
       }
       const key = Crypto.randomUUID();
-      return apiFetch<{ id: string }>("/api/mobile/separations", jsonMutation("POST", { title, date: date || null, location: location || null, originalText: text, result: proposal?.result, manuallyAdjusted: manual }, key));
+      const saved = await apiFetch<{ id: string }>("/api/mobile/separations", jsonMutation("POST", { title, date: date || null, location: location || null, originalText: text, result: proposal?.result, manuallyAdjusted: manual }, key));
+      return { ...saved, mode: "publish" as const };
     },
-    onSuccess: ({ id }) => {
+    onSuccess: (saved) => {
       client.invalidateQueries({ queryKey: ["separations"] });
       client.invalidateQueries({ queryKey: ["matches"] });
       client.invalidateQueries({ queryKey: ["notifications"] });
-      router.replace({ pathname: "/separations/[id]", params: { id } });
+      if (saved.mode === "draft") {
+        setProposal(current => current ? { ...current, result: saved.result, draft: saved.draft } : current);
+        Alert.alert("Rascunho salvo", "A lista continua aberta. Você pode continuar ajustando os times ou fechar a lista e publicar esta separação.");
+        return;
+      }
+      router.replace({ pathname: "/separations/[id]", params: { id: saved.id! } });
     },
     onError: (error: Error) => Alert.alert("Não foi possível salvar", error.message),
   });
 
   useEffect(() => {
-    if (!matchId || loadedMatch.current === matchId) return;
-    loadedMatch.current = matchId;
-    void proposalMutation.mutateAsync({ matchId, nonce: 0 }).then(next => {
+    const loadKey = `${matchId}:${draftMode}:${brand.separationDraftsEnabled}`;
+    if (!matchId || loadedMatch.current === loadKey) return;
+    loadedMatch.current = loadKey;
+    void proposalMutation.mutateAsync({ matchId, nonce: 0, loadDraft: draftMode }).then(next => {
       setProposal(next);
       setSelected(next.players.map(player => player.id));
       setTitle(next.match?.title || next.parsed?.title || "Pelada");
@@ -78,7 +94,9 @@ export default function NewSeparation() {
     }).catch(() => {
       loadedMatch.current = "";
     });
-  }, [matchId]);
+  // The mutation object is intentionally excluded to avoid reloading the draft after each render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, draftMode, brand.separationDraftsEnabled]);
 
   const importList = async () => {
     const next = await proposalMutation.mutateAsync({ originalText: text, nonce: 0 }).catch(() => null);
@@ -97,7 +115,7 @@ export default function NewSeparation() {
     if (!next) return;
     setNonce(nextNonce);
     setProposal(next);
-    setManual(false);
+      setManual(Boolean(next.draft?.exists&&!next.draft?.stale&&next.draft?.manuallyAdjusted));
     setSwap(null);
     setStep(3);
   };
@@ -201,10 +219,11 @@ export default function NewSeparation() {
 
       {step === 4 && proposal ? <>
         <Card style={styles.gap}>
-          {matchId ? <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={styles.official}>A lista será fechada somente após esta confirmação.</Text></> : <><Field label="Título" value={title} onChangeText={setTitle}/><Field label="Data (AAAA-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none"/><Field label="Local (opcional)" value={location} onChangeText={setLocation}/></>}
+          {matchId ? <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={draftMode?styles.draft:styles.official}>{draftMode?"O rascunho será salvo sem encerrar a lista ou notificar os jogadores.":"A lista será fechada somente após esta confirmação."}</Text>{draftMode&&proposal.draft?.updatedAt?<Text style={styles.muted}>Último rascunho: {new Date(proposal.draft.updatedAt).toLocaleString("pt-BR")}</Text>:null}</> : <><Field label="Título" value={title} onChangeText={setTitle}/><Field label="Data (AAAA-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none"/><Field label="Local (opcional)" value={location} onChangeText={setLocation}/></>}
           <Text style={styles.muted}>{proposal.result.blue.length} no {brand.teamBlueName} · {proposal.result.yellow.length} no {brand.teamYellowName} · {manual ? "Ajuste manual" : "Proposta oficial"} · {proposal.result.rating}</Text>
         </Card>
-        <Button title={matchId ? "Fechar lista e salvar" : "Confirmar e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(matchId ? "Fechar lista e salvar?" : "Salvar separação?", matchId ? "A partida será encerrada com esta proposta. Os presentes e os indicadores serão validados novamente." : "Os times e os indicadores atuais serão gravados na mesma base da aplicação web.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate() }])}/>
+        {draftMode?<Button title="Salvar rascunho" variant="secondary" busy={saveMutation.isPending} onPress={() => Alert.alert("Salvar rascunho?", "A proposta ficará disponível somente aos administradores. A lista continuará aberta e ninguém será notificado.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate("draft") }])}/>:null}
+        <Button title={draftMode?"Fechar lista e publicar":matchId ? "Fechar lista e salvar" : "Confirmar e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(draftMode?"Fechar lista e publicar?":matchId ? "Fechar lista e salvar?" : "Salvar separação?", matchId ? "A partida será encerrada com esta proposta, publicada em Separações e os jogadores serão notificados." : "Os times e os indicadores atuais serão gravados na mesma base da aplicação web.", [{ text: "Cancelar", style: "cancel" }, { text: draftMode?"Publicar":"Salvar", onPress: () => saveMutation.mutate("publish") }])}/>
         <Button title="Voltar aos times" variant="secondary" onPress={() => setStep(3)}/>
       </> : null}
     </ScrollView>
@@ -244,6 +263,7 @@ const styles = StyleSheet.create({
   choiceMark: { fontSize: 22, color: colors.green, fontWeight: "900" },
   instructions: { gap: 7 },
   official: { color: colors.blue, fontWeight: "800" },
+  draft: { color: colors.yellow, fontWeight: "800" },
   manual: { color: colors.success, fontWeight: "800" },
   warning: { gap: 4, backgroundColor: colors.yellowSoft, borderColor: colors.yellow },
   warningTitle: { color: colors.yellow, fontWeight: "900" },

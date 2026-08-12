@@ -7,10 +7,11 @@ import test from "node:test";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
-const [{ setRuntimeBindings }, database, adminMatches, matches, notifications, separationProposal] = await Promise.all([
+const [{ setRuntimeBindings }, database, adminMatches, separationDrafts, matches, notifications, separationProposal] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
   import("../app/api/admin/matches/route.ts"),
+  import("../app/api/admin/separation-drafts/route.ts"),
   import("../app/api/matches/route.ts"),
   import("../app/api/notifications/route.ts"),
   import("../app/api/mobile/separations/proposal/route.ts"),
@@ -83,6 +84,31 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
     assert.equal(firstProposal.players.length, 4);
     assert.equal(firstProposal.result.proposal, 1);
 
+    await db().prepare(`UPDATE instance_configuration SET separation_drafts_enabled=1 WHERE id=1`).run();
+    const draftSaved = await separationDrafts.PUT(jsonRequest("https://pelada.example/api/admin/separation-drafts", {
+      matchId, result: firstProposal.result, manuallyAdjusted: false,
+    }, "ppm_session=match-admin-session", "PUT"));
+    assert.equal(draftSaved.status, 200);
+    assert.equal((await draftSaved.json()).draft.stale, false);
+    const draftLoaded = await separationProposal.POST(jsonRequest(
+      "https://pelada.example/api/mobile/separations/proposal",
+      { matchId, loadDraft: true },
+      "ppm_session=match-admin-session",
+    ));
+    assert.equal(draftLoaded.status, 200);
+    assert.equal((await draftLoaded.json()).draft.exists, true);
+
+    const extra = await db().prepare(`SELECT id FROM players WHERE active=1 AND deleted_at IS NULL AND id NOT IN (SELECT player_id FROM match_attendance WHERE match_id=?) LIMIT 1`).bind(matchId).first();
+    assert.ok(extra?.id);
+    assert.equal((await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", { action: "attendance", matchId, playerId: extra.id, status: "PRESENT" }, "ppm_session=match-admin-session", "PATCH"))).status, 200);
+    const staleDraft = await separationProposal.POST(jsonRequest(
+      "https://pelada.example/api/mobile/separations/proposal",
+      { matchId, loadDraft: true },
+      "ppm_session=match-admin-session",
+    ));
+    assert.equal(staleDraft.status, 200);
+    assert.equal((await staleDraft.json()).draft.stale, true);
+
     const regeneratedResponse = await separationProposal.POST(jsonRequest(
       "https://pelada.example/api/mobile/separations/proposal",
       { matchId, nonce: 1 },
@@ -113,6 +139,9 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
     assert.ok(savedSeparation);
     assert.equal(JSON.parse(savedSeparation.snapshot).proposal, 2);
     assert.equal(savedSeparation.manually_adjusted, 1);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM match_separation_drafts WHERE match_id=?`).bind(matchId).first().then(row => Number(row.total)), 0);
+    const closedNotices = await notifications.GET(new Request("https://pelada.example/api/notifications", { headers: { cookie: "ppm_member_session=match-member-session" } }));
+    assert.ok((await closedNotices.json()).notifications.some(item => item.type === "MATCH_CLOSED"));
   } finally {
     bindings.DB.close();
     setRuntimeBindings(undefined);

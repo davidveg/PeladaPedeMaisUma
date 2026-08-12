@@ -16,6 +16,7 @@ export type MatchWeather = { status: "AVAILABLE" | "OUT_OF_RANGE" | "LOCATION_NO
 export type ScheduledMatch = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: "OPEN" | "CLOSED" | "CANCELLED"; acceptingResponses: boolean; separationId?: string | null;
+  separationDraft?: { enabled: boolean; exists: boolean; stale: boolean; updatedAt?: string | null };
   counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: MatchAttendance[];
   guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
   preconfirmedGuestIds?: string[];
