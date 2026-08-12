@@ -14,12 +14,12 @@ function MatchScore({ blue, yellow }: { blue: number; yellow: number }) {
   const { config: brand, palette } = useMobileBranding();
   return <View accessibilityLabel={`Placar: ${brand.teamBlueName} ${blue}, ${brand.teamYellowName} ${yellow}`} style={styles.score}>
     <View style={[styles.scoreTeam, { backgroundColor:palette.blueSoft }]}>
-      <Text style={[styles.scoreLabel, { color: palette.blue }]}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text>
+      <Text allowFontScaling={false} numberOfLines={1} style={[styles.scoreLabel, { color: palette.blue }]}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text>
       <Text style={[styles.scoreValue, { color: palette.blue }]}>{blue}</Text>
     </View>
     <Text style={styles.scoreSeparator}>×</Text>
     <View style={[styles.scoreTeam, { backgroundColor:palette.yellowSoft }]}>
-      <Text style={[styles.scoreLabel, { color: palette.yellow }]}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text>
+      <Text allowFontScaling={false} numberOfLines={1} style={[styles.scoreLabel, { color: palette.yellow }]}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text>
       <Text style={[styles.scoreValue, { color: palette.yellow }]}>{yellow}</Text>
     </View>
   </View>;
@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
   date: { color: colors.muted },
   pending: { maxWidth: 120, textAlign: "right", color: colors.yellow, fontWeight: "800" },
   score: { flexDirection: "row", alignItems: "center", gap: 4 },
-  scoreTeam: { minWidth: 48, flexShrink: 0, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 4, alignItems: "center" },
-  scoreLabel: { paddingHorizontal: 2, fontSize: 7, lineHeight: 9, fontWeight: "900", letterSpacing: 0.4 },
+  scoreTeam: { width: 58, flexShrink: 0, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, alignItems: "center" },
+  scoreLabel: { width: "100%", textAlign: "center", fontSize: 7, lineHeight: 9, fontWeight: "900" },
   scoreValue: { fontSize: 21, lineHeight: 24, fontWeight: "900" },
   scoreSeparator: { color: colors.muted, fontSize: 17, fontWeight: "800" },
   teams: { flexDirection: "row", gap: 8 },
