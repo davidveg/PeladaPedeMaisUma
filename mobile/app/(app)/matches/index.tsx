@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Switch, Text, View } from "react-native";
 import { apiFetch } from "@/api";
 import { useAuth } from "@/auth";
 import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
@@ -10,17 +10,20 @@ import type { MatchListPayload, ScheduledMatch } from "@/types";
 
 export default function MatchesScreen() {
   const { account } = useAuth(), router = useRouter();
+  const [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
   const query = useQuery({
     queryKey: ["matches"],
     queryFn: () => apiFetch<MatchListPayload>(account?.role === "admin" ? "/api/admin/matches" : "/api/matches"),
   });
   const refetch = query.refetch;
+  const visibleMatches = (query.data?.matches || []).filter(item => !onlyActiveOrSeparated || isActiveOrSeparated(item));
   useFocusEffect(useCallback(() => { void refetch(); }, [refetch]));
   return <Screen><Header eyebrow="AGENDA DA PELADA" title="Partidas" action={account?.role === "admin" ? <Button title="+ Criar" onPress={() => router.push("/matches/manage" as never)}/> : null}/>
     {query.isError && !query.data ? <ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/> : <FlatList
-      contentContainerStyle={styles.list} data={query.data?.matches || []} keyExtractor={item => item.id}
+      contentContainerStyle={styles.list} data={visibleMatches} keyExtractor={item => item.id}
       refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} tintColor={colors.green}/>}
-      ListEmptyComponent={<EmptyState title="Nenhuma partida" message="As partidas criadas pelos administradores aparecerão aqui."/>}
+      ListHeaderComponent={<View style={styles.filter}><View style={{ flex: 1, gap: 3 }}><Text style={styles.filterTitle}>Somente abertas ou com times gerados</Text><Text style={styles.filterHelp}>Oculta canceladas e listas encerradas sem separação.</Text></View><Switch accessibilityLabel="Somente partidas abertas ou com times gerados" value={onlyActiveOrSeparated} onValueChange={setOnlyActiveOrSeparated} trackColor={{ false: colors.border, true: colors.green }} thumbColor="#FFFFFF"/></View>}
+      ListEmptyComponent={<EmptyState title="Nenhuma partida" message="Nenhuma partida corresponde ao filtro atual."/>}
       renderItem={({ item }) => <MatchCard item={item} onPress={() => router.push(`/matches/${item.id}` as never)}/>}
     />}</Screen>;
 }
@@ -45,9 +48,10 @@ function CompactWeather({ weather }: { weather?: ScheduledMatch["weather"] }) {
   </View>;
 }
 function status(value: string, accepting: boolean) { return value === "OPEN" ? accepting ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : value === "CLOSED" ? "LISTA ENCERRADA" : "CANCELADA"; }
+function isActiveOrSeparated(item: ScheduledMatch) { return item.status !== "CANCELLED" && (item.status === "OPEN" || Boolean(item.separationId)); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 const styles = StyleSheet.create({
-  list: { padding: 20, paddingTop: 8, gap: 12, flexGrow: 1 }, card: { gap: 12 }, cancelled: { opacity: .65 },
+  list: { padding: 20, paddingTop: 8, gap: 12, flexGrow: 1 }, filter: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 13, backgroundColor: "#F2F7F4" }, filterTitle: { color: colors.text, fontWeight: "900" }, filterHelp: { color: colors.muted, fontSize: 11, lineHeight: 16 }, card: { gap: 12 }, cancelled: { opacity: .65 },
   top: { flexDirection: "row", gap: 12 }, state: { alignSelf: "flex-start", fontSize: 9, fontWeight: "900", letterSpacing: .6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10 },
   open: { color: colors.success, backgroundColor: "#E5F4EA" }, closed: { color: colors.muted, backgroundColor: "#EEF1EF" }, cancelledState: { color: colors.danger, backgroundColor: colors.dangerSoft },
   title: { color: colors.text, fontSize: 20, fontWeight: "900", marginTop: 8 }, date: { color: colors.muted, marginTop: 4 },

@@ -28,17 +28,20 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
   async function load() {
     setLoading(true);
     try {
       const result = await api("/api/admin/matches");
       setData(result);
-      setSelected(current => current && result.matches.some((item: Match) => item.id === current) ? current : result.matches[0]?.id || null);
+      const defaultMatches = result.matches.filter(isActiveOrSeparated);
+      setSelected(current => current && defaultMatches.some((item: Match) => item.id === current) ? current : defaultMatches[0]?.id || null);
     } catch (cause: any) { setError(cause.message); } finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
-  const current = data.matches.find(item => item.id === selected) || null;
+  const visibleMatches = useMemo(() => onlyActiveOrSeparated ? data.matches.filter(isActiveOrSeparated) : data.matches, [data.matches, onlyActiveOrSeparated]);
+  useEffect(() => { if (!visibleMatches.some(item => item.id === selected)) setSelected(visibleMatches[0]?.id || null); }, [visibleMatches, selected]);
+  const current = visibleMatches.find(item => item.id === selected) || null;
 
   async function attendance(playerId: string, status: "PRESENT" | "ABSENT") {
     setError("");
@@ -78,7 +81,8 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props
   if (loading && !data.matches.length) return <div className="admin-card match-admin-empty">Carregando partidas…</div>;
   return <section className="admin-matches">
     <div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p><button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button></div>
-    <div className="match-admin-layout"><div className="match-admin-list">{data.matches.length ? data.matches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
+    <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem separação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label>
+    <div className="match-admin-layout"><div className="match-admin-list">{visibleMatches.length ? visibleMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
       <span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
@@ -164,3 +168,4 @@ function nextMatchDefaults(config?: any) {
 }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 function statusLabel(status: string) { return status === "OPEN" ? "Confirmações abertas" : status === "CLOSED" ? "Lista encerrada" : "Cancelada"; }
+function isActiveOrSeparated(item: Match) { return item.status !== "CANCELLED" && (item.status === "OPEN" || Boolean(item.separationId)); }

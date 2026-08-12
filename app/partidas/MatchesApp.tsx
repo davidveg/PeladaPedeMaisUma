@@ -31,7 +31,7 @@ async function api(url: string, options?: RequestInit) {
 export default function MatchesApp() {
   const [matches, setMatches] = useState<Match[]>([]), [loading, setLoading] = useState(true), [unauthorized, setUnauthorized] = useState(false);
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(""), [isAdmin, setIsAdmin] = useState(false);
-  const [targetMatchId, setTargetMatchId] = useState("");
+  const [targetMatchId, setTargetMatchId] = useState(""), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
   async function load() {
     try {
       const [matchPayload, authPayload] = await Promise.all([api("/api/matches"), api("/api/member-auth")]);
@@ -48,8 +48,9 @@ export default function MatchesApp() {
   }, []);
   useEffect(() => {
     if (!targetMatchId || !matches.some(item => item.id === targetMatchId)) return;
+    if (onlyActiveOrSeparated && !isActiveOrSeparated(matches.find(item => item.id === targetMatchId)!)) { setOnlyActiveOrSeparated(false); return; }
     window.requestAnimationFrame(() => document.getElementById(targetMatchId)?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  }, [matches, targetMatchId]);
+  }, [matches, onlyActiveOrSeparated, targetMatchId]);
   async function answer(item: Match, status: "PRESENT" | "ABSENT") {
     const changes = item.viewer.status && item.viewer.status !== status;
     if (changes && !confirm(`Alterar sua resposta? Isso consumirá 1 das ${item.maxChanges} remarcações permitidas.`)) return;
@@ -77,7 +78,8 @@ export default function MatchesApp() {
     const returnTo = targetMatchId ? `/partidas?match=${encodeURIComponent(targetMatchId)}` : "/partidas";
     return <div className="member-page"><SiteHeader active="matches"/><main className="member-main"><div className="member-access-card match-login-required"><div className="ball">📅</div><h2>Entre para confirmar</h2><p>Use sua conta de jogador ou administrador para confirmar presença.</p><a className="primary" href={accountSignInHref(returnTo)}>Entrar na minha conta</a></div></main></div>;
   }
-  return <div className="member-page"><SiteHeader active="matches" isAdmin={isAdmin}/><main className="member-main match-site-main"><div className="member-account-head"><div><div className="eyebrow">AGENDA DA PELADA</div><h1>Partidas e presenças</h1><p>Suas respostas são sincronizadas entre o site e o aplicativo.</p></div></div>{error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")}>×</button></div>}<div className="match-site-list">{matches.length ? matches.map(item => <MatchSiteCard key={item.id} item={item} busy={busy} onAnswer={answer} onShare={share}/>) : <div className="empty">Nenhuma partida criada ainda.</div>}</div></main></div>;
+  const visibleMatches = onlyActiveOrSeparated ? matches.filter(isActiveOrSeparated) : matches;
+  return <div className="member-page"><SiteHeader active="matches" isAdmin={isAdmin}/><main className="member-main match-site-main"><div className="member-account-head"><div><div className="eyebrow">AGENDA DA PELADA</div><h1>Partidas e presenças</h1><p>Suas respostas são sincronizadas entre o site e o aplicativo.</p></div></div>{error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")}>×</button></div>}<label className="match-list-filter"><span><b>Somente abertas ou com times gerados</b><small>Oculta partidas canceladas e listas encerradas sem separação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label><div className="match-site-list">{visibleMatches.length ? visibleMatches.map(item => <MatchSiteCard key={item.id} item={item} busy={busy} onAnswer={answer} onShare={share}/>) : <div className="empty">Nenhuma partida corresponde ao filtro atual.</div>}</div></main></div>;
 }
 
 function MatchSiteCard({ item, busy, onAnswer, onShare }: { item: Match; busy: string; onAnswer(item: Match, status: "PRESENT" | "ABSENT"): void; onShare(item: Match): void }) {
@@ -112,5 +114,6 @@ function MatchSiteCard({ item, busy, onAnswer, onShare }: { item: Match; busy: s
 function Roster({ title, entries }: { title: string; entries: Attendance[] }) { return <div><b>{title} ({entries.length})</b><p>{entries.length ? entries.map(item => item.playerName).join(", ") : "Ninguém ainda"}</p></div>; }
 function WaitingRoster({ entries }: { entries: { playerId: string; playerName: string }[] }) { return <div className="waiting"><b>Lista de espera ({entries.length})</b><p>{entries.length ? entries.map(item => item.playerName).join(", ") : "Ninguém aguardando"}</p></div>; }
 function goalkeeperLimitReached(item: Match) { return Boolean(item.viewer.isGoalkeeper && item.viewer.status !== "PRESENT" && (item.goalkeepers?.present || 0) >= (item.goalkeepers?.max || 2)); }
+function isActiveOrSeparated(item: Match) { return item.status !== "CANCELLED" && (item.status === "OPEN" || Boolean(item.separationId)); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 function statusLabel(status: string) { return status === "OPEN" ? "Confirmações abertas" : status === "CLOSED" ? "Lista encerrada" : "Cancelada"; }
