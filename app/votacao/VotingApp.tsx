@@ -105,7 +105,7 @@ export default function VotingApp() {
       <section className="vote-card">
         <div className="vote-head">
           <div><small>VOTAÇÃO DA PARTIDA</small><h1>{match.matchTitle}</h1><p>{match.matchDate ? new Date(match.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"}</p></div>
-          <div className="score-board"><span>{brand.teamBlueName} <b>{match.blueScore}</b></span><i>×</i><span><b>{match.yellowScore}</b> {brand.teamYellowName}</span></div>
+          <div className="score-board"><span className="blue">{brand.teamBlueName} <b>{match.blueScore}</b></span><i>×</i><span className="yellow"><b>{match.yellowScore}</b> {brand.teamYellowName}</span></div>
         </div>
         {data.showContributions && match.contributions?.length > 0 && <VoteContributions contributions={match.contributions} />}
         {!data.enabled && !closed && <div className="alert">O Modo Carreira está temporariamente desativado. Nenhum voto pode ser enviado agora.</div>}
@@ -199,7 +199,7 @@ function VoteIdentity({ player, onLogout, busy }: any) {
   return (
     <div className="vote-identity">
       <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-identity-photo" previewSize={280} />
-      <span><small>VOTANDO COMO</small><b>{player.displayName}</b><em>{player.team === "BLUE" ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</em></span>
+      <span><small>VOTANDO COMO</small><b>{player.displayName}</b><em className={player.team.toLowerCase()}>{player.team === "BLUE" ? `Time ${brand.teamBlueName}` : `Time ${brand.teamYellowName}`}</em></span>
       <p>Sua identidade foi confirmada pela conta associada. Você não poderá selecionar a si mesmo.</p>
       <button type="button" className="ghost" onClick={onLogout} disabled={busy}>Trocar conta</button>
     </div>

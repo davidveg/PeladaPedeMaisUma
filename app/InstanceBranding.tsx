@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { DEFAULT_INSTANCE_CONFIGURATION, type InstanceConfiguration } from "../lib/instance-config";
+import { colorWithOpacity, contrastTextColor, readableTeamColor } from "../lib/team-colors";
 
 type BrandingContextValue = {
   config: InstanceConfiguration;
@@ -37,6 +38,12 @@ export function InstanceBrandingProvider({ children }: PropsWithChildren) {
       "--lime": config.secondaryColor,
       "--blue": config.teamBlueColor,
       "--yellow": config.teamYellowColor,
+      "--blue-soft": colorWithOpacity(config.teamBlueColor, .1),
+      "--yellow-soft": colorWithOpacity(config.teamYellowColor, .1),
+      "--blue-ink": readableTeamColor(config.teamBlueColor),
+      "--yellow-ink": readableTeamColor(config.teamYellowColor),
+      "--blue-contrast": contrastTextColor(config.teamBlueColor),
+      "--yellow-contrast": contrastTextColor(config.teamYellowColor),
       "--white": config.surfaceColor,
     };
     for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value);
