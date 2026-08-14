@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         member.created_at,
         now,
       ),
+      db().prepare(`UPDATE administrators SET promoted_from_member=1 WHERE id=?`).bind(accountId),
       db().prepare(`UPDATE player_account_links SET account_type='administrator' WHERE account_type='member' AND account_id=?`).bind(accountId),
       db().prepare(`UPDATE mobile_sessions SET account_type='administrator' WHERE account_type='member' AND account_id=?`).bind(accountId),
       db().prepare(`UPDATE mobile_push_tokens SET account_type='administrator',updated_at=? WHERE account_type='member' AND account_id=?`).bind(now, accountId),

@@ -7,11 +7,14 @@ import test from "node:test";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
-const [{ setRuntimeBindings }, { db, ensureDb, hashPassword, verifyPassword }, promotionRoute, authRoute] = await Promise.all([
+const [{ setRuntimeBindings }, { db, ensureDb, hashPassword, verifyPassword }, promotionRoute, demotionRoute, associationsRoute, authRoute, memberAuthRoute] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
   import("../app/api/member-associations/promote/route.ts"),
+  import("../app/api/member-associations/demote/route.ts"),
+  import("../app/api/member-associations/route.ts"),
   import("../app/api/auth/route.ts"),
+  import("../app/api/member-auth/route.ts"),
 ]);
 
 test("administrador promove conta de jogador preservando credenciais, associação e dados da conta", async () => {
@@ -51,11 +54,12 @@ test("administrador promove conta de jogador preservando credenciais, associaç�
     assert.equal(response.status, 200);
 
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM member_accounts WHERE id=?`).bind(memberId).first("total"), 0);
-    const promoted = await db().prepare(`SELECT email,password_hash,active,must_change_password,created_at FROM administrators WHERE id=?`).bind(memberId).first();
+    const promoted = await db().prepare(`SELECT email,password_hash,active,must_change_password,promoted_from_member,created_at FROM administrators WHERE id=?`).bind(memberId).first();
     assert.equal(promoted.email, "jogador-promotion@example.com");
     assert.equal(await verifyPassword(password, promoted.password_hash), true);
     assert.equal(promoted.active, 1);
     assert.equal(promoted.must_change_password, 0);
+    assert.equal(promoted.promoted_from_member, 1);
     assert.equal(promoted.created_at, now);
     assert.deepEqual(
       { ...(await db().prepare(`SELECT player_id,account_type,account_id FROM player_account_links WHERE player_id=?`).bind(playerId).first()) },
@@ -77,6 +81,74 @@ test("administrador promove conta de jogador preservando credenciais, associaç�
     assert.match(login.headers.get("set-cookie") || "", /ppm_session=/);
     const event = await db().prepare(`SELECT administrator_id,action,entity_type,entity_id FROM audit_logs WHERE action='MEMBER_PROMOTED_TO_ADMIN'`).first();
     assert.deepEqual({ ...event }, { administrator_id: administratorId, action: "MEMBER_PROMOTED_TO_ADMIN", entity_type: "administrator", entity_id: memberId });
+
+    const associations = await associationsRoute.GET(new Request("https://pelada.example/api/member-associations", { headers: { cookie: "ppm_session=promotion-admin-session" } }));
+    assert.equal(associations.status, 200);
+    const promotedAssociation = (await associations.json()).associations.find((item) => item.id === memberId);
+    assert.equal(promotedAssociation.canDemote, true);
+    assert.equal(promotedAssociation.promotedFromMember, true);
+
+    assert.equal((await demotionRoute.POST(demotionRequest({ accountId: memberId }))).status, 401);
+    const directAdministratorAttempt = await demotionRoute.POST(demotionRequest({ accountId: administratorId }, "ppm_session=promotion-admin-session"));
+    assert.equal(directAdministratorAttempt.status, 403);
+
+    const promotedSessionId = (login.headers.get("set-cookie") || "").match(/ppm_session=([^;]+)/)?.[1];
+    assert.ok(promotedSessionId);
+    await db().prepare(`UPDATE administrators SET active=0 WHERE id<>?`).bind(memberId).run();
+    const lastActiveAttempt = await demotionRoute.POST(demotionRequest({ accountId: memberId }, `ppm_session=${promotedSessionId}`));
+    assert.equal(lastActiveAttempt.status, 400);
+    await db().prepare(`UPDATE administrators SET active=1 WHERE id=?`).bind(administratorId).run();
+
+    const demotion = await demotionRoute.POST(demotionRequest({ accountId: memberId }, "ppm_session=promotion-admin-session"));
+    assert.equal(demotion.status, 200);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM administrators WHERE id=?`).bind(memberId).first("total"), 0);
+    const restored = await db().prepare(`SELECT email,password_hash,active,created_at FROM member_accounts WHERE id=?`).bind(memberId).first();
+    assert.equal(restored.email, "jogador-promotion@example.com");
+    assert.equal(await verifyPassword(password, restored.password_hash), true);
+    assert.equal(restored.active, 1);
+    assert.equal(restored.created_at, now);
+    assert.deepEqual(
+      { ...(await db().prepare(`SELECT player_id,account_type,account_id FROM player_account_links WHERE player_id=?`).bind(playerId).first()) },
+      { player_id: playerId, account_type: "member", account_id: memberId },
+    );
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM sessions WHERE administrator_id=?`).bind(memberId).first("total"), 0);
+    assert.equal(await db().prepare(`SELECT account_type FROM mobile_sessions WHERE id='promoted-member-mobile'`).first("account_type"), "member");
+    assert.equal(await db().prepare(`SELECT account_type FROM mobile_push_tokens WHERE id='promoted-member-push'`).first("account_type"), "member");
+    assert.equal(await db().prepare(`SELECT account_type FROM account_notifications WHERE id='promoted-notification'`).first("account_type"), "member");
+    assert.equal(await db().prepare(`SELECT account_type FROM account_notification_preferences WHERE id='promoted-preferences'`).first("account_type"), "member");
+    assert.equal(await db().prepare(`SELECT voter_account_type FROM career_votes WHERE id='promoted-vote'`).first("voter_account_type"), "member");
+
+    const memberLogin = await memberAuthRoute.POST(new Request("https://pelada.example/api/member-auth", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "jogador-promotion@example.com", password }),
+    }));
+    assert.equal(memberLogin.status, 200);
+    assert.match(memberLogin.headers.get("set-cookie") || "", /ppm_member_session=/);
+    const demotionEvent = await db().prepare(`SELECT administrator_id,action,entity_type,entity_id FROM audit_logs WHERE action='ADMIN_REVERTED_TO_MEMBER'`).first();
+    assert.deepEqual({ ...demotionEvent }, { administrator_id: administratorId, action: "ADMIN_REVERTED_TO_MEMBER", entity_type: "member_account", entity_id: memberId });
+  } finally {
+    bindings.DB.close();
+    setRuntimeBindings(undefined);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração identifica promoções antigas sem liberar administradores cadastrados diretamente", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ppm-promoted-admin-migration-"));
+  const bindings = await createSelfhostBindings(directory);
+  setRuntimeBindings({ ...bindings, APP_BASE_URL: "https://pelada.example" });
+  try {
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(`CREATE TABLE administrators (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, must_change_password INTEGER NOT NULL DEFAULT 1, last_login_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`).run();
+    await bindings.DB.prepare(`CREATE TABLE audit_logs (id TEXT PRIMARY KEY, administrator_id TEXT, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT, previous_data TEXT, new_data TEXT, created_at TEXT NOT NULL)`).run();
+    await bindings.DB.prepare(`INSERT INTO administrators (id,email,password_hash,active,must_change_password,created_at,updated_at) VALUES ('direct','direct@example.com','hash',1,0,?,?)`).bind(now, now).run();
+    await bindings.DB.prepare(`INSERT INTO administrators (id,email,password_hash,active,must_change_password,created_at,updated_at) VALUES ('legacy-promoted','promoted@example.com','hash',1,0,?,?)`).bind(now, now).run();
+    await bindings.DB.prepare(`INSERT INTO audit_logs (id,administrator_id,action,entity_type,entity_id,created_at) VALUES ('promotion-log','direct','MEMBER_PROMOTED_TO_ADMIN','administrator','legacy-promoted',?)`).bind(now).run();
+
+    await ensureDb();
+    assert.equal(await db().prepare(`SELECT promoted_from_member FROM administrators WHERE id='direct'`).first("promoted_from_member"), 0);
+    assert.equal(await db().prepare(`SELECT promoted_from_member FROM administrators WHERE id='legacy-promoted'`).first("promoted_from_member"), 1);
   } finally {
     bindings.DB.close();
     setRuntimeBindings(undefined);
@@ -86,6 +158,14 @@ test("administrador promove conta de jogador preservando credenciais, associaç�
 
 function jsonRequest(body, cookie = "") {
   return new Request("https://pelada.example/api/member-associations/promote", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+    body: JSON.stringify(body),
+  });
+}
+
+function demotionRequest(body, cookie = "") {
+  return new Request("https://pelada.example/api/member-associations/demote", {
     method: "POST",
     headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
     body: JSON.stringify(body),

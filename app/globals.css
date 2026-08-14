@@ -123,6 +123,8 @@
 .association-account-actions button{white-space:nowrap}
 .association-account-actions .promote-account{border:1px solid #9ab9aa;background:#edf6f1;color:var(--green);border-radius:9px;padding:9px 11px;font-size:10px;font-weight:850}
 .association-account-actions .promote-account:hover:not(:disabled){background:#dfeee6;border-color:#719c88}
+.association-account-actions .demote-account{border:1px solid #d7bd82;background:#fff8e8;color:#77551c;border-radius:9px;padding:9px 11px;font-size:10px;font-weight:850}
+.association-account-actions .demote-account:hover:not(:disabled){background:#f8edcf;border-color:#b99548}
 .member-password-reset-editor{width:min(520px,calc(100% - 32px))}
 .member-password-reset-editor>.ball{margin-bottom:12px}
 .member-password-reset-editor>p{color:var(--muted);font-size:12px;line-height:1.6}
