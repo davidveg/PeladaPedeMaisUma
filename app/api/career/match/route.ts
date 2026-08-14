@@ -1,7 +1,8 @@
-import { adminRequired } from "../../../../lib/database";
+import { staffRequired } from "../../../../lib/database";
 import { createCareerMatch, editCareerMatch } from "../../../../lib/career-service";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
+const adminRequired=(request:Request)=>staffRequired(request,"MATCH_RESULTS_MANAGE");
 
 export async function POST(request:Request){
   const admin:any=await adminRequired(request);if(!admin)return Response.json({error:"Não autorizado"},{status:401});

@@ -10,6 +10,7 @@ import { colors } from "@/theme";
 import type { MatchListPayload, Separation } from "@/types";
 import { useMobileBranding } from "@/branding";
 import { manualSeparationEntryVisible } from "@/separation-access";
+import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -30,7 +31,7 @@ export default function AppLayout() {
   });
   const matchesQuery = useQuery({
     queryKey: ["matches"],
-    queryFn: () => apiFetch<MatchListPayload>(account?.role === "admin" ? "/api/admin/matches" : "/api/matches"),
+    queryFn: () => apiFetch<MatchListPayload>(hasAnyPermission(account, [MODERATOR_PERMISSIONS.MATCHES_MANAGE, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE, MODERATOR_PERMISSIONS.MATCHES_CANCEL, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE]) ? "/api/admin/matches" : "/api/matches"),
     enabled: Boolean(account),
   });
   const notificationsQuery = useQuery({
@@ -40,7 +41,7 @@ export default function AppLayout() {
   });
   if (loading) return <View style={styles.loading}><ActivityIndicator color={palette.green}/></View>;
   if (!account) return <Redirect href="/login"/>;
-  const admin = account.role === "admin";
+  const canConfigureWeights = hasPermission(account, MODERATOR_PERMISSIONS.BALANCE_CONFIG_MANAGE);
   const pendingVotes = separationsQuery.data?.separations.filter(item => item.career?.viewerCanVote).length || 0;
   const pendingMatches = matchesQuery.data?.matches.filter(item => item.status === "OPEN" && item.viewer.canRespond && !item.viewer.status).length || 0;
   const unreadNotifications = notificationsQuery.data?.unread || 0;
@@ -90,12 +91,12 @@ export default function AppLayout() {
     }}/>
     <Tabs.Screen name="new-separation" options={{
       title: "Nova",
-      href: manualSeparationEntryVisible(account.role, instanceConfig.manualSeparationEnabled) ? undefined : null,
+      href: manualSeparationEntryVisible(account, instanceConfig.manualSeparationEnabled) ? undefined : null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="add-circle" inactive="add-circle-outline"/>,
     }}/>
     <Tabs.Screen name="config" options={{
       title: "Pesos",
-      href: admin ? undefined : null,
+      href: canConfigureWeights ? undefined : null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="options" inactive="options-outline"/>,
     }}/>
     <Tabs.Screen name="account" options={{

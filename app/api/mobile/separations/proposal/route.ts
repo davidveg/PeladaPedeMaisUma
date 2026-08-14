@@ -1,9 +1,10 @@
 /* D1 and untrusted JSON payloads are narrowed explicitly at each use. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { adminRequired, db, ensureDb } from "../../../../../lib/database";
+import { db, ensureDb, staffRequired } from "../../../../../lib/database";
 import { ensureCareerSeasonCurrent } from "../../../../../lib/career-season";
 import { balanceTeams, matchPlayers, parseWhatsApp, type Config, type Player } from "../../../../../lib/football";
 import { createMatchSeparationProposal, loadMatchSeparationDraft } from "../../../../../lib/scheduled-matches";
+const adminRequired=(request:Request)=>staffRequired(request,"SEPARATIONS_MANAGE");
 
 export async function POST(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });

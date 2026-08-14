@@ -7,13 +7,18 @@ import { Button, Card, ErrorState, Header, Screen } from "@/components";
 import { colors } from "@/theme";
 import type { MatchListPayload, MatchPlayer, ScheduledMatch } from "@/types";
 import { shareText } from "@/sharing";
+import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 export default function MatchDetail() {
   const { id } = useLocalSearchParams<{ id: string }>(), { account } = useAuth(), router = useRouter(), client = useQueryClient();
-  const query = useQuery({ queryKey: ["matches"], queryFn: () => apiFetch<MatchListPayload>(account?.role === "admin" ? "/api/admin/matches" : "/api/matches") });
+  const canManageMatches = hasPermission(account, MODERATOR_PERMISSIONS.MATCHES_MANAGE);
+  const canManageAttendance = hasPermission(account, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE);
+  const canManageSeparations = hasPermission(account, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE);
+  const canReadAdminMatches = hasAnyPermission(account, [MODERATOR_PERMISSIONS.MATCHES_MANAGE, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE, MODERATOR_PERMISSIONS.MATCHES_CANCEL, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE]);
+  const query = useQuery({ queryKey: ["matches"], queryFn: () => apiFetch<MatchListPayload>(canReadAdminMatches ? "/api/admin/matches" : "/api/matches") });
   const item = query.data?.matches.find(match => match.id === id);
   const mutation = useMutation({
-    mutationFn: ({ playerId, status, guestAction }: { playerId?: string; status?: "PRESENT" | "ABSENT"; guestAction?: "ADD" | "REMOVE" }) => account?.role === "admin" && playerId
+    mutationFn: ({ playerId, status, guestAction }: { playerId?: string; status?: "PRESENT" | "ABSENT"; guestAction?: "ADD" | "REMOVE" }) => canManageAttendance && playerId
       ? apiFetch("/api/admin/matches", jsonMutation("PATCH", guestAction
         ? { action: "guest-preconfirmation", matchId: id, playerId, guestAction }
         : { action: "attendance", matchId: id, playerId, status }))
@@ -24,7 +29,7 @@ export default function MatchDetail() {
   if (query.isError) return <Screen><ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/></Screen>;
   if (!item) return <Screen><ErrorState message="Partida não encontrada." retry={() => query.refetch()}/></Screen>;
   const attendanceByPlayer = Object.fromEntries(item.attendance.map(answer => [answer.playerId, answer]));
-  const players = account?.role === "admin" ? query.data?.players || [] : [];
+  const players = canManageAttendance ? query.data?.players || [] : [];
   const goalkeeperLimitReached = Boolean(item.viewer.isGoalkeeper && item.viewer.status !== "PRESENT" && (item.goalkeepers?.present || 0) >= (item.goalkeepers?.max || 2));
   const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest);
   const waitingIds = new Set(item.preconfirmedGuestIds || []);
@@ -41,13 +46,13 @@ export default function MatchDetail() {
     ListHeaderComponent={<><Header eyebrow={item.status === "OPEN" ? item.acceptingResponses ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : item.status === "CLOSED" ? "LISTA ENCERRADA" : "PARTIDA CANCELADA"} title={item.title}/>
       <Card style={styles.info}><Text style={styles.date}>{dateTime(item.matchAt)}</Text>{item.location ? <Text style={styles.location}>📍 {item.location}</Text> : null}<Text style={styles.deadline}>Responda até {dateTime(item.confirmationDeadline)}</Text><View style={styles.counts}><Count value={item.counts.present} label="Presentes" color={colors.success}/><Count value={item.counts.absent} label="Ausentes" color={colors.danger}/>{item.guestPreconfirmation?.enabled ? <Count value={item.counts.preconfirmed || 0} label="Na espera" color={colors.yellow}/> : null}<Count value={item.counts.pending} label="Pendentes" color={colors.muted}/></View></Card>
       <MobileWeather weather={item.weather}/>
-      {account?.role !== "admin" ? <Card style={styles.answer}>
+      {!canManageAttendance ? <Card style={styles.answer}>
         <Text style={styles.answerTitle}>{guestManaged ? item.viewer.preconfirmed ? "Você está na lista de espera" : item.viewer.status === "PRESENT" ? "Presença aprovada" : item.viewer.status === "ABSENT" ? "Sua resposta: Não vou" : "Presença gerenciada pela organização" : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Vou jogar" : "Não vou"}` : "Confirme sua presença"}</Text>
         <Text style={styles.help}>{guestManaged ? item.viewer.preconfirmed ? "Aguarde a aprovação final de um administrador." : "Convidados entram na lista de espera e são aprovados pelos administradores da pelada." : goalkeeperLimitReached ? "Os dois lugares de goleiro já estão preenchidos." : `${item.viewer.changesRemaining} de ${item.maxChanges} remarcações restantes.`}</Text>
         {item.viewer.playerId ? <View style={styles.buttons}>{!guestManaged && <Button title="✓ Vou jogar" busy={mutation.isPending} disabled={!item.viewer.canConfirmPresence || goalkeeperLimitReached} onPress={() => answer("PRESENT")}/>}<Button title="× Não vou" busy={mutation.isPending} disabled={!item.viewer.canRespond} variant="danger" onPress={() => answer("ABSENT")}/></View> : <Text style={styles.warning}>Associe sua conta a um jogador para responder.</Text>}
       </Card> : <Text style={styles.adminTitle}>Confirmação administrativa</Text>}
-      {item.status === "OPEN" && (account?.role === "admin" || item.shareMessage) ? <View style={styles.matchActions}>{account?.role === "admin" ? <Button title="Editar data e regras" variant="secondary" onPress={() => router.push(`/matches/manage?id=${item.id}` as never)}/> : null}{item.shareMessage ? <Button title="Compartilhar parcial no WhatsApp" icon="whatsapp" variant="secondary" onPress={() => shareText(item.shareMessage).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</View> : null}
-      {account?.role !== "admin" && <Roster item={item}/>}
+      {item.status === "OPEN" && (canReadAdminMatches || item.shareMessage) ? <View style={styles.matchActions}>{canManageMatches ? <Button title="Editar data e regras" variant="secondary" onPress={() => router.push(`/matches/manage?id=${item.id}` as never)}/> : null}{item.shareMessage ? <Button title="Compartilhar parcial no WhatsApp" icon="whatsapp" variant="secondary" onPress={() => shareText(item.shareMessage).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</View> : null}
+      {!canManageAttendance && <Roster item={item}/>}
     </>}
     renderItem={({ item: player }: { item: MatchPlayer }) => {
       const response = attendanceByPlayer[player.id], guest = player.type === "guest", preconfirmed = waitingIds.has(player.id);
@@ -63,7 +68,7 @@ export default function MatchDetail() {
         <Pressable style={[styles.smallButton, response?.status === "ABSENT" && styles.smallAbsent]} onPress={() => mutation.mutate({ playerId: player.id, status: "ABSENT" })}><Text style={response?.status === "ABSENT" ? styles.smallOnText : styles.smallAbsentText}>×</Text></Pressable>
       </View>;
     }}
-    ListFooterComponent={<View style={styles.footer}>{item.separationId ? <Button title="Abrir separação gerada" variant="secondary" onPress={() => router.push({ pathname: "/separations/[id]", params: { id: item.separationId! } })}/> : null}{account?.role === "admin" && item.status === "OPEN" && item.separationDraft?.enabled ? <Card style={[styles.draftInfo,item.separationDraft.stale&&styles.draftInfoStale]}><Text style={styles.draftTitle}>{item.separationDraft.exists?item.separationDraft.stale?"Rascunho desatualizado":"Rascunho salvo":"Planeje antes de publicar"}</Text><Text style={styles.draftText}>{item.separationDraft.exists&&!item.separationDraft.stale&&item.separationDraft.updatedAt?`Atualizado em ${new Date(item.separationDraft.updatedAt).toLocaleString("pt-BR")}. A lista continua aberta.`:item.separationDraft.stale?"A lista de presentes mudou. Uma nova proposta será iniciada ao abrir.":"Crie uma proposta sem encerrar a lista ou notificar os participantes."}</Text><Button title={item.separationDraft.exists&&!item.separationDraft.stale?"Editar rascunho de separação":"Criar rascunho de separação"} variant="secondary" disabled={item.counts.present<4} onPress={()=>router.push({pathname:"/new-separation",params:{matchId:item.id,draft:"1"}} as never)}/></Card>:null}{account?.role === "admin" && item.status === "OPEN" ? <Button title="Fechar lista e gerar times" disabled={item.counts.present < 4} onPress={() => router.push({ pathname: "/new-separation", params: { matchId: item.id } } as never)}/> : null}</View>}
+    ListFooterComponent={<View style={styles.footer}>{item.separationId ? <Button title="Abrir separação gerada" variant="secondary" onPress={() => router.push({ pathname: "/separations/[id]", params: { id: item.separationId! } })}/> : null}{canManageSeparations && item.status === "OPEN" && item.separationDraft?.enabled ? <Card style={[styles.draftInfo,item.separationDraft.stale&&styles.draftInfoStale]}><Text style={styles.draftTitle}>{item.separationDraft.exists?item.separationDraft.stale?"Rascunho desatualizado":"Rascunho salvo":"Planeje antes de publicar"}</Text><Text style={styles.draftText}>{item.separationDraft.exists&&!item.separationDraft.stale&&item.separationDraft.updatedAt?`Atualizado em ${new Date(item.separationDraft.updatedAt).toLocaleString("pt-BR")}. A lista continua aberta.`:item.separationDraft.stale?"A lista de presentes mudou. Uma nova proposta será iniciada ao abrir.":"Crie uma proposta sem encerrar a lista ou notificar os participantes."}</Text><Button title={item.separationDraft.exists&&!item.separationDraft.stale?"Editar rascunho de separação":"Criar rascunho de separação"} variant="secondary" disabled={item.counts.present<4} onPress={()=>router.push({pathname:"/new-separation",params:{matchId:item.id,draft:"1"}} as never)}/></Card>:null}{canManageSeparations && item.status === "OPEN" ? <Button title="Fechar lista e gerar times" disabled={item.counts.present < 4} onPress={() => router.push({ pathname: "/new-separation", params: { matchId: item.id } } as never)}/> : null}</View>}
   /></Screen>;
 }
 function Count({ value, label, color }: { value: number; label: string; color: string }) { return <View style={styles.count}><Text style={[styles.countValue, { color }]}>{value}</Text><Text style={styles.countLabel}>{label}</Text></View>; }

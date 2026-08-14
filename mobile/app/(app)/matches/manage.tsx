@@ -8,12 +8,14 @@ import { Button, Card, ErrorState, Field, Header, Screen } from "@/components";
 import { colors } from "@/theme";
 import type { MatchListPayload, ScheduledMatch } from "@/types";
 import { useMobileBranding } from "@/branding";
+import { hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 export default function ManageMatch() {
   const { id } = useLocalSearchParams<{ id?: string }>(), { account } = useAuth(), router = useRouter(), client = useQueryClient();
-  const query = useQuery({ queryKey: ["matches"], queryFn: () => apiFetch<MatchListPayload>("/api/admin/matches"), enabled: account?.role === "admin" });
+  const canManageMatches = hasPermission(account, MODERATOR_PERMISSIONS.MATCHES_MANAGE);
+  const query = useQuery({ queryKey: ["matches"], queryFn: () => apiFetch<MatchListPayload>("/api/admin/matches"), enabled: canManageMatches });
   const existing = query.data?.matches.find(item => item.id === id);
-  if (account?.role !== "admin") return <Screen><ErrorState message="Somente administradores podem configurar partidas."/></Screen>;
+  if (!canManageMatches) return <Screen><ErrorState message="Sua conta não possui permissão para configurar partidas."/></Screen>;
   if (id && query.isLoading) return <Screen><Header title="Configurar partida"/></Screen>;
   if (id && !existing) return <Screen><ErrorState message="Partida não encontrada." retry={() => query.refetch()}/></Screen>;
   return <MatchForm key={existing?.updatedAt || "new"} existing={existing} onSaved={async () => { await client.invalidateQueries({ queryKey: ["matches"] }); router.back(); }} onCancel={() => router.back()}/>;

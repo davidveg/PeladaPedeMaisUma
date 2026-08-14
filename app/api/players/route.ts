@@ -1,4 +1,4 @@
-import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
+import { audit, currentPlayerAccount, db, ensureDb, staffRequired, staffRequiredAny } from "../../../lib/database";
 import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
@@ -24,7 +24,8 @@ const map = (row: any) => ({
 });
 
 export async function GET(request: Request) {
-  if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
+  if (!(await currentPlayerAccount(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  if (!(await staffRequiredAny(request,["PLAYERS_MANAGE","SEPARATIONS_MANAGE","MATCH_RESULTS_MANAGE"]))) return Response.json({ error: "Sem permissão para consultar os dados administrativos dos jogadores." }, { status: 403 });
   await ensureDb();
   await ensureCareerSeasonCurrent();
   const [rows, careerStats] = await Promise.all([
@@ -35,8 +36,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
+  if (!(await currentPlayerAccount(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  const admin: any = await staffRequired(request,"PLAYERS_MANAGE");
+  if (!admin) return Response.json({ error: "Sem permissão para gerenciar jogadores." }, { status: 403 });
   await ensureDb();
   const player = await request.json() as any;
   const values = playerRatings(player);
@@ -49,8 +51,9 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
+  if (!(await currentPlayerAccount(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  const admin: any = await staffRequired(request,"PLAYERS_MANAGE");
+  if (!admin) return Response.json({ error: "Sem permissão para gerenciar jogadores." }, { status: 403 });
   await ensureDb();
   const player = await request.json() as any;
   const values = playerRatings(player);
@@ -64,8 +67,9 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
+  if (!(await currentPlayerAccount(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  const admin: any = await staffRequired(request,"PLAYERS_MANAGE");
+  if (!admin) return Response.json({ error: "Sem permissão para gerenciar jogadores." }, { status: 403 });
   await ensureDb();
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return Response.json({ error: "Informe o jogador que será excluído." }, { status: 400 });

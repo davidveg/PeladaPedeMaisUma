@@ -7,7 +7,7 @@ const noStore = { "cache-control": "no-store", "content-type": "application/json
 
 export async function GET(request: Request) {
   const account: any = await playerAccountRequired(request);
-  return account ? Response.json({ account: publicAccount(account) }, { headers: noStore }) : Response.json({ error: "Sessão expirada." }, { status: 401, headers: noStore });
+  return account ? Response.json({ account: await publicAccount(account) }, { headers: noStore }) : Response.json({ error: "Sessão expirada." }, { status: 401, headers: noStore });
 }
 
 export async function POST(request: Request) {
@@ -43,8 +43,11 @@ export async function DELETE(request: Request) {
 async function loadAccount(accountType: "administrator" | "member", id: string) {
   const account: any = accountType === "administrator"
     ? await db().prepare(`SELECT a.id,a.email,l.player_id playerId,'administrator' accountType FROM administrators a LEFT JOIN player_account_links l ON l.account_type='administrator' AND l.account_id=a.id WHERE a.id=?`).bind(id).first()
-    : await db().prepare(`SELECT a.id,a.email,l.player_id playerId,'member' accountType FROM member_accounts a LEFT JOIN player_account_links l ON l.account_type='member' AND l.account_id=a.id WHERE a.id=?`).bind(id).first();
-  return publicAccount(account);
+    : await db().prepare(`SELECT a.id,a.email,a.role,l.player_id playerId,'member' accountType FROM member_accounts a LEFT JOIN player_account_links l ON l.account_type='member' AND l.account_id=a.id WHERE a.id=?`).bind(id).first();
+  return await publicAccount(account);
 }
 
-const publicAccount = (account: any) => ({ id: account.id, email: account.email, role: account.accountType === "administrator" ? "admin" : "player", playerId: account.playerId || null });
+async function publicAccount(account: any) {
+  const permissions=account?.role==="moderator"?(await db().prepare(`SELECT permission FROM moderator_permissions WHERE member_account_id=? AND enabled=1 ORDER BY permission`).bind(account.id).all()).results.map((row:any)=>row.permission):[];
+  return { id: account.id, email: account.email, role: account.accountType === "administrator" ? "admin" : account.role === "moderator" ? "moderator" : "player", playerId: account.playerId || null, permissions };
+}

@@ -1,10 +1,11 @@
-import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
+import { adminRequired as fullAdminRequired, audit, currentStaff, db, ensureDb } from "../../../lib/database";
 import {
   INSTANCE_CONFIGURATION_COLUMNS,
   instanceConfigurationFromRow,
   instanceConfigurationValues,
   validateInstanceConfiguration,
 } from "../../../lib/instance-config";
+const adminRequired=(request:Request)=>request.method==="GET"?currentStaff(request):fullAdminRequired(request);
 
 export async function GET(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });

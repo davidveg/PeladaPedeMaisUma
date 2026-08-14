@@ -1,8 +1,9 @@
 /* D1 authentication rows are provided by the existing untyped adapter. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { POST as createMatch, PUT as updateMatch } from "../../../career/match/route";
-import { adminRequired } from "../../../../../lib/database";
+import { staffRequired } from "../../../../../lib/database";
 import { claimIdempotency, readIdempotencyKey, releaseIdempotency, storeIdempotentResponse } from "../../../../../lib/mobile-idempotency";
+const adminRequired=(request:Request)=>staffRequired(request,"MATCH_RESULTS_MANAGE");
 
 async function run(request: Request, operation: string, handler: (request: Request) => Promise<Response>) {
   const admin: any = await adminRequired(request);

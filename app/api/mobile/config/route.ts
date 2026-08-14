@@ -1,4 +1,5 @@
-import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
+import { audit, db, ensureDb, staffRequired } from "../../../../lib/database";
+const adminRequired=(request:Request)=>staffRequired(request,"BALANCE_CONFIG_MANAGE");
 
 const columns = ["speed_weight", "skill_weight", "marking_weight", "tactical_intelligence_weight", "competitiveness_weight", "goalkeeper_defenses_weight", "goalkeeper_positioning_weight", "goalkeeper_safety_weight", "goalkeeper_footwork_weight", "goalkeeper_leadership_weight"];
 const keys = ["speedWeight", "skillWeight", "markingWeight", "tacticalIntelligenceWeight", "competitivenessWeight", "goalkeeperDefensesWeight", "goalkeeperPositioningWeight", "goalkeeperSafetyWeight", "goalkeeperFootworkWeight", "goalkeeperLeadershipWeight"];

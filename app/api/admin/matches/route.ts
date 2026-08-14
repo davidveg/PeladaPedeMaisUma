@@ -1,6 +1,6 @@
 /* Administrative match lifecycle and attendance overrides. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
+import { audit, db, ensureDb, staffRequired, staffRequiredAny } from "../../../../lib/database";
 import { broadcastAccountNotification } from "../../../../lib/account-notifications";
 import { createSeparationFromMatch, loadScheduledMatches, setAttendance, setGuestPreconfirmation } from "../../../../lib/scheduled-matches";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
@@ -11,15 +11,15 @@ import { refreshMatchWeather } from "../../../../lib/match-weather";
 const noStore = { "cache-control": "no-store" };
 
 export async function GET(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
+  const admin: any = await staffRequiredAny(request,["MATCHES_MANAGE","MATCH_ATTENDANCE_MANAGE","MATCHES_CANCEL","SEPARATIONS_MANAGE"]);
+  if (!admin) return Response.json({ error: "Sem permissão para acessar a gestão de partidas." }, { status: 403, headers: noStore });
   const baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
   return Response.json(await loadScheduledMatches(admin, true, baseUrl), { headers: noStore });
 }
 
 export async function POST(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
+  const admin: any = await staffRequired(request,"MATCHES_MANAGE");
+  if (!admin) return Response.json({ error: "Sem permissão para criar partidas." }, { status: 403, headers: noStore });
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
   const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
@@ -44,11 +44,12 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
-  await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
   const action = String(payload.action || "update");
+  const permission = action === "attendance" || action === "guest-preconfirmation" ? "MATCH_ATTENDANCE_MANAGE" : action === "cancel" ? "MATCHES_CANCEL" : action === "close" ? "SEPARATIONS_MANAGE" : "MATCHES_MANAGE";
+  const admin: any = await staffRequired(request,permission);
+  if (!admin) return Response.json({ error: "Este perfil moderador não possui permissão para esta operação." }, { status: 403, headers: noStore });
+  await ensureDb();
   try {
     if (action === "guest-preconfirmation") {
       const result = await setGuestPreconfirmation({

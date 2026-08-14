@@ -1,4 +1,4 @@
-import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
+import { staffRequired, audit, db, ensureDb } from "../../../lib/database";
 import { normalizeName } from "../../../lib/football";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 
@@ -23,7 +23,7 @@ const map = (row: any) => ({
 });
 
 export async function POST(request: Request) {
-  const admin: any = await adminRequired(request);
+  const admin: any = await staffRequired(request,"SEPARATIONS_MANAGE");
   if (!admin) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
   await ensureCareerSeasonCurrent();

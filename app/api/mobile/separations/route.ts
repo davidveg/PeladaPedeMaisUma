@@ -1,10 +1,11 @@
 /* Existing separation snapshots are intentionally schema-flexible JSON. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GET as getSeparations, PATCH as patchSeparation, POST as postSeparation } from "../../separations/route";
-import { adminRequired, db, playerAccountRequired } from "../../../../lib/database";
+import { db, playerAccountRequired, staffRequired } from "../../../../lib/database";
 import { claimIdempotency, readIdempotencyKey, releaseIdempotency, storeIdempotentResponse } from "../../../../lib/mobile-idempotency";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
+const adminRequired=(request:Request)=>staffRequired(request,"SEPARATIONS_MANAGE");
 
 export async function GET(request: Request) {
   const account: any = await playerAccountRequired(request);

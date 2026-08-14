@@ -16,18 +16,23 @@ export async function GET(request: Request) {
   const query = String(parameters.get("q") || "").trim().slice(0, 100).toLowerCase();
   const action = String(parameters.get("action") || "ALL").trim().slice(0, 50);
   const search = `%${query}%`;
+  const actorJoin = `LEFT JOIN (
+    SELECT id, email FROM administrators
+    UNION ALL
+    SELECT id, email FROM member_accounts
+  ) a ON a.id = l.administrator_id`;
   const filters = `
     WHERE (? = '' OR LOWER(COALESCE(a.email, 'Ação pública') || ' ' || l.action || ' ' || l.entity_type || ' ' || COALESCE(l.entity_id, '') || ' ' || COALESCE(l.previous_data, '') || ' ' || COALESCE(l.new_data, '')) LIKE ?)
       AND (? = 'ALL' OR l.action = ?)
   `;
-  const count = await db().prepare(`SELECT COUNT(*) AS total FROM audit_logs l LEFT JOIN administrators a ON a.id = l.administrator_id ${filters}`).bind(query, search, action, action).first<any>();
+  const count = await db().prepare(`SELECT COUNT(*) AS total FROM audit_logs l ${actorJoin} ${filters}`).bind(query, search, action, action).first<any>();
   const total = Number(count?.total || 0), totalPages = Math.max(1, Math.ceil(total / pageSize)), page = Math.min(requestedPage, totalPages), offset = (page - 1) * pageSize;
   const [rows, actionRows] = await Promise.all([
     db().prepare(`
     SELECT l.id, l.administrator_id, l.action, l.entity_type, l.entity_id,
            l.previous_data, l.new_data, l.created_at, a.email AS administrator_email
     FROM audit_logs l
-    LEFT JOIN administrators a ON a.id = l.administrator_id
+    ${actorJoin}
     ${filters}
     ORDER BY l.created_at DESC
     LIMIT ? OFFSET ?

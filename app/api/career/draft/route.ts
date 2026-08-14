@@ -1,6 +1,7 @@
 import { getCareerConfig } from "../../../../lib/career-service";
-import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
+import { audit, db, ensureDb, staffRequired } from "../../../../lib/database";
 import { scoresFromContributions, validateMatchDraft } from "../../../../lib/match-draft";
+const adminRequired=(request:Request)=>staffRequired(request,"MATCH_RESULTS_MANAGE");
 
 async function draftContext(request: Request) {
   const admin: any = await adminRequired(request);

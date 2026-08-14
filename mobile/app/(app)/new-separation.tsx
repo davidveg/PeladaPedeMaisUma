@@ -41,7 +41,7 @@ export default function NewSeparation() {
   const [location, setLocation] = useState("");
   const loadedMatch = useRef("");
   const router = useRouter(), client = useQueryClient();
-  const builderAllowed = separationBuilderAllowed(account?.role, brand.manualSeparationEnabled, matchId);
+  const builderAllowed = separationBuilderAllowed(account, brand.manualSeparationEnabled, matchId);
   const playersQuery = useQuery({ queryKey: ["admin-players"], queryFn: () => apiFetch<{ players: Player[] }>("/api/players"), enabled: builderAllowed && !matchId });
   const proposalMutation = useMutation({
     mutationFn: (body: unknown) => apiFetch<Proposal>("/api/mobile/separations/proposal", jsonMutation("POST", body)),

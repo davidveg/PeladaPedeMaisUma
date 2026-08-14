@@ -1,7 +1,8 @@
 /* Administrative separation drafts never close a match or notify participants. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { adminRequired, ensureDb } from "../../../../lib/database";
+import { ensureDb, staffRequired } from "../../../../lib/database";
 import { loadMatchSeparationDraft, saveMatchSeparationDraft } from "../../../../lib/scheduled-matches";
+const adminRequired=(request:Request)=>staffRequired(request,"SEPARATIONS_MANAGE");
 
 const noStore = { "cache-control": "no-store" };
 

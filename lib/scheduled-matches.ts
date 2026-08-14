@@ -77,7 +77,7 @@ export async function setAttendance(params: {
   if (!administratorOverride && String(account.playerId || "") !== playerId) {
     throw statusError("Você só pode responder pela sua própria associação.", 403);
   }
-  if (administratorOverride && account.accountType !== "administrator") throw statusError("Não autorizado.", 401);
+  if (administratorOverride && account.accountType !== "administrator" && account.role !== "moderator") throw statusError("Não autorizado.", 401);
   const player: any = await db().prepare(
     `SELECT id,display_name,type,primary_position FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`,
   ).bind(playerId).first();
@@ -163,7 +163,7 @@ export async function setAttendance(params: {
       throw error;
     }
   }
-  await audit(account.accountType === "administrator" ? account.id : null, "MATCH_ATTENDANCE_CHANGED", "scheduled_match", matchId, {
+  await audit(administratorOverride || account.accountType === "administrator" ? account.id : null, "MATCH_ATTENDANCE_CHANGED", "scheduled_match", matchId, {
     playerId, playerName: player.display_name, status, changeCount: nextChanges, administratorOverride,
   }, previous ? { status: previous.status, changeCount: previous.change_count } : undefined);
   await db().prepare(`DELETE FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`).bind(matchId, playerId).run();
@@ -183,7 +183,7 @@ export async function setGuestPreconfirmation(params: {
 }) {
   await ensureDb();
   const { matchId, playerId, action, account } = params;
-  if (account?.accountType !== "administrator") throw statusError("Não autorizado.", 401);
+  if (account?.accountType !== "administrator" && account?.role !== "moderator") throw statusError("Não autorizado.", 401);
   if (!["ADD", "REMOVE"].includes(action)) throw statusError("Ação da lista de espera inválida.", 400);
   const [match, player, instanceRow] = await Promise.all([
     db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first<any>(),

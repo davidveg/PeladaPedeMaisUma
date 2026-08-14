@@ -9,7 +9,7 @@ import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { WeatherPreview } from "../components/WeatherPreview";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
-type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any };
+type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[] };
 type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "ABSENT"; changeCount: number };
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
@@ -24,11 +24,12 @@ type Match = {
 };
 type Player = { id: string; displayName: string; type: string; primaryPosition: string };
 
-export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props) {
+export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[] }: Props) {
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
+  const allowed=(permission:string)=>permissions.includes("*")||permissions.includes(permission),canManage=allowed("MATCHES_MANAGE"),canAttend=allowed("MATCH_ATTENDANCE_MANAGE"),canCancel=allowed("MATCHES_CANCEL"),canSeparate=allowed("SEPARATIONS_MANAGE");
   async function load() {
     setLoading(true);
     try {
@@ -80,19 +81,19 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig }: Props
 
   if (loading && !data.matches.length) return <div className="admin-card match-admin-empty">Carregando partidas…</div>;
   return <section className="admin-matches">
-    <div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p><button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button></div>
+    <div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p>{canManage&&<button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button>}</div>
     <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem separação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label>
     <div className="match-admin-layout"><div className="match-admin-list">{visibleMatches.length ? visibleMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
       <span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
     </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}</div>
-    <div>{current ? <MatchAdminDetail match={current} players={data.players} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
+    <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
     {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
 }
 
-function MatchAdminDetail({ match, players, onAttendance, onGuestPreconfirmation, onEdit, onClose, onCancel }: any) {
+function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, canSeparate, onAttendance, onGuestPreconfirmation, onEdit, onClose, onCancel }: any) {
   const byPlayer = useMemo(
     () => Object.fromEntries(match.attendance.map((item: Attendance) => [item.playerId, item])),
     [match.attendance],
@@ -103,7 +104,7 @@ function MatchAdminDetail({ match, players, onAttendance, onGuestPreconfirmation
   ).length;
   const share = () => match.shareMessage?.trim() && window.open(buildWhatsAppShareUrl(match.shareMessage), "_blank", "noopener,noreferrer");
   return <section className="admin-card match-admin-detail">
-    <div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
+    <div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{canManage&&match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
     <WeatherPreview weather={match.weather}/>
     <div className="match-attendance-summary">
       <span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span>
@@ -119,16 +120,16 @@ function MatchAdminDetail({ match, players, onAttendance, onGuestPreconfirmation
       const responseLabel = preconfirmed ? "Na lista de espera · aguardando aprovação" : answer ? `${answer.changeCount}/${match.maxChanges} remarcações` : "Sem resposta";
       return <div className={`${guest ? "guest" : ""}${preconfirmed ? " preconfirmed" : ""}`} key={player.id}>
         <span><b>{player.displayName}{guest && <em>Convidado</em>}</b><small>{player.primaryPosition} · {responseLabel}</small></span>
-        <div>{guestFlow && answer?.status !== "PRESENT" ? <>
+        {canAttend&&<div>{guestFlow && answer?.status !== "PRESENT" ? <>
           {!preconfirmed && <button className="attendance-waiting" onClick={() => onGuestPreconfirmation(player.id, "ADD")}>⏳ Colocar na espera</button>}
           {preconfirmed && <button className="attendance-present" disabled={!match.guestPreconfirmation.canApprove} title={!match.guestPreconfirmation.canApprove ? `Aguarde presentes e fila somarem ${match.guestPreconfirmation.threshold}.` : undefined} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Confirmar</button>}
           {preconfirmed && <button className="attendance-waiting on" onClick={() => onGuestPreconfirmation(player.id, "REMOVE")}>Remover espera</button>}
         </> : <button disabled={goalkeeperBlocked} title={goalkeeperBlocked ? "Os dois lugares de goleiro já estão preenchidos." : undefined} className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button>}
-        <button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div>
+        <button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div>}
       </div>;
     })}</div>
     {match.status === "OPEN" && match.separationDraft?.enabled && match.separationDraft?.exists && <p className={match.separationDraft.stale ? "match-draft-status stale" : "match-draft-status"}>{match.separationDraft.stale ? "O rascunho ficou desatualizado porque a lista de presentes mudou. Ao abri-lo, uma nova proposta será iniciada." : `Rascunho salvo${match.separationDraft.updatedAt ? ` em ${dateTime(match.separationDraft.updatedAt)}` : ""}.`}</p>}
-    <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <>{match.separationDraft?.enabled&&<a className="ghost" aria-disabled={match.counts.present<4} href={match.counts.present>=4?`/?matchId=${encodeURIComponent(match.id)}&draft=1`:undefined}>{match.separationDraft.exists&&!match.separationDraft.stale?'Editar rascunho de separação':'Criar rascunho de separação'}</a>}<button className="danger" onClick={onCancel}>Cancelar partida</button><button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button></>}</div>
+    <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/separacoes-salvas?separation=${encodeURIComponent(match.separationId)}`}>Abrir separação ↗</a>}{match.status === "OPEN" && <>{canSeparate&&match.separationDraft?.enabled&&<a className="ghost" aria-disabled={match.counts.present<4} href={match.counts.present>=4?`/?matchId=${encodeURIComponent(match.id)}&draft=1`:undefined}>{match.separationDraft.exists&&!match.separationDraft.stale?'Editar rascunho de separação':'Criar rascunho de separação'}</a>}{canCancel&&<button className="danger" onClick={onCancel}>Cancelar partida</button>}{canSeparate&&<button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button>}</>}</div>
   </section>;
 }
 

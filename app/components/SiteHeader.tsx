@@ -2,7 +2,7 @@
 
 import type { MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
-import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
+import { BrandIdentity } from "../InstanceBranding";
 
 type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "notifications" | "account" | "admin";
 
@@ -26,12 +26,10 @@ async function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: 
 
 export function SiteHeader({
   active,
-  isAdmin = false,
 }: {
   active?: SiteSection;
   isAdmin?: boolean;
 }) {
-  const { config } = useInstanceBranding();
   const link = (section: SiteSection, href: string, label: string) => (
     <a className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       {label}
@@ -40,18 +38,17 @@ export function SiteHeader({
 
   return (
     <header className="site-header">
-      <a href="/" className="brand" onClick={(event) => navigateWithDocument(event, "/")}>
+      <a href="/separacoes-salvas" className="brand" onClick={(event) => navigateWithDocument(event, "/separacoes-salvas")}>
         <BrandIdentity/>
       </a>
       <nav aria-label="Navegação principal">
-        {(!isAdmin || config.manualSeparationEnabled) && link("home", "/", isAdmin ? "Montar times" : "Início")}
         {link("players", "/jogadores", "Jogadores")}
         {link("statistics", "/estatisticas", "Estatísticas")}
-        {link("separations", "/separacoes-salvas", isAdmin ? "Separações salvas" : "Últimas separações")}
+        {link("separations", "/separacoes-salvas", "Separações salvas")}
         {link("matches", "/partidas", "Partidas")}
         {link("notifications", "/notificacoes", "Notificações")}
         {link("account", "/conta", "Minha conta")}
-        {link("admin", "/admin", isAdmin ? "Painel administrativo" : "Entrar como administrador")}
+        {link("admin", "/admin", "Painel Administrativo")}
       </nav>
     </header>
   );

@@ -1,11 +1,14 @@
-export function manualSeparationEntryVisible(role: string | undefined, manualSeparationEnabled: boolean) {
-  return role === "admin" && manualSeparationEnabled;
+import type { Account } from "./types";
+import { hasPermission, MODERATOR_PERMISSIONS } from "./moderator-permissions.ts";
+
+export function manualSeparationEntryVisible(account: Account | null | undefined, manualSeparationEnabled: boolean) {
+  return hasPermission(account, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE) && manualSeparationEnabled;
 }
 
 export function separationBuilderAllowed(
-  role: string | undefined,
+  account: Account | null | undefined,
   manualSeparationEnabled: boolean,
   matchId?: string,
 ) {
-  return role === "admin" && (manualSeparationEnabled || Boolean(matchId));
+  return hasPermission(account, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE) && (manualSeparationEnabled || Boolean(matchId));
 }

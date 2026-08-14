@@ -1,5 +1,6 @@
-import { adminRequired, audit, db, ensureDb } from "../../../lib/database";
+import { audit, db, ensureDb, staffRequired, staffRequiredAny } from "../../../lib/database";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
+const adminRequired=(request:Request)=>request.method==="GET"?staffRequiredAny(request,["BALANCE_CONFIG_MANAGE","SEPARATIONS_MANAGE"]):staffRequired(request,"BALANCE_CONFIG_MANAGE");
 
 const lineWeightKeys = ["speedWeight", "skillWeight", "markingWeight", "tacticalIntelligenceWeight", "competitivenessWeight"] as const;
 const goalkeeperWeightKeys = ["goalkeeperDefensesWeight", "goalkeeperPositioningWeight", "goalkeeperSafetyWeight", "goalkeeperFootworkWeight", "goalkeeperLeadershipWeight"] as const;

@@ -1,6 +1,7 @@
 import { addSeasonMonths, validateCareerConfig, type CareerConfig } from "../../../../lib/career";
 import { careerMatchFromRow, finalizeCareerMatch, finalizeIfExpired, getCareerConfig } from "../../../../lib/career-service";
-import { adminRequired, audit, db, ensureDb } from "../../../../lib/database";
+import { adminRequired as fullAdminRequired, audit, db, ensureDb, staffRequired, staffRequiredAny } from "../../../../lib/database";
+const adminRequired=(request:Request)=>request.method==="PUT"?fullAdminRequired(request):request.method==="GET"?staffRequiredAny(request,["CAREER_VOTES_MANAGE","MATCH_RESULTS_MANAGE"]):staffRequired(request,"CAREER_VOTES_MANAGE");
 
 export async function GET(request:Request){
   if(!(await adminRequired(request)))return Response.json({error:"Não autorizado"},{status:401});await ensureDb();

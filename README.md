@@ -41,6 +41,9 @@ Documentação complementar:
 - A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição e observações.
 - Recuperação de senha por e-mail para administradores e contas de jogadores.
 - Administradores podem redefinir uma senha temporária de conta de jogador e revogar todas as sessões anteriores.
+- Perfil intermediário de **moderador**, promovido a partir de uma conta de jogador e sempre reversível pelo administrador.
+- Permissões granulares de moderador para jogadores e notas, partidas, presenças, cancelamentos, separações, súmula/resultados, votos do Modo Carreira e pesos do algoritmo.
+- Moderadores mantêm a associação com seu jogador e nunca podem promover, reverter ou alterar permissões de outras contas.
 
 ### Agenda, presenças e notificações
 
@@ -132,6 +135,7 @@ O painel possui:
 - separações salvas;
 - administradores;
 - contas de jogadores e associações;
+- moderadores e suas permissões;
 - identidade, agenda, nomes e cores das equipes;
 - ativação e limite da lista de espera administrativa de convidados;
 - ativação opcional da importação manual por lista do WhatsApp, compartilhada entre site e aplicativo;
@@ -351,6 +355,7 @@ Somente a confirmação oficial do resultado atualiza estatísticas e momentum. 
 | Página | Finalidade |
 | --- | --- |
 | `/` | Organização e criação de times para administradores |
+| `/admin` | Painel completo para administradores e painel limitado às permissões concedidas para moderadores |
 | `/jogadores` | Lista pública e cards |
 | `/separacoes-salvas` | Histórico público das separações |
 | `/estatisticas` | Rankings e confrontos |
@@ -399,6 +404,7 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 
 - `GET/POST/PUT/DELETE /api/players` — jogadores.
 - `GET/POST/PUT /api/administrators` — administradores.
+- `GET/POST/PUT/DELETE /api/moderators` — promoção, permissões e reversão de moderadores (somente administradores).
 - `GET/DELETE /api/member-associations` — associações.
 - `PUT /api/member-associations/password` — senha temporária de jogador.
 - `GET/PUT /api/config` — equilíbrio.

@@ -7,18 +7,21 @@ import { useAuth } from "@/auth";
 import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
 import { colors } from "@/theme";
 import type { MatchListPayload, ScheduledMatch } from "@/types";
+import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 export default function MatchesScreen() {
   const { account } = useAuth(), router = useRouter();
+  const canReadAdminMatches = hasAnyPermission(account, [MODERATOR_PERMISSIONS.MATCHES_MANAGE, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE, MODERATOR_PERMISSIONS.MATCHES_CANCEL, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE]);
+  const canManageMatches = hasPermission(account, MODERATOR_PERMISSIONS.MATCHES_MANAGE);
   const [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
   const query = useQuery({
     queryKey: ["matches"],
-    queryFn: () => apiFetch<MatchListPayload>(account?.role === "admin" ? "/api/admin/matches" : "/api/matches"),
+    queryFn: () => apiFetch<MatchListPayload>(canReadAdminMatches ? "/api/admin/matches" : "/api/matches"),
   });
   const refetch = query.refetch;
   const visibleMatches = (query.data?.matches || []).filter(item => !onlyActiveOrSeparated || isActiveOrSeparated(item));
   useFocusEffect(useCallback(() => { void refetch(); }, [refetch]));
-  return <Screen><Header eyebrow="AGENDA DA PELADA" title="Partidas" action={account?.role === "admin" ? <Button title="+ Criar" onPress={() => router.push("/matches/manage" as never)}/> : null}/>
+  return <Screen><Header eyebrow="AGENDA DA PELADA" title="Partidas" action={canManageMatches ? <Button title="+ Criar" onPress={() => router.push("/matches/manage" as never)}/> : null}/>
     {query.isError && !query.data ? <ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/> : <FlatList
       contentContainerStyle={styles.list} data={visibleMatches} keyExtractor={item => item.id}
       refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} tintColor={colors.green}/>}

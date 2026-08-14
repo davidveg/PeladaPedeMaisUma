@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       db().prepare(`UPDATE career_votes SET voter_account_type='administrator' WHERE voter_account_type='member' AND voter_account_id=?`).bind(accountId),
       db().prepare(`DELETE FROM member_password_reset_tokens WHERE member_account_id=?`).bind(accountId),
       db().prepare(`DELETE FROM member_sessions WHERE member_account_id=?`).bind(accountId),
+      db().prepare(`DELETE FROM moderator_permissions WHERE member_account_id=?`).bind(accountId),
       db().prepare(`DELETE FROM member_accounts WHERE id=?`).bind(accountId),
     ]);
   } catch (error: any) {

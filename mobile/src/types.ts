@@ -1,5 +1,5 @@
-export type Role = "admin" | "player";
-export type Account = { id: string; email: string; role: Role; playerId: string | null };
+export type Role = "admin" | "moderator" | "player";
+export type Account = { id: string; email: string; role: Role; playerId: string | null; permissions?: string[] };
 export type Session = { account: Account; accessToken: string; refreshToken: string; accessExpiresAt: string; refreshExpiresAt: string };
 export type CareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
 export type Player = { id: string; displayName: string; fullName?: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: string; speed: number; skill: number; marking?: number; tacticalIntelligence?:number; competitiveness?:number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?:number; goalkeeperLeadership?:number; momentum?: number; resultMomentum?: number; votingMomentum?: number; photoUrl?: string | null; notes?: string | null; careerStats?: CareerStats };
