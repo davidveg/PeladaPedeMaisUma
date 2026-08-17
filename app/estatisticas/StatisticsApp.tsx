@@ -113,7 +113,7 @@ function PlayerOfMonth({standing}:{standing:MonthlyStanding|null}) {
     <div className="player-of-month-title"><span aria-hidden="true">★</span><div><small>DESTAQUE INDIVIDUAL</small><b>Jogador do mês</b></div></div>
     <div className="player-of-month-profile">
       <PlayerPhoto photoUrl={standing.player.photoUrl} name={standing.player.displayName} className="player-of-month-photo"/>
-      <div><h3>{standing.player.displayName}</h3><span>{standing.player.primaryPosition||"Jogador"}</span></div>
+      <div className="player-of-month-identity"><h3>{standing.player.displayName}</h3><span>{standing.player.primaryPosition||"Jogador"}</span></div>
     </div>
     <div className="player-of-month-total"><strong>{signed(standing.totalMomentum)}</strong><small>momentum total</small></div>
     <dl className="player-of-month-breakdown">

@@ -20,14 +20,14 @@
 .player-of-month-title>div{display:flex;flex-direction:column;gap:2px}
 .player-of-month-title small{color:#c5dbd1;font-size:7px;letter-spacing:1.3px;font-weight:900}
 .player-of-month-title b{font:700 18px Georgia,serif;text-transform:none}
-.player-of-month>.player-of-month-profile{display:flex;flex:1;flex-direction:column;justify-content:center;justify-items:normal;align-items:center;padding:17px 0 10px;text-align:center}
-.player-of-month-profile>.player-avatar-wrap{width:148px;height:148px;margin:0 0 14px}
-.player-of-month-profile .player-photo{width:148px;height:148px;margin:0;border:4px solid #fff;border-radius:50%;background:#e1ede6;box-shadow:0 14px 32px #061b144f}
-.player-of-month-profile .player-photo img{width:100%;height:100%;margin:0;object-fit:cover}
+.player-of-month>.player-of-month-profile{display:flex;flex:1;flex-direction:column;justify-content:center;justify-items:normal;align-items:center;gap:14px;padding:19px 0 12px;text-align:center}
+.player-of-month-profile>.player-avatar-wrap{position:relative;z-index:1;width:156px;height:156px;margin:0}
+.player-of-month-profile .player-photo{box-sizing:border-box;width:156px;height:156px;margin:0;overflow:hidden;border:4px solid #fff;border-radius:50%;background:#e1ede6;box-shadow:0 14px 32px #061b144f}
+.player-of-month-profile .player-photo img{display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:center}
 .player-of-month-profile .player-placeholder{font-size:54px}
-.player-of-month-profile>div{position:relative;z-index:2;min-width:82%;margin-top:-3px;padding:10px 15px 9px;border:1px solid #dce9e1;border-radius:12px;background:#f5faf7;color:#153f31;box-shadow:0 9px 22px #061b1435}
+.player-of-month-profile>.player-of-month-identity{position:relative;z-index:2;min-width:82%;margin:0;padding:10px 15px 9px;border:1px solid #dce9e1;border-radius:12px;background:#f5faf7;color:#153f31;box-shadow:0 9px 22px #061b1435}
 .player-of-month-profile h3{margin:0;font:700 26px/1.05 Georgia,serif;color:#153f31}
-.player-of-month-profile>div>span{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:99px;background:#dfece5;color:#315f4e;font-size:8px;font-weight:850}
+.player-of-month-profile>.player-of-month-identity>span{display:inline-flex;margin-top:6px;padding:4px 10px;border-radius:99px;background:#dfece5;color:#315f4e;font-size:8px;font-weight:850}
 .player-of-month>.player-of-month-total{display:flex;flex-direction:column;align-items:center;justify-items:normal;margin:0;padding:13px 0;border-top:1px solid #ffffff29;border-bottom:1px solid #ffffff29}
 .player-of-month-total strong{font:700 37px/1 Georgia,serif;color:#d9f66b}
 .player-of-month-total small{margin-top:5px;color:#c5dbd1;font-size:7px;letter-spacing:1.4px;font-weight:900;text-transform:uppercase}
@@ -46,7 +46,7 @@
 .monthly-awards-pending b{font:700 19px Georgia,serif}
 .monthly-awards-pending p{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
 
-@media(max-width:760px){.monthly-highlight-layout{grid-template-columns:1fr}.player-of-month{min-height:540px}.player-of-month-profile>.player-avatar-wrap,.player-of-month-profile .player-photo{width:138px;height:138px}}
+@media(max-width:760px){.monthly-highlight-layout{grid-template-columns:1fr}.player-of-month{min-height:540px}.player-of-month-profile>.player-avatar-wrap,.player-of-month-profile .player-photo{width:148px;height:148px}}
 
 .formation-line>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));align-items:center;gap:8px 12px}
 .formation-line article{justify-self:center;width:100%;max-width:145px}
