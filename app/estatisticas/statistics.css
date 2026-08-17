@@ -71,3 +71,17 @@
 
 @media(max-width:900px){.statistics-hero{display:grid}.statistics-period{width:100%;max-width:none}.statistics-hero-copy{min-height:auto}.statistics-period-main{grid-template-columns:auto 1fr}}
 @media(max-width:600px){.statistics-period{padding:14px}.statistics-period-head{align-items:flex-start;flex-direction:column;gap:6px}.statistics-period-main{grid-template-columns:1fr}.statistics-period-shortcuts button{flex:1}.statistics-date-range{grid-template-columns:1fr 1fr}.statistics-date-range>span{grid-column:1/-1}.statistics-period select,.statistics-period input{font-size:12px}}
+
+/* Fotos dos destaques mensais sem aro duplo. */
+.formation-line article>.player-avatar-wrap{display:grid;place-items:center;width:58px;height:58px;margin:0;border:0;border-radius:50%;background:transparent;box-shadow:none}
+.formation-line article>.player-avatar-wrap>.player-photo{width:58px;height:58px;overflow:hidden;border:0;border-radius:50%;background:#e3eee7;box-shadow:0 5px 13px #0a2c1f70}
+.formation-line article>.player-avatar-wrap>.player-photo>img{display:block;width:100%;height:100%;margin:0;border:0;border-radius:50%;object-fit:cover;object-position:center;box-shadow:none}
+
+/* O círculo decorativo acompanha o centro real da foto. */
+.player-of-month:before{content:none}
+.player-of-month>.player-of-month-profile>.player-avatar-wrap{position:relative;z-index:1;align-self:center;justify-self:center;width:156px;height:156px;margin:0;border:0;border-radius:50%}
+.player-of-month>.player-of-month-profile>.player-avatar-wrap:before{content:"";position:absolute;z-index:0;left:50%;top:50%;width:205px;height:205px;border:1px solid #ffffff1f;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+.player-of-month>.player-of-month-profile>.player-avatar-wrap>.player-photo{position:relative;z-index:1;box-sizing:border-box;width:156px;height:156px;margin:0;overflow:hidden;border:0;border-radius:50%;background:#e1ede6;box-shadow:0 14px 32px #061b144f}
+.player-of-month>.player-of-month-profile>.player-avatar-wrap>.player-photo>img{display:block;width:100%;height:100%;margin:0;border:0;border-radius:50%;object-fit:cover;object-position:center}
+
+@media(max-width:760px){.formation-line article>.player-avatar-wrap,.formation-line article>.player-avatar-wrap>.player-photo{width:52px;height:52px}.player-of-month>.player-of-month-profile>.player-avatar-wrap,.player-of-month>.player-of-month-profile>.player-avatar-wrap>.player-photo{width:148px;height:148px}.player-of-month>.player-of-month-profile>.player-avatar-wrap:before{width:195px;height:195px}}
