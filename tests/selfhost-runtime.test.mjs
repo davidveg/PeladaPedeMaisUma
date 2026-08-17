@@ -364,3 +364,21 @@ test("migração adiciona a configuração de cards por nível desativada por pa
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração adiciona a formação mensal e o histórico finalizado", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-monthly-team-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO career_configuration (id) VALUES (1)").run();
+    const migration = await readFile(new URL("../drizzle/0032_monthly_career_awards.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    const formation = await bindings.DB.prepare("SELECT monthly_team_goalkeepers,monthly_team_defenders,monthly_team_midfielders,monthly_team_attackers FROM career_configuration WHERE id=1").first();
+    assert.deepEqual({ ...formation }, { monthly_team_goalkeepers: 1, monthly_team_defenders: 2, monthly_team_midfielders: 2, monthly_team_attackers: 2 });
+    await bindings.DB.prepare("INSERT INTO monthly_career_awards (month,year,snapshot,finalized_at) VALUES ('2026-07',2026,'{}','2026-08-01T00:00:00.000Z')").run();
+    assert.equal(await bindings.DB.prepare("SELECT COUNT(*) total FROM monthly_career_awards").first("total"), 1);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -9,6 +9,10 @@ export type CareerConfig = {
   seasonStartedAt: string;
   nextSeasonResetAt: string;
   seasonNumber: number;
+  monthlyTeamGoalkeepers: number;
+  monthlyTeamDefenders: number;
+  monthlyTeamMidfielders: number;
+  monthlyTeamAttackers: number;
   resultMomentumMultiplier: number;
   momentumMultiplier: number;
   winnerBonus: number;
@@ -22,11 +26,18 @@ export type CareerConfig = {
   votingDays: number;
 };
 
-export const defaultCareerConfig: CareerConfig = { enabled: true, trackContributions: true, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, seasonDurationMonths: 12, seasonStartedAt: "", nextSeasonResetAt: "", seasonNumber: 1, resultMomentumMultiplier: 1, momentumMultiplier: 1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, votingDays: 5 };
+export type MonthlyTeamFormation = { goalkeepers: number; defenders: number; midfielders: number; attackers: number };
+export const defaultMonthlyTeamFormation: MonthlyTeamFormation = { goalkeepers: 1, defenders: 2, midfielders: 2, attackers: 2 };
+
+export const defaultCareerConfig: CareerConfig = { enabled: true, trackContributions: true, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, seasonDurationMonths: 12, seasonStartedAt: "", nextSeasonResetAt: "", seasonNumber: 1, monthlyTeamGoalkeepers: 1, monthlyTeamDefenders: 2, monthlyTeamMidfielders: 2, monthlyTeamAttackers: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, votingDays: 5 };
 
 export function careerConfigFromRow(row: any): CareerConfig {
   if (!row) return { ...defaultCareerConfig };
-  return { enabled: Boolean(row.enabled), trackContributions: Boolean(row.track_contributions ?? 1), cardTiersEnabled: Boolean(row.card_tiers_enabled ?? 0), cardBronzeMax: Number(row.card_bronze_max ?? 2.4), cardSilverMax: Number(row.card_silver_max ?? 3.9), cardGoldMax: Number(row.card_gold_max ?? 4.5), seasonDurationMonths: Number(row.season_duration_months ?? 12), seasonStartedAt: String(row.season_started_at ?? ""), nextSeasonResetAt: String(row.next_season_reset_at ?? ""), seasonNumber: Number(row.season_number ?? 1), resultMomentumMultiplier: Number(row.result_momentum_multiplier ?? 1), momentumMultiplier: Number(row.momentum_multiplier ?? 1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), votingDays: Number(row.voting_days) };
+  return { enabled: Boolean(row.enabled), trackContributions: Boolean(row.track_contributions ?? 1), cardTiersEnabled: Boolean(row.card_tiers_enabled ?? 0), cardBronzeMax: Number(row.card_bronze_max ?? 2.4), cardSilverMax: Number(row.card_silver_max ?? 3.9), cardGoldMax: Number(row.card_gold_max ?? 4.5), seasonDurationMonths: Number(row.season_duration_months ?? 12), seasonStartedAt: String(row.season_started_at ?? ""), nextSeasonResetAt: String(row.next_season_reset_at ?? ""), seasonNumber: Number(row.season_number ?? 1), monthlyTeamGoalkeepers: Number(row.monthly_team_goalkeepers ?? 1), monthlyTeamDefenders: Number(row.monthly_team_defenders ?? 2), monthlyTeamMidfielders: Number(row.monthly_team_midfielders ?? 2), monthlyTeamAttackers: Number(row.monthly_team_attackers ?? 2), resultMomentumMultiplier: Number(row.result_momentum_multiplier ?? 1), momentumMultiplier: Number(row.momentum_multiplier ?? 1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), votingDays: Number(row.voting_days) };
+}
+
+export function monthlyTeamFormation(config: Pick<CareerConfig, "monthlyTeamGoalkeepers" | "monthlyTeamDefenders" | "monthlyTeamMidfielders" | "monthlyTeamAttackers">): MonthlyTeamFormation {
+  return { goalkeepers: config.monthlyTeamGoalkeepers, defenders: config.monthlyTeamDefenders, midfielders: config.monthlyTeamMidfielders, attackers: config.monthlyTeamAttackers };
 }
 
 export function validateCareerConfig(config: CareerConfig) {
@@ -36,7 +47,9 @@ export function validateCareerConfig(config: CareerConfig) {
   const validTiers = tiers.every(value => Number.isFinite(value) && value >= 1 && value < 5 && Math.abs(value * 10 - Math.round(value * 10)) < 1e-9) && config.cardBronzeMax < config.cardSilverMax && config.cardSilverMax < config.cardGoldMax;
   const validMultipliers = [config.resultMomentumMultiplier, config.momentumMultiplier].every(value => Number.isFinite(value) && value >= 0 && value <= 5);
   const validSeason = Number.isInteger(config.seasonDurationMonths) && config.seasonDurationMonths >= 1 && config.seasonDurationMonths <= 120;
-  return validTiers && validMultipliers && validSeason && positive.every(value => Number.isFinite(value) && value >= 0 && value <= 1) && negative.every(value => Number.isFinite(value) && value <= 0 && value >= -1) && Number.isInteger(config.votingDays) && config.votingDays >= 1 && config.votingDays <= 30;
+  const formation = [config.monthlyTeamGoalkeepers, config.monthlyTeamDefenders, config.monthlyTeamMidfielders, config.monthlyTeamAttackers];
+  const validFormation = formation.every(value => Number.isInteger(value) && value >= 0 && value <= 11) && formation.reduce((sum, value) => sum + value, 0) >= 1 && formation.reduce((sum, value) => sum + value, 0) <= 30;
+  return validTiers && validMultipliers && validSeason && validFormation && positive.every(value => Number.isFinite(value) && value >= 0 && value <= 1) && negative.every(value => Number.isFinite(value) && value <= 0 && value >= -1) && Number.isInteger(config.votingDays) && config.votingDays >= 1 && config.votingDays <= 30;
 }
 
 export function defaultSeasonResetAt(now = new Date(), timeZone = "America/Sao_Paulo") {
