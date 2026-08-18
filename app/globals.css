@@ -333,3 +333,79 @@
 .match-draft-add .draft-yellow{background:var(--yellow);color:var(--yellow-contrast)}
 .match-draft-goal.blue,.match-draft-goal.blue.own-goal{border-left-color:var(--blue);background:var(--blue-soft)}
 .match-draft-goal.yellow,.match-draft-goal.yellow.own-goal{border-left-color:var(--yellow);background:var(--yellow-soft)}
+
+/* Painel administrativo no navegador móvel. O desktop mantém as tabelas originais. */
+@media(max-width:760px){
+ .admin-shell{width:100%;max-width:100vw;overflow-x:clip}
+ .admin-shell aside{position:sticky;top:0;z-index:35;width:100%;max-width:100vw;height:auto;display:flex;flex-direction:row;gap:4px;padding:10px 12px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-snap-type:x proximity;box-shadow:0 5px 18px #0d2f241f}
+ .admin-shell aside::-webkit-scrollbar{display:none}
+ .admin-shell aside>button{flex:0 0 auto;margin:0;padding:10px 12px;white-space:nowrap;scroll-snap-align:center}
+ .admin-main{width:100%;min-width:0;max-width:100vw;margin-left:0;padding:22px 12px 60px;overflow-x:hidden}
+ .admin-main>*{min-width:0;max-width:100%}
+ .admin-top{align-items:flex-start;gap:8px;margin-bottom:22px}
+ .admin-top>div{min-width:0;margin-right:auto}
+ .admin-top h1{font-size:clamp(28px,9vw,36px);line-height:1.03;letter-spacing:-.6px;overflow-wrap:anywhere}
+ .admin-top .mobile-profile,.admin-top>a{flex:0 0 auto}
+ .admin-card{min-width:0;max-width:100%;padding:16px}
+ .inline-form{gap:10px}
+ .inline-form input,.inline-form button{width:100%;min-width:0}
+
+ .separation-draft-setting{gap:18px;padding:18px}
+ .separation-draft-setting>div{min-width:0;max-width:100%}
+ .separation-draft-setting h2{font-size:23px;line-height:1.15}
+ .separation-draft-setting p{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+ .separation-draft-setting .feature-switch{width:100%;justify-content:flex-start}
+ .separation-draft-setting .feature-switch>button{min-width:130px}
+ .separation-draft-setting .feature-switch .help-tip{flex:0 0 18px;width:18px;height:18px}
+ .separation-draft-setting .feature-switch .help-tip>button{flex:0 0 18px;width:18px;min-width:18px;height:18px}
+ .separation-draft-setting .feature-switch .help-tip>[role=tooltip]{width:min(280px,calc(100vw - 32px));max-width:calc(100vw - 32px);white-space:normal;overflow-wrap:anywhere}
+
+ .association-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:16px}
+ .association-summary>div{min-width:0;padding:12px 7px;border-radius:10px;background:#f3f7f4}
+ .association-summary b{font-size:26px}
+ .association-summary span{text-align:center;line-height:1.35}
+ .association-summary p{grid-column:1/-1;margin:2px 0 0;padding:14px 0 0;border-top:1px solid var(--line);border-left:0;font-size:10px;overflow-wrap:anywhere}
+
+ .admin-main>.admin-card.table,.admin-main>.separation-admin-stack,.admin-main>.member-associations{width:100%}
+ .admin-main>.admin-card.table{display:block}
+ .table>.tr.sep.th,.table>.tr.admin-tr.th,.table>.tr.member-association-tr.th{display:none}
+ .table>.tr.sep:not(.th),.table>.tr.admin-tr:not(.th),.table>.tr.member-association-tr:not(.th){width:calc(100% - 20px);min-width:0!important;margin:10px;gap:8px;padding:12px!important;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
+ .table>.tr.sep:not(.th)>span,.table>.tr.admin-tr:not(.th)>span,.table>.tr.member-association-tr:not(.th)>span{min-width:0}
+ .table>.tr.sep:not(.th)>span:not(:first-child),.table>.tr.admin-tr:not(.th)>span:not(:first-child),.table>.tr.member-association-tr:not(.th)>span:not(:first-child):not(.association-account-actions){display:flex;flex-direction:column;align-items:flex-start;justify-content:center;justify-self:stretch;min-height:54px;padding:8px;border:1px solid #e1e8e3;border-radius:9px;background:#f8faf8;overflow-wrap:anywhere}
+ .table>.tr.sep:not(.th)>span:not(:first-child)::before,.table>.tr.admin-tr:not(.th)>span:not(:first-child)::before,.table>.tr.member-association-tr:not(.th)>span:not(:first-child):not(.association-account-actions)::before{display:block;margin-bottom:5px;color:#718078;font-size:7px;font-weight:900;letter-spacing:.7px;text-transform:uppercase}
+
+ .table>.tr.sep:not(.th){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .table>.tr.sep:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+ .table>.tr.sep:not(.th)>span:nth-child(2)::before{content:"Confirmação"}
+ .table>.tr.sep:not(.th)>span:nth-child(3)::before{content:"Jogadores"}
+ .table>.tr.sep:not(.th)>span:nth-child(4)::before{content:"Equilíbrio"}
+ .table>.tr.sep:not(.th)>span:nth-child(4){justify-self:stretch}
+ .table>.tr.sep:not(.th)>button{grid-column:1/-1;width:100%;min-height:40px}
+
+ .table>.tr.admin-tr:not(.th){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .table>.tr.admin-tr:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+ .table>.tr.admin-tr:not(.th)>span:nth-child(2)::before{content:"Cadastro"}
+ .table>.tr.admin-tr:not(.th)>span:nth-child(3)::before{content:"Atualização"}
+ .table>.tr.admin-tr:not(.th)>span:nth-child(4)::before{content:"Status"}
+ .table>.tr.admin-tr:not(.th)>span:nth-child(4){justify-self:stretch}
+ .table>.tr.admin-tr:not(.th)>button{grid-column:1/-1;width:100%;min-height:40px}
+
+ .table>.tr.member-association-tr:not(.th){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .table>.tr.member-association-tr:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+ .table>.tr.member-association-tr:not(.th)>span:first-child b{overflow-wrap:anywhere}
+ .table>.tr.member-association-tr:not(.th)>span:nth-child(2)::before{content:"Jogador associado"}
+ .table>.tr.member-association-tr:not(.th)>span:nth-child(3)::before{content:"Tipo / posição"}
+ .table>.tr.member-association-tr:not(.th)>span:nth-child(4)::before{content:"Cadastro"}
+ .table>.tr.member-association-tr:not(.th)>span:nth-child(5)::before{content:"Último acesso"}
+ .table>.tr.member-association-tr:not(.th)>.association-account-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding-top:4px}
+ .table>.tr.member-association-tr:not(.th)>.association-account-actions>*{width:100%;min-width:0;min-height:39px;white-space:normal}
+ .table>.tr.member-association-tr:not(.th)>.association-account-actions>.status{grid-column:1/-1;display:flex;align-items:center;justify-content:center}
+}
+
+@media(max-width:420px){
+ .admin-main{padding-inline:10px}
+ .admin-top h1{font-size:30px}
+ .table>.tr.sep:not(.th),.table>.tr.admin-tr:not(.th),.table>.tr.member-association-tr:not(.th){width:calc(100% - 16px);margin:8px}
+ .table>.tr.member-association-tr:not(.th){grid-template-columns:1fr}
+ .table>.tr.member-association-tr:not(.th)>span:first-child,.table>.tr.member-association-tr:not(.th)>.association-account-actions{grid-column:1}
+}
