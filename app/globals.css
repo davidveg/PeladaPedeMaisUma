@@ -421,4 +421,7 @@
 .settings .historical-learning-toggle{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;cursor:pointer}
 .historical-learning-toggle input{flex:0 0 18px;width:18px;height:18px;margin:0;accent-color:var(--green)}
 .historical-learning-toggle b{font-size:12px}
+.historical-learning-controls .help-tip>[role=tooltip]{left:auto;right:0;width:min(320px,calc(100vw - 48px));max-width:calc(100vw - 48px);white-space:normal;overflow-wrap:anywhere;transform:translateY(-3px)}
+.historical-learning-controls .help-tip>[role=tooltip]:before{left:auto;right:4px;transform:rotate(45deg)}
+.historical-learning-controls .help-tip:hover>[role=tooltip],.historical-learning-controls .help-tip:focus-within>[role=tooltip]{transform:translateY(0)}
 @media(max-width:760px){.historical-learning-setting{align-items:flex-start;flex-direction:column!important;gap:17px;padding:16px}.historical-learning-controls{width:100%;justify-content:flex-start;padding-top:0}.historical-learning-setting .help-tip>[role=tooltip]{left:0;right:auto;width:min(280px,calc(100vw - 42px));transform:translateY(-3px)}.historical-learning-setting .help-tip:hover>[role=tooltip],.historical-learning-setting .help-tip:focus-within>[role=tooltip]{transform:translateY(0)}.historical-learning-setting .help-tip>[role=tooltip]:before{left:8px;transform:rotate(45deg)}}
