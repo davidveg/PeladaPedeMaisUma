@@ -2,6 +2,7 @@ import { audit, currentPlayerAccount, db, ensureDb, staffRequired, staffRequired
 import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
+import { attachHistoricalPerformance } from "../../../lib/historical-performance-store";
 
 const map = (row: any) => ({
   ...row,
@@ -28,11 +29,13 @@ export async function GET(request: Request) {
   if (!(await staffRequiredAny(request,["PLAYERS_MANAGE","SEPARATIONS_MANAGE","MATCH_RESULTS_MANAGE"]))) return Response.json({ error: "Sem permissão para consultar os dados administrativos dos jogadores." }, { status: 403 });
   await ensureDb();
   await ensureCareerSeasonCurrent();
-  const [rows, careerStats] = await Promise.all([
+  const [rows, careerStats, configuration] = await Promise.all([
     db().prepare(`SELECT * FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all(),
     loadPlayerCareerStats(),
+    db().prepare(`SELECT historical_learning_enabled FROM system_configuration WHERE id=1`).first<any>(),
   ]);
-  return Response.json({ players: rows.results.map(row => attachPlayerCareerStats(map(row), careerStats)) }, { headers: { "cache-control": "no-store, max-age=0", pragma: "no-cache" } });
+  const players = rows.results.map(row => attachPlayerCareerStats(map(row), careerStats));
+  return Response.json({ players: await attachHistoricalPerformance(players as any[], Boolean(configuration?.historical_learning_enabled)) }, { headers: { "cache-control": "no-store, max-age=0", pragma: "no-cache" } });
 }
 
 export async function POST(request: Request) {

@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb } from "./database";
 import { ensureCareerSeasonCurrent } from "./career-season";
+import { attachHistoricalPerformance } from "./historical-performance-store";
 import { balanceTeams, calculateTeamDelta, defaultConfig, guestBalancePenalty, type Config, type Player } from "./football";
 import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
 import { instanceConfigurationFromRow } from "./instance-config";
@@ -270,11 +271,12 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
     ratingSystemVersion: 2,
     resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1),
     momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1),
+    historicalLearningEnabled: Boolean(systemConfig?.historical_learning_enabled ?? 0),
     maximumPositionDifference: Number(systemConfig?.maximum_position_difference ?? 1),
     protectedTopPlayersPercentage: Number(systemConfig?.protected_top_players_percentage ?? .25),
     algorithmAttempts: Number(systemConfig?.algorithm_attempts ?? 2500),
   };
-  const players = presentRows.map(mapPlayer);
+  const players = await attachHistoricalPerformance(presentRows.map(mapPlayer), Boolean(config.historicalLearningEnabled));
   const result = balanceTeams(players, config, Math.max(0, Math.floor(Number(nonce) || 0)));
   return {
     match: {

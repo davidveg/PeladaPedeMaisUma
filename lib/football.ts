@@ -1,9 +1,9 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
 export type PlayerCareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
-export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; tacticalIntelligence?: number; competitiveness?: number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?: number; goalkeeperLeadership?: number; momentum?: number; resultMomentum?: number; votingMomentum?: number; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
-export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; tacticalIntelligenceWeight?: number; competitivenessWeight?: number; goalkeeperDefensesWeight?: number; goalkeeperPositioningWeight?: number; goalkeeperSafetyWeight?: number; goalkeeperFootworkWeight?: number; goalkeeperLeadershipWeight?: number; ratingSystemVersion?: number; resultMomentumMultiplier?: number; momentumMultiplier?: number; showContributions?: boolean; cardTiersEnabled?: boolean; cardBronzeMax?: number; cardSilverMax?: number; cardGoldMax?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
+export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; speed: number; skill: number; marking?: number; tacticalIntelligence?: number; competitiveness?: number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?: number; goalkeeperLeadership?: number; momentum?: number; resultMomentum?: number; votingMomentum?: number; historicalPerformance?: { adjustment: number; confidence: number; games: number; recentMatches: number; [key: string]: number }; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
+export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; tacticalIntelligenceWeight?: number; competitivenessWeight?: number; goalkeeperDefensesWeight?: number; goalkeeperPositioningWeight?: number; goalkeeperSafetyWeight?: number; goalkeeperFootworkWeight?: number; goalkeeperLeadershipWeight?: number; ratingSystemVersion?: number; resultMomentumMultiplier?: number; momentumMultiplier?: number; historicalLearningEnabled?: boolean; showContributions?: boolean; cardTiersEnabled?: boolean; cardBronzeMax?: number; cardSilverMax?: number; cardGoldMax?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
-export const defaultConfig: Config = { speedWeight: .35, skillWeight: .25, markingWeight: .15, tacticalIntelligenceWeight: .2, competitivenessWeight: .05, goalkeeperDefensesWeight: .4, goalkeeperPositioningWeight: .25, goalkeeperSafetyWeight: .2, goalkeeperFootworkWeight: .1, goalkeeperLeadershipWeight: .05, ratingSystemVersion: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
+export const defaultConfig: Config = { speedWeight: .35, skillWeight: .25, markingWeight: .15, tacticalIntelligenceWeight: .2, competitivenessWeight: .05, goalkeeperDefensesWeight: .4, goalkeeperPositioningWeight: .25, goalkeeperSafetyWeight: .2, goalkeeperFootworkWeight: .1, goalkeeperLeadershipWeight: .05, ratingSystemVersion: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, historicalLearningEnabled: false, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
 const modernRatingSystem = (c: Config) => c.ratingSystemVersion === 2 || c.tacticalIntelligenceWeight != null;
 export const playerAttributes = (p: Player) => p.primaryPosition === "Goleiro" || p.type === "goalkeeper"
   ? { speed: p.goalkeeperPositioning ?? p.speed ?? 3, skill: p.skill, marking: p.goalExit ?? p.marking ?? 3, tacticalIntelligence: p.goalkeeperSafety ?? 3, competitiveness: p.goalkeeperLeadership ?? 3 }
@@ -27,6 +27,8 @@ export const score = (p: Player, c = defaultConfig) => {
   const raw=base+momentumContribution(p,c);
   return Math.round(Math.max(1,Math.min(5,raw))*10)/10;
 };
+export const historicalLearningContribution = (p: Player, c: Config = defaultConfig) => c.historicalLearningEnabled ? Number(p.historicalPerformance?.adjustment ?? 0) : 0;
+export const balancingScore = (p: Player, c: Config = defaultConfig) => Math.max(1, Math.min(5, score(p, c) + historicalLearningContribution(p, c)));
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 export type ImportedPlayerType = "monthly" | "guest" | "goalkeeper";
 
@@ -73,8 +75,8 @@ export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig) 
   const positions = { Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 };
   team.forEach(p => positions[p.primaryPosition]++);
   const guests = team.filter(isGuest).length;
-  const speed = team.reduce((s,p)=>s+playerAttributes(p).speed,0), skill = team.reduce((s,p)=>s+playerAttributes(p).skill,0), marking = team.reduce((s,p)=>s+playerAttributes(p).marking,0), tacticalIntelligence=team.reduce((s,p)=>s+playerAttributes(p).tacticalIntelligence,0), competitiveness=team.reduce((s,p)=>s+playerAttributes(p).competitiveness,0),momentum=team.reduce((s,p)=>s+momentumContribution(p,c),0), total = team.reduce((s,p)=>s+score(p,c),0);
-  return { count: team.length, guests, positions, speed, skill, marking, tacticalIntelligence, competitiveness, momentum, total, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, tacticalIntelligenceAvg:tacticalIntelligence/team.length||0, competitivenessAvg:competitiveness/team.length||0, momentumAvg:momentum/team.length||0, scoreAvg: total/team.length||0 };
+  const speed = team.reduce((s,p)=>s+playerAttributes(p).speed,0), skill = team.reduce((s,p)=>s+playerAttributes(p).skill,0), marking = team.reduce((s,p)=>s+playerAttributes(p).marking,0), tacticalIntelligence=team.reduce((s,p)=>s+playerAttributes(p).tacticalIntelligence,0), competitiveness=team.reduce((s,p)=>s+playerAttributes(p).competitiveness,0),momentum=team.reduce((s,p)=>s+momentumContribution(p,c),0),historicalLearning=team.reduce((s,p)=>s+historicalLearningContribution(p,c),0),total = team.reduce((s,p)=>s+score(p,c),0),balancingTotal=total+historicalLearning;
+  return { count: team.length, guests, positions, speed, skill, marking, tacticalIntelligence, competitiveness, momentum, historicalLearning, total, balancingTotal, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, tacticalIntelligenceAvg:tacticalIntelligence/team.length||0, competitivenessAvg:competitiveness/team.length||0, momentumAvg:momentum/team.length||0, historicalLearningAvg:historicalLearning/team.length||0, scoreAvg: total/team.length||0, balancingScoreAvg:balancingTotal/team.length||0 };
 }
 
 export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config = defaultConfig) {
@@ -91,7 +93,9 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
     tacticalIntelligence: Math.abs(blueMetrics.tacticalIntelligence-yellowMetrics.tacticalIntelligence),
     competitiveness: Math.abs(blueMetrics.competitiveness-yellowMetrics.competitiveness),
     momentum: Math.abs(blueMetrics.momentum-yellowMetrics.momentum),
+    historicalLearning: Math.abs(blueMetrics.historicalLearning-yellowMetrics.historicalLearning),
     score: Math.abs(blueMetrics.total-yellowMetrics.total),
+    balancingScore: Math.abs(blueMetrics.balancingTotal-yellowMetrics.balancingTotal),
   };
   return { blueMetrics, yellowMetrics, delta };
 }
@@ -112,7 +116,7 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
   let best: { blue: Player[]; yellow: Player[]; cost: number; extraId?: string } | null = null;
   const configuredProtectedPercentage=Number(config.protectedTopPlayersPercentage),protectedTopPlayersPercentage=Number.isFinite(configuredProtectedPercentage)?Math.min(1,Math.max(0,configuredProtectedPercentage)):defaultConfig.protectedTopPlayersPercentage;
   const protectedPerTeam = Math.min(Math.floor(line.length/2), Math.ceil(line.length * protectedTopPlayersPercentage / 2));
-  const protectedPlayers = [...line].sort((a,b)=>score(b,config)-score(a,config)).slice(0,protectedPerTeam*2);
+  const protectedPlayers = [...line].sort((a,b)=>balancingScore(b,config)-balancingScore(a,config)).slice(0,protectedPerTeam*2);
   const protectedIds = new Set(protectedPlayers.map(p=>p.id));
   const remainingPlayers = line.filter(player=>!protectedIds.has(player.id));
   for (let attempt=0; attempt<Math.max(300, config.algorithmAttempts); attempt++) {
@@ -138,14 +142,14 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
     }else shuffled.forEach(player=>(blue.length<=yellow.length?blue:yellow).push(player));
     if (goalkeepers[0]) blue.push(goalkeepers[0]); if (goalkeepers[1]) yellow.push(goalkeepers[1]); goalkeepers.slice(2).forEach((p,i)=>(i%2?yellow:blue).push(p));
     const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDifferences = ["Defesa","Meio-campo","Ataque"].map(k=>Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions])),positionDiff=positionDifferences.reduce((sum,value)=>sum+value,0),positionExcess=positionDifferences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0);
-    const larger = blue.length>yellow.length?blue:yellow; const rankedExtraCandidates=[...larger].filter(p=>p.primaryPosition!=="Goleiro").sort((a,b)=>score(a,config)-score(b,config)); const extra = input.length%2 ? rankedExtraCandidates.find(p=>!protectedIds.has(p.id))??rankedExtraCandidates[0] : undefined;
+    const larger = blue.length>yellow.length?blue:yellow; const rankedExtraCandidates=[...larger].filter(p=>p.primaryPosition!=="Goleiro").sort((a,b)=>balancingScore(a,config)-balancingScore(b,config)); const extra = input.length%2 ? rankedExtraCandidates.find(p=>!protectedIds.has(p.id))??rankedExtraCandidates[0] : undefined;
     const attributeDifference = Math.abs(bm.total-bm.momentum-ym.total+ym.momentum);
-    const cost = Math.abs(blue.length-yellow.length)*1000 + positionExcess*2000 + positionDiff*120 + guestBalancePenalty(blue,yellow) + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + (input.length%2 && !extra ? 500 : 0);
+    const cost = Math.abs(blue.length-yellow.length)*1000 + positionExcess*2000 + positionDiff*120 + guestBalancePenalty(blue,yellow) + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + Math.abs(bm.historicalLearning-ym.historicalLearning)*30 + (input.length%2 && !extra ? 500 : 0);
     if (!best || cost < best.cost) best={blue,yellow,cost,extraId:extra?.id};
   }
   const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, maximumPositionDifference, protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
+  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, historicalLearningEnabled:Boolean(config.historicalLearningEnabled), maximumPositionDifference, protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
 }
 
 function playerSeed(id:string){return [...id].reduce((seed,character,index)=>seed+character.charCodeAt(0)*(index+1),0)}

@@ -7,8 +7,8 @@ const keys = ["speedWeight", "skillWeight", "markingWeight", "tacticalIntelligen
 export async function GET(request: Request) {
   if (!(await adminRequired(request))) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
-  const row: any = await db().prepare(`SELECT ${columns.join(",")},updated_at FROM system_configuration WHERE id=1`).first();
-  return Response.json({ ...Object.fromEntries(keys.map((key, index) => [key, Number(row[columns[index]])])), ratingSystemVersion: 2, updatedAt: row.updated_at }, { headers: { "cache-control": "no-store" } });
+  const row: any = await db().prepare(`SELECT ${columns.join(",")},historical_learning_enabled,updated_at FROM system_configuration WHERE id=1`).first();
+  return Response.json({ ...Object.fromEntries(keys.map((key, index) => [key, Number(row[columns[index]])])), historicalLearningEnabled: Boolean(row.historical_learning_enabled), ratingSystemVersion: 2, updatedAt: row.updated_at }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function PUT(request: Request) {

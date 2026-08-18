@@ -4,6 +4,7 @@ import { db, ensureDb, staffRequired } from "../../../../../lib/database";
 import { ensureCareerSeasonCurrent } from "../../../../../lib/career-season";
 import { balanceTeams, matchPlayers, parseWhatsApp, type Config, type Player } from "../../../../../lib/football";
 import { createMatchSeparationProposal, loadMatchSeparationDraft } from "../../../../../lib/scheduled-matches";
+import { attachHistoricalPerformance } from "../../../../../lib/historical-performance-store";
 const adminRequired=(request:Request)=>staffRequired(request,"SEPARATIONS_MANAGE");
 
 export async function POST(request: Request) {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),
     db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier FROM career_configuration WHERE id=1`).first<any>(),
   ]);
-  const players = playerRows.results.map(mapPlayer), nonce = Math.max(0, Math.floor(Number(payload.nonce) || 0));
+  const players = await attachHistoricalPerformance(playerRows.results.map(mapPlayer), Boolean(systemConfig?.historical_learning_enabled)), nonce = Math.max(0, Math.floor(Number(payload.nonce) || 0));
   let selected: Player[] = [], parsed: ReturnType<typeof parseWhatsApp> | null = null, matches: ReturnType<typeof matchPlayers> = [];
   if (Array.isArray(payload.playerIds)) {
     const ids = [...new Set(payload.playerIds.map(String))];
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     speedWeight: Number(systemConfig.speed_weight), skillWeight: Number(systemConfig.skill_weight), markingWeight: Number(systemConfig.marking_weight),
     tacticalIntelligenceWeight:Number(systemConfig.tactical_intelligence_weight??.2), competitivenessWeight:Number(systemConfig.competitiveness_weight??.05),
     goalkeeperDefensesWeight:Number(systemConfig.goalkeeper_defenses_weight??.4), goalkeeperPositioningWeight:Number(systemConfig.goalkeeper_positioning_weight??.25), goalkeeperSafetyWeight:Number(systemConfig.goalkeeper_safety_weight??.2), goalkeeperFootworkWeight:Number(systemConfig.goalkeeper_footwork_weight??.1), goalkeeperLeadershipWeight:Number(systemConfig.goalkeeper_leadership_weight??.05), ratingSystemVersion:2,
-    resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1), momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1), maximumPositionDifference: Number(systemConfig.maximum_position_difference),
+    resultMomentumMultiplier: Number(careerConfig?.result_momentum_multiplier ?? 1), momentumMultiplier: Number(careerConfig?.momentum_multiplier ?? 1), historicalLearningEnabled: Boolean(systemConfig?.historical_learning_enabled), maximumPositionDifference: Number(systemConfig.maximum_position_difference),
     protectedTopPlayersPercentage: Number(systemConfig.protected_top_players_percentage), algorithmAttempts: Number(systemConfig.algorithm_attempts),
   };
   try {
