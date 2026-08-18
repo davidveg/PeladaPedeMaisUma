@@ -3,6 +3,7 @@ import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 import { attachHistoricalPerformance } from "../../../lib/historical-performance-store";
+import { playerTypeValidationError } from "../../../lib/player-types";
 
 const map = (row: any) => ({
   ...row,
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
   const player = await request.json() as any;
   const values = playerRatings(player);
   if (!validPlayer(player, values)) return Response.json({ error: "Preencha nome, posição e todos os atributos entre 1 e 5." }, { status: 400 });
+  const typeError = playerTypeValidationError(player.type, player.primaryPosition);
+  if (typeError) return Response.json({ error: typeError }, { status: 400 });
   const id = crypto.randomUUID(), now = new Date().toISOString();
   await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, player.fullName || player.displayName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type || "guest", player.primaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active === false ? 0 : 1, player.notes || null, now, now).run();
@@ -61,6 +64,8 @@ export async function PUT(request: Request) {
   const player = await request.json() as any;
   const values = playerRatings(player);
   if (!validPlayer(player, values)) return Response.json({ error: "Preencha nome, posição e todos os atributos entre 1 e 5." }, { status: 400 });
+  const typeError = playerTypeValidationError(player.type, player.primaryPosition);
+  if (typeError) return Response.json({ error: typeError }, { status: 400 });
   const previous = await db().prepare(`SELECT full_name,display_name,nickname,type,primary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(player.id).first();
   if (!previous) return Response.json({ error: "Jogador não encontrado." }, { status: 404 });
   await db().prepare(`UPDATE players SET full_name=?,display_name=?,nickname=?,aliases=?,type=?,primary_position=?,speed=?,skill=?,marking=?,tactical_intelligence=?,competitiveness=?,goalkeeper_positioning=?,goal_exit=?,goalkeeper_safety=?,goalkeeper_leadership=?,photo_url=?,active=?,notes=?,updated_at=? WHERE id=? AND deleted_at IS NULL`)

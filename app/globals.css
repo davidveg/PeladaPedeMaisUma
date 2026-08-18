@@ -47,7 +47,7 @@
 .career-season-status{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:-5px 0 20px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#f6f8f6}.career-season-status span{display:flex;flex-direction:column;gap:4px}.career-season-status small{font-size:8px;letter-spacing:1px;color:var(--muted);font-weight:900}.career-season-status b{font-size:12px}.career-season-status p{grid-column:1/-1;margin:2px 0 0;color:var(--muted);font-size:10px}
 @media(max-width:760px){.career-config-grid,.career-season-status{grid-template-columns:1fr}.career-season-status p{grid-column:auto}}
 .sort-header{min-width:0;border:0;background:transparent;color:inherit;padding:6px 2px;display:flex;align-items:center;gap:4px;text-align:left;text-transform:inherit;letter-spacing:inherit;font:inherit;cursor:pointer}.sort-header span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sort-header i{font-style:normal;font-size:12px;line-height:1;color:#a4aea9}.sort-header:hover,.sort-header:focus-visible{color:var(--green);outline:none}.sort-header:focus-visible{box-shadow:0 0 0 2px #8eb5a3;border-radius:4px}.sort-header.active i{color:var(--green);font-weight:900}
-.table{overflow-x:auto}.player-list-stack{display:grid;gap:28px}.player-list-title{display:flex;align-items:flex-start;justify-content:flex-start;gap:10px;margin:0 3px 10px}.player-list-title h2{font:700 22px Georgia,serif;margin:0}.player-list-title p{font-size:11px;color:var(--muted);margin:4px 0 0}.player-list-title>b{min-width:32px;height:32px;padding:0 9px;border-radius:99px;background:#e4eee8;color:var(--green);display:grid;place-items:center;font-size:12px}.tr.player-tr.th{min-height:54px}.tr.line-player-tr{grid-template-columns:2.2fr 1fr 1.1fr .8fr .8fr .8fr .8fr .75fr;min-width:880px}.tr.goalkeeper-tr{grid-template-columns:2.2fr 1.2fr 1fr 1.2fr 1fr .8fr;min-width:700px}.player-tr .sort-header span{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.25}.player-table-empty{padding:28px 18px;color:var(--muted);font-size:12px;text-align:center}
+.table{overflow-x:auto}.player-list-stack{display:grid;gap:28px}.player-list-title{display:flex;align-items:flex-start;justify-content:flex-start;gap:10px;margin:0 3px 10px}.player-list-title h2{font:700 22px Georgia,serif;margin:0}.player-list-title p{font-size:11px;color:var(--muted);margin:4px 0 0}.player-list-title>b{min-width:32px;height:32px;padding:0 9px;border-radius:99px;background:#e4eee8;color:var(--green);display:grid;place-items:center;font-size:12px}.tr.player-tr.th{min-height:54px}.tr.line-player-tr{grid-template-columns:2.2fr 1fr 1.1fr .8fr .8fr .8fr .8fr .75fr;min-width:880px}.tr.goalkeeper-tr{grid-template-columns:2.2fr 1.25fr 1fr 1.2fr 1fr 1.2fr 1fr .8fr .7fr;min-width:900px}.player-tr .sort-header span{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.25}.player-table-empty{padding:28px 18px;color:var(--muted);font-size:12px;text-align:center}
 .admin-main:has(.player-list-stack){max-width:1600px}
 
 /* Public player directory */
@@ -172,7 +172,7 @@
 /* Expanded player and goalkeeper disciplines */
 .rating-slider>span{display:flex!important;align-items:center;gap:6px}
 .tr.line-player-tr{grid-template-columns:minmax(230px,2.2fr) minmax(100px,.9fr) minmax(110px,1fr) repeat(3,minmax(85px,.75fr)) minmax(115px,1fr) minmax(110px,.95fr) minmax(90px,.8fr) minmax(78px,.7fr)!important;min-width:1240px!important}
-.tr.goalkeeper-tr{grid-template-columns:minmax(230px,2.2fr) repeat(5,minmax(105px,.95fr)) minmax(90px,.8fr) minmax(78px,.7fr)!important;min-width:1080px!important}
+.tr.goalkeeper-tr{grid-template-columns:minmax(230px,2.2fr) minmax(150px,1.25fr) repeat(5,minmax(105px,.95fr)) minmax(90px,.8fr) minmax(78px,.7fr)!important;min-width:1230px!important}
 .expanded-weights .weight-group{display:flex;flex-direction:column}
 .public-players{max-width:1480px}
 .public-player-tr.line{grid-template-columns:minmax(220px,2.2fr) minmax(90px,.9fr) minmax(100px,1fr) repeat(5,minmax(96px,.8fr)) minmax(88px,.75fr) minmax(88px,.9fr) minmax(70px,.65fr)!important;min-width:1240px!important}
@@ -254,13 +254,14 @@
  .player-table .line-player-tr:not(.th)>span:nth-child(8)::before{content:"Competitividade"}
  .player-table .line-player-tr:not(.th)>span:nth-child(9)::before{content:"Momentum"}
  .player-table .line-player-tr:not(.th)>span:nth-child(10)::before{content:"Status"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(2)::before{content:"Defesas"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(3)::before{content:"Posicionamento"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(4)::before{content:"Jogo com os pés"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(5)::before{content:"Segurança"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(6)::before{content:"Liderança"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(7)::before{content:"Momentum"}
- .player-table .goalkeeper-tr:not(.th)>span:nth-child(8)::before{content:"Status"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(2)::before{content:"Tipo"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(3)::before{content:"Defesas"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(4)::before{content:"Posicionamento"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(5)::before{content:"Jogo com os pés"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(6)::before{content:"Segurança"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(7)::before{content:"Liderança"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(8)::before{content:"Momentum"}
+ .player-table .goalkeeper-tr:not(.th)>span:nth-child(9)::before{content:"Status"}
  .player-table .player-tr:not(.th)>.status.active{background:#e4f3e9;color:#247b4d}
 }
 

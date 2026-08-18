@@ -98,7 +98,7 @@ export function buildStreakLeaders(players: StatisticsPlayer[], matches: Statist
 
 export function buildMonthlyCareerHighlights(players: StatisticsPlayer[], matches: StatisticsMatch[], year: number, referenceDate = new Date().toISOString().slice(0, 10), focusMonth = referenceDate.slice(0, 7), annualAwardsAvailableAt = `${year}-12-31`, finalizedAwards: MonthlyCareerAward[] = [], requestedFormation: MonthlyTeamFormation = defaultMonthlyTeamFormation) {
   const formation = normalizeFormation(requestedFormation);
-  const eligiblePlayers = players.filter(player => player.type === "monthly" || player.type === "goalkeeper" || player.primaryPosition === "Goleiro");
+  const eligiblePlayers = players.filter(player => player.type === "monthly" || player.type === "goalkeeper" || player.type === "casual" || player.primaryPosition === "Goleiro");
   const playerMap = new Map(eligiblePlayers.map(player => [player.id, player]));
   const months = new Map<string, StatisticsMatch[]>();
   for (const match of matches) {

@@ -194,7 +194,7 @@ export default function NewSeparation() {
           <Text style={styles.choiceMark}>✓</Text>
         </Card> : <Pressable key={player.id} accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(player.id) }} onPress={() => toggle(player.id)}>
           <Card style={[styles.playerChoice, selected.includes(player.id) && styles.playerChoiceSelected]}>
-            <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · {player.type === "goalkeeper" ? "Goleiro" : player.type === "monthly" ? "Mensalista" : "Convidado"}</Text></View>
+            <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · {player.type === "goalkeeper" ? "Goleiro Mensalista" : player.type === "casual" ? "Avulso" : player.type === "monthly" ? "Mensalista" : "Convidado"}</Text></View>
             <Text style={styles.choiceMark}>{selected.includes(player.id) ? "✓" : "+"}</Text>
           </Card>
         </Pressable>)}

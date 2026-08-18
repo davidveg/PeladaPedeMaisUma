@@ -1,6 +1,7 @@
 import { staffRequired, audit, db, ensureDb } from "../../../lib/database";
 import { normalizeName } from "../../../lib/football";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
+import { isPlayerType, playerTypeValidationError } from "../../../lib/player-types";
 
 const map = (row: any) => ({
   ...row,
@@ -39,12 +40,13 @@ export async function POST(request: Request) {
   const goalkeeperSafety = Math.round(Number(payload.goalkeeperSafety ?? 3) * 10) / 10;
   const goalkeeperLeadership = Math.round(Number(payload.goalkeeperLeadership ?? 3) * 10) / 10;
   const positions = new Set(["Defesa", "Meio-campo", "Ataque", "Goleiro"]);
-  const types = new Set(["monthly", "guest", "goalkeeper"]);
-  const playerType = types.has(payload.type) ? payload.type : payload.primaryPosition === "Goleiro" ? "goalkeeper" : "guest";
+  const playerType = isPlayerType(payload.type) ? payload.type : payload.primaryPosition === "Goleiro" ? "goalkeeper" : "guest";
 
   if (!displayName || !positions.has(payload.primaryPosition) || [speed,skill,marking,tacticalIntelligence,competitiveness,goalkeeperPositioning,goalExit,goalkeeperSafety,goalkeeperLeadership].some(value=>!Number.isFinite(value)||value<1||value>5)) {
     return Response.json({ error: "Informe nome, posição e todos os atributos entre 1 e 5." }, { status: 400 });
   }
+  const typeError = playerTypeValidationError(playerType, payload.primaryPosition);
+  if (typeError) return Response.json({ error: typeError }, { status: 400 });
 
   const rows = await db().prepare("SELECT * FROM players WHERE deleted_at IS NULL AND active=1").all();
   const normalized = normalizeName(displayName);

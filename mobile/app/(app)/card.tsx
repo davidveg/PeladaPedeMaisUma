@@ -285,7 +285,7 @@ function statColor(tier: PlayerCardTier, tone: StatTone, fallback: string) {
   return fallback;
 }
 
-const typeLabel = (value: string) => value === "goalkeeper" ? "Goleiro" : value === "monthly" ? "Mensalista" : "Convidado";
+const typeLabel = (value: string) => value === "goalkeeper" ? "Goleiro Mensalista" : value === "casual" ? "Avulso" : value === "monthly" ? "Mensalista" : "Convidado";
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingTop: 8, paddingBottom: 28, gap: 16 },
