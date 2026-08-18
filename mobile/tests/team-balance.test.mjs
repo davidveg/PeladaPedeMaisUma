@@ -11,7 +11,11 @@ test("recalcula uma divisão equivalente como excelente", () => {
   const next = recalculateTeamResult(result, blue, yellow);
   assert.equal(next.rating, "Excelente equilíbrio");
   assert.equal(next.cost, 0);
-  assert.deepEqual(next.delta, { players: 0, defenders: 0, midfielders: 0, attackers: 0, speed: 0, skill: 0, marking: 0, tacticalIntelligence:0, competitiveness:0, momentum: 0, score: 0 });
+  assert.deepEqual(next.delta, {
+    players: 0, defenders: 0, midfielders: 0, attackers: 0, speed: 0, skill: 0, marking: 0,
+    tacticalIntelligence:0, competitiveness:0, momentum: 0, historicalLearning:0, score: 0, balancingScore:0,
+    advantage:{players:"EVEN",defenders:"EVEN",midfielders:"EVEN",attackers:"EVEN",speed:"EVEN",skill:"EVEN",marking:"EVEN",tacticalIntelligence:"EVEN",competitiveness:"EVEN",momentum:"EVEN",historicalLearning:"EVEN",score:"EVEN"},
+  });
   assert.equal(next.blueMetrics.scoreAvg, 3);
   assert.equal(next.yellowMetrics.scoreAvg, 3);
 });
@@ -20,6 +24,8 @@ test("transferência individual atualiza quantidade, custo e classificação", (
   const moved = blue[1];
   const next = recalculateTeamResult(result, [blue[0]], [...yellow, moved]);
   assert.equal(next.delta.players, 2);
+  assert.equal(next.delta.advantage.players, "YELLOW");
+  assert.equal(next.delta.advantage.attackers, "YELLOW");
   assert.ok(next.cost >= 2000);
   assert.equal(next.rating, "Equilíbrio limitado");
 });

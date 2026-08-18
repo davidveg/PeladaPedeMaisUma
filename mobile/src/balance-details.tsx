@@ -2,7 +2,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { Card } from "./components";
 import { colors } from "./theme";
 import { useMobileBranding } from "./branding";
-import type { TeamDelta, TeamResult } from "./types";
+import type { TeamAdvantage, TeamDelta, TeamMetrics, TeamResult } from "./types";
+
+type MetricKey = "players"|"defenders"|"midfielders"|"attackers"|"speed"|"skill"|"marking"|"tacticalIntelligence"|"competitiveness"|"momentum"|"historicalLearning"|"score";
 
 const explanations: Record<string, string> = {
   "Excelente equilíbrio": "Diferenças muito pequenas entre posições, atributos e pontuação.",
@@ -22,12 +24,17 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
   const { config: brand, palette: teamPalette } = useMobileBranding();
   const rating = result.rating || fallbackRating || "Equilíbrio não informado", palette = tone(rating);
   const delta = result.delta || emptyDelta;
-  const metrics = [
-    ["Jogadores", delta.players, 0], ["Defensores", delta.defenders, 0], ["Meio-campo", delta.midfielders, 0],
-    ["Atacantes", delta.attackers, 0], ["Físico / Pos.", delta.speed, 1], ["Técnica / Def.", delta.skill, 1],
-    ["Marcação / Pés", delta.marking, 1], ["Tática / Segurança", delta.tacticalIntelligence, 1],
-    ["Comp. / Liderança", delta.competitiveness, 1], ["Momentum", delta.momentum, 1], ["Pontuação", delta.score, 1],
-  ] as const;
+  const metrics: { key:MetricKey; label:string; value:number; decimals:number }[] = [
+    {key:"players",label:"Jogadores",value:delta.players,decimals:0},{key:"defenders",label:"Defensores",value:delta.defenders,decimals:0},{key:"midfielders",label:"Meio-campo",value:delta.midfielders,decimals:0},
+    {key:"attackers",label:"Atacantes",value:delta.attackers,decimals:0},{key:"speed",label:"Físico / Pos.",value:delta.speed,decimals:1},{key:"skill",label:"Técnica / Def.",value:delta.skill,decimals:1},
+    {key:"marking",label:"Marcação / Pés",value:delta.marking,decimals:1},{key:"tacticalIntelligence",label:"Tática / Segurança",value:delta.tacticalIntelligence,decimals:1},
+    {key:"competitiveness",label:"Comp. / Liderança",value:delta.competitiveness,decimals:1},{key:"momentum",label:"Momentum",value:delta.momentum,decimals:1},
+    ...(result.historicalLearningEnabled||Number(delta.historicalLearning??0)!==0?[{key:"historicalLearning" as const,label:"Histórico observado",value:Number(delta.historicalLearning??0),decimals:2}]:[]),
+    {key:"score",label:"Pontuação",value:delta.score,decimals:2},
+  ];
+  const metricSide=(key:MetricKey,value:number)=>value===0?"EVEN":delta.advantage?.[key]||advantageFromMetrics(key,result.blueMetrics,result.yellowMetrics);
+  const sideLabel=(side:TeamAdvantage)=>side==="BLUE"?`Time ${brand.teamBlueName}`:side==="YELLOW"?`Time ${brand.teamYellowName}`:"Sem diferença";
+  const sideColor=(side:TeamAdvantage)=>side==="BLUE"?teamPalette.blue:side==="YELLOW"?teamPalette.yellow:colors.muted;
   return <Card style={styles.card}>
     <View style={[styles.rating, { backgroundColor: palette.soft, borderColor: palette.color }]}>
       <Text style={[styles.ratingLabel, { color: palette.color }]}>INDICADOR ATUAL</Text>
@@ -37,7 +44,7 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
     <View style={styles.section}>
       <Text style={styles.heading}>Diferenças entre os times</Text>
       <Text style={styles.hint}>Quanto mais próximo de zero, mais semelhantes estão os times.</Text>
-      <View style={styles.metricGrid}>{metrics.map(([label, value, decimals]) => <View key={label} style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{Number(value || 0).toFixed(decimals)}</Text></View>)}</View>
+      <View style={styles.metricGrid}>{metrics.map(metric=>{const side=metricSide(metric.key,Number(metric.value||0));return <View key={metric.key} style={styles.metric}><Text style={styles.metricLabel}>{metric.label}</Text><Text style={styles.metricValue}>{Number(metric.value||0).toFixed(metric.decimals)}</Text><Text style={[styles.metricSide,{color:sideColor(side)}]}>{sideLabel(side)}</Text></View>})}</View>
     </View>
     {result.blueMetrics && result.yellowMetrics ? <View style={styles.teamAverages}>
       <View style={[styles.teamAverage, { backgroundColor: teamPalette.blueSoft }]}><Text style={{ color: teamPalette.blue, fontWeight: "900" }}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{result.blueMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
@@ -54,7 +61,17 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
   </Card>;
 }
 
+function advantageFromMetrics(key:MetricKey,blue?:TeamMetrics,yellow?:TeamMetrics):TeamAdvantage {
+  if(!blue||!yellow)return "EVEN";
+  const values:Record<MetricKey,[number,number]>={
+    players:[blue.count,yellow.count],defenders:[blue.positions.Defesa,yellow.positions.Defesa],midfielders:[blue.positions["Meio-campo"],yellow.positions["Meio-campo"]],attackers:[blue.positions.Ataque,yellow.positions.Ataque],
+    speed:[blue.speed,yellow.speed],skill:[blue.skill,yellow.skill],marking:[blue.marking,yellow.marking],tacticalIntelligence:[blue.tacticalIntelligence,yellow.tacticalIntelligence],competitiveness:[blue.competitiveness,yellow.competitiveness],
+    momentum:[blue.momentum,yellow.momentum],historicalLearning:[Number(blue.historicalLearning??0),Number(yellow.historicalLearning??0)],score:[blue.total,yellow.total],
+  };
+  const [blueValue,yellowValue]=values[key];return blueValue===yellowValue?"EVEN":blueValue>yellowValue?"BLUE":"YELLOW";
+}
+
 const emptyDelta: TeamDelta = { players: 0, defenders: 0, midfielders: 0, attackers: 0, speed: 0, skill: 0, marking: 0, tacticalIntelligence:0, competitiveness:0, momentum: 0, score: 0 };
 const styles = StyleSheet.create({
-  card: { gap: 16 }, rating: { gap: 4, padding: 12, borderRadius: 12, borderWidth: 1 }, ratingLabel: { fontSize: 11, fontWeight: "900", letterSpacing: 1 }, ratingTitle: { fontSize: 20, fontWeight: "900" }, explanation: { color: colors.text, lineHeight: 20 }, section: { gap: 6 }, heading: { color: colors.text, fontSize: 17, fontWeight: "900" }, hint: { color: colors.muted, lineHeight: 19 }, metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }, metric: { width: "31%", minWidth: 88, padding: 9, borderRadius: 10, backgroundColor: colors.cream }, metricLabel: { color: colors.muted, fontSize: 11, fontWeight: "700" }, metricValue: { color: colors.text, fontSize: 18, fontWeight: "900" }, teamAverages: { flexDirection: "row", gap: 10 }, teamAverage: { flex: 1, padding: 11, borderRadius: 11 }, averageValue: { color: colors.text, fontSize: 20, fontWeight: "900" }, ranges: { color: colors.text, lineHeight: 20, fontWeight: "700" }, config: { color: colors.muted, lineHeight: 19 },
+  card: { gap: 16 }, rating: { gap: 4, padding: 12, borderRadius: 12, borderWidth: 1 }, ratingLabel: { fontSize: 11, fontWeight: "900", letterSpacing: 1 }, ratingTitle: { fontSize: 20, fontWeight: "900" }, explanation: { color: colors.text, lineHeight: 20 }, section: { gap: 6 }, heading: { color: colors.text, fontSize: 17, fontWeight: "900" }, hint: { color: colors.muted, lineHeight: 19 }, metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }, metric: { width: "31%", minWidth: 88, minHeight:92, padding: 9, borderRadius: 10, backgroundColor: colors.cream }, metricLabel: { color: colors.muted, fontSize: 11, fontWeight: "700" }, metricValue: { color: colors.text, fontSize: 18, fontWeight: "900", marginTop:3 }, metricSide:{fontSize:10,fontWeight:"900",marginTop:4}, teamAverages: { flexDirection: "row", gap: 10 }, teamAverage: { flex: 1, padding: 11, borderRadius: 11 }, averageValue: { color: colors.text, fontSize: 20, fontWeight: "900" }, ranges: { color: colors.text, lineHeight: 20, fontWeight: "700" }, config: { color: colors.muted, lineHeight: 19 },
 });
