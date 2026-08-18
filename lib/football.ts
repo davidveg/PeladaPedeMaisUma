@@ -81,6 +81,7 @@ export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig) 
 
 export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config = defaultConfig) {
   const blueMetrics = calculateTeamMetrics(blue, c), yellowMetrics = calculateTeamMetrics(yellow, c);
+  const advantage = (blueValue: number, yellowValue: number) => blueValue === yellowValue ? "EVEN" : blueValue > yellowValue ? "BLUE" : "YELLOW";
   const delta = {
     players: Math.abs(blueMetrics.count-yellowMetrics.count),
     guests: Math.abs(blueMetrics.guests-yellowMetrics.guests),
@@ -96,6 +97,20 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
     historicalLearning: Math.abs(blueMetrics.historicalLearning-yellowMetrics.historicalLearning),
     score: Math.abs(blueMetrics.total-yellowMetrics.total),
     balancingScore: Math.abs(blueMetrics.balancingTotal-yellowMetrics.balancingTotal),
+    advantage: {
+      players: advantage(blueMetrics.count, yellowMetrics.count),
+      defenders: advantage(blueMetrics.positions.Defesa, yellowMetrics.positions.Defesa),
+      midfielders: advantage(blueMetrics.positions["Meio-campo"], yellowMetrics.positions["Meio-campo"]),
+      attackers: advantage(blueMetrics.positions.Ataque, yellowMetrics.positions.Ataque),
+      speed: advantage(blueMetrics.speed, yellowMetrics.speed),
+      skill: advantage(blueMetrics.skill, yellowMetrics.skill),
+      marking: advantage(blueMetrics.marking, yellowMetrics.marking),
+      tacticalIntelligence: advantage(blueMetrics.tacticalIntelligence, yellowMetrics.tacticalIntelligence),
+      competitiveness: advantage(blueMetrics.competitiveness, yellowMetrics.competitiveness),
+      momentum: advantage(blueMetrics.momentum, yellowMetrics.momentum),
+      historicalLearning: advantage(blueMetrics.historicalLearning, yellowMetrics.historicalLearning),
+      score: advantage(blueMetrics.total, yellowMetrics.total),
+    },
   };
   return { blueMetrics, yellowMetrics, delta };
 }
