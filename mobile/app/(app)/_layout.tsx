@@ -10,6 +10,7 @@ import { colors } from "@/theme";
 import type { MatchListPayload, Separation } from "@/types";
 import { useMobileBranding } from "@/branding";
 import { manualSeparationEntryVisible } from "@/separation-access";
+import { financeEntryVisible } from "@/finance";
 import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -21,7 +22,7 @@ function TabIcon({ focused, color, active, inactive }: { focused: boolean; color
 }
 
 export default function AppLayout() {
-  const { palette, config: instanceConfig } = useMobileBranding();
+  const { palette, config: instanceConfig, loading: brandingLoading } = useMobileBranding();
   const { account, loading } = useAuth();
   const insets = useSafeAreaInsets();
   const separationsQuery = useQuery({
@@ -39,9 +40,10 @@ export default function AppLayout() {
     queryFn: () => apiFetch<{ unread: number }>("/api/notifications"),
     enabled: Boolean(account),
   });
-  if (loading) return <View style={styles.loading}><ActivityIndicator color={palette.green}/></View>;
+  if (loading || brandingLoading) return <View style={styles.loading}><ActivityIndicator color={palette.green}/></View>;
   if (!account) return <Redirect href="/login"/>;
   const canConfigureWeights = hasPermission(account, MODERATOR_PERMISSIONS.BALANCE_CONFIG_MANAGE);
+  const financeVisible = financeEntryVisible(account, instanceConfig.financeEnabled);
   const pendingVotes = separationsQuery.data?.separations.filter(item => item.career?.viewerCanVote).length || 0;
   const pendingMatches = matchesQuery.data?.matches.filter(item => item.status === "OPEN" && item.viewer.canRespond && !item.viewer.status).length || 0;
   const unreadNotifications = notificationsQuery.data?.unread || 0;
@@ -88,6 +90,11 @@ export default function AppLayout() {
       title: "Meu card",
       href: account.playerId ? undefined : null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="id-card" inactive="id-card-outline"/>,
+    }}/>
+    <Tabs.Screen name="finance" options={{
+      title: "Financeiro",
+      href: financeVisible ? undefined : null,
+      tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="wallet" inactive="wallet-outline"/>,
     }}/>
     <Tabs.Screen name="new-separation" options={{
       title: "Nova",

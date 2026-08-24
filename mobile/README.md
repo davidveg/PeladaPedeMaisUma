@@ -15,6 +15,7 @@ Aplicativo Expo/React Native com uma única base TypeScript para iOS e Android. 
 - O compartilhamento tenta WhatsApp e cai no compartilhamento nativo. Links são rejeitados se não forem HTTPS públicos.
 - Partidas e presenças usam a mesma API do site; mudar a resposta em qualquer cliente consome a mesma contagem de remarcações.
 - Push é opcional e nunca bloqueia o aplicativo. No Expo Go o módulo nativo fica desativado automaticamente, enquanto a central interna de notificações continua funcionando.
+- A aba **Financeiro** acompanha a chave da instância: jogadores consultam somente o próprio histórico; administradores e moderadores autorizados veem o resumo mensal e compartilham a parcial pelo WhatsApp. Cadastros, estornos e configurações financeiras completas permanecem no site.
 
 ## Execução local
 

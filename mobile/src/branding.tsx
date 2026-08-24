@@ -25,6 +25,7 @@ export type MobileInstanceConfiguration = {
   separationDraftsEnabled: boolean;
   guestPreconfirmationEnabled: boolean;
   guestConfirmationThreshold: number;
+  financeEnabled: boolean;
   timezone: string;
 };
 
@@ -49,6 +50,7 @@ const defaultConfiguration: MobileInstanceConfiguration = {
   separationDraftsEnabled: false,
   guestPreconfirmationEnabled: false,
   guestConfirmationThreshold: 16,
+  financeEnabled: true,
   timezone: "America/Sao_Paulo",
 };
 

@@ -229,12 +229,21 @@ paths:
       responses:
         "200": { description: Configuração oficial e partidas }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/finance:
+    get:
+      summary: Consulta o financeiro geral ou o histórico próprio
+      parameters: [{ in: query, name: competence, schema: { type: string, pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$", example: "2026-08" } }]
+      responses:
+        "200": { description: Administradores e moderadores com FINANCE_MANAGE recebem o resumo mensal; jogadores recebem somente suas cobranças e pagamentos. Todos os valores monetários usam centavos inteiros. }
+        "403": { description: Conta sem jogador associado }
+        "404": { description: Módulo financeiro desativado na configuração da instância }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/public-config:
     get:
       summary: URL pública canônica para links compartilháveis
       security: []
       responses:
-        "200": { description: URL pública e configuração compartilhada pelo site e aplicativo, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri }, instance: { type: object, properties: { manualSeparationEnabled: { type: boolean, default: false, description: Exibe a importação manual de uma lista do WhatsApp; a montagem iniciada por Partidas permanece disponível. }, separationDraftsEnabled: { type: boolean, default: false, description: Permite que administradores salvem propostas privadas antes do fechamento da lista. } } } } } } } } }
+        "200": { description: URL pública e configuração compartilhada pelo site e aplicativo, content: { application/json: { schema: { type: object, properties: { baseUrl: { type: string, format: uri }, instance: { type: object, properties: { manualSeparationEnabled: { type: boolean, default: false, description: Exibe a importação manual de uma lista do WhatsApp; a montagem iniciada por Partidas permanece disponível. }, separationDraftsEnabled: { type: boolean, default: false, description: Permite que administradores salvem propostas privadas antes do fechamento da lista. }, financeEnabled: { type: boolean, default: true, description: Exibe a aba financeira e permite consultas ao módulo. } } } } } } } } }
   /api/health:
     get:
       summary: Disponibilidade do servidor e banco
@@ -254,7 +263,7 @@ components:
     Account:
       type: object
       required: [id, email, role, playerId]
-      properties: { id: { type: string }, email: { type: string, format: email }, role: { enum: [admin, player] }, playerId: { type: [string, "null"] } }
+      properties: { id: { type: string }, email: { type: string, format: email }, role: { enum: [admin, moderator, player] }, playerId: { type: [string, "null"] }, permissions: { type: array, items: { type: string } } }
     AccountResponse: { type: object, properties: { account: { $ref: "#/components/schemas/Account" } } }
     Session:
       allOf:
