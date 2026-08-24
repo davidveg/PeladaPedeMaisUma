@@ -30,6 +30,14 @@ export function brazilianDateInput(value: string) {
   return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join("/");
 }
 
+export function brazilianDateOnly(value?: string | null) {
+  const match = String(value || "").slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > new Date(year, month, 0).getDate()) return "";
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
 export function brazilianTimeInput(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 4);
   return [digits.slice(0, 2), digits.slice(2, 4)].filter(Boolean).join(":");
