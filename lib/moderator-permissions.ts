@@ -7,6 +7,7 @@ export const MODERATOR_PERMISSIONS = [
   "MATCH_RESULTS_MANAGE",
   "CAREER_VOTES_MANAGE",
   "BALANCE_CONFIG_MANAGE",
+  "FINANCE_MANAGE",
 ] as const;
 
 export type ModeratorPermission = typeof MODERATOR_PERMISSIONS[number];
@@ -24,6 +25,7 @@ export const MODERATOR_PERMISSION_DEFINITIONS: ReadonlyArray<{
   { key: "MATCH_RESULTS_MANAGE", label: "Súmula e resultado", description: "Registrar e corrigir placar, gols, assistências e o rascunho da súmula." },
   { key: "CAREER_VOTES_MANAGE", label: "Votações da partida", description: "Consultar votos, remover votos inválidos e encerrar uma votação antecipadamente." },
   { key: "BALANCE_CONFIG_MANAGE", label: "Pesos do algoritmo", description: "Alterar os pesos e limites usados pelo algoritmo de equilíbrio." },
+  { key: "FINANCE_MANAGE", label: "Financeiro", description: "Visualizar o caixa e a inadimplência, configurar mensalidades e administrar cobranças, pagamentos, despesas, estornos e fechamentos." },
 ];
 
 export function isModeratorPermission(value: unknown): value is ModeratorPermission {

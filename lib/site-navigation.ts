@@ -1,4 +1,4 @@
-const protectedAccountPaths = new Set(["/partidas", "/notificacoes"]);
+const protectedAccountPaths = new Set(["/partidas", "/notificacoes", "/financeiro"]);
 
 export function isAccountProtectedPath(href: string) {
   return protectedAccountPaths.has(pathname(href));

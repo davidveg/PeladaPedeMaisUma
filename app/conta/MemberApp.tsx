@@ -9,6 +9,7 @@ import { PlayerPhoto } from "../components/PlayerPhoto";
 import { SiteHeader } from "../components/SiteHeader";
 import { useInstanceBranding } from "../InstanceBranding";
 import { playerTypeLabel } from "../../lib/player-types";
+import { PlayerFinancialHistory } from "../components/PlayerFinancialHistory";
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options), text = await response.text();
@@ -27,6 +28,7 @@ type NotificationPreferences = {
 };
 
 export default function MemberApp() {
+  const { config: instance } = useInstanceBranding();
   const [member, setMember] = useState<any>(undefined), [player, setPlayer] = useState<Player | null>(null), [config, setConfig] = useState<Config>(defaultConfig), [available, setAvailable] = useState<any[]>([]), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
   async function load() {
     const auth = await api("/api/member-auth");
@@ -53,7 +55,7 @@ export default function MemberApp() {
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
   if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
-  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
 }
 
 function NotificationPreferencesCard() {
@@ -125,8 +127,8 @@ function MemberAccess({ onDone }: { onDone: () => Promise<{ member: any; player:
     {mode === "login" || mode === "register" ? <div className="member-access-tabs"><button type="button" className={mode === "login" ? "on" : ""} onClick={() => changeMode("login")}>Entrar</button><button type="button" className={mode === "register" ? "on" : ""} onClick={() => changeMode("register")}>Criar conta</button></div> : null}
     <div className="ball">{mode === "request" ? "✉️" : mode === "reset" ? "🔐" : "⚽"}</div><h2>{heading}</h2><p>{description}</p>
     {error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b></div>}
-    {mode !== "reset" && <label>E-mail<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required /></label>}
-    {mode !== "request" && <label>{mode === "reset" ? "Nova senha" : "Senha"}<input type="password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} required />{mode === "reset" && <small>Mínimo de 8 caracteres.</small>}</label>}
+    {mode !== "reset" && <label>{mode === "login" ? "E-mail ou usuário" : "E-mail"}<input type={mode === "login" ? "text" : "email"} value={email} onChange={event => setEmail(event.target.value)} autoComplete={mode === "login" ? "username" : "email"} required /></label>}
+    {mode !== "request" && <label>{mode === "reset" ? "Nova senha" : "Senha"}<input type="password" minLength={mode === "login" ? undefined : 8} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} required />{mode === "reset" && <small>Mínimo de 8 caracteres.</small>}</label>}
     {(mode === "register" || mode === "reset") && <label>Confirmar senha<input type="password" minLength={8} value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="new-password" required /><small>Digite novamente a nova senha.</small></label>}
     {mode === "login" && <button className="member-forgot" type="button" onClick={() => changeMode("request")}>Esqueci minha senha</button>}
     <button className="primary" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar →" : mode === "register" ? "Cadastrar e continuar →" : mode === "request" ? "Enviar link de recuperação" : "Redefinir senha"}</button>

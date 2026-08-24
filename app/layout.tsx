@@ -46,14 +46,21 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  let instance = DEFAULT_INSTANCE_CONFIGURATION;
+  try {
+    await ensureDb();
+    instance = instanceConfigurationFromRow(await db().prepare("SELECT * FROM instance_configuration WHERE id=1").first());
+  } catch {
+    // O provedor mantém os padrões durante builds sem acesso ao banco.
+  }
   return (
     <html lang="pt-BR">
-      <body><InstanceBrandingProvider>{children}</InstanceBrandingProvider></body>
+      <body><InstanceBrandingProvider initialConfig={instance}>{children}</InstanceBrandingProvider></body>
     </html>
   );
 }

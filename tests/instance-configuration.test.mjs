@@ -26,6 +26,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.separationDraftsEnabled, false);
   assert.equal(config.guestPreconfirmationEnabled, false);
   assert.equal(config.guestConfirmationThreshold, 16);
+  assert.equal(config.financeEnabled, true);
   assert.equal(config.shareImageUrl, null);
   assert.equal(config.faviconUrl, null);
 });
@@ -46,6 +47,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     separationDraftsEnabled: true,
     guestPreconfirmationEnabled: true,
     guestConfirmationThreshold: 18,
+    financeEnabled: false,
     shareImageUrl: "/api/upload?key=branding%2Fsocial.png",
     faviconUrl: "/api/upload?key=branding%2Ffavicon.ico",
   });
@@ -58,18 +60,34 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.separationDraftsEnabled, true);
   assert.equal(result.config.guestPreconfirmationEnabled, true);
   assert.equal(result.config.guestConfirmationThreshold, 18);
+  assert.equal(result.config.financeEnabled, false);
   assert.equal(result.config.shareImageUrl, "/api/upload?key=branding%2Fsocial.png");
   assert.equal(result.config.faviconUrl, "/api/upload?key=branding%2Ffavicon.ico");
 });
 
 test("mantém colunas e valores alinhados ao salvar a configuração", () => {
-  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20 };
+  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20, financeEnabled: false };
   assert.equal(INSTANCE_CONFIGURATION_COLUMNS.length, instanceConfigurationValues(config).length);
   const index = INSTANCE_CONFIGURATION_COLUMNS.indexOf("manual_separation_enabled");
   assert.equal(instanceConfigurationValues(config)[index], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("separation_drafts_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_preconfirmation_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_confirmation_threshold")], 20);
+  assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("finance_enabled")], 0);
+});
+
+test("migração mantém o módulo financeiro ativo nas instalações existentes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-finance-toggle-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0036_finance_toggle.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT finance_enabled FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { finance_enabled: 1 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("rejeita cores, horários e logotipos externos inseguros", () => {

@@ -38,15 +38,19 @@ test("administrador promove, configura e reverte moderador com autorização por
     assert.equal((await moderatorRoute.POST(jsonRequest("POST", { accountId: memberId }))).status, 401);
     const invalidPromotion = await moderatorRoute.POST(jsonRequest("POST", { accountId: memberId, permissions: ["INVALID_PERMISSION"] }, "ppm_session=moderator-admin-session"));
     assert.equal(invalidPromotion.status, 400);
-    const promoted = await moderatorRoute.POST(jsonRequest("POST", { accountId: memberId, permissions: ["PLAYERS_MANAGE"] }, "ppm_session=moderator-admin-session"));
+    const definitionsResponse = await moderatorRoute.GET(new Request("https://pelada.example/api/moderators", { headers: { cookie: "ppm_session=moderator-admin-session" } }));
+    assert.equal(definitionsResponse.status, 200);
+    assert.ok((await definitionsResponse.json()).permissionDefinitions.some(item => item.key === "FINANCE_MANAGE"));
+    const promoted = await moderatorRoute.POST(jsonRequest("POST", { accountId: memberId, permissions: ["PLAYERS_MANAGE", "FINANCE_MANAGE"] }, "ppm_session=moderator-admin-session"));
     assert.equal(promoted.status, 201);
     assert.equal(await db().prepare(`SELECT role FROM member_accounts WHERE id=?`).bind(memberId).first("role"), "moderator");
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM moderator_permissions WHERE member_account_id=? AND permission='PLAYERS_MANAGE'`).bind(memberId).first("total"), 1);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM moderator_permissions WHERE member_account_id=? AND permission='FINANCE_MANAGE'`).bind(memberId).first("total"), 1);
 
     const login = await authRoute.POST(jsonRequest("POST", { email: "moderador@example.com", password: "senha-moderador-123" }));
     assert.equal(login.status, 200);
     assert.equal((await login.clone().json()).admin.role, "moderator");
-    assert.deepEqual((await login.json()).admin.permissions, ["PLAYERS_MANAGE"]);
+    assert.deepEqual((await login.json()).admin.permissions, ["FINANCE_MANAGE", "PLAYERS_MANAGE"]);
     const moderatorCookie = (login.headers.get("set-cookie") || "").match(/ppm_member_session=([^;]+)/)?.[1];
     assert.ok(moderatorCookie);
     const cookie = `ppm_member_session=${moderatorCookie}`;

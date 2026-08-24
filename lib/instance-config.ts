@@ -31,6 +31,7 @@ export type InstanceConfiguration = {
   separationDraftsEnabled: boolean;
   guestPreconfirmationEnabled: boolean;
   guestConfirmationThreshold: number;
+  financeEnabled: boolean;
   timezone: string;
   updatedAt?: string;
 };
@@ -68,6 +69,7 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   separationDraftsEnabled: false,
   guestPreconfirmationEnabled: false,
   guestConfirmationThreshold: 16,
+  financeEnabled: true,
   timezone: "America/Sao_Paulo",
 };
 
@@ -109,6 +111,7 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     separationDraftsEnabled: Boolean(row.separation_drafts_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.separationDraftsEnabled),
     guestPreconfirmationEnabled: Boolean(row.guest_preconfirmation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.guestPreconfirmationEnabled),
     guestConfirmationThreshold: Number(row.guest_confirmation_threshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
+    financeEnabled: Boolean(row.finance_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.financeEnabled),
     timezone: value("timezone", DEFAULT_INSTANCE_CONFIGURATION.timezone),
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
   };
@@ -157,6 +160,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     separationDraftsEnabled: source.separationDraftsEnabled === true,
     guestPreconfirmationEnabled: source.guestPreconfirmationEnabled === true,
     guestConfirmationThreshold: Number(source.guestConfirmationThreshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
+    financeEnabled: source.financeEnabled !== false,
     timezone: text("timezone", 80, DEFAULT_INSTANCE_CONFIGURATION.timezone),
   };
 
@@ -203,7 +207,7 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
   "separation_drafts_enabled",
-  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "timezone",
+  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "finance_enabled", "timezone",
 ] as const;
 
 export function instanceConfigurationValues(config: InstanceConfiguration) {
@@ -213,7 +217,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
-    Number(config.manualSeparationEnabled), Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold,
+    Number(config.manualSeparationEnabled), Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.financeEnabled),
     config.timezone,
   ];
 }

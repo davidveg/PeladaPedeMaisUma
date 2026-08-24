@@ -14,8 +14,8 @@ const BrandingContext = createContext<BrandingContextValue>({
   async refresh() {},
 });
 
-export function InstanceBrandingProvider({ children }: PropsWithChildren) {
-  const [config, setConfig] = useState<InstanceConfiguration>(DEFAULT_INSTANCE_CONFIGURATION);
+export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INSTANCE_CONFIGURATION }: PropsWithChildren<{ initialConfig?: InstanceConfiguration }>) {
+  const [config, setConfig] = useState<InstanceConfiguration>(initialConfig);
 
   async function refresh() {
     const response = await fetch("/api/public-config", { cache: "no-store" });

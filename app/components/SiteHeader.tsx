@@ -2,9 +2,9 @@
 
 import type { MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
-import { BrandIdentity } from "../InstanceBranding";
+import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 
-type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "notifications" | "account" | "admin";
+type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
 
 async function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -30,6 +30,7 @@ export function SiteHeader({
   active?: SiteSection;
   isAdmin?: boolean;
 }) {
+  const { config } = useInstanceBranding();
   const link = (section: SiteSection, href: string, label: string) => (
     <a className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       {label}
@@ -46,6 +47,7 @@ export function SiteHeader({
         {link("statistics", "/estatisticas", "Estatísticas")}
         {link("separations", "/separacoes-salvas", "Separações salvas")}
         {link("matches", "/partidas", "Partidas")}
+        {config.financeEnabled && link("finance", "/financeiro", "Financeiro")}
         {link("notifications", "/notificacoes", "Notificações")}
         {link("account", "/conta", "Minha conta")}
         {link("admin", "/admin", "Painel Administrativo")}

@@ -1,4 +1,5 @@
-import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
@@ -153,11 +154,81 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   separationDraftsEnabled: integer("separation_drafts_enabled", { mode: "boolean" }).notNull().default(false),
   guestPreconfirmationEnabled: integer("guest_preconfirmation_enabled", { mode: "boolean" }).notNull().default(false),
   guestConfirmationThreshold: integer("guest_confirmation_threshold").notNull().default(16),
+  financeEnabled: integer("finance_enabled", { mode: "boolean" }).notNull().default(true),
   timezone: text("timezone").notNull().default("America/Sao_Paulo"),
   updatedAt: text("updated_at").notNull(),
 });
 
 export const auditLogs = sqliteTable("audit_logs", { id: text("id").primaryKey(), administratorId: text("administrator_id"), action: text("action").notNull(), entityType: text("entity_type").notNull(), entityId: text("entity_id"), previousData: text("previous_data"), newData: text("new_data"), createdAt: text("created_at").notNull() });
+
+// Financial amounts are always stored as integer cents. The application currently
+// models one pelada per deployment, represented by the fixed `instance:1` scope.
+export const financialSettings = sqliteTable("financial_settings", {
+  scopeId: text("scope_id").primaryKey().default("instance:1"),
+  defaultMonthlyFeeCents: integer("default_monthly_fee_cents").notNull().default(0),
+  defaultDueDay: integer("default_due_day").notNull().default(10),
+  openingBalanceCents: integer("opening_balance_cents").notNull().default(0),
+  initialCompetence: text("initial_competence"), pixKey: text("pix_key"), ...timestamps,
+});
+export const financialPlayerSettings = sqliteTable("financial_player_settings", {
+  scopeId: text("scope_id").notNull().default("instance:1"), playerId: text("player_id").notNull(),
+  monthlyEnabled: integer("monthly_enabled", { mode: "boolean" }).notNull().default(true),
+  customMonthlyFeeCents: integer("custom_monthly_fee_cents"), ...timestamps,
+}, table => [uniqueIndex("financial_player_settings_scope_player_unique").on(table.scopeId, table.playerId)]);
+export const financialCharges = sqliteTable("financial_charges", {
+  id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"),
+  playerId: text("player_id"), matchId: text("match_id"), type: text("type").notNull(),
+  description: text("description").notNull(), category: text("category").notNull(),
+  amountCents: integer("amount_cents").notNull(), competence: text("competence").notNull(), dueDate: text("due_date").notNull(),
+  status: text("status").notNull().default("PENDING"), createdByAdministratorId: text("created_by_administrator_id").notNull(),
+  cancelledAt: text("cancelled_at"), cancelledByAdministratorId: text("cancelled_by_administrator_id"), cancellationReason: text("cancellation_reason"), ...timestamps,
+}, table => [
+  uniqueIndex("financial_charge_monthly_unique").on(table.scopeId, table.playerId, table.type, table.competence).where(sql`${table.type} = 'MONTHLY_FEE'`),
+  index("financial_charge_scope_competence_idx").on(table.scopeId, table.competence),
+  index("financial_charge_player_idx").on(table.playerId, table.competence),
+]);
+export const financialPayments = sqliteTable("financial_payments", {
+  id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"), chargeId: text("charge_id").notNull(),
+  amountCents: integer("amount_cents").notNull(), paidAt: text("paid_at").notNull(), method: text("method").notNull(), notes: text("notes"),
+  status: text("status").notNull().default("COMPLETED"), createdByAdministratorId: text("created_by_administrator_id").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(), reversedAt: text("reversed_at"), reversedByAdministratorId: text("reversed_by_administrator_id"), reversalReason: text("reversal_reason"), createdAt: text("created_at").notNull(),
+}, table => [
+  uniqueIndex("financial_payment_scope_idempotency_unique").on(table.scopeId, table.idempotencyKey),
+  index("financial_payment_charge_idx").on(table.chargeId, table.status),
+]);
+export const financialRecurringExpenses = sqliteTable("financial_recurring_expenses", {
+  id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"), description: text("description").notNull(),
+  category: text("category").notNull(), amountCents: integer("amount_cents").notNull(), recurrence: text("recurrence").notNull().default("MONTHLY"),
+  dueDay: integer("due_day").notNull(), supplier: text("supplier"), notes: text("notes"), active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), ...timestamps,
+}, table => [index("financial_recurring_expense_scope_idx").on(table.scopeId, table.active)]);
+export const financialExpenses = sqliteTable("financial_expenses", {
+  id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"), recurringExpenseId: text("recurring_expense_id"),
+  description: text("description").notNull(), category: text("category").notNull(), amountCents: integer("amount_cents").notNull(),
+  competence: text("competence").notNull(), dueDate: text("due_date").notNull(), paidAt: text("paid_at"), method: text("method"),
+  status: text("status").notNull().default("PENDING"), supplier: text("supplier"), notes: text("notes"),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), paidByAdministratorId: text("paid_by_administrator_id"),
+  paymentIdempotencyKey: text("payment_idempotency_key"), cancelledAt: text("cancelled_at"), cancelledByAdministratorId: text("cancelled_by_administrator_id"), cancellationReason: text("cancellation_reason"), ...timestamps,
+}, table => [
+  uniqueIndex("financial_expense_recurring_competence_unique").on(table.scopeId, table.recurringExpenseId, table.competence).where(sql`${table.recurringExpenseId} IS NOT NULL`),
+  uniqueIndex("financial_expense_payment_idempotency_unique").on(table.scopeId, table.paymentIdempotencyKey).where(sql`${table.paymentIdempotencyKey} IS NOT NULL`),
+  index("financial_expense_scope_competence_idx").on(table.scopeId, table.competence),
+]);
+export const financialMovements = sqliteTable("financial_movements", {
+  id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"), direction: text("direction").notNull(),
+  category: text("category").notNull(), description: text("description").notNull(), amountCents: integer("amount_cents").notNull(),
+  occurredAt: text("occurred_at").notNull(), method: text("method"), playerId: text("player_id"), chargeId: text("charge_id"),
+  paymentId: text("payment_id"), expenseId: text("expense_id"), status: text("status").notNull().default("ACTIVE"),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), createdAt: text("created_at").notNull(),
+}, table => [
+  uniqueIndex("financial_movement_payment_unique").on(table.paymentId).where(sql`${table.paymentId} IS NOT NULL`),
+  uniqueIndex("financial_movement_expense_unique").on(table.expenseId).where(sql`${table.expenseId} IS NOT NULL AND ${table.status} = 'ACTIVE'`),
+  index("financial_movement_scope_date_idx").on(table.scopeId, table.occurredAt),
+]);
+export const financialMonthlyClosures = sqliteTable("financial_monthly_closures", {
+  id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"), competence: text("competence").notNull(),
+  snapshot: text("snapshot").notNull(), closedByAdministratorId: text("closed_by_administrator_id").notNull(), closedAt: text("closed_at").notNull(),
+}, table => [uniqueIndex("financial_monthly_closure_scope_competence_unique").on(table.scopeId, table.competence)]);
 
 export const careerConfiguration = sqliteTable("career_configuration", {
   id: integer("id").primaryKey().default(1), enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
