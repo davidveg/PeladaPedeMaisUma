@@ -46,6 +46,49 @@ test("gera mensalidades com valor personalizado e impede competência duplicada"
   } finally { await f.cleanup(); }
 });
 
+test("gera mensalidades somente para mensalistas e goleiros mensalistas", async () => {
+  const f = await fixture();
+  try {
+    const now = new Date().toISOString();
+    const goalkeeperId = "finance-goalkeeper", casualId = "finance-casual", guestId = "finance-guest";
+    await db().batch([
+      db().prepare(`INSERT INTO players (id,full_name,display_name,aliases,type,primary_position,speed,skill,marking,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(goalkeeperId, "Goleiro Mensalista", "Goleiro Mensalista", "[]", "goalkeeper", "Goleiro", 3, 3, 3, 1, now, now),
+      db().prepare(`INSERT INTO players (id,full_name,display_name,aliases,type,primary_position,speed,skill,marking,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(casualId, "Goleiro Avulso", "Goleiro Avulso", "[]", "casual", "Goleiro", 3, 3, 3, 1, now, now),
+      db().prepare(`INSERT INTO players (id,full_name,display_name,aliases,type,primary_position,speed,skill,marking,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(guestId, "Jogador Convidado", "Jogador Convidado", "[]", "guest", "Ataque", 3, 3, 3, 1, now, now),
+    ]);
+    const saved = await post({
+      action: "save-settings", defaultMonthlyFeeCents: 7000, defaultDueDay: 10, openingBalanceCents: 0, initialCompetence: "2026-09",
+      players: [
+        { playerId: f.playerA, monthlyEnabled: true },
+        { playerId: f.playerB, monthlyEnabled: false },
+        { playerId: goalkeeperId, monthlyEnabled: true },
+        { playerId: casualId, monthlyEnabled: true, customMonthlyFeeCents: 5000 },
+        { playerId: guestId, monthlyEnabled: true, customMonthlyFeeCents: 5000 },
+      ],
+    });
+    assert.equal(saved.status, 200);
+
+    const generated = await post({ action: "generate-monthly", competence: "2026-09" });
+    assert.equal(generated.status, 200);
+    assert.equal((await generated.json()).created, 2);
+    const charges = await db().prepare(`SELECT p.type FROM financial_charges c JOIN players p ON p.id=c.player_id ORDER BY p.type`).all();
+    assert.deepEqual(charges.results.map(row => row.type), ["goalkeeper", "monthly"]);
+
+    const view = await get("2026-09");
+    assert.equal(view.players.find(player => player.id === casualId).monthlyEnabled, false);
+    assert.equal(view.players.find(player => player.id === guestId).monthlyEnabled, false);
+    const excludedSettings = await db().prepare(`SELECT player_id,monthly_enabled,custom_monthly_fee_cents FROM financial_player_settings WHERE player_id IN (?,?) ORDER BY player_id`).bind(casualId, guestId).all();
+    assert.deepEqual(excludedSettings.results.map(row => ({ ...row })), [
+      { player_id: casualId, monthly_enabled: 0, custom_monthly_fee_cents: null },
+      { player_id: guestId, monthly_enabled: 0, custom_monthly_fee_cents: null },
+    ]);
+    await db().prepare(`UPDATE financial_player_settings SET monthly_enabled=1,custom_monthly_fee_cents=5000 WHERE player_id=?`).bind(casualId).run();
+    const legacyView = await get("2026-09");
+    assert.equal(legacyView.players.find(player => player.id === casualId).monthlyEnabled, false);
+    assert.equal(legacyView.players.find(player => player.id === casualId).customMonthlyFeeCents, null);
+  } finally { await f.cleanup(); }
+});
+
 test("módulo desativado bloqueia consultas e operações sem alterar os dados", async () => {
   const f = await fixture();
   try {

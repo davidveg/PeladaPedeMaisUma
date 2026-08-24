@@ -5,7 +5,7 @@ import { SiteHeader } from "../components/SiteHeader";
 import { accountSignInHref } from "../../lib/site-navigation";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { buildMonthlyPaymentsWhatsAppMessage } from "../../lib/finance-sharing";
-import { playerTypeLabel } from "../../lib/player-types";
+import { canHaveMonthlyFee, playerTypeLabel } from "../../lib/player-types";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 
 type Tab = "dashboard" | "monthly" | "income" | "expenses" | "movements" | "closing";
@@ -69,12 +69,12 @@ function Dashboard({ data }: { data: any }) {
 function Metric({ label, value, tone = "" }: { label: string; value: string; tone?: string }) { return <article className={`finance-metric ${tone}`}><small>{label}</small><strong>{value}</strong></article>; }
 
 function Monthly({ data, competence, action, busy }: any) {
-  const [settings, setSettings] = useState({ ...data.settings, defaultMonthlyFee: reais(data.settings.defaultMonthlyFeeCents), openingBalance: reais(data.settings.openingBalanceCents), pixKey: data.settings.pixKey || "", players: data.players.map((p: any) => ({ ...p, customFee: p.customMonthlyFeeCents === null ? "" : reais(p.customMonthlyFeeCents) })) });
+  const [settings, setSettings] = useState({ ...data.settings, defaultMonthlyFee: reais(data.settings.defaultMonthlyFeeCents), openingBalance: reais(data.settings.openingBalanceCents), pixKey: data.settings.pixKey || "", players: data.players.filter((p: any) => canHaveMonthlyFee(p.type)).map((p: any) => ({ ...p, customFee: p.customMonthlyFeeCents === null ? "" : reais(p.customMonthlyFeeCents) })) });
   const [payment, setPayment] = useState<any>();
   useEffect(() => {
     // Refresh the editable draft after the server confirms a mutation.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSettings({ ...data.settings, defaultMonthlyFee: reais(data.settings.defaultMonthlyFeeCents), openingBalance: reais(data.settings.openingBalanceCents), pixKey: data.settings.pixKey || "", players: data.players.map((p: any) => ({ ...p, customFee: p.customMonthlyFeeCents === null ? "" : reais(p.customMonthlyFeeCents) })) });
+    setSettings({ ...data.settings, defaultMonthlyFee: reais(data.settings.defaultMonthlyFeeCents), openingBalance: reais(data.settings.openingBalanceCents), pixKey: data.settings.pixKey || "", players: data.players.filter((p: any) => canHaveMonthlyFee(p.type)).map((p: any) => ({ ...p, customFee: p.customMonthlyFeeCents === null ? "" : reais(p.customMonthlyFeeCents) })) });
   }, [data]);
   async function save(event: React.FormEvent) { event.preventDefault(); await action({ action: "save-settings", defaultMonthlyFeeCents: toCents(settings.defaultMonthlyFee), defaultDueDay: Number(settings.defaultDueDay), openingBalanceCents: toCents(settings.openingBalance), initialCompetence: settings.initialCompetence, pixKey: settings.pixKey, players: settings.players.map((p: any) => ({ playerId: p.id, monthlyEnabled: p.monthlyEnabled, customMonthlyFeeCents: p.customFee === "" ? null : toCents(p.customFee) })) }); }
   const monthly = data.charges.filter((item: any) => item.type === "MONTHLY_FEE");

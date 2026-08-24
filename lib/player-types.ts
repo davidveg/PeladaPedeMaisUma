@@ -14,6 +14,10 @@ export function playerTypeLabel(type: string) {
   return "Mensalista";
 }
 
+export function canHaveMonthlyFee(type: string) {
+  return type === "monthly" || type === "goalkeeper";
+}
+
 export function playerTypeValidationError(type: unknown, position: Position | string) {
   if (!isPlayerType(type)) return "Selecione um tipo de jogador válido.";
   const goalkeeper = position === "Goleiro";

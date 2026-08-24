@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isPlayerType, playerTypeLabel, playerTypeValidationError } from "../lib/player-types.ts";
+import { canHaveMonthlyFee, isPlayerType, playerTypeLabel, playerTypeValidationError } from "../lib/player-types.ts";
 
 test("reconhece e apresenta o tipo Avulso", () => {
   assert.equal(isPlayerType("casual"), true);
   assert.equal(playerTypeLabel("casual"), "Avulso");
   assert.equal(playerTypeLabel("goalkeeper"), "Goleiro Mensalista");
+});
+
+test("somente mensalistas e goleiros mensalistas podem receber mensalidade", () => {
+  assert.equal(canHaveMonthlyFee("monthly"), true);
+  assert.equal(canHaveMonthlyFee("goalkeeper"), true);
+  assert.equal(canHaveMonthlyFee("guest"), false);
+  assert.equal(canHaveMonthlyFee("casual"), false);
 });
 
 test("permite Avulso somente na posição de goleiro", () => {

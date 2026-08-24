@@ -1,6 +1,7 @@
 /* Financial domain for the single-pelada instance. Monetary values are integer cents. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db, ensureDb } from "./database";
+import { canHaveMonthlyFee } from "./player-types";
 
 export const FINANCIAL_SCOPE = "instance:1";
 export const PAYMENT_METHODS = new Set(["PIX", "CASH", "TRANSFER", "CARD", "OTHER"]);
@@ -117,7 +118,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     summary, charges, expenses,
     movements: movementRows.results.map((row: any) => ({ id: row.id, direction: row.direction, category: row.category, description: row.description, amountCents: Number(row.amount_cents), occurredAt: row.occurred_at, method: row.method, playerId: row.player_id, playerName: row.player_name, chargeId: row.charge_id, paymentId: row.payment_id, expenseId: row.expense_id, status: row.status })),
     recurringExpenses: recurringRows.results.map((row: any) => ({ id: row.id, description: row.description, category: row.category, amountCents: Number(row.amount_cents), recurrence: row.recurrence, dueDay: Number(row.due_day), supplier: row.supplier, notes: row.notes, active: !!row.active })),
-    players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, active: !!row.active, monthlyEnabled: row.monthly_enabled === null ? row.type !== "guest" : !!row.monthly_enabled, customMonthlyFeeCents: row.custom_monthly_fee_cents === null ? null : Number(row.custom_monthly_fee_cents) })),
+    players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })),
     matches: matchRows.results.map((row: any) => ({ id: row.id, title: row.title, matchAt: row.match_at })),
     closure: closure ? { id: closure.id, ...JSON.parse(closure.snapshot), closedAt: closure.closed_at } : null,
   };
@@ -167,13 +168,20 @@ export async function saveSettings(payload: any, admin: any) {
   const now = new Date().toISOString();
   const previous = await db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first();
   const statements = [db().prepare(`UPDATE financial_settings SET default_monthly_fee_cents=?,default_due_day=?,opening_balance_cents=?,initial_competence=?,pix_key=?,updated_at=? WHERE scope_id=?`).bind(defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, now, FINANCIAL_SCOPE)];
+  const normalizedPlayers: any[] = [];
   if (Array.isArray(payload.players)) for (const item of payload.players) {
-    const player = await db().prepare(`SELECT id FROM players WHERE id=? AND deleted_at IS NULL`).bind(String(item.playerId || "")).first();
+    const player: any = await db().prepare(`SELECT id,type FROM players WHERE id=? AND deleted_at IS NULL`).bind(String(item.playerId || "")).first();
     if (!player) throw new FinanceError("Um dos jogadores informados não existe.");
+    if (!canHaveMonthlyFee(String(player.type))) {
+      statements.push(db().prepare(`INSERT INTO financial_player_settings (scope_id,player_id,monthly_enabled,custom_monthly_fee_cents,created_at,updated_at) VALUES (?,?,0,NULL,?,?) ON CONFLICT(scope_id,player_id) DO UPDATE SET monthly_enabled=0,custom_monthly_fee_cents=NULL,updated_at=excluded.updated_at`).bind(FINANCIAL_SCOPE, String(item.playerId), now, now));
+      normalizedPlayers.push({ playerId: String(item.playerId), monthlyEnabled: false, customMonthlyFeeCents: null });
+      continue;
+    }
     const custom = item.customMonthlyFeeCents === null || item.customMonthlyFeeCents === "" || item.customMonthlyFeeCents === undefined ? null : cents(item.customMonthlyFeeCents, "valor personalizado", true);
     statements.push(db().prepare(`INSERT INTO financial_player_settings (scope_id,player_id,monthly_enabled,custom_monthly_fee_cents,created_at,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(scope_id,player_id) DO UPDATE SET monthly_enabled=excluded.monthly_enabled,custom_monthly_fee_cents=excluded.custom_monthly_fee_cents,updated_at=excluded.updated_at`).bind(FINANCIAL_SCOPE, String(item.playerId), item.monthlyEnabled ? 1 : 0, custom, now, now));
+    normalizedPlayers.push({ playerId: String(item.playerId), monthlyEnabled: !!item.monthlyEnabled, customMonthlyFeeCents: custom });
   }
-  statements.push(auditStatement(admin.id, "FINANCIAL_SETTINGS_UPDATED", "financial_settings", FINANCIAL_SCOPE, { defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, players: payload.players }, previous));
+  statements.push(auditStatement(admin.id, "FINANCIAL_SETTINGS_UPDATED", "financial_settings", FINANCIAL_SCOPE, { defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, players: normalizedPlayers }, previous));
   await db().batch(statements);
   return { message: "Configurações financeiras salvas." };
 }
@@ -183,7 +191,7 @@ export async function generateMonthlyFees(payload: any, admin: any) {
   const competence = normalizeCompetence(payload.competence), now = new Date().toISOString();
   const settings: any = await db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first();
   if (settings?.initial_competence && competence < settings.initial_competence) throw new FinanceError("A competência é anterior ao início configurado.");
-  const result = await db().prepare(`SELECT p.id,p.display_name,COALESCE(f.monthly_enabled,CASE WHEN p.type='guest' THEN 0 ELSE 1 END) monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.active=1 AND p.deleted_at IS NULL`).bind(FINANCIAL_SCOPE).all();
+  const result = await db().prepare(`SELECT p.id,p.display_name,COALESCE(f.monthly_enabled,1) monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.active=1 AND p.deleted_at IS NULL AND p.type IN ('monthly','goalkeeper')`).bind(FINANCIAL_SCOPE).all();
   const eligible = result.results.filter((row: any) => !!row.monthly_enabled);
   if (!eligible.length) throw new FinanceError("Nenhum jogador mensalista está habilitado.");
   const dueDate = dueDateFor(competence, Number(settings?.default_due_day || 10)), statements: any[] = [], createdIds: string[] = [];
