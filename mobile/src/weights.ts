@@ -7,13 +7,9 @@ export const defaultWeights:Weights={speedWeight:.35,skillWeight:.25,markingWeig
 export const lineWeightKeys=["speedWeight","skillWeight","markingWeight","tacticalIntelligenceWeight","competitivenessWeight"] as const;
 export const goalkeeperWeightKeys=["goalkeeperDefensesWeight","goalkeeperPositioningWeight","goalkeeperSafetyWeight","goalkeeperFootworkWeight","goalkeeperLeadershipWeight"] as const;
 export type WeightKey=typeof lineWeightKeys[number]|typeof goalkeeperWeightKeys[number];
-export function normalizeWeights(current:Weights,keysOrChanged:readonly WeightKey[]|WeightKey,changedOrNext:WeightKey|number,maybeNext?:number):Weights{
-  const grouped=Array.isArray(keysOrChanged),keys:readonly WeightKey[]=grouped?(keysOrChanged as readonly WeightKey[]):lineWeightKeys;
-  const changed=(grouped?changedOrNext:keysOrChanged) as WeightKey,next=grouped?Number(maybeNext):Number(changedOrNext),result={...current};
-  const bounded=Math.max(0,Math.min(1,round(next))),others=keys.filter(key=>key!==changed),remaining=1-bounded,total=others.reduce((sum,key)=>sum+Number(current[key]??0),0);
-  result[changed]=bounded;
-  let assigned=0;
-  others.forEach((key,index)=>{const value=index===others.length-1?remaining-assigned:total>0?remaining*Number(current[key]??0)/total:remaining/others.length;result[key]=round(value);assigned+=result[key]});
-  return result;
+export function updateWeight(current:Weights,key:WeightKey,next:number):Weights{
+  return {...current,[key]:Math.max(0,Math.min(1,Math.round(next*100)/100))};
 }
-const round=(value:number)=>Math.round(value*10_000)/10_000;
+export function weightTotalPercent(current:Weights,keys:readonly WeightKey[]):number{
+  return Math.round(keys.reduce((sum,key)=>sum+Number(current[key]??0),0)*100);
+}

@@ -14,6 +14,15 @@ test("transfere jogadores de uma separação pendente e recalcula os indicadores
   assert.equal(typeof result.rating, "string");
 });
 
+test("preserva o equilíbrio por times-base ao editar uma lista ímpar",()=>{
+  const extra=player("e","Meio-campo",3),odd={...snapshot,blue:[...snapshot.blue,extra]};
+  const result=rebuildEditedSeparation(odd,["a","b","e"],["c","d"]);
+  assert.equal(result.extraId,"e");
+  assert.equal(result.blueBaseMetrics.count,result.yellowBaseMetrics.count);
+  assert.equal(result.delta.baseTeams,true);
+  assert.equal(result.delta.players,1);
+});
+
 test("não permite perder, repetir ou inventar jogadores durante a edição", () => {
   assert.throws(() => rebuildEditedSeparation(snapshot, ["a", "b"], ["c"]), /exatamente/);
   assert.throws(() => rebuildEditedSeparation(snapshot, ["a", "b"], ["c", "c"]), /exatamente/);

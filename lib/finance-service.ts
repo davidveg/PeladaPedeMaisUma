@@ -7,6 +7,7 @@ export const FINANCIAL_SCOPE = "instance:1";
 export const PAYMENT_METHODS = new Set(["PIX", "CASH", "TRANSFER", "CARD", "OTHER"]);
 export const CHARGE_TYPES = new Set(["MONTHLY_FEE", "SINGLE_MATCH", "EXTRA", "OTHER"]);
 const EXPENSE_CATEGORIES = new Set(["FIELD", "REFEREE", "WATER", "BALLS", "BIBS", "EQUIPMENT", "SOCIAL", "MAINTENANCE", "OTHER"]);
+const portugueseNameCollator = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
 export class FinanceError extends Error {
   status: number;
@@ -110,7 +111,8 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     db().prepare(`SELECT id,title,match_at FROM scheduled_matches WHERE status<>'CANCELLED' ORDER BY match_at DESC LIMIT 30`).all(),
     db().prepare(`SELECT id,snapshot,closed_at FROM financial_monthly_closures WHERE scope_id=? AND competence=?`).bind(FINANCIAL_SCOPE, competence).first<any>(),
   ]);
-  const charges = chargeRows.results.map(rowCharge), expenses = expenseRows.results.map(rowExpense);
+  const mappedCharges = chargeRows.results.map(rowCharge), monthlyCharges = mappedCharges.filter(item => item.type === "MONTHLY_FEE").sort((left, right) => portugueseNameCollator.compare(left.playerName || left.description, right.playerName || right.description));
+  const charges = [...monthlyCharges, ...mappedCharges.filter(item => item.type !== "MONTHLY_FEE")], expenses = expenseRows.results.map(rowExpense);
   const summary = await calculateSummary(competence, charges, expenses, Number(settings?.opening_balance_cents || 0));
   return {
     viewer: { accountType: viewer.accountType, role: viewer.role, email: viewer.email, canManage: true }, competence,
@@ -118,7 +120,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     summary, charges, expenses,
     movements: movementRows.results.map((row: any) => ({ id: row.id, direction: row.direction, category: row.category, description: row.description, amountCents: Number(row.amount_cents), occurredAt: row.occurred_at, method: row.method, playerId: row.player_id, playerName: row.player_name, chargeId: row.charge_id, paymentId: row.payment_id, expenseId: row.expense_id, status: row.status })),
     recurringExpenses: recurringRows.results.map((row: any) => ({ id: row.id, description: row.description, category: row.category, amountCents: Number(row.amount_cents), recurrence: row.recurrence, dueDay: Number(row.due_day), supplier: row.supplier, notes: row.notes, active: !!row.active })),
-    players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })),
+    players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })).sort((left, right) => portugueseNameCollator.compare(left.displayName, right.displayName)),
     matches: matchRows.results.map((row: any) => ({ id: row.id, title: row.title, matchAt: row.match_at })),
     closure: closure ? { id: closure.id, ...JSON.parse(closure.snapshot), closedAt: closure.closed_at } : null,
   };

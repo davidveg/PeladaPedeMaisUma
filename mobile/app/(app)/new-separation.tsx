@@ -208,8 +208,8 @@ export default function NewSeparation() {
           <Text style={styles.muted}>Toque em um jogador de cada equipe para trocá-los, ou use a seta para transferir apenas aquele jogador ao outro time.</Text>
           {manual ? <Text style={styles.manual}>✓ Indicadores recalculados após ajuste manual.</Text> : <Text style={styles.official}>Proposta oficial do algoritmo.</Text>}
         </Card>
-        <TeamEditor team="blue" players={proposal.result.blue} selectedId={swap?.team === "blue" ? swap.id : null} onSelect={id => chooseSwap("blue", id)} onMove={id => movePlayer("blue", id)}/>
-        <TeamEditor team="yellow" players={proposal.result.yellow} selectedId={swap?.team === "yellow" ? swap.id : null} onSelect={id => chooseSwap("yellow", id)} onMove={id => movePlayer("yellow", id)}/>
+        <TeamEditor team="blue" players={proposal.result.blue} extraId={proposal.result.extraId} selectedId={swap?.team === "blue" ? swap.id : null} onSelect={id => chooseSwap("blue", id)} onMove={id => movePlayer("blue", id)}/>
+        <TeamEditor team="yellow" players={proposal.result.yellow} extraId={proposal.result.extraId} selectedId={swap?.team === "yellow" ? swap.id : null} onSelect={id => chooseSwap("yellow", id)} onMove={id => movePlayer("yellow", id)}/>
         {(proposal.result.delta?.players || 0) > 1 ? <Card style={styles.warning}><Text style={styles.warningTitle}>Atenção à quantidade</Text><Text style={styles.muted}>Os times estão com diferença de {proposal.result.delta?.players} jogadores. O indicador abaixo considera essa diferença.</Text></Card> : null}
         <BalanceDetails result={proposal.result}/>
         <Button title="Continuar" onPress={() => setStep(4)}/>
@@ -230,7 +230,7 @@ export default function NewSeparation() {
   </Screen>;
 }
 
-function TeamEditor({ team, players, selectedId, onSelect, onMove }: { team: TeamKey; players: Player[]; selectedId: string | null; onSelect: (id: string) => void; onMove: (id: string) => void }) {
+function TeamEditor({ team, players, extraId, selectedId, onSelect, onMove }: { team: TeamKey; players: Player[]; extraId?:string; selectedId: string | null; onSelect: (id: string) => void; onMove: (id: string) => void }) {
   const { config: brand, palette } = useMobileBranding();
   const blue = team === "blue", color = blue ? palette.blue : palette.yellow, soft = blue ? palette.blueSoft : palette.yellowSoft, selectedText=contrastTextColor(color);
   const title = (blue ? brand.teamBlueName : brand.teamYellowName).toLocaleUpperCase("pt-BR"), destination = blue ? brand.teamYellowName : brand.teamBlueName;
@@ -241,7 +241,7 @@ function TeamEditor({ team, players, selectedId, onSelect, onMove }: { team: Tea
       return <View key={player.id} style={[styles.teamPlayer, { backgroundColor: selected ? color : soft }]}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={`Selecionar ${player.displayName} para troca`} onPress={() => onSelect(player.id)} style={styles.playerIdentity}>
           <Text style={[styles.playerName, selected && { color:selectedText }]}>{player.displayName}</Text>
-          <Text style={[styles.playerPosition, selected && { color:selectedText }]}>{player.primaryPosition}{selected ? " · selecionado para troca" : ""}</Text>
+          <Text style={[styles.playerPosition, selected && { color:selectedText }]}>{player.primaryPosition}{player.id===extraId?" · jogador adicional":""}{selected ? " · selecionado para troca" : ""}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={`Mover ${player.displayName} para o time ${destination}`} onPress={() => onMove(player.id)} style={[styles.moveButton, { borderColor: color }]}>
           <Text style={[styles.moveArrow, { color }]}>{blue ? "→" : "←"}</Text>

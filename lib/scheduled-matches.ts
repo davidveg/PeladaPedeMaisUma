@@ -3,7 +3,7 @@
 import { audit, db, ensureDb } from "./database";
 import { ensureCareerSeasonCurrent } from "./career-season";
 import { attachHistoricalPerformance } from "./historical-performance-store";
-import { balanceTeams, calculateTeamDelta, defaultConfig, guestBalancePenalty, type Config, type Player } from "./football";
+import { balanceTeams, defaultConfig, recalculateTeamBalance, type Config, type Player } from "./football";
 import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
 import { instanceConfigurationFromRow } from "./instance-config";
 import { refreshMatchWeather, weatherFromRow } from "./match-weather";
@@ -399,16 +399,7 @@ function validateAndRebuildResult(input: any, players: Player[], config: Config,
   if (!manuallyAdjusted) return generated;
   const byId = new Map(players.map(player => [player.id, player]));
   const blue = blueIds.map((id:string) => byId.get(id)!), yellow = yellowIds.map((id:string) => byId.get(id)!);
-  const metrics = calculateTeamDelta(blue, yellow, config);
-  const positionDifferences = [metrics.delta.defenders, metrics.delta.midfielders, metrics.delta.attackers];
-  const positionDifference = positionDifferences.reduce((sum, value) => sum + value, 0);
-  const maximumPositionDifference = Number(generated.maximumPositionDifference ?? config.maximumPositionDifference ?? 1);
-  const positionExcess = positionDifferences.reduce((sum, value) => sum + Math.max(0, value - maximumPositionDifference), 0);
-  const attributeDifference = Math.abs((metrics.blueMetrics.total-metrics.blueMetrics.momentum)-(metrics.yellowMetrics.total-metrics.yellowMetrics.momentum));
-  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120 + guestBalancePenalty(blue, yellow)
-    + attributeDifference * 14 + Math.abs(metrics.blueMetrics.scoreAvg - metrics.yellowMetrics.scoreAvg) * 18;
-  const rating = cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...generated, blue, yellow, ...metrics, cost, rating, extraId: undefined };
+  return { ...generated, blue, yellow, ...recalculateTeamBalance(blue,yellow,config) };
 }
 
 function publicMatch(

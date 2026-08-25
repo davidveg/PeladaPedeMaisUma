@@ -123,6 +123,63 @@ export function guestBalancePenalty(blue: Player[], yellow: Player[]) {
   return Math.max(0, Math.abs(blueGuests-yellowGuests)-minimumDifference) * 2500;
 }
 
+function teamBalanceCost(blue:Player[],yellow:Player[],config:Config,maximumPositionDifference:number){
+  const bm=calculateTeamMetrics(blue,config),ym=calculateTeamMetrics(yellow,config);
+  const positionDifferences=["Defesa","Meio-campo","Ataque"].map(key=>Math.abs(bm.positions[key as keyof typeof bm.positions]-ym.positions[key as keyof typeof ym.positions]));
+  const positionDiff=positionDifferences.reduce((sum,value)=>sum+value,0),positionExcess=positionDifferences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0);
+  const attributeDifference=Math.abs(bm.total-bm.momentum-ym.total+ym.momentum);
+  return Math.abs(blue.length-yellow.length)*1000+positionExcess*2000+positionDiff*120+guestBalancePenalty(blue,yellow)+attributeDifference*14+Math.abs(bm.scoreAvg-ym.scoreAvg)*18+Math.abs(bm.historicalLearning-ym.historicalLearning)*30;
+}
+
+function additionalPlayerCandidates(players:Player[],protectedIds:Set<string>){
+  const groups=[
+    players.filter(player=>player.primaryPosition!=="Goleiro"&&!protectedIds.has(player.id)),
+    players.filter(player=>player.primaryPosition!=="Goleiro"),
+    players.filter(player=>!protectedIds.has(player.id)),
+    players,
+  ];
+  return groups.find(group=>group.length)??[];
+}
+
+function protectedPlayerIds(players:Player[],config:Config){
+  const line=players.filter(player=>player.primaryPosition!=="Goleiro"),configuredPercentage=Number(config.protectedTopPlayersPercentage);
+  const percentage=Number.isFinite(configuredPercentage)?Math.min(1,Math.max(0,configuredPercentage)):defaultConfig.protectedTopPlayersPercentage;
+  const protectedPerTeam=Math.min(Math.floor(line.length/2),Math.ceil(line.length*percentage/2));
+  return new Set([...line].sort((a,b)=>balancingScore(b,config)-balancingScore(a,config)).slice(0,protectedPerTeam*2).map(player=>player.id));
+}
+
+function evaluateTeamSplit(blue:Player[],yellow:Player[],config:Config,maximumPositionDifference:number,protectedIds:Set<string>){
+  if((blue.length+yellow.length)%2===0||Math.abs(blue.length-yellow.length)!==1)return{cost:teamBalanceCost(blue,yellow,config,maximumPositionDifference),extraId:undefined as string|undefined,blueBase:blue,yellowBase:yellow};
+  const largerKey=blue.length>yellow.length?"blue":"yellow",larger=largerKey==="blue"?blue:yellow;
+  let best:{cost:number;extraId:string;extraScore:number;blueBase:Player[];yellowBase:Player[]}|null=null;
+  for(const candidate of additionalPlayerCandidates(larger,protectedIds)){
+    const blueBase=largerKey==="blue"?blue.filter(player=>player.id!==candidate.id):blue;
+    const yellowBase=largerKey==="yellow"?yellow.filter(player=>player.id!==candidate.id):yellow;
+    const cost=teamBalanceCost(blueBase,yellowBase,config,maximumPositionDifference);
+    const extraScore=balancingScore(candidate,config);
+    if(!best||cost<best.cost||(cost===best.cost&&extraScore<best.extraScore))best={cost,extraId:candidate.id,extraScore,blueBase,yellowBase};
+  }
+  return best??{cost:teamBalanceCost(blue,yellow,config,maximumPositionDifference),extraId:undefined,blueBase:blue,yellowBase:yellow};
+}
+
+function teamComparison(blue:Player[],yellow:Player[],config:Config,extraId?:string){
+  const actual=calculateTeamDelta(blue,yellow,config),blueBase=extraId?blue.filter(player=>player.id!==extraId):blue,yellowBase=extraId?yellow.filter(player=>player.id!==extraId):yellow;
+  if(!extraId)return{...actual,blueBaseMetrics:undefined,yellowBaseMetrics:undefined};
+  const base=calculateTeamDelta(blueBase,yellowBase,config);
+  return{
+    blueMetrics:actual.blueMetrics,yellowMetrics:actual.yellowMetrics,
+    blueBaseMetrics:base.blueMetrics,yellowBaseMetrics:base.yellowMetrics,
+    delta:{...base.delta,players:actual.delta.players,baseTeams:true,advantage:{...base.delta.advantage,players:actual.delta.advantage.players}},
+  };
+}
+
+export function recalculateTeamBalance(blue:Player[],yellow:Player[],config:Config=defaultConfig){
+  const maximumPositionDifference=Number.isFinite(config.maximumPositionDifference)?Number(config.maximumPositionDifference):defaultConfig.maximumPositionDifference!;
+  const evaluated=evaluateTeamSplit(blue,yellow,config,maximumPositionDifference,protectedPlayerIds([...blue,...yellow],config)),metrics=teamComparison(blue,yellow,config,evaluated.extraId);
+  const rating=evaluated.cost<35?"Excelente equilíbrio":evaluated.cost<80?"Bom equilíbrio":evaluated.cost<150?"Equilíbrio aceitável":"Equilíbrio limitado";
+  return{...metrics,cost:evaluated.cost,rating,extraId:evaluated.extraId};
+}
+
 export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0) {
   if (input.length < 4) throw new Error("São necessários pelo menos 4 jogadores.");
   const maximumPositionDifference = Number.isFinite(config.maximumPositionDifference) ? Number(config.maximumPositionDifference) : defaultConfig.maximumPositionDifference!;
@@ -156,15 +213,12 @@ export function balanceTeams(input: Player[], config = defaultConfig, nonce = 0)
       remainingRegulars.forEach(player=>(blue.length<=yellow.length?blue:yellow).push(player));
     }else shuffled.forEach(player=>(blue.length<=yellow.length?blue:yellow).push(player));
     if (goalkeepers[0]) blue.push(goalkeepers[0]); if (goalkeepers[1]) yellow.push(goalkeepers[1]); goalkeepers.slice(2).forEach((p,i)=>(i%2?yellow:blue).push(p));
-    const bm=calculateTeamMetrics(blue,config), ym=calculateTeamMetrics(yellow,config); const positionDifferences = ["Defesa","Meio-campo","Ataque"].map(k=>Math.abs(bm.positions[k as keyof typeof bm.positions]-ym.positions[k as keyof typeof ym.positions])),positionDiff=positionDifferences.reduce((sum,value)=>sum+value,0),positionExcess=positionDifferences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0);
-    const larger = blue.length>yellow.length?blue:yellow; const rankedExtraCandidates=[...larger].filter(p=>p.primaryPosition!=="Goleiro").sort((a,b)=>balancingScore(a,config)-balancingScore(b,config)); const extra = input.length%2 ? rankedExtraCandidates.find(p=>!protectedIds.has(p.id))??rankedExtraCandidates[0] : undefined;
-    const attributeDifference = Math.abs(bm.total-bm.momentum-ym.total+ym.momentum);
-    const cost = Math.abs(blue.length-yellow.length)*1000 + positionExcess*2000 + positionDiff*120 + guestBalancePenalty(blue,yellow) + attributeDifference*14 + Math.abs(bm.scoreAvg-ym.scoreAvg)*18 + Math.abs(bm.historicalLearning-ym.historicalLearning)*30 + (input.length%2 && !extra ? 500 : 0);
-    if (!best || cost < best.cost) best={blue,yellow,cost,extraId:extra?.id};
+    const evaluated=evaluateTeamSplit(blue,yellow,config,maximumPositionDifference,protectedIds);
+    if (!best || evaluated.cost < best.cost) best={blue,yellow,cost:evaluated.cost,extraId:evaluated.extraId};
   }
-  const { blueMetrics, yellowMetrics, delta }=calculateTeamDelta(best!.blue,best!.yellow,config);
+  const {blueMetrics,yellowMetrics,blueBaseMetrics,yellowBaseMetrics,delta}=teamComparison(best!.blue,best!.yellow,config,best!.extraId);
   const rating = best!.cost < 35 ? "Excelente equilíbrio" : best!.cost < 80 ? "Bom equilíbrio" : best!.cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
-  return { ...best!, blueMetrics, yellowMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, historicalLearningEnabled:Boolean(config.historicalLearningEnabled), maximumPositionDifference, protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
+  return { ...best!, blueMetrics, yellowMetrics, blueBaseMetrics, yellowBaseMetrics, delta, rating, proposal: nonce+1, speedWeight: config.speedWeight, skillWeight: config.skillWeight, markingWeight: config.markingWeight, tacticalIntelligenceWeight:config.tacticalIntelligenceWeight, competitivenessWeight:config.competitivenessWeight, goalkeeperDefensesWeight:config.goalkeeperDefensesWeight, goalkeeperPositioningWeight:config.goalkeeperPositioningWeight, goalkeeperSafetyWeight:config.goalkeeperSafetyWeight, goalkeeperFootworkWeight:config.goalkeeperFootworkWeight, goalkeeperLeadershipWeight:config.goalkeeperLeadershipWeight, ratingSystemVersion:2, resultMomentumMultiplier: config.resultMomentumMultiplier??1, momentumMultiplier: config.momentumMultiplier??1, historicalLearningEnabled:Boolean(config.historicalLearningEnabled), maximumPositionDifference, protectedTopPlayersPercentage, algorithmAttempts: config.algorithmAttempts };
 }
 
 function playerSeed(id:string){return [...id].reduce((seed,character,index)=>seed+character.charCodeAt(0)*(index+1),0)}

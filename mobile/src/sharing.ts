@@ -18,7 +18,7 @@ export async function shareText(message?: string | null) {
 
 type TeamBranding = { teamBlueName?: string; teamYellowName?: string; teamBlueColor?: string; teamYellowColor?: string };
 export function separationMessage(item: Separation, publicBaseUrl: string, branding: TeamBranding = {}) {
-  const lines = (players: Player[]) => players.map((player, index) => `${index + 1}. ${player.displayName}`).join("\n");
+  const lines = (players: Player[]) => players.map((player, index) => `${index + 1}. ${player.displayName}${player.id===item.snapshot.extraId?" (jogador adicional)":""}`).join("\n");
   const blueName=branding.teamBlueName||"Azul",yellowName=branding.teamYellowName||"Amarelo",blueMarker=teamColorMarker(branding.teamBlueColor||"#1768E5"),yellowMarker=teamColorMarker(branding.teamYellowColor||"#F4BF20");
   const score = item.career ? `\n\nPlacar: ${blueMarker} ${blueName} ${item.career.blueScore} × ${item.career.yellowScore} ${yellowName} ${yellowMarker}` : "";
   const url = ensurePublicHttps(`${publicBaseUrl.replace(/\/$/, "")}/?separation=${encodeURIComponent(item.id)}`);

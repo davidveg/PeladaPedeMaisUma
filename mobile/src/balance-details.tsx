@@ -23,7 +23,7 @@ function tone(rating: string) {
 export function BalanceDetails({ result, fallbackRating }: { result: TeamResult; fallbackRating?: string }) {
   const { config: brand, palette: teamPalette } = useMobileBranding();
   const rating = result.rating || fallbackRating || "Equilíbrio não informado", palette = tone(rating);
-  const delta = result.delta || emptyDelta;
+  const delta = result.delta || emptyDelta,usesBaseTeams=Boolean(delta.baseTeams||result.extraId),blueAverageMetrics=result.blueBaseMetrics||result.blueMetrics,yellowAverageMetrics=result.yellowBaseMetrics||result.yellowMetrics;
   const metrics: { key:MetricKey; label:string; value:number; decimals:number }[] = [
     {key:"players",label:"Jogadores",value:delta.players,decimals:0},{key:"defenders",label:"Defensores",value:delta.defenders,decimals:0},{key:"midfielders",label:"Meio-campo",value:delta.midfielders,decimals:0},
     {key:"attackers",label:"Atacantes",value:delta.attackers,decimals:0},{key:"speed",label:"Físico / Pos.",value:delta.speed,decimals:1},{key:"skill",label:"Técnica / Def.",value:delta.skill,decimals:1},
@@ -43,12 +43,12 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
     </View>
     <View style={styles.section}>
       <Text style={styles.heading}>Diferenças entre os times</Text>
-      <Text style={styles.hint}>Quanto mais próximo de zero, mais semelhantes estão os times.</Text>
+      <Text style={styles.hint}>{usesBaseTeams?"Os atributos e a pontuação comparam times-base do mesmo tamanho; o jogador adicional fica fora desses indicadores.":"Quanto mais próximo de zero, mais semelhantes estão os times."}</Text>
       <View style={styles.metricGrid}>{metrics.map(metric=>{const side=metricSide(metric.key,Number(metric.value||0));return <View key={metric.key} style={styles.metric}><Text style={styles.metricLabel}>{metric.label}</Text><Text style={styles.metricValue}>{Number(metric.value||0).toFixed(metric.decimals)}</Text><Text style={[styles.metricSide,{color:sideColor(side)}]}>{sideLabel(side)}</Text></View>})}</View>
     </View>
-    {result.blueMetrics && result.yellowMetrics ? <View style={styles.teamAverages}>
-      <View style={[styles.teamAverage, { backgroundColor: teamPalette.blueSoft }]}><Text style={{ color: teamPalette.blue, fontWeight: "900" }}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{result.blueMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
-      <View style={[styles.teamAverage, { backgroundColor: teamPalette.yellowSoft }]}><Text style={{ color: teamPalette.yellow, fontWeight: "900" }}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{result.yellowMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>média geral</Text></View>
+    {blueAverageMetrics && yellowAverageMetrics ? <View style={styles.teamAverages}>
+      <View style={[styles.teamAverage, { backgroundColor: teamPalette.blueSoft }]}><Text style={{ color: teamPalette.blue, fontWeight: "900" }}>{brand.teamBlueName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{blueAverageMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>{usesBaseTeams?"média do time-base":"média geral"}</Text></View>
+      <View style={[styles.teamAverage, { backgroundColor: teamPalette.yellowSoft }]}><Text style={{ color: teamPalette.yellow, fontWeight: "900" }}>{brand.teamYellowName.toLocaleUpperCase("pt-BR")}</Text><Text style={styles.averageValue}>{yellowAverageMetrics.scoreAvg.toFixed(2)}</Text><Text style={styles.metricLabel}>{usesBaseTeams?"média do time-base":"média geral"}</Text></View>
     </View> : null}
     <View style={styles.section}>
       <Text style={styles.heading}>Como o algoritmo classificou</Text>

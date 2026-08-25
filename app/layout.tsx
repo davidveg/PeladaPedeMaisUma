@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { db, ensureDb } from "../lib/database";
 import { DEFAULT_INSTANCE_CONFIGURATION, instanceConfigurationFromRow } from "../lib/instance-config";
@@ -15,6 +15,12 @@ const siteIcons: Metadata["icons"] = {
   ],
   shortcut: "/favicon.ico",
   apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -30,6 +30,23 @@ test("transferência individual atualiza quantidade, custo e classificação", (
   assert.equal(next.rating, "Equilíbrio limitado");
 });
 
+test("lista ímpar recalcula dois times-base e identifica o jogador adicional",()=>{
+  const additional=player("b-mid","Meio-campo"),next=recalculateTeamResult(result,[...blue,additional],yellow);
+  assert.equal(next.extraId,additional.id);
+  assert.equal(next.blueBaseMetrics.count,next.yellowBaseMetrics.count);
+  assert.equal(next.blueBaseMetrics.count,2);
+  assert.equal(next.blueBaseMetrics.scoreAvg,next.yellowBaseMetrics.scoreAvg);
+  assert.equal(next.delta.baseTeams,true);
+  assert.equal(next.delta.players,1);
+  assert.equal(next.cost,0);
+});
+
+test("lista ímpar não escolhe um jogador protegido como adicional",()=>{
+  const star={...player("star","Ataque"),speed:5,skill:5,marking:5,tacticalIntelligence:5,competitiveness:5},additional=player("regular","Meio-campo");
+  const next=recalculateTeamResult({...result,protectedTopPlayersPercentage:.25},[...blue,star,additional],[...yellow,player("y-extra","Ataque")]);
+  assert.notEqual(next.extraId,star.id);
+});
+
 test("usa as mesmas faixas de classificação do algoritmo", () => {
   assert.equal(balanceRating(34.99), "Excelente equilíbrio");
   assert.equal(balanceRating(35), "Bom equilíbrio");

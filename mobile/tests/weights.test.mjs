@@ -1,30 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultWeights, goalkeeperWeightKeys, lineWeightKeys, normalizeWeights } from "../src/weights.ts";
+import { defaultWeights, goalkeeperWeightKeys, lineWeightKeys, updateWeight, weightTotalPercent } from "../src/weights.ts";
 
-test("ajusta os outros pesos proporcionalmente e mantém 100%", () => {
-  const next = normalizeWeights({ speedWeight: .48, skillWeight: .32, markingWeight: .2 }, "speedWeight", .6);
+test("altera somente o peso escolhido", () => {
+  const next = updateWeight(defaultWeights, "speedWeight", .6);
   assert.equal(next.speedWeight, .6);
-  assert.ok(Math.abs(next.skillWeight + next.markingWeight - .4) < .0001);
-  assert.ok(Math.abs(next.speedWeight + next.skillWeight + next.markingWeight - 1) < .0001);
-});
-
-test("limita pesos ao intervalo entre zero e um", () => {
-  assert.equal(normalizeWeights({ speedWeight: .4, skillWeight: .4, markingWeight: .2 }, "markingWeight", 2).markingWeight, 1);
-});
-
-test("redistribui somente os cinco pesos dos jogadores de linha", () => {
-  const next = normalizeWeights(defaultWeights, lineWeightKeys, "tacticalIntelligenceWeight", .4);
-  const lineTotal = lineWeightKeys.reduce((sum, key) => sum + next[key], 0);
-  assert.ok(Math.abs(lineTotal - 1) < .0001);
-  assert.equal(next.tacticalIntelligenceWeight, .4);
+  assert.equal(next.skillWeight, defaultWeights.skillWeight);
+  assert.equal(next.markingWeight, defaultWeights.markingWeight);
   assert.equal(next.goalkeeperDefensesWeight, defaultWeights.goalkeeperDefensesWeight);
 });
 
-test("redistribui somente os cinco pesos dos goleiros", () => {
-  const next = normalizeWeights(defaultWeights, goalkeeperWeightKeys, "goalkeeperSafetyWeight", .35);
-  const goalkeeperTotal = goalkeeperWeightKeys.reduce((sum, key) => sum + next[key], 0);
-  assert.ok(Math.abs(goalkeeperTotal - 1) < .0001);
-  assert.equal(next.goalkeeperSafetyWeight, .35);
-  assert.equal(next.speedWeight, defaultWeights.speedWeight);
+test("limita pesos ao intervalo entre zero e um", () => {
+  assert.equal(updateWeight(defaultWeights, "markingWeight", 2).markingWeight, 1);
+  assert.equal(updateWeight(defaultWeights, "markingWeight", -1).markingWeight, 0);
+});
+
+test("arredonda o valor alterado para pontos percentuais inteiros", () => {
+  assert.equal(updateWeight(defaultWeights, "tacticalIntelligenceWeight", .236).tacticalIntelligenceWeight, .24);
+});
+
+test("calcula os totais dos grupos em porcentagem", () => {
+  assert.equal(weightTotalPercent(defaultWeights, lineWeightKeys), 100);
+  assert.equal(weightTotalPercent(defaultWeights, goalkeeperWeightKeys), 100);
+  const changed = updateWeight(defaultWeights, "goalkeeperSafetyWeight", .35);
+  assert.equal(weightTotalPercent(changed, goalkeeperWeightKeys), 115);
 });

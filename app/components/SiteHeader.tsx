@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 
@@ -31,8 +31,12 @@ export function SiteHeader({
   isAdmin?: boolean;
 }) {
   const { config } = useInstanceBranding();
+  const activeLink = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    activeLink.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [active]);
   const link = (section: SiteSection, href: string, label: string) => (
-    <a className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
+    <a ref={active === section ? activeLink : undefined} className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       {label}
     </a>
   );

@@ -18,6 +18,7 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.match(source, /link\("separations", "\/separacoes-salvas", "Separações salvas"\)/);
   assert.match(source, /link\("admin", "\/admin", "Painel Administrativo"\)/);
   assert.match(source, /href="\/separacoes-salvas" className="brand"/);
+  assert.match(source, /scrollIntoView\(\{ block: "nearest", inline: "center" \}\)/);
   assert.match(worker, /text\/html/);
   assert.match(worker, /text\/x-component/);
   assert.match(worker, /no-cache, must-revalidate/);

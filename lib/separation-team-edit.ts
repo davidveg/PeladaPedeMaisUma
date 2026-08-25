@@ -1,6 +1,6 @@
 /* Saved snapshots remain schema-flexible for historical compatibility. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { calculateTeamDelta, defaultConfig, guestBalancePenalty, type Config, type Player } from "./football.ts";
+import { defaultConfig, recalculateTeamBalance, type Config, type Player } from "./football.ts";
 
 export function rebuildEditedSeparation(snapshot: any, blueInput: unknown, yellowInput: unknown) {
   const currentBlue = Array.isArray(snapshot?.blue) ? snapshot.blue as Player[] : [];
@@ -15,18 +15,8 @@ export function rebuildEditedSeparation(snapshot: any, blueInput: unknown, yello
   const byId = new Map(players.map(player => [String(player.id), player]));
   const blue = blueIds.map(id => byId.get(id)!), yellow = yellowIds.map(id => byId.get(id)!);
   const config: Config = { ...defaultConfig, ...snapshot };
-  const metrics = calculateTeamDelta(blue, yellow, config);
-  const maximumPositionDifference = Number(snapshot?.maximumPositionDifference ?? config.maximumPositionDifference ?? 1);
-  const positionDifferences = [metrics.delta.defenders, metrics.delta.midfielders, metrics.delta.attackers];
-  const positionDifference = positionDifferences.reduce((sum, value) => sum + value, 0);
-  const positionExcess = positionDifferences.reduce((sum, value) => sum + Math.max(0, value - maximumPositionDifference), 0);
-  const attributeDifference = Math.abs((metrics.blueMetrics.total - metrics.blueMetrics.momentum) - (metrics.yellowMetrics.total - metrics.yellowMetrics.momentum));
-  const cost = metrics.delta.players * 1000 + positionExcess * 2000 + positionDifference * 120 + guestBalancePenalty(blue, yellow)
-    + attributeDifference * 14 + Math.abs(metrics.blueMetrics.scoreAvg - metrics.yellowMetrics.scoreAvg) * 18;
-  const rating = cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
   const preserved = { ...snapshot };
-  delete preserved.extraId;
-  return { ...preserved, blue, yellow, ...metrics, cost, rating };
+  return { ...preserved, blue, yellow, ...recalculateTeamBalance(blue,yellow,config) };
 }
 
 function stringIds(value: unknown) {

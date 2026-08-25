@@ -33,6 +33,10 @@ async function fixture() {
 test("gera mensalidades com valor personalizado e impede competência duplicada", async () => {
   const f = await fixture();
   try {
+    await Promise.all([
+      db().prepare(`UPDATE players SET display_name='Zulu' WHERE id=?`).bind(f.playerA).run(),
+      db().prepare(`UPDATE players SET display_name='Álvaro' WHERE id=?`).bind(f.playerB).run(),
+    ]);
     assert.equal((await post({ action: "save-settings", defaultMonthlyFeeCents: 10000, defaultDueDay: 10, openingBalanceCents: 35000, initialCompetence: "2026-08", pixKey: "financeiro@example.com", players: [{ playerId: f.playerA, monthlyEnabled: true, customMonthlyFeeCents: null }, { playerId: f.playerB, monthlyEnabled: true, customMonthlyFeeCents: 8000 }] })).status, 200);
     const generated = await post({ action: "generate-monthly", competence: "2026-08" });
     assert.equal(generated.status, 200); assert.equal((await generated.json()).created, 2);
@@ -41,7 +45,10 @@ test("gera mensalidades com valor personalizado e impede competência duplicada"
       { player_id: f.playerA, amount_cents: 10000, due_date: "2026-08-10", status: "PENDING" },
       { player_id: f.playerB, amount_cents: 8000, due_date: "2026-08-10", status: "PENDING" },
     ]);
-    assert.equal((await get("2026-08")).settings.pixKey, "financeiro@example.com");
+    const view = await get("2026-08");
+    assert.equal(view.settings.pixKey, "financeiro@example.com");
+    assert.deepEqual(view.charges.map(item => item.playerName), ["Álvaro", "Zulu"]);
+    assert.deepEqual(view.players.slice(0, 2).map(item => item.displayName), ["Álvaro", "Zulu"]);
     assert.equal((await post({ action: "generate-monthly", competence: "2026-08" })).status, 409);
   } finally { await f.cleanup(); }
 });
