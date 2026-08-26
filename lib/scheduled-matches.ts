@@ -22,7 +22,7 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
               CASE WHEN m.status='OPEN' THEN m.match_at END ASC,
               m.match_at DESC`,
   ).all(), db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>(),
-    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position,secondary_position FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
     db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first()]);
   const rows = matchResult.results as any[];
   const instance = instanceConfigurationFromRow(instanceRow as any);
@@ -481,7 +481,7 @@ function publicMatch(
 }
 
 function publicPlayer(row: any) {
-  return { id: String(row.id), displayName: String(row.display_name), photoUrl: row.photo_url || null, type: row.type, primaryPosition: row.primary_position };
+  return { id: String(row.id), displayName: String(row.display_name), photoUrl: row.photo_url || null, type: row.type, primaryPosition: row.primary_position, secondaryPosition: row.secondary_position ?? null };
 }
 
 function mapAttendance(row: any, playerName: string, maxChanges: number) {
@@ -498,7 +498,7 @@ function mapPlayer(row: any): Player {
   return {
     id: String(row.id), fullName: String(row.full_name), displayName: String(row.display_name),
     nickname: row.nickname, aliases: JSON.parse(row.aliases || "[]"), type: row.type,
-    primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill),
+    primaryPosition: row.primary_position, secondaryPosition: row.secondary_position ?? null, speed: Number(row.speed), skill: Number(row.skill),
     marking: Number(row.marking ?? 3), tacticalIntelligence:Number(row.tactical_intelligence??3), competitiveness:Number(row.competitiveness??3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3),
     goalExit: Number(row.goal_exit ?? row.marking ?? 3), goalkeeperSafety:Number(row.goalkeeper_safety??3), goalkeeperLeadership:Number(row.goalkeeper_leadership??3), momentum: Number(row.momentum ?? 0),
     resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0),

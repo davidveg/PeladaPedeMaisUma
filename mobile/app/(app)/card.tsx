@@ -63,7 +63,7 @@ const palettes = {
 type StatTone = "default" | "positive" | "negative" | "special";
 type PhotoAction = "choose" | "remove";
 type PhotoResult = { cancelled: true } | { cancelled: false; photoUrl: string | null };
-type ProfileDraft = { fullName: string; nickname: string; primaryPosition: string; notes: string };
+type ProfileDraft = { fullName: string; nickname: string; primaryPosition: string; secondaryPosition: string; notes: string };
 const MAX_PHOTO_SIZE = 5_000_000;
 
 export default function MyCard() {
@@ -113,6 +113,7 @@ export default function MyCard() {
           fullName: current.fullName || current.displayName,
           nickname: current.nickname || "",
           primaryPosition: current.primaryPosition,
+          secondaryPosition: current.secondaryPosition || "",
           notes: current.notes || "",
           photoUrl,
         }),
@@ -200,7 +201,7 @@ export default function MyCard() {
           <View style={styles.identity}>
             <Text style={[styles.tierBadge, { backgroundColor: palette.badge, borderColor: palette.badgeBorder, color: palette.text }]}>{playerCardTierLabel(tier)}</Text>
             <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>{player.displayName}</Text>
-            <Text style={[styles.role, { color: palette.muted }]}>{player.primaryPosition} · {typeLabel(player.type)}</Text>
+            <Text style={[styles.role, { color: palette.muted }]}>Principal: {player.primaryPosition}{player.secondaryPosition ? ` · Secundária: ${player.secondaryPosition}` : ""} · {typeLabel(player.type)}</Text>
           </View>
           <View style={styles.overall}>
             <Text style={[styles.overallValue, { color: palette.text }]}>{overall.toFixed(1)}</Text>
@@ -232,6 +233,7 @@ export default function MyCard() {
           <ProfileInfo label="Nome completo" value={player.fullName || player.displayName}/>
           <ProfileInfo label="Apelido" value={player.nickname || "Não informado"}/>
           <ProfileInfo label="Posição" value={player.primaryPosition}/>
+          {player.secondaryPosition ? <ProfileInfo label="Posição secundária" value={player.secondaryPosition}/> : null}
           <ProfileInfo label="Observações" value={player.notes || "Nenhuma observação"}/>
         </View>
         <Button title="Editar minhas informações" onPress={() => setEditing(true)}/>
@@ -250,6 +252,7 @@ function ProfileEditor({ player, onClose, onSaved }: { player: Player; onClose()
     fullName: player?.fullName || player?.displayName || "",
     nickname: player?.nickname || "",
     primaryPosition: player?.primaryPosition || "Meio-campo",
+    secondaryPosition: player?.secondaryPosition || "",
     notes: player?.notes || "",
   });
   const save = useMutation({
@@ -261,6 +264,7 @@ function ProfileEditor({ player, onClose, onSaved }: { player: Player; onClose()
     onError: (error: Error) => Alert.alert("Não foi possível atualizar o perfil", error.message),
   });
   const set = (key: keyof ProfileDraft, value: string) => setDraft(current => ({ ...current, [key]: value }));
+  const setPrimaryPosition = (primaryPosition: string) => setDraft(current => ({ ...current, primaryPosition, secondaryPosition: primaryPosition === "Goleiro" || current.secondaryPosition === primaryPosition ? "" : current.secondaryPosition }));
   const valid = draft.fullName.trim().length >= 2 && draft.fullName.trim().length <= 120 && draft.nickname.trim().length <= 60 && draft.notes.trim().length <= 1000;
   return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.editorScreen}>
@@ -269,7 +273,8 @@ function ProfileEditor({ player, onClose, onSaved }: { player: Player; onClose()
         <Text style={styles.profileDescription}>Você pode editar seus dados pessoais. As avaliações esportivas são alteradas somente pelos administradores.</Text>
         <Field label="Nome completo" value={draft.fullName} maxLength={120} autoCapitalize="words" onChangeText={value => set("fullName", value)}/>
         <Field label="Apelido" value={draft.nickname} maxLength={60} autoCapitalize="words" onChangeText={value => set("nickname", value)}/>
-        <View style={styles.positionField}><Text style={styles.positionLabel}>Posição</Text><View style={styles.positionOptions}>{["Defesa", "Meio-campo", "Ataque", "Goleiro"].map(position => <Pressable key={position} accessibilityRole="radio" accessibilityState={{ checked: draft.primaryPosition === position }} onPress={() => set("primaryPosition", position)} style={[styles.positionOption, draft.primaryPosition === position && styles.positionOptionSelected]}><Text style={[styles.positionOptionText, draft.primaryPosition === position && styles.positionOptionTextSelected]}>{position}</Text></Pressable>)}</View></View>
+        <View style={styles.positionField}><Text style={styles.positionLabel}>Posição principal</Text><View style={styles.positionOptions}>{["Defesa", "Meio-campo", "Ataque", "Goleiro"].map(position => <Pressable key={position} accessibilityRole="radio" accessibilityState={{ checked: draft.primaryPosition === position }} onPress={() => setPrimaryPosition(position)} style={[styles.positionOption, draft.primaryPosition === position && styles.positionOptionSelected]}><Text style={[styles.positionOptionText, draft.primaryPosition === position && styles.positionOptionTextSelected]}>{position}</Text></Pressable>)}</View></View>
+        {draft.primaryPosition !== "Goleiro" ? <View style={styles.positionField}><Text style={styles.positionLabel}>Posição secundária (opcional)</Text><View style={styles.positionOptions}><Pressable accessibilityRole="radio" accessibilityState={{ checked: !draft.secondaryPosition }} onPress={() => set("secondaryPosition", "")} style={[styles.positionOption, !draft.secondaryPosition && styles.positionOptionSelected]}><Text style={[styles.positionOptionText, !draft.secondaryPosition && styles.positionOptionTextSelected]}>Nenhuma</Text></Pressable>{["Defesa", "Meio-campo", "Ataque"].filter(position => position !== draft.primaryPosition).map(position => <Pressable key={position} accessibilityRole="radio" accessibilityState={{ checked: draft.secondaryPosition === position }} onPress={() => set("secondaryPosition", position)} style={[styles.positionOption, draft.secondaryPosition === position && styles.positionOptionSelected]}><Text style={[styles.positionOptionText, draft.secondaryPosition === position && styles.positionOptionTextSelected]}>{position}</Text></Pressable>)}</View><Text style={styles.positionHint}>Usada apenas quando melhorar o equilíbrio dos times.</Text></View> : null}
         <Field label="Observações" value={draft.notes} maxLength={1000} multiline numberOfLines={5} onChangeText={value => set("notes", value)}/>
         <View style={styles.editorActions}><Button title="Cancelar" variant="secondary" disabled={save.isPending} onPress={onClose}/><Button title="Salvar alterações" busy={save.isPending} disabled={!valid} onPress={() => save.mutate()}/></View>
       </ScrollView>
@@ -333,6 +338,7 @@ const styles = StyleSheet.create({
   editorClose: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#E8EEEA", alignItems: "center", justifyContent: "center" },
   positionField: { gap: 8 },
   positionLabel: { color: colors.text, fontWeight: "700" },
+  positionHint: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   positionOptions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   positionOption: { minHeight: 42, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   positionOptionSelected: { borderColor: colors.green, backgroundColor: "#E5F0E9" },

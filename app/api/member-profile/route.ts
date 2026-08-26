@@ -2,6 +2,7 @@ import { audit, db, playerAccountRequired } from "../../../lib/database";
 import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
+import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
 
 const positions = new Set(["Defesa", "Meio-campo", "Ataque", "Goleiro"]);
 
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
     db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier,track_contributions,card_tiers_enabled,card_bronze_max,card_silver_max,card_gold_max FROM career_configuration WHERE id=1`).first<any>(),
   ]);
   if (!row) return Response.json({ member: { ...member, playerId: null }, player: null });
-  const player = attachPlayerCareerStats({ id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, type: row.type, primaryPosition: row.primary_position, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), tacticalIntelligence:Number(row.tactical_intelligence??3), competitiveness:Number(row.competitiveness??3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), goalkeeperSafety:Number(row.goalkeeper_safety??3), goalkeeperLeadership:Number(row.goalkeeper_leadership??3), momentum: Number(row.momentum ?? 0), resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), photoUrl: row.photo_url, notes: row.notes, active: !!row.active }, careerStats);
+  const player = attachPlayerCareerStats({ id: row.id, fullName: row.full_name, displayName: row.display_name, nickname: row.nickname, type: row.type, primaryPosition: row.primary_position, secondaryPosition: row.secondary_position ?? null, speed: Number(row.speed), skill: Number(row.skill), marking: Number(row.marking ?? 3), tacticalIntelligence:Number(row.tactical_intelligence??3), competitiveness:Number(row.competitiveness??3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3), goalExit: Number(row.goal_exit ?? row.marking ?? 3), goalkeeperSafety:Number(row.goalkeeper_safety??3), goalkeeperLeadership:Number(row.goalkeeper_leadership??3), momentum: Number(row.momentum ?? 0), resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), photoUrl: row.photo_url, notes: row.notes, active: !!row.active }, careerStats);
   return Response.json({ member, player, config: { speedWeight: Number(configuration?.speed_weight ?? .35), skillWeight: Number(configuration?.skill_weight ?? .25), markingWeight: Number(configuration?.marking_weight ?? .15), tacticalIntelligenceWeight:Number(configuration?.tactical_intelligence_weight??.2), competitivenessWeight:Number(configuration?.competitiveness_weight??.05), goalkeeperDefensesWeight:Number(configuration?.goalkeeper_defenses_weight??.4), goalkeeperPositioningWeight:Number(configuration?.goalkeeper_positioning_weight??.25), goalkeeperSafetyWeight:Number(configuration?.goalkeeper_safety_weight??.2), goalkeeperFootworkWeight:Number(configuration?.goalkeeper_footwork_weight??.1), goalkeeperLeadershipWeight:Number(configuration?.goalkeeper_leadership_weight??.05), ratingSystemVersion:2, resultMomentumMultiplier: Number(careerConfiguration?.result_momentum_multiplier ?? 1), momentumMultiplier: Number(careerConfiguration?.momentum_multiplier ?? 1), showContributions: Boolean(careerConfiguration?.track_contributions ?? 1), cardTiersEnabled: Boolean(careerConfiguration?.card_tiers_enabled ?? 0), cardBronzeMax: Number(careerConfiguration?.card_bronze_max ?? 2.4), cardSilverMax: Number(careerConfiguration?.card_silver_max ?? 3.9), cardGoldMax: Number(careerConfiguration?.card_gold_max ?? 4.5) } }, { headers: { "cache-control": "no-store" } });
 }
 
@@ -29,9 +30,13 @@ export async function PUT(request: Request) {
   if (fullName.length < 2 || fullName.length > 120) return Response.json({ error: "Informe um nome completo válido." }, { status: 400 });
   if (nickname.length > 60 || notes.length > 1000 || !positions.has(primaryPosition)) return Response.json({ error: "Revise apelido, posição e observações." }, { status: 400 });
   if (photoUrl && !/^\/api\/upload\?key=players(?:%2f|\/)/i.test(photoUrl)) return Response.json({ error: "A referência da foto é inválida." }, { status: 400 });
-  const previous = await db().prepare(`SELECT full_name,nickname,primary_position,photo_url,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(member.playerId).first();
+  const previous: any = await db().prepare(`SELECT full_name,nickname,type,primary_position,secondary_position,photo_url,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(member.playerId).first();
   if (!previous) return Response.json({ error: "Jogador não encontrado." }, { status: 404 });
-  await db().prepare(`UPDATE players SET full_name=?,nickname=?,primary_position=?,photo_url=?,notes=?,updated_at=? WHERE id=?`).bind(fullName, nickname || null, primaryPosition, photoUrl, notes || null, new Date().toISOString(), member.playerId).run();
-  await audit(member.accountType === "administrator" ? member.id : null, "MEMBER_PROFILE_UPDATE", "player", member.playerId, { fullName, nickname: nickname || null, primaryPosition, photoUrl, notes: notes || null, accountId: member.id, accountType: member.accountType }, previous);
+  const requestedSecondary = Object.prototype.hasOwnProperty.call(payload, "secondaryPosition") ? payload.secondaryPosition : previous.secondary_position;
+  const positionError = secondaryPositionValidationError(primaryPosition, requestedSecondary, previous.type);
+  if (positionError) return Response.json({ error: positionError }, { status: 400 });
+  const secondaryPosition = normalizeSecondaryPosition(primaryPosition, requestedSecondary, previous.type);
+  await db().prepare(`UPDATE players SET full_name=?,nickname=?,primary_position=?,secondary_position=?,photo_url=?,notes=?,updated_at=? WHERE id=?`).bind(fullName, nickname || null, primaryPosition, secondaryPosition, photoUrl, notes || null, new Date().toISOString(), member.playerId).run();
+  await audit(member.accountType === "administrator" ? member.id : null, "MEMBER_PROFILE_UPDATE", "player", member.playerId, { fullName, nickname: nickname || null, primaryPosition, secondaryPosition, photoUrl, notes: notes || null, accountId: member.id, accountType: member.accountType }, previous);
   return Response.json({ ok: true, message: "Perfil atualizado com sucesso." });
 }

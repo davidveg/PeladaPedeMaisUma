@@ -2,12 +2,14 @@ import { staffRequired, audit, db, ensureDb } from "../../../lib/database";
 import { normalizeName } from "../../../lib/football";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 import { isPlayerType, playerTypeValidationError } from "../../../lib/player-types";
+import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
 
 const map = (row: any) => ({
   ...row,
   fullName: row.full_name,
   displayName: row.display_name,
   primaryPosition: row.primary_position,
+  secondaryPosition: row.secondary_position ?? null,
   photoUrl: row.photo_url,
   marking: Number(row.marking ?? 3),
   tacticalIntelligence: Number(row.tactical_intelligence ?? 3),
@@ -47,6 +49,9 @@ export async function POST(request: Request) {
   }
   const typeError = playerTypeValidationError(playerType, payload.primaryPosition);
   if (typeError) return Response.json({ error: typeError }, { status: 400 });
+  const positionError = secondaryPositionValidationError(payload.primaryPosition, payload.secondaryPosition, playerType);
+  if (positionError) return Response.json({ error: positionError }, { status: 400 });
+  const secondaryPosition = normalizeSecondaryPosition(payload.primaryPosition, payload.secondaryPosition, playerType);
 
   const rows = await db().prepare("SELECT * FROM players WHERE deleted_at IS NULL AND active=1").all();
   const normalized = normalizeName(displayName);
@@ -57,9 +62,9 @@ export async function POST(request: Request) {
   if (existing) return Response.json({ player: map(existing), reused: true });
 
   const id = crypto.randomUUID(), now = new Date().toISOString();
-  await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(id, String(payload.fullName || displayName).trim(), displayName, String(payload.nickname || "").trim() || null, "[]", playerType, payload.primaryPosition, speed, skill, marking, tacticalIntelligence, competitiveness, goalkeeperPositioning, goalExit, goalkeeperSafety, goalkeeperLeadership, null, 1, String(payload.notes || "").trim() || null, now, now).run();
+  await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,secondary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(id, String(payload.fullName || displayName).trim(), displayName, String(payload.nickname || "").trim() || null, "[]", playerType, payload.primaryPosition, secondaryPosition, speed, skill, marking, tacticalIntelligence, competitiveness, goalkeeperPositioning, goalExit, goalkeeperSafety, goalkeeperLeadership, null, 1, String(payload.notes || "").trim() || null, now, now).run();
   const created = await db().prepare("SELECT * FROM players WHERE id=?").bind(id).first();
-  await audit(admin.id, "CREATE", "player", id, { displayName, type: playerType, primaryPosition: payload.primaryPosition, speed, skill, marking, tacticalIntelligence, competitiveness, goalkeeperPositioning, goalExit, goalkeeperSafety, goalkeeperLeadership });
+  await audit(admin.id, "CREATE", "player", id, { displayName, type: playerType, primaryPosition: payload.primaryPosition, secondaryPosition, speed, skill, marking, tacticalIntelligence, competitiveness, goalkeeperPositioning, goalExit, goalkeeperSafety, goalkeeperLeadership });
   return Response.json({ player: map(created), reused: false }, { status: 201 });
 }

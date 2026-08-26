@@ -8,6 +8,7 @@ export function publicPlayer(row: any): Player {
     displayName,
     type: String(row.type ?? "monthly"),
     primaryPosition: row.primary_position ?? row.primaryPosition,
+    secondaryPosition: row.secondary_position ?? row.secondaryPosition ?? null,
     speed: Number(row.speed ?? 3),
     skill: Number(row.skill ?? 3),
     marking: Number(row.marking ?? 3),

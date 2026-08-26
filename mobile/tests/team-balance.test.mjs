@@ -47,6 +47,14 @@ test("lista ímpar não escolhe um jogador protegido como adicional",()=>{
   assert.notEqual(next.extraId,star.id);
 });
 
+test("usa a posição secundária quando ela reduz a diferença entre as faixas",()=>{
+  const flexible={...player("flex","Ataque"),secondaryPosition:"Meio-campo"};
+  const next=recalculateTeamResult(result,[player("b-def-2","Defesa"),flexible],[player("y-def-2","Defesa"),player("y-mid","Meio-campo")]);
+  assert.equal(next.delta.midfielders,0);
+  assert.equal(next.delta.attackers,0);
+  assert.equal(next.cost,0);
+});
+
 test("usa as mesmas faixas de classificação do algoritmo", () => {
   assert.equal(balanceRating(34.99), "Excelente equilíbrio");
   assert.equal(balanceRating(35), "Bom equilíbrio");

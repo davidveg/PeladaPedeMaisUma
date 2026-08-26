@@ -3,8 +3,8 @@ import { audit, db, playerAccountRequired } from "../../../lib/database";
 export async function GET(request: Request) {
   const member = await playerAccountRequired(request);
   if (!member) return Response.json({ error: "Não autorizado." }, { status: 401 });
-  const rows = await db().prepare(`SELECT p.id,p.display_name,p.type,p.primary_position,p.photo_url FROM players p LEFT JOIN player_account_links l ON l.player_id=p.id WHERE p.deleted_at IS NULL AND p.active=1 AND l.player_id IS NULL ORDER BY p.display_name`).all();
-  return Response.json({ players: rows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, primaryPosition: row.primary_position, photoUrl: row.photo_url })) }, { headers: { "cache-control": "no-store" } });
+  const rows = await db().prepare(`SELECT p.id,p.display_name,p.type,p.primary_position,p.secondary_position,p.photo_url FROM players p LEFT JOIN player_account_links l ON l.player_id=p.id WHERE p.deleted_at IS NULL AND p.active=1 AND l.player_id IS NULL ORDER BY p.display_name`).all();
+  return Response.json({ players: rows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, primaryPosition: row.primary_position, secondaryPosition: row.secondary_position ?? null, photoUrl: row.photo_url })) }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function POST(request: Request) {

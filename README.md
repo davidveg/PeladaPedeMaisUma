@@ -30,6 +30,7 @@ Documentação complementar:
 ### Jogadores e contas
 
 - Cadastro de mensalistas, convidados e goleiros.
+- Jogadores de linha podem informar uma posição secundária opcional; goleiros permanecem com posição única.
 - Correspondência por nome de exibição, nome completo, apelido e aliases.
 - Foto individual com avatar padrão quando não houver imagem.
 - Notas decimais entre 1 e 5:
@@ -38,7 +39,7 @@ Documentação complementar:
   - todos os jogadores: Momentum.
 - Contas comuns e administrativas podem ser associadas a um jogador.
 - Cada conta aceita um único jogador e cada jogador aceita um único login, independentemente do tipo da conta.
-- A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição e observações.
+- A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição principal, posição secundária e observações.
 - Recuperação de senha por e-mail para administradores e contas de jogadores.
 - Administradores podem redefinir uma senha temporária de conta de jogador e revogar todas as sessões anteriores.
 - Perfil intermediário de **moderador**, promovido a partir de uma conta de jogador e sempre reversível pelo administrador.
@@ -81,6 +82,7 @@ Documentação complementar:
 - A configuração dos rascunhos é independente do Modo Carreira e não altera o estado das demais funcionalidades.
 - Se a lista de presentes mudar, o rascunho é marcado como desatualizado e uma nova proposta precisa ser validada antes da publicação oficial.
 - Nova proposta, troca manual entre equipes, métricas e indicador de equilíbrio.
+- O algoritmo considera cada jogador de linha em uma única faixa por proposta e pode usar sua posição secundária quando isso reduzir a diferença de Defesas, Meio-campistas e Atacantes entre os times.
 - Nomes e cores das duas equipes configuráveis por instância; os padrões são Time Azul e Time Amarelo.
 - Criação e confirmação de separações exclusivas para administradores.
 - Snapshot histórico das equipes e das regras utilizadas, preservando a partida mesmo após alterações futuras nos cadastros.

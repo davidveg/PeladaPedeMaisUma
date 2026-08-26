@@ -2,7 +2,7 @@ export type Role = "admin" | "moderator" | "player";
 export type Account = { id: string; email: string; role: Role; playerId: string | null; permissions?: string[] };
 export type Session = { account: Account; accessToken: string; refreshToken: string; accessExpiresAt: string; refreshExpiresAt: string };
 export type CareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
-export type Player = { id: string; displayName: string; fullName?: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: string; speed: number; skill: number; marking?: number; tacticalIntelligence?:number; competitiveness?:number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?:number; goalkeeperLeadership?:number; momentum?: number; resultMomentum?: number; votingMomentum?: number; historicalPerformance?: { adjustment?: number; confidence?: number; games?: number; recentMatches?: number }; photoUrl?: string | null; notes?: string | null; careerStats?: CareerStats };
+export type Player = { id: string; displayName: string; fullName?: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: string; secondaryPosition?: string | null; speed: number; skill: number; marking?: number; tacticalIntelligence?:number; competitiveness?:number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?:number; goalkeeperLeadership?:number; momentum?: number; resultMomentum?: number; votingMomentum?: number; historicalPerformance?: { adjustment?: number; confidence?: number; games?: number; recentMatches?: number }; photoUrl?: string | null; notes?: string | null; careerStats?: CareerStats };
 export type Contribution = { team: "BLUE" | "YELLOW"; scorerPlayerId: string; assistPlayerId?: string | null; ownGoal?: boolean; scorerName?: string; assistName?: string | null };
 export type CareerResultEntry = { playerId: string; place: number; points: number; firstVotes: number; secondVotes: number; thirdVotes: number; momentum: number };
 export type CareerVotingResults = { voteCount: number; motm: CareerResultEntry[]; dotm: CareerResultEntry[] };
@@ -28,7 +28,7 @@ export type ScheduledMatch = {
   viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean };
   createdAt: string; updatedAt: string;
 };
-export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string };
+export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string; secondaryPosition?: string | null };
 export type MatchListPayload = { matches: ScheduledMatch[]; players?: MatchPlayer[]; serverNow: string };
 export type AppNotification = { id: string; type: string; title: string; body: string; matchId?: string | null; actionUrl?: string | null; readAt?: string | null; createdAt: string };
 export type NotificationPreferences = {

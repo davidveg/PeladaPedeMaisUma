@@ -33,11 +33,39 @@ function playerScore(player: Player, result: TeamResult) {
   return Math.round(Math.max(1, Math.min(5, raw)) * 10) / 10;
 }
 
-export function calculateMobileTeamMetrics(team: Player[], result: TeamResult): TeamMetrics {
-  const positions = { Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 };
+type PositionName = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
+type PositionCounts = Record<PositionName, number>;
+const linePositions: PositionName[] = ["Defesa", "Meio-campo", "Ataque"];
+const emptyPositions = (): PositionCounts => ({ Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 });
+
+function resolveBalancedPositions(blue: Player[], yellow: Player[], maximumPositionDifference: number) {
+  const bluePositions=emptyPositions(),yellowPositions=emptyPositions();
+  const flexible:{side:"blue"|"yellow";primary:PositionName;secondary:PositionName;used:boolean}[]=[];
+  for(const [side,team,positions] of [["blue",blue,bluePositions],["yellow",yellow,yellowPositions]] as const)for(const player of team){
+    const goalkeeper=player.type==="goalkeeper"||player.type==="casual"||player.primaryPosition==="Goleiro",primary=(goalkeeper?"Goleiro":player.primaryPosition) as PositionName,secondary=player.secondaryPosition as PositionName|null|undefined;
+    positions[primary]++;
+    if(!goalkeeper&&secondary&&linePositions.includes(secondary)&&secondary!==primary)flexible.push({side,primary,secondary,used:false});
+  }
+  const objective=()=>{const differences=linePositions.map(position=>Math.abs(bluePositions[position]-yellowPositions[position]));return{difference:differences.reduce((sum,value)=>sum+value,0),excess:differences.reduce((sum,value)=>sum+Math.max(0,value-maximumPositionDifference),0)}};
+  let current=objective(),secondaryUses=0;
+  while(true){
+    let selected:number|null=null,selectedObjective=current;
+    for(let index=0;index<flexible.length;index++){
+      const option=flexible[index];if(option.used)continue;const positions=option.side==="blue"?bluePositions:yellowPositions;
+      positions[option.primary]--;positions[option.secondary]++;const candidate=objective();positions[option.secondary]--;positions[option.primary]++;
+      if(candidate.excess<selectedObjective.excess||(candidate.excess===selectedObjective.excess&&candidate.difference<selectedObjective.difference)){selected=index;selectedObjective=candidate}
+    }
+    if(selected==null)break;
+    const option=flexible[selected],positions=option.side==="blue"?bluePositions:yellowPositions;positions[option.primary]--;positions[option.secondary]++;option.used=true;secondaryUses++;current=selectedObjective;
+  }
+  return{blue:bluePositions,yellow:yellowPositions,difference:current.difference,excess:current.excess,secondaryUses};
+}
+
+export function calculateMobileTeamMetrics(team: Player[], result: TeamResult, resolvedPositions?: PositionCounts): TeamMetrics {
+  const positions = resolvedPositions ?? emptyPositions();
   let speed = 0, skill = 0, marking = 0, tacticalIntelligence=0, competitiveness=0, momentum = 0, historicalLearning = 0, total = 0;
   for (const player of team) {
-    if (player.primaryPosition in positions) positions[player.primaryPosition as keyof typeof positions]++;
+    if (!resolvedPositions && player.primaryPosition in positions) positions[player.primaryPosition as keyof typeof positions]++;
     const value = attributes(player);
     speed += value.speed;
     skill += value.skill;
@@ -54,6 +82,11 @@ export function calculateMobileTeamMetrics(team: Player[], result: TeamResult): 
 
 export function balanceRating(cost: number) {
   return cost < 35 ? "Excelente equilíbrio" : cost < 80 ? "Bom equilíbrio" : cost < 150 ? "Equilíbrio aceitável" : "Equilíbrio limitado";
+}
+
+function calculatePairMetrics(blue: Player[], yellow: Player[], result: TeamResult) {
+  const resolved = resolveBalancedPositions(blue, yellow, Number(result.maximumPositionDifference ?? 1));
+  return { blueMetrics: calculateMobileTeamMetrics(blue, result, resolved.blue), yellowMetrics: calculateMobileTeamMetrics(yellow, result, resolved.yellow) };
 }
 
 function metricsDelta(blueMetrics:TeamMetrics,yellowMetrics:TeamMetrics):TeamDelta{
@@ -93,14 +126,14 @@ function metricsCost(blueMetrics:TeamMetrics,yellowMetrics:TeamMetrics,result:Te
 }
 
 export function recalculateTeamResult(result: TeamResult, blue: Player[], yellow: Player[]): TeamResult {
-  const blueMetrics=calculateMobileTeamMetrics(blue,result),yellowMetrics=calculateMobileTeamMetrics(yellow,result),actualDelta=metricsDelta(blueMetrics,yellowMetrics);
+  const actualMetrics=calculatePairMetrics(blue,yellow,result),blueMetrics=actualMetrics.blueMetrics,yellowMetrics=actualMetrics.yellowMetrics,actualDelta=metricsDelta(blueMetrics,yellowMetrics);
   if((blue.length+yellow.length)%2===1&&Math.abs(blue.length-yellow.length)===1){
     const allPlayers=[...blue,...yellow],line=allPlayers.filter(player=>player.primaryPosition!=="Goleiro"),configuredPercentage=Number(result.protectedTopPlayersPercentage),protectedPercentage=Number.isFinite(configuredPercentage)?Math.min(1,Math.max(0,configuredPercentage)):.25,protectedPerTeam=Math.min(Math.floor(line.length/2),Math.ceil(line.length*protectedPercentage/2)),protectedIds=new Set([...line].sort((a,b)=>playerScore(b,result)-playerScore(a,result)).slice(0,protectedPerTeam*2).map(player=>player.id));
     const largerKey=blue.length>yellow.length?"blue":"yellow",larger=largerKey==="blue"?blue:yellow,preferred=larger.filter(player=>player.primaryPosition!=="Goleiro"&&!protectedIds.has(player.id)),lineCandidates=larger.filter(player=>player.primaryPosition!=="Goleiro"),unprotected=larger.filter(player=>!protectedIds.has(player.id)),candidates=preferred.length?preferred:lineCandidates.length?lineCandidates:unprotected.length?unprotected:larger;
     let best:{extraId:string;blueBaseMetrics:TeamMetrics;yellowBaseMetrics:TeamMetrics;delta:TeamDelta;cost:number;score:number}|null=null;
     for(const candidate of candidates.length?candidates:larger){
       const blueBase=largerKey==="blue"?blue.filter(player=>player.id!==candidate.id):blue,yellowBase=largerKey==="yellow"?yellow.filter(player=>player.id!==candidate.id):yellow;
-      const blueBaseMetrics=calculateMobileTeamMetrics(blueBase,result),yellowBaseMetrics=calculateMobileTeamMetrics(yellowBase,result),delta=metricsDelta(blueBaseMetrics,yellowBaseMetrics),cost=metricsCost(blueBaseMetrics,yellowBaseMetrics,result),score=playerScore(candidate,result);
+      const baseMetrics=calculatePairMetrics(blueBase,yellowBase,result),blueBaseMetrics=baseMetrics.blueMetrics,yellowBaseMetrics=baseMetrics.yellowMetrics,delta=metricsDelta(blueBaseMetrics,yellowBaseMetrics),cost=metricsCost(blueBaseMetrics,yellowBaseMetrics,result),score=playerScore(candidate,result);
       if(!best||cost<best.cost||(cost===best.cost&&score<best.score))best={extraId:candidate.id,blueBaseMetrics,yellowBaseMetrics,delta,cost,score};
     }
     if(best)return{...result,blue,yellow,blueMetrics,yellowMetrics,blueBaseMetrics:best.blueBaseMetrics,yellowBaseMetrics:best.yellowBaseMetrics,delta:{...best.delta,players:actualDelta.players,baseTeams:true,advantage:{...best.delta.advantage,players:actualDelta.advantage?.players}},cost:best.cost,rating:balanceRating(best.cost),extraId:best.extraId};

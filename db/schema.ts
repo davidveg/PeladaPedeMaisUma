@@ -9,7 +9,7 @@ const timestamps = {
 export const players = sqliteTable("players", {
   id: text("id").primaryKey(), fullName: text("full_name").notNull(), displayName: text("display_name").notNull(),
   nickname: text("nickname"), aliases: text("aliases").notNull().default("[]"), type: text("type").notNull().default("monthly"),
-  primaryPosition: text("primary_position").notNull(), speed: real("speed").notNull(), skill: real("skill").notNull(), marking: real("marking").notNull().default(3),
+  primaryPosition: text("primary_position").notNull(), secondaryPosition: text("secondary_position"), speed: real("speed").notNull(), skill: real("skill").notNull(), marking: real("marking").notNull().default(3),
   tacticalIntelligence: real("tactical_intelligence").notNull().default(3), competitiveness: real("competitiveness").notNull().default(3),
   goalkeeperPositioning: real("goalkeeper_positioning").notNull().default(3), goalExit: real("goal_exit").notNull().default(3),
   goalkeeperSafety: real("goalkeeper_safety").notNull().default(3), goalkeeperLeadership: real("goalkeeper_leadership").notNull().default(3),

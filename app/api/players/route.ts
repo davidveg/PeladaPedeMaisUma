@@ -4,12 +4,14 @@ import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 import { attachHistoricalPerformance } from "../../../lib/historical-performance-store";
 import { playerTypeValidationError } from "../../../lib/player-types";
+import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
 
 const map = (row: any) => ({
   ...row,
   fullName: row.full_name,
   displayName: row.display_name,
   primaryPosition: row.primary_position,
+  secondaryPosition: row.secondary_position ?? null,
   photoUrl: row.photo_url,
   marking: Number(row.marking ?? 3),
   tacticalIntelligence: Number(row.tactical_intelligence ?? 3),
@@ -49,9 +51,12 @@ export async function POST(request: Request) {
   if (!validPlayer(player, values)) return Response.json({ error: "Preencha nome, posição e todos os atributos entre 1 e 5." }, { status: 400 });
   const typeError = playerTypeValidationError(player.type, player.primaryPosition);
   if (typeError) return Response.json({ error: typeError }, { status: 400 });
+  const positionError = secondaryPositionValidationError(player.primaryPosition, player.secondaryPosition, player.type);
+  if (positionError) return Response.json({ error: positionError }, { status: 400 });
+  const secondaryPosition = normalizeSecondaryPosition(player.primaryPosition, player.secondaryPosition, player.type);
   const id = crypto.randomUUID(), now = new Date().toISOString();
-  await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(id, player.fullName || player.displayName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type || "guest", player.primaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active === false ? 0 : 1, player.notes || null, now, now).run();
+  await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,secondary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(id, player.fullName || player.displayName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type || "guest", player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active === false ? 0 : 1, player.notes || null, now, now).run();
   await audit(admin.id, "CREATE", "player", id, { ...player, ...values });
   return Response.json({ id }, { status: 201 });
 }
@@ -66,11 +71,14 @@ export async function PUT(request: Request) {
   if (!validPlayer(player, values)) return Response.json({ error: "Preencha nome, posição e todos os atributos entre 1 e 5." }, { status: 400 });
   const typeError = playerTypeValidationError(player.type, player.primaryPosition);
   if (typeError) return Response.json({ error: typeError }, { status: 400 });
-  const previous = await db().prepare(`SELECT full_name,display_name,nickname,type,primary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(player.id).first();
+  const positionError = secondaryPositionValidationError(player.primaryPosition, player.secondaryPosition, player.type);
+  if (positionError) return Response.json({ error: positionError }, { status: 400 });
+  const previous: any = await db().prepare(`SELECT full_name,display_name,nickname,type,primary_position,secondary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(player.id).first();
   if (!previous) return Response.json({ error: "Jogador não encontrado." }, { status: 404 });
-  await db().prepare(`UPDATE players SET full_name=?,display_name=?,nickname=?,aliases=?,type=?,primary_position=?,speed=?,skill=?,marking=?,tactical_intelligence=?,competitiveness=?,goalkeeper_positioning=?,goal_exit=?,goalkeeper_safety=?,goalkeeper_leadership=?,photo_url=?,active=?,notes=?,updated_at=? WHERE id=? AND deleted_at IS NULL`)
-    .bind(player.fullName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type, player.primaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active ? 1 : 0, player.notes || null, new Date().toISOString(), player.id).run();
-  await audit(admin.id, "UPDATE", "player", player.id, { displayName: player.displayName, type: player.type, primaryPosition: player.primaryPosition, ...values, active: Boolean(player.active), photoUrl: player.photoUrl || null }, previous);
+  const secondaryPosition = Object.prototype.hasOwnProperty.call(player, "secondaryPosition") ? normalizeSecondaryPosition(player.primaryPosition, player.secondaryPosition, player.type) : normalizeSecondaryPosition(player.primaryPosition, previous.secondary_position, player.type);
+  await db().prepare(`UPDATE players SET full_name=?,display_name=?,nickname=?,aliases=?,type=?,primary_position=?,secondary_position=?,speed=?,skill=?,marking=?,tactical_intelligence=?,competitiveness=?,goalkeeper_positioning=?,goal_exit=?,goalkeeper_safety=?,goalkeeper_leadership=?,photo_url=?,active=?,notes=?,updated_at=? WHERE id=? AND deleted_at IS NULL`)
+    .bind(player.fullName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type, player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active ? 1 : 0, player.notes || null, new Date().toISOString(), player.id).run();
+  await audit(admin.id, "UPDATE", "player", player.id, { displayName: player.displayName, type: player.type, primaryPosition: player.primaryPosition, secondaryPosition, ...values, active: Boolean(player.active), photoUrl: player.photoUrl || null }, previous);
   return Response.json({ ok: true });
 }
 
