@@ -1,5 +1,6 @@
 import { addSeasonMonths, validateCareerConfig, type CareerConfig } from "../../../../lib/career";
 import { careerMatchFromRow, finalizeCareerMatch, finalizeIfExpired, getCareerConfig } from "../../../../lib/career-service";
+import { getCareerAwardControl } from "../../../../lib/career-awards";
 import { adminRequired as fullAdminRequired, audit, db, ensureDb, staffRequired, staffRequiredAny } from "../../../../lib/database";
 const adminRequired=(request:Request)=>request.method==="PUT"?fullAdminRequired(request):request.method==="GET"?staffRequiredAny(request,["CAREER_VOTES_MANAGE","MATCH_RESULTS_MANAGE"]):staffRequired(request,"CAREER_VOTES_MANAGE");
 
@@ -11,7 +12,7 @@ export async function GET(request:Request){
   const rows=(await db().prepare(`SELECT c.*,s.match_title,s.match_date,s.snapshot FROM career_matches c JOIN team_separations s ON s.id=c.separation_id ORDER BY c.created_at DESC`).all()).results;
   const matches=[];
   for(const row of rows){const snapshot=JSON.parse((row as any).snapshot),players=[...(snapshot.blue||[]),...(snapshot.yellow||[])],names=Object.fromEntries(players.map((player:any)=>[player.id,player.displayName]));const votes=(await db().prepare(`SELECT * FROM career_votes WHERE career_match_id=? ORDER BY created_at`).bind((row as any).id).all()).results.map((vote:any)=>({id:vote.id,voterPlayerId:vote.voter_player_id,voterName:names[vote.voter_player_id]||"Jogador",motm:[vote.motm_first_id,vote.motm_second_id,vote.motm_third_id].map((id:string)=>({id,name:names[id]||"Jogador"})),dotm:[vote.dotm_first_id,vote.dotm_second_id,vote.dotm_third_id].map((id:string)=>({id,name:names[id]||"Jogador"})),createdAt:vote.created_at}));matches.push({...careerMatchFromRow(row),matchTitle:(row as any).match_title,matchDate:(row as any).match_date,votes});}
-  return Response.json({config,matches});
+  return Response.json({config,matches,awards:await getCareerAwardControl()});
 }
 
 export async function PUT(request:Request){

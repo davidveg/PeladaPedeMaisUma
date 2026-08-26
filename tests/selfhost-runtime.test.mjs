@@ -382,3 +382,18 @@ test("migração adiciona a formação mensal e o histórico finalizado", async 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("migração preserva o resultado final de uma temporada", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-season-awards-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    const migration = await readFile(new URL("../drizzle/0037_career_award_closures.sql", import.meta.url), "utf8");
+    await bindings.DB.exec(migration);
+    await bindings.DB.prepare("INSERT INTO career_season_awards (season_number,year,started_at,ended_at,snapshot,finalized_by_administrator_id,finalized_at) VALUES (1,2026,'2026-01-01','2026-08-31','{}','admin-one','2026-08-31T12:00:00.000Z')").run();
+    assert.equal(await bindings.DB.prepare("SELECT COUNT(*) total FROM career_season_awards").first("total"), 1);
+    await assert.rejects(() => bindings.DB.prepare("INSERT INTO career_season_awards (season_number,year,ended_at,snapshot,finalized_by_administrator_id,finalized_at) VALUES (1,2026,'2026-08-31','{}','admin-one','2026-08-31T12:00:00.000Z')").run(), /UNIQUE/);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});

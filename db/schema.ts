@@ -266,3 +266,12 @@ export const careerMatchContributions = sqliteTable("career_match_contributions"
   id: text("id").primaryKey(), careerMatchId: text("career_match_id").notNull(), scorerPlayerId: text("scorer_player_id").notNull(),
   assistPlayerId: text("assist_player_id"), team: text("team").notNull(), ownGoal: integer("is_own_goal", { mode: "boolean" }).notNull().default(false), createdAt: text("created_at").notNull(),
 });
+
+export const monthlyCareerAwards = sqliteTable("monthly_career_awards", {
+  month: text("month").primaryKey(), year: integer("year").notNull(), snapshot: text("snapshot").notNull(), finalizedAt: text("finalized_at").notNull(),
+}, table => [index("monthly_career_awards_year_idx").on(table.year, table.month)]);
+
+export const careerSeasonAwards = sqliteTable("career_season_awards", {
+  seasonNumber: integer("season_number").primaryKey(), year: integer("year").notNull(), startedAt: text("started_at"), endedAt: text("ended_at").notNull(),
+  snapshot: text("snapshot").notNull(), finalizedByAdministratorId: text("finalized_by_administrator_id").notNull(), finalizedAt: text("finalized_at").notNull(),
+}, table => [index("career_season_awards_year_idx").on(table.year, table.seasonNumber)]);

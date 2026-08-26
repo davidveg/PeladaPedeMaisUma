@@ -109,27 +109,15 @@ export function buildMonthlyCareerHighlights(players: StatisticsPlayer[], matche
   const awards = [...months].map(([month, monthMatches]) => buildMonthAward(month, monthMatches, playerMap, formation)).filter(Boolean) as MonthlyCareerAward[];
   awards.sort((a, b) => b.month.localeCompare(a.month));
   const referenceMonth = referenceDate.slice(0, 7), selectedMonth = focusMonth.startsWith(`${year}-`) ? focusMonth : `${year}-12`;
-  const isClosed = (month: string) => month < referenceMonth;
+  const finalizedByMonth = new Map(finalizedAwards.filter(award => award.month.startsWith(`${year}-`)).map(award => [award.month, award]));
+  const isClosed = (month: string) => month < referenceMonth || finalizedByMonth.has(month);
   const currentYear = Number(referenceDate.slice(0, 4));
   const annualMvpAvailable = year < currentYear || (year === currentYear && referenceDate >= annualAwardsAvailableAt);
   const closedAwards = awards.filter(award => isClosed(award.month) || (annualMvpAvailable && award.month <= referenceMonth));
-  const historyByMonth = new Map(finalizedAwards.filter(award => award.month.startsWith(`${year}-`) && isClosed(award.month)).map(award => [award.month, award]));
+  const historyByMonth = new Map(finalizedByMonth);
   for (const award of closedAwards) if (!historyByMonth.has(award.month)) historyByMonth.set(award.month, award);
   const history = [...historyByMonth.values()].sort((a, b) => b.month.localeCompare(a.month));
-  const mvpTotals = new Map<string, { player: StatisticsPlayer; selections: number; playerOfMonthAwards: number; momentum: number }>();
-  for (const award of history) {
-    for (const member of award.selection) {
-      const current = mvpTotals.get(member.player.id) || { player: member.player, selections: 0, playerOfMonthAwards: 0, momentum: 0 };
-      current.selections += 1; current.momentum += member.totalMomentum; mvpTotals.set(member.player.id, current);
-    }
-    if (award.playerOfMonth) {
-      const current = mvpTotals.get(award.playerOfMonth.player.id) || { player: award.playerOfMonth.player, selections: 0, playerOfMonthAwards: 0, momentum: 0 };
-      current.playerOfMonthAwards += 1; mvpTotals.set(current.player.id, current);
-    }
-  }
-  const annualMvp = [...mvpTotals.values()]
-    .sort((a, b) => b.selections - a.selections || b.playerOfMonthAwards - a.playerOfMonthAwards || b.momentum - a.momentum || byPlayerName(a.player, b.player))
-    .slice(0, 3).map((entry, index) => ({ ...entry, place: index + 1, medal: (["Bola de Ouro", "Bola de Prata", "Bola de Bronze"] as const)[index], momentum: round(entry.momentum) }));
+  const annualMvp = buildAnnualMvpFromAwards(history);
   return { year, focusMonth: selectedMonth, focusMonthClosed: isClosed(selectedMonth), focus: isClosed(selectedMonth) ? history.find(award => award.month === selectedMonth) || null : null, history, annualMvp: annualMvpAvailable ? annualMvp : [], annualMvpAvailable, annualMvpAvailableAt: annualAwardsAvailableAt };
 }
 
@@ -151,7 +139,7 @@ export type MonthlyCareerAward = {
   selection: (MonthlyCareerStanding & { role: string })[];
 };
 
-function buildMonthAward(month: string, matches: StatisticsMatch[], playerMap: Map<string, StatisticsPlayer>, formation: MonthlyTeamFormation): MonthlyCareerAward | null {
+export function buildMonthAward(month: string, matches: StatisticsMatch[], playerMap: Map<string, StatisticsPlayer>, formation: MonthlyTeamFormation): MonthlyCareerAward | null {
   const standings = new Map<string, MonthlyCareerStanding>();
   const get = (playerId: string) => {
     const player = playerMap.get(playerId); if (!player) return null;
@@ -176,6 +164,27 @@ function buildMonthAward(month: string, matches: StatisticsMatch[], playerMap: M
   if (!ranked.length) return null;
   const select = (role: string, amount: number) => ranked.filter(entry => playerRole(entry.player) === role).slice(0, amount).map(entry => ({ ...entry, role }));
   return { month, matchCount: matches.length, formation, playerOfMonth: ranked[0] || null, selection: [...select("Goleiro", formation.goalkeepers), ...select("Defesa", formation.defenders), ...select("Meio-campo", formation.midfielders), ...select("Ataque", formation.attackers)] };
+}
+
+export function buildAnnualMvpFromAwards(awards: MonthlyCareerAward[]) {
+  const mvpTotals = new Map<string, { player: StatisticsPlayer; selections: number; playerOfMonthAwards: number; momentum: number }>();
+  for (const award of awards) {
+    for (const member of award.selection) {
+      const current = mvpTotals.get(member.player.id) || { player: member.player, selections: 0, playerOfMonthAwards: 0, momentum: 0 };
+      current.selections += 1;
+      current.momentum += member.totalMomentum;
+      mvpTotals.set(member.player.id, current);
+    }
+    if (award.playerOfMonth) {
+      const current = mvpTotals.get(award.playerOfMonth.player.id) || { player: award.playerOfMonth.player, selections: 0, playerOfMonthAwards: 0, momentum: 0 };
+      current.playerOfMonthAwards += 1;
+      mvpTotals.set(current.player.id, current);
+    }
+  }
+  return [...mvpTotals.values()]
+    .sort((a, b) => b.selections - a.selections || b.playerOfMonthAwards - a.playerOfMonthAwards || b.momentum - a.momentum || byPlayerName(a.player, b.player))
+    .slice(0, 3)
+    .map((entry, index) => ({ ...entry, place: index + 1, medal: (["Bola de Ouro", "Bola de Prata", "Bola de Bronze"] as const)[index], momentum: round(entry.momentum) }));
 }
 
 function normalizeFormation(value: MonthlyTeamFormation): MonthlyTeamFormation {

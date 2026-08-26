@@ -1,10 +1,14 @@
 import { db, ensureDb } from "../../../lib/database";
 import { buildMonthlyCareerHighlights, buildPublicStatistics, type MonthlyCareerAward, type StatisticsMatch } from "../../../lib/public-statistics";
+import { tryFinalizeCurrentMonthFromHistory } from "../../../lib/career-awards";
+import { finalizeIfExpired } from "../../../lib/career-service";
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: Request) {
   await ensureDb();
+  const expiredVoting = await db().prepare(`SELECT * FROM career_matches WHERE status='OPEN' AND closes_at<=?`).bind(new Date().toISOString()).all();
+  for (const match of expiredVoting.results) await finalizeIfExpired(match);
   const params = new URL(request.url).searchParams;
   const now = new Date();
   const defaultFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -60,6 +64,7 @@ export async function GET(request: Request) {
   }));
   const statistics = buildPublicStatistics(players, matches, contributions, params.get("playerA") || undefined, params.get("playerB") || undefined);
   const today = new Date().toISOString().slice(0, 10), currentMonth = today.slice(0, 7), requestedMonth = to.slice(0, 7);
+  await tryFinalizeCurrentMonthFromHistory(today).catch(() => null);
   const focusMonth = selectedYear === Number(today.slice(0, 4)) && requestedMonth > currentMonth ? currentMonth : requestedMonth;
   const annualAwardsAvailableAt = annualAwardsDate(selectedYear, careerRow?.next_season_reset_at);
   const monthlyFormation = { goalkeepers: Number(careerRow?.monthly_team_goalkeepers ?? 1), defenders: Number(careerRow?.monthly_team_defenders ?? 2), midfielders: Number(careerRow?.monthly_team_midfielders ?? 2), attackers: Number(careerRow?.monthly_team_attackers ?? 2) };
@@ -69,12 +74,21 @@ export async function GET(request: Request) {
     await db().prepare(`INSERT OR IGNORE INTO monthly_career_awards (month,year,snapshot,finalized_at) VALUES (?,?,?,?)`)
       .bind(award.month, selectedYear, JSON.stringify(award), finalizedAt).run();
   }
-  const finalizedRows = await db().prepare(`SELECT snapshot FROM monthly_career_awards WHERE year=? ORDER BY month DESC`).bind(selectedYear).all();
+  const [finalizedRows,seasonAwardRow] = await Promise.all([
+    db().prepare(`SELECT snapshot FROM monthly_career_awards WHERE year=? ORDER BY month DESC`).bind(selectedYear).all(),
+    db().prepare(`SELECT snapshot,ended_at,finalized_at FROM career_season_awards WHERE year=? ORDER BY season_number DESC LIMIT 1`).bind(selectedYear).first<any>(),
+  ]);
   const finalizedAwards = (finalizedRows.results as Record<string, unknown>[]).flatMap(row => {
     const award = parseJson(row.snapshot, null) as MonthlyCareerAward | null;
     return award?.month ? [award] : [];
   });
   const careerHighlights = buildMonthlyCareerHighlights(players, yearMatches, selectedYear, today, focusMonth, annualAwardsAvailableAt, finalizedAwards, monthlyFormation);
+  const seasonSnapshot = parseJson(seasonAwardRow?.snapshot, null);
+  if (Array.isArray(seasonSnapshot?.annualMvp)) {
+    careerHighlights.annualMvp = seasonSnapshot.annualMvp;
+    careerHighlights.annualMvpAvailable = true;
+    careerHighlights.annualMvpAvailableAt = String(seasonAwardRow?.ended_at || seasonAwardRow?.finalized_at || annualAwardsAvailableAt).slice(0, 10);
+  }
   return Response.json({ from, to, players, ...statistics, careerHighlights }, { headers: { "cache-control": "no-store, max-age=0" } });
 }
 

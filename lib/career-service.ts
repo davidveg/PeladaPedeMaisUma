@@ -4,6 +4,7 @@ import { logEvent } from "./logger";
 import { validateMatchContributions, type MatchContributionInput } from "./match-contributions";
 import { notifyOpenCareerVote } from "./push-notifications";
 import { ensureCareerSeasonCurrent } from "./career-season";
+import { tryFinalizeMonthlyAwardAfterMatch } from "./career-awards";
 
 export async function getCareerConfig() { await ensureDb(); await ensureCareerSeasonCurrent(); return careerConfigFromRow(await db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first()); }
 
@@ -79,6 +80,8 @@ export async function finalizeCareerMatch(matchId: string, administratorId: stri
     await db().batch(statements);
     await audit(administratorId,"CAREER_VOTING_CLOSED","career_match",matchId,{voteCount:votes.length,automatic:!administratorId,momentumApplied:belongsToCurrentSeason,results});
     logEvent("info","career_voting_closed",{careerMatchId:matchId,voteCount:votes.length,automatic:!administratorId});
+    try { await tryFinalizeMonthlyAwardAfterMatch(matchId); }
+    catch (awardError: any) { logEvent("error","career_month_awards_auto_finalize_failed",{careerMatchId:matchId,error:String(awardError?.message||awardError)}); }
   } catch(error) {
     await db().prepare(`UPDATE career_matches SET status='OPEN',updated_at=? WHERE id=? AND status='FINALIZING'`).bind(new Date().toISOString(),matchId).run();
     throw error;

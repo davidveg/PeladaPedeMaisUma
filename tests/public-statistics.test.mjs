@@ -86,6 +86,11 @@ test("monta jogador, seleção mensal, histórico fechado e pódio anual pelo mo
   assert.equal(currentMonth.focusMonthClosed, false);
   assert.equal(currentMonth.focus, null, "o mês em andamento não deve publicar a premiação");
 
+  const preservedFebruary = structuredClone(result.history.find(award => award.month === "2026-02"));
+  const currentMonthFinalizedEarly = buildMonthlyCareerHighlights(awardPlayers, awardMatches, 2026, "2026-02-15", "2026-02", "2026-12-31", [preservedFebruary]);
+  assert.equal(currentMonthFinalizedEarly.focusMonthClosed, true);
+  assert.equal(currentMonthFinalizedEarly.focus.month, "2026-02", "um retrato persistido deve publicar o mês antes do fim do calendário");
+
   const preservedJanuary = structuredClone(result.history.find(award => award.month === "2026-01"));
   preservedJanuary.playerOfMonth.player.displayName = "Destaque preservado";
   const withFinalizedSnapshot = buildMonthlyCareerHighlights(awardPlayers, awardMatches, 2026, "2026-03-15", "2026-01", "2026-12-31", [preservedJanuary]);

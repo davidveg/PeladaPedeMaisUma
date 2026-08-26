@@ -1,6 +1,6 @@
 /* Database rows and D1 batch metadata are narrowed at this service boundary. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { nextSeasonResetAt } from "./career";
+import { addSeasonMonths, nextSeasonResetAt } from "./career";
 import { audit, db, ensureDb } from "./database";
 import { logEvent } from "./logger";
 
@@ -11,6 +11,21 @@ export async function ensureCareerSeasonCurrent(now = new Date()) {
   if (seasonCheck) return seasonCheck;
   seasonCheck = checkAndResetSeason(now).finally(() => { seasonCheck = null; });
   return seasonCheck;
+}
+
+export async function resetCareerSeasonNow(administratorId: string, now = new Date()) {
+  await ensureDb();
+  const row: any = await db().prepare(`SELECT season_duration_months,season_started_at,next_season_reset_at,season_number FROM career_configuration WHERE id=1`).first();
+  const durationMonths = Number(row?.season_duration_months || 12), previousSeasonNumber = Number(row?.season_number || 1);
+  const nextSeasonNumber = previousSeasonNumber + 1, timestamp = now.toISOString(), nextResetAt = addSeasonMonths(now, durationMonths).toISOString();
+  const batch = await db().batch([
+    db().prepare(`UPDATE players SET momentum=0,result_momentum=0,voting_momentum=0,updated_at=? WHERE momentum<>0 OR result_momentum<>0 OR voting_momentum<>0`).bind(timestamp),
+    db().prepare(`UPDATE career_configuration SET season_started_at=?,next_season_reset_at=?,season_number=?,updated_at=? WHERE id=1 AND season_number=?`).bind(timestamp,nextResetAt,nextSeasonNumber,timestamp,previousSeasonNumber),
+  ]);
+  if (Number((batch[1] as any)?.meta?.changes || 0) !== 1) throw Object.assign(new Error("A temporada foi alterada em outra sessão. Atualize e tente novamente."), { status: 409 });
+  await audit(administratorId,"CAREER_SEASON_RESET","career_configuration","1",{seasonNumber:nextSeasonNumber,seasonStartedAt:timestamp,nextSeasonResetAt:nextResetAt,durationMonths,manual:true},{seasonNumber:previousSeasonNumber,seasonStartedAt:row?.season_started_at,nextSeasonResetAt:row?.next_season_reset_at});
+  logEvent("info","career_season_reset",{seasonNumber:nextSeasonNumber,durationMonths,nextSeasonResetAt:nextResetAt,manual:true});
+  return { previousSeasonNumber, seasonNumber: nextSeasonNumber, seasonStartedAt: timestamp, nextSeasonResetAt: nextResetAt };
 }
 
 async function checkAndResetSeason(now: Date) {
