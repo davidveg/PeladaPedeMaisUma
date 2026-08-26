@@ -71,6 +71,27 @@ function dueDateFor(competence: string, dueDay: number) {
   return `${competence}-${String(Math.min(dueDay, lastDay)).padStart(2, "0")}`;
 }
 
+function competenceLabel(competence: string) {
+  const [year, month] = competence.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
+async function assertCompetencesOpen(...competences: string[]) {
+  for (const competence of [...new Set(competences.filter(Boolean))]) {
+    const closure = await db().prepare(`SELECT id FROM financial_monthly_closures WHERE scope_id=? AND competence=?`).bind(FINANCIAL_SCOPE, competence).first();
+    if (closure) throw new FinanceError(`A competência ${competenceLabel(competence)} está fechada. Reabra o mês antes de alterar seus lançamentos.`, 409);
+  }
+}
+
+function comparableClosure(summary: any, monthlyPlayers: number) {
+  return {
+    currentBalanceCents: Number(summary?.currentBalanceCents || 0), incomeCents: Number(summary?.incomeCents || 0), expenseCents: Number(summary?.expenseCents || 0),
+    resultCents: Number(summary?.resultCents || 0), receivableCents: Number(summary?.receivableCents || 0), payableCents: Number(summary?.payableCents || 0),
+    previousBalanceCents: Number(summary?.previousBalanceCents || 0), monthlyPlayers: Number(monthlyPlayers || 0),
+    players: { current: Number(summary?.players?.current || 0), pending: Number(summary?.players?.pending || 0), overdue: Number(summary?.players?.overdue || 0) },
+  };
+}
+
 function auditStatement(adminId: string, action: string, entityType: string, entityId: string, next?: unknown, previous?: unknown) {
   return db().prepare(`INSERT INTO audit_logs (id,administrator_id,action,entity_type,entity_id,previous_data,new_data,created_at) VALUES (?,?,?,?,?,?,?,?)`)
     .bind(crypto.randomUUID(), adminId, action, entityType, entityId, previous === undefined ? null : JSON.stringify(previous), next === undefined ? null : JSON.stringify(next), new Date().toISOString());
@@ -114,6 +135,8 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
   const mappedCharges = chargeRows.results.map(rowCharge), monthlyCharges = mappedCharges.filter(item => item.type === "MONTHLY_FEE").sort((left, right) => portugueseNameCollator.compare(left.playerName || left.description, right.playerName || right.description));
   const charges = [...monthlyCharges, ...mappedCharges.filter(item => item.type !== "MONTHLY_FEE")], expenses = expenseRows.results.map(rowExpense);
   const summary = await calculateSummary(competence, charges, expenses, Number(settings?.opening_balance_cents || 0));
+  const closureSnapshot = closure ? JSON.parse(closure.snapshot) : null, monthlyPlayers = charges.filter(item => item.type === "MONTHLY_FEE").length;
+  const closureOutdated = Boolean(closureSnapshot && JSON.stringify(comparableClosure(closureSnapshot.summary, closureSnapshot.monthlyPlayers)) !== JSON.stringify(comparableClosure(summary, monthlyPlayers)));
   return {
     viewer: { accountType: viewer.accountType, role: viewer.role, email: viewer.email, canManage: true }, competence,
     settings: { defaultMonthlyFeeCents: Number(settings?.default_monthly_fee_cents || 0), defaultDueDay: Number(settings?.default_due_day || 10), openingBalanceCents: Number(settings?.opening_balance_cents || 0), initialCompetence: settings?.initial_competence || "", pixKey: settings?.pix_key || "" },
@@ -122,7 +145,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     recurringExpenses: recurringRows.results.map((row: any) => ({ id: row.id, description: row.description, category: row.category, amountCents: Number(row.amount_cents), recurrence: row.recurrence, dueDay: Number(row.due_day), supplier: row.supplier, notes: row.notes, active: !!row.active })),
     players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })).sort((left, right) => portugueseNameCollator.compare(left.displayName, right.displayName)),
     matches: matchRows.results.map((row: any) => ({ id: row.id, title: row.title, matchAt: row.match_at })),
-    closure: closure ? { id: closure.id, ...JSON.parse(closure.snapshot), closedAt: closure.closed_at } : null,
+    closure: closure ? { id: closure.id, ...closureSnapshot, closedAt: closure.closed_at, isOutdated: closureOutdated, liveSummary: summary, liveMonthlyPlayers: monthlyPlayers } : null,
   };
 }
 
@@ -169,6 +192,10 @@ export async function saveSettings(payload: any, admin: any) {
   const pixKey = text(payload.pixKey, "chave Pix", 180, false);
   const now = new Date().toISOString();
   const previous = await db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first();
+  if (previous && Number(previous.opening_balance_cents || 0) !== openingBalanceCents) {
+    const closure = await db().prepare(`SELECT competence FROM financial_monthly_closures WHERE scope_id=? ORDER BY competence LIMIT 1`).bind(FINANCIAL_SCOPE).first<any>();
+    if (closure) throw new FinanceError(`O saldo inicial não pode ser alterado porque já existe um fechamento em ${competenceLabel(closure.competence)}. Reabra as competências fechadas antes de ajustar esse valor.`, 409);
+  }
   const statements = [db().prepare(`UPDATE financial_settings SET default_monthly_fee_cents=?,default_due_day=?,opening_balance_cents=?,initial_competence=?,pix_key=?,updated_at=? WHERE scope_id=?`).bind(defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, now, FINANCIAL_SCOPE)];
   const normalizedPlayers: any[] = [];
   if (Array.isArray(payload.players)) for (const item of payload.players) {
@@ -191,6 +218,7 @@ export async function saveSettings(payload: any, admin: any) {
 export async function generateMonthlyFees(payload: any, admin: any) {
   await ensureDb();
   const competence = normalizeCompetence(payload.competence), now = new Date().toISOString();
+  await assertCompetencesOpen(competence);
   const settings: any = await db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first();
   if (settings?.initial_competence && competence < settings.initial_competence) throw new FinanceError("A competência é anterior ao início configurado.");
   const result = await db().prepare(`SELECT p.id,p.display_name,COALESCE(f.monthly_enabled,1) monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.active=1 AND p.deleted_at IS NULL AND p.type IN ('monthly','goalkeeper')`).bind(FINANCIAL_SCOPE).all();
@@ -219,6 +247,7 @@ export async function createCharge(payload: any, admin: any) {
   if (type === "SINGLE_MATCH" && !matchId) throw new FinanceError("Selecione a partida da cobrança avulsa.");
   const id = crypto.randomUUID(), now = new Date().toISOString();
   const data = { description: text(payload.description, "descrição", 180), category: text(payload.category || type, "categoria", 60), amountCents: cents(payload.amountCents), competence: normalizeCompetence(payload.competence), dueDate: dateOnly(payload.dueDate, "data de vencimento") };
+  await assertCompetencesOpen(data.competence);
   await db().batch([
     db().prepare(`INSERT INTO financial_charges (id,scope_id,player_id,match_id,type,description,category,amount_cents,competence,due_date,status,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,'PENDING',?,?,?)`).bind(id, FINANCIAL_SCOPE, playerId, matchId, type, data.description, data.category, data.amountCents, data.competence, data.dueDate, admin.id, now, now),
     auditStatement(admin.id, "FINANCIAL_CHARGE_CREATED", "financial_charge", id, { ...data, type, playerId, matchId }),
@@ -237,6 +266,7 @@ export async function registerPayment(payload: any, admin: any) {
   const amountCents = cents(payload.amountCents), remaining = Number(charge.amount_cents) - Number(charge.paid_cents || 0);
   if (amountCents > remaining) throw new FinanceError("O pagamento não pode ser maior que o valor restante.", 409);
   const paidAt = occurredAt(payload.paidAt, "data de pagamento"), paymentMethod = method(payload.method), notes = text(payload.notes, "observação", 1000, false);
+  await assertCompetencesOpen(String(charge.competence), paidAt.slice(0, 7));
   const id = crypto.randomUUID(), movementId = crypto.randomUUID(), now = new Date().toISOString();
   const statements = [
     db().prepare(`INSERT INTO financial_payments (id,scope_id,charge_id,amount_cents,paid_at,method,notes,status,created_by_administrator_id,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,'COMPLETED',?,?,?)`).bind(id, FINANCIAL_SCOPE, chargeId, amountCents, paidAt, paymentMethod, notes, admin.id, idempotencyKey, now),
@@ -258,9 +288,10 @@ export async function registerPayment(payload: any, admin: any) {
 export async function reversePayment(payload: any, admin: any) {
   await ensureDb();
   const paymentId = String(payload.paymentId || ""), reason = text(payload.reason, "motivo", 500);
-  const payment: any = await db().prepare(`SELECT * FROM financial_payments WHERE id=? AND scope_id=?`).bind(paymentId, FINANCIAL_SCOPE).first();
+  const payment: any = await db().prepare(`SELECT p.*,c.competence charge_competence FROM financial_payments p JOIN financial_charges c ON c.id=p.charge_id WHERE p.id=? AND p.scope_id=?`).bind(paymentId, FINANCIAL_SCOPE).first();
   if (!payment) throw new FinanceError("Pagamento não encontrado.", 404);
   if (payment.status === "REVERSED") return { message: "Pagamento já estava estornado.", idempotent: true };
+  await assertCompetencesOpen(String(payment.charge_competence), String(payment.paid_at).slice(0, 7));
   const now = new Date().toISOString();
   await db().batch([
     db().prepare(`UPDATE financial_payments SET status='REVERSED',reversed_at=?,reversed_by_administrator_id=?,reversal_reason=? WHERE id=? AND status='COMPLETED'`).bind(now, admin.id, reason, paymentId),
@@ -277,6 +308,7 @@ export async function cancelCharge(payload: any, admin: any) {
   const charge: any = await db().prepare(`SELECT c.*,EXISTS(SELECT 1 FROM financial_payments p WHERE p.charge_id=c.id AND p.status='COMPLETED') has_payment FROM financial_charges c WHERE c.id=? AND c.scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
   if (!charge) throw new FinanceError("Cobrança não encontrada.", 404);
   if (charge.status === "CANCELLED") return { message: "Cobrança já estava cancelada.", idempotent: true };
+  await assertCompetencesOpen(String(charge.competence));
   if (charge.has_payment) throw new FinanceError("Estorne os pagamentos antes de cancelar a cobrança.", 409);
   const now = new Date().toISOString();
   await db().batch([db().prepare(`UPDATE financial_charges SET status='CANCELLED',cancelled_at=?,cancelled_by_administrator_id=?,cancellation_reason=?,updated_at=? WHERE id=?`).bind(now, admin.id, reason, now, id), auditStatement(admin.id, "FINANCIAL_CHARGE_CANCELLED", "financial_charge", id, { status: "CANCELLED", reason }, charge)]);
@@ -288,6 +320,7 @@ export async function toggleChargeExemption(payload: any, admin: any) {
   const id = String(payload.chargeId || ""), charge: any = await db().prepare(`SELECT c.*,EXISTS(SELECT 1 FROM financial_payments p WHERE p.charge_id=c.id AND p.status='COMPLETED') has_payment FROM financial_charges c WHERE c.id=? AND c.scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
   if (!charge) throw new FinanceError("Cobrança não encontrada.", 404);
   if (charge.status === "CANCELLED" || charge.has_payment) throw new FinanceError("Cobranças canceladas ou com pagamento não podem ser isentadas.", 409);
+  await assertCompetencesOpen(String(charge.competence));
   const next = charge.status === "EXEMPT" ? "PENDING" : "EXEMPT", now = new Date().toISOString();
   await db().batch([db().prepare(`UPDATE financial_charges SET status=?,updated_at=? WHERE id=?`).bind(next, now, id), auditStatement(admin.id, next === "EXEMPT" ? "FINANCIAL_CHARGE_EXEMPTED" : "FINANCIAL_CHARGE_EXEMPTION_REMOVED", "financial_charge", id, { status: next }, charge)]);
   return { message: next === "EXEMPT" ? "Jogador isentado nesta cobrança." : "Isenção removida." };
@@ -299,6 +332,7 @@ export async function createExpense(payload: any, admin: any) {
   if (!EXPENSE_CATEGORIES.has(category)) throw new FinanceError("Selecione uma categoria de despesa válida.");
   const id = crypto.randomUUID(), now = new Date().toISOString();
   const data = { description: text(payload.description, "descrição", 180), category, amountCents: cents(payload.amountCents), competence: normalizeCompetence(payload.competence), dueDate: dateOnly(payload.dueDate, "data de vencimento"), supplier: text(payload.supplier, "fornecedor", 180, false), notes: text(payload.notes, "observação", 1000, false) };
+  await assertCompetencesOpen(data.competence);
   await db().batch([db().prepare(`INSERT INTO financial_expenses (id,scope_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(id, FINANCIAL_SCOPE, data.description, category, data.amountCents, data.competence, data.dueDate, data.supplier, data.notes, admin.id, now, now), auditStatement(admin.id, "FINANCIAL_EXPENSE_CREATED", "financial_expense", id, data)]);
   return { id, message: "Despesa cadastrada." };
 }
@@ -312,6 +346,7 @@ export async function payExpense(payload: any, admin: any) {
   if (expense.status === "CANCELLED") throw new FinanceError("Uma despesa cancelada não pode ser paga.", 409);
   if (expense.payment_idempotency_key === idempotencyKey) return { message: "Esta operação de pagamento foi estornada anteriormente.", idempotent: true };
   const paidAt = occurredAt(payload.paidAt, "data do pagamento"), paymentMethod = method(payload.method), now = new Date().toISOString(), movementId = crypto.randomUUID();
+  await assertCompetencesOpen(String(expense.competence), paidAt.slice(0, 7));
   try {
     await db().batch([
       db().prepare(`UPDATE financial_expenses SET status='PAID',paid_at=?,method=?,paid_by_administrator_id=?,payment_idempotency_key=?,updated_at=? WHERE id=? AND status='PENDING'`).bind(paidAt, paymentMethod, admin.id, idempotencyKey, now, expenseId),
@@ -325,9 +360,10 @@ export async function payExpense(payload: any, admin: any) {
 export async function reverseExpensePayment(payload: any, admin: any) {
   await ensureDb();
   const id = String(payload.expenseId || ""), reason = text(payload.reason, "motivo", 500);
-  const expense: any = await db().prepare(`SELECT * FROM financial_expenses WHERE id=? AND scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
+  const expense: any = await db().prepare(`SELECT e.*,(SELECT occurred_at FROM financial_movements m WHERE m.expense_id=e.id AND m.status='ACTIVE' LIMIT 1) movement_occurred_at FROM financial_expenses e WHERE e.id=? AND e.scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
   if (!expense) throw new FinanceError("Despesa não encontrada.", 404);
   if (expense.status !== "PAID") return { message: "A despesa não possui pagamento ativo.", idempotent: true };
+  await assertCompetencesOpen(String(expense.competence), String(expense.movement_occurred_at || expense.paid_at).slice(0, 7));
   const now = new Date().toISOString();
   await db().batch([
     db().prepare(`UPDATE financial_expenses SET status='PENDING',updated_at=? WHERE id=? AND status='PAID'`).bind(now, id),
@@ -343,6 +379,7 @@ export async function cancelExpense(payload: any, admin: any) {
   const expense: any = await db().prepare(`SELECT * FROM financial_expenses WHERE id=? AND scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
   if (!expense) throw new FinanceError("Despesa não encontrada.", 404);
   if (expense.status === "CANCELLED") return { message: "Despesa já estava cancelada.", idempotent: true };
+  await assertCompetencesOpen(String(expense.competence));
   if (expense.status === "PAID") throw new FinanceError("Uma despesa paga exige estorno antes do cancelamento.", 409);
   const now = new Date().toISOString();
   await db().batch([db().prepare(`UPDATE financial_expenses SET status='CANCELLED',cancelled_at=?,cancelled_by_administrator_id=?,cancellation_reason=?,updated_at=? WHERE id=?`).bind(now, admin.id, reason, now, id), auditStatement(admin.id, "FINANCIAL_EXPENSE_CANCELLED", "financial_expense", id, { status: "CANCELLED", reason }, expense)]);
@@ -362,6 +399,7 @@ export async function createRecurringExpense(payload: any, admin: any) {
 export async function generateRecurringExpenses(payload: any, admin: any) {
   await ensureDb();
   const competence = normalizeCompetence(payload.competence), rows = await db().prepare(`SELECT * FROM financial_recurring_expenses WHERE scope_id=? AND active=1`).bind(FINANCIAL_SCOPE).all();
+  await assertCompetencesOpen(competence);
   if (!rows.results.length) throw new FinanceError("Nenhuma despesa recorrente ativa foi configurada.");
   const now = new Date().toISOString(), ids: string[] = [], statements: any[] = [];
   for (const row of rows.results as any[]) {
@@ -383,4 +421,17 @@ export async function closeMonth(payload: any, admin: any) {
   const snapshot = { competence, summary: view.summary, monthlyPlayers: view.charges.filter((item: any) => item.type === "MONTHLY_FEE").length };
   await db().batch([db().prepare(`INSERT INTO financial_monthly_closures (id,scope_id,competence,snapshot,closed_by_administrator_id,closed_at) VALUES (?,?,?,?,?,?)`).bind(id, FINANCIAL_SCOPE, competence, JSON.stringify(snapshot), admin.id, now), auditStatement(admin.id, "FINANCIAL_MONTH_CLOSED", "financial_monthly_closure", id, snapshot)]);
   return { id, message: "Fechamento mensal registrado." };
+}
+
+export async function reopenMonth(payload: any, admin: any) {
+  await ensureDb();
+  const competence = normalizeCompetence(payload.competence);
+  const closure: any = await db().prepare(`SELECT * FROM financial_monthly_closures WHERE scope_id=? AND competence=?`).bind(FINANCIAL_SCOPE, competence).first();
+  if (!closure) return { message: "A competência já está aberta.", idempotent: true };
+  const previous = { competence, snapshot: JSON.parse(closure.snapshot), closedAt: closure.closed_at, closedByAdministratorId: closure.closed_by_administrator_id };
+  await db().batch([
+    db().prepare(`DELETE FROM financial_monthly_closures WHERE id=? AND scope_id=?`).bind(closure.id, FINANCIAL_SCOPE),
+    auditStatement(admin.id, "FINANCIAL_MONTH_REOPENED", "financial_monthly_closure", closure.id, { competence, status: "OPEN" }, previous),
+  ]);
+  return { message: `A competência ${competenceLabel(competence)} foi reaberta para correções.` };
 }

@@ -192,6 +192,44 @@ test("moderador financeiro administra o módulo sem perder a privacidade da vis�
   } finally { await f.cleanup(); }
 });
 
+test("competência fechada bloqueia alterações e pode ser reaberta com auditoria", async () => {
+  const f = await fixture();
+  try {
+    await post({ action: "save-settings", defaultMonthlyFeeCents: 8000, defaultDueDay: 10, openingBalanceCents: 0, initialCompetence: "2026-08", players: [{ playerId: f.playerA, monthlyEnabled: true }, { playerId: f.playerB, monthlyEnabled: false }] });
+    await post({ action: "generate-monthly", competence: "2026-08" });
+    const chargeId = await db().prepare(`SELECT id FROM financial_charges WHERE player_id=?`).bind(f.playerA).first("id");
+    assert.equal((await post({ action: "close-month", competence: "2026-08" })).status, 200);
+
+    const blockedPayment = await post({ action: "register-payment", chargeId, amountCents: 8000, paidAt: "2026-08-25", method: "PIX", idempotencyKey: "closed-month-payment" });
+    assert.equal(blockedPayment.status, 409);
+    assert.match((await blockedPayment.json()).error, /está fechada/);
+    assert.equal((await post({ action: "create-expense", description: "Despesa tardia", category: "OTHER", amountCents: 1000, competence: "2026-08", dueDate: "2026-08-25" })).status, 409);
+    assert.equal((await post({ action: "save-settings", defaultMonthlyFeeCents: 8000, defaultDueDay: 10, openingBalanceCents: 1000, initialCompetence: "2026-08", players: [] })).status, 409);
+
+    assert.equal((await post({ action: "reopen-month", competence: "2026-08" })).status, 200);
+    assert.equal((await post({ action: "register-payment", chargeId, amountCents: 8000, paidAt: "2026-08-25", method: "PIX", idempotencyKey: "reopened-month-payment" })).status, 200);
+    assert.equal((await post({ action: "close-month", competence: "2026-08" })).status, 200);
+    const view = await get("2026-08");
+    assert.equal(view.closure.isOutdated, false);
+    assert.equal(view.closure.summary.incomeCents, 8000);
+    assert.equal(view.closure.summary.currentBalanceCents, view.summary.currentBalanceCents);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_MONTH_REOPENED'`).first("total"), 1);
+  } finally { await f.cleanup(); }
+});
+
+test("fechamento legado divergente é identificado para correção", async () => {
+  const f = await fixture();
+  try {
+    await post({ action: "close-month", competence: "2026-08" });
+    const now = new Date().toISOString();
+    await db().prepare(`INSERT INTO financial_movements (id,scope_id,direction,category,description,amount_cents,occurred_at,method,status,created_by_administrator_id,created_at) VALUES ('legacy-late-entry','instance:1','IN','OTHER','Lançamento posterior',40000,'2026-08-25T12:00:00.000Z','PIX','ACTIVE',?,?)`).bind(f.adminId, now).run();
+    const view = await get("2026-08");
+    assert.equal(view.closure.isOutdated, true);
+    assert.equal(view.closure.summary.incomeCents, 0);
+    assert.equal(view.closure.liveSummary.incomeCents, 40000);
+  } finally { await f.cleanup(); }
+});
+
 test("cancelamento exige estorno, mantém auditoria e fechamento mensal é idempotente", async () => {
   const f = await fixture();
   try {

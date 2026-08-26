@@ -4,7 +4,7 @@ import { isFinanceEnabled } from "../../../lib/finance-feature";
 import {
   cancelCharge, cancelExpense, closeMonth, createCharge, createExpense, createRecurringExpense,
   FinanceError, generateMonthlyFees, generateRecurringExpenses, loadFinance, payExpense,
-  registerPayment, reverseExpensePayment, reversePayment, saveSettings, toggleChargeExemption,
+  registerPayment, reopenMonth, reverseExpensePayment, reversePayment, saveSettings, toggleChargeExemption,
 } from "../../../lib/finance-service";
 
 const noStore = { "cache-control": "no-store" };
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       "create-expense": createExpense, "pay-expense": payExpense, "cancel-expense": cancelExpense,
       "reverse-expense-payment": reverseExpensePayment,
       "create-recurring-expense": createRecurringExpense, "generate-recurring-expenses": generateRecurringExpenses,
-      "close-month": closeMonth,
+      "close-month": closeMonth, "reopen-month": reopenMonth,
     };
     const handler = actions[String(payload.action || "")];
     if (!handler) throw new FinanceError("Ação financeira inválida.");
