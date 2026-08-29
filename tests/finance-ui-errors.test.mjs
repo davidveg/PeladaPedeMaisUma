@@ -15,3 +15,12 @@ test("diálogos financeiros só fecham depois de uma operação bem-sucedida", a
   assert.match(source, /if\(await action\(\{ action: "register-payment"[^\n]+setPayment\(null\)/);
   assert.match(source, /if\(await action\(\{ action: "pay-expense"[^\n]+setPaying\(null\)/);
 });
+
+test("goleiros são opcionais por competência na geração de mensalidades", async () => {
+  const source = await readFile(new URL("../app/financeiro/FinanceApp.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /useState\(false\)/);
+  assert.match(source, /Incluir goleiros nesta competência/);
+  assert.match(source, /includeGoalkeepers, goalkeepersOnly: competenceGenerated/);
+  assert.match(source, /Goleiro · isento por padrão/);
+});

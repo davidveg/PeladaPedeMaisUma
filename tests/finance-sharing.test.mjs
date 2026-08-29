@@ -42,3 +42,23 @@ test("avisa quando existem valores personalizados e não imprime Pix vazio", () 
   assert.match(message, /Valor padrão: R\$ 100,00/);
   assert.match(message, /Alguns mensalistas possuem valor personalizado/);
 });
+
+test("omite goleiros isentos ou cancelados sem esconder cobranças válidas", () => {
+  const message = buildMonthlyPaymentsWhatsAppMessage({
+    competence: "2026-10",
+    pixKey: "pix@example.com",
+    defaultMonthlyFeeCents: 7000,
+    charges: [
+      { playerName: "Aranha", playerType: "goalkeeper", amountCents: 7000, paidCents: 0, competence: "2026-10", storedStatus: "EXEMPT" },
+      { playerName: "Bruno", playerType: "monthly", amountCents: 7000, paidCents: 0, competence: "2026-10", storedStatus: "EXEMPT" },
+      { playerName: "Lourenço", playerType: "goalkeeper", amountCents: 7000, paidCents: 0, competence: "2026-10", storedStatus: "CANCELLED" },
+      { playerName: "Renato", playerType: "goalkeeper", amountCents: 7000, paidCents: 7000, competence: "2026-10", storedStatus: "PAID", lastPaidAt: "2026-10-03T12:00:00.000Z" },
+      { playerName: "William", playerType: "monthly", amountCents: 7000, paidCents: 0, competence: "2026-10", storedStatus: "PENDING" },
+    ],
+  });
+
+  assert.doesNotMatch(message, /Aranha|Lourenço/);
+  assert.match(message, /1 - Bruno: ISENTO/);
+  assert.match(message, /2 - Renato: ✅/);
+  assert.match(message, /3 - William:/);
+});

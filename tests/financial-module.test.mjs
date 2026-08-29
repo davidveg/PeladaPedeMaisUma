@@ -53,7 +53,7 @@ test("gera mensalidades com valor personalizado e impede competência duplicada"
   } finally { await f.cleanup(); }
 });
 
-test("gera mensalidades somente para mensalistas e goleiros mensalistas", async () => {
+test("mantém goleiros isentos por padrão e permite incluí-los somente na competência escolhida", async () => {
   const f = await fixture();
   try {
     const now = new Date().toISOString();
@@ -77,11 +77,28 @@ test("gera mensalidades somente para mensalistas e goleiros mensalistas", async 
 
     const generated = await post({ action: "generate-monthly", competence: "2026-09" });
     assert.equal(generated.status, 200);
-    assert.equal((await generated.json()).created, 2);
-    const charges = await db().prepare(`SELECT p.type FROM financial_charges c JOIN players p ON p.id=c.player_id ORDER BY p.type`).all();
-    assert.deepEqual(charges.results.map(row => row.type), ["goalkeeper", "monthly"]);
+    assert.equal((await generated.json()).created, 1);
+    const defaultCharges = await db().prepare(`SELECT p.type FROM financial_charges c JOIN players p ON p.id=c.player_id WHERE c.competence='2026-09' ORDER BY p.type`).all();
+    assert.deepEqual(defaultCharges.results.map(row => row.type), ["monthly"]);
+
+    const addedGoalkeepers = await post({ action: "generate-monthly", competence: "2026-09", includeGoalkeepers: true, goalkeepersOnly: true });
+    assert.equal(addedGoalkeepers.status, 200);
+    assert.equal((await addedGoalkeepers.json()).created, 1);
+    const septemberCharges = await db().prepare(`SELECT p.type,c.amount_cents FROM financial_charges c JOIN players p ON p.id=c.player_id WHERE c.competence='2026-09' ORDER BY p.type`).all();
+    assert.deepEqual(septemberCharges.results.map(row => ({ ...row })), [
+      { type: "goalkeeper", amount_cents: 7000 },
+      { type: "monthly", amount_cents: 7000 },
+    ]);
+    assert.equal((await post({ action: "generate-monthly", competence: "2026-09", includeGoalkeepers: true, goalkeepersOnly: true })).status, 409);
+
+    const generatedWithGoalkeepers = await post({ action: "generate-monthly", competence: "2026-10", includeGoalkeepers: true });
+    assert.equal(generatedWithGoalkeepers.status, 200);
+    assert.equal((await generatedWithGoalkeepers.json()).created, 2);
+    const octoberCharges = await db().prepare(`SELECT p.type FROM financial_charges c JOIN players p ON p.id=c.player_id WHERE c.competence='2026-10' ORDER BY p.type`).all();
+    assert.deepEqual(octoberCharges.results.map(row => row.type), ["goalkeeper", "monthly"]);
 
     const view = await get("2026-09");
+    assert.equal(view.charges.find(charge => charge.playerId === goalkeeperId).playerType, "goalkeeper");
     assert.equal(view.players.find(player => player.id === casualId).monthlyEnabled, false);
     assert.equal(view.players.find(player => player.id === guestId).monthlyEnabled, false);
     const excludedSettings = await db().prepare(`SELECT player_id,monthly_enabled,custom_monthly_fee_cents FROM financial_player_settings WHERE player_id IN (?,?) ORDER BY player_id`).bind(casualId, guestId).all();

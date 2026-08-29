@@ -1,5 +1,6 @@
 export type MonthlyPaymentShareItem = {
   playerName?: string | null;
+  playerType?: string | null;
   amountCents: number;
   paidCents: number;
   competence: string;
@@ -20,7 +21,7 @@ export function buildMonthlyPaymentsWhatsAppMessage({
 }) {
   const month = competenceLabel(competence);
   const monthly = charges
-    .filter(charge => charge.playerName)
+    .filter(charge => charge.playerName && !isExcludedGoalkeeper(charge))
     .sort((left, right) => String(left.playerName).localeCompare(String(right.playerName), "pt-BR", { sensitivity: "base" }));
   const lines = monthly.map((charge, index) => `${index + 1} - ${charge.playerName}: ${paymentMarker(charge, competence)}`.trimEnd());
   const activeAmounts = new Set(monthly.filter(charge => charge.storedStatus !== "CANCELLED").map(charge => charge.amountCents));
@@ -31,6 +32,10 @@ export function buildMonthlyPaymentsWhatsAppMessage({
     ? `\n\n*ATENÇÃO: PIX para pagamento:* ${String(pixKey).trim()}\n\n${amountLabel}`
     : `\n\n${amountLabel}`;
   return `*Pagamento ${month}:*\n\n${lines.join("\n")}${paymentInstructions}`;
+}
+
+function isExcludedGoalkeeper(charge: MonthlyPaymentShareItem) {
+  return charge.playerType === "goalkeeper" && (charge.storedStatus === "EXEMPT" || charge.storedStatus === "CANCELLED");
 }
 
 function paymentMarker(charge: MonthlyPaymentShareItem, competence: string) {

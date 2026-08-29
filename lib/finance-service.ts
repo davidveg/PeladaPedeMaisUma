@@ -101,7 +101,7 @@ function rowCharge(row: any) {
   const paidCents = Number(row.paid_cents || 0), amountCents = Number(row.amount_cents);
   const overdue = row.status === "PENDING" && row.due_date < new Date().toISOString().slice(0, 10);
   return {
-    id: row.id, playerId: row.player_id, playerName: row.player_name || null, matchId: row.match_id,
+    id: row.id, playerId: row.player_id, playerName: row.player_name || null, playerType: row.player_type || null, matchId: row.match_id,
     type: row.type, description: row.description, category: row.category, amountCents, paidCents,
     remainingCents: Math.max(0, amountCents - paidCents), competence: row.competence, dueDate: row.due_date,
     status: overdue ? "OVERDUE" : row.status, storedStatus: row.status, lastPaidAt: row.last_paid_at || null, createdAt: row.created_at,
@@ -124,7 +124,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
   if (!canManage || selfOnly) return loadPlayerFinance(viewer, competence);
   const [settings, chargeRows, expenseRows, movementRows, recurringRows, playerRows, matchRows, closure] = await Promise.all([
     db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first<any>(),
-    db().prepare(`SELECT c.*,p.display_name player_name,COALESCE(SUM(CASE WHEN fp.status='COMPLETED' THEN fp.amount_cents ELSE 0 END),0) paid_cents,MAX(CASE WHEN fp.status='COMPLETED' THEN fp.paid_at END) last_paid_at FROM financial_charges c LEFT JOIN players p ON p.id=c.player_id LEFT JOIN financial_payments fp ON fp.charge_id=c.id WHERE c.scope_id=? AND c.competence=? GROUP BY c.id ORDER BY c.due_date,c.created_at`).bind(FINANCIAL_SCOPE, competence).all(),
+    db().prepare(`SELECT c.*,p.display_name player_name,p.type player_type,COALESCE(SUM(CASE WHEN fp.status='COMPLETED' THEN fp.amount_cents ELSE 0 END),0) paid_cents,MAX(CASE WHEN fp.status='COMPLETED' THEN fp.paid_at END) last_paid_at FROM financial_charges c LEFT JOIN players p ON p.id=c.player_id LEFT JOIN financial_payments fp ON fp.charge_id=c.id WHERE c.scope_id=? AND c.competence=? GROUP BY c.id ORDER BY c.due_date,c.created_at`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT * FROM financial_expenses WHERE scope_id=? AND competence=? ORDER BY due_date,created_at`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT m.*,p.display_name player_name FROM financial_movements m LEFT JOIN players p ON p.id=m.player_id WHERE m.scope_id=? AND substr(m.occurred_at,1,7)=? ORDER BY m.occurred_at DESC,m.created_at DESC`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT * FROM financial_recurring_expenses WHERE scope_id=? ORDER BY active DESC,description`).bind(FINANCIAL_SCOPE).all(),
@@ -172,7 +172,7 @@ async function calculateSummary(competence: string, charges: any[], expenses: an
 
 async function loadPlayerFinance(viewer: any, competence: string) {
   if (!viewer.playerId) throw new FinanceError("Associe sua conta a um jogador para consultar o financeiro.", 403);
-  const rows = await db().prepare(`SELECT c.*,p.display_name player_name,COALESCE(SUM(CASE WHEN fp.status='COMPLETED' THEN fp.amount_cents ELSE 0 END),0) paid_cents,MAX(CASE WHEN fp.status='COMPLETED' THEN fp.paid_at END) last_paid_at FROM financial_charges c JOIN players p ON p.id=c.player_id LEFT JOIN financial_payments fp ON fp.charge_id=c.id WHERE c.scope_id=? AND c.player_id=? GROUP BY c.id ORDER BY c.competence DESC,c.due_date DESC`).bind(FINANCIAL_SCOPE, viewer.playerId).all();
+  const rows = await db().prepare(`SELECT c.*,p.display_name player_name,p.type player_type,COALESCE(SUM(CASE WHEN fp.status='COMPLETED' THEN fp.amount_cents ELSE 0 END),0) paid_cents,MAX(CASE WHEN fp.status='COMPLETED' THEN fp.paid_at END) last_paid_at FROM financial_charges c JOIN players p ON p.id=c.player_id LEFT JOIN financial_payments fp ON fp.charge_id=c.id WHERE c.scope_id=? AND c.player_id=? GROUP BY c.id ORDER BY c.competence DESC,c.due_date DESC`).bind(FINANCIAL_SCOPE, viewer.playerId).all();
   const charges = rows.results.map(rowCharge), chargeIds = charges.map(item => item.id);
   let payments: any[] = [];
   if (chargeIds.length) {
@@ -218,12 +218,22 @@ export async function saveSettings(payload: any, admin: any) {
 export async function generateMonthlyFees(payload: any, admin: any) {
   await ensureDb();
   const competence = normalizeCompetence(payload.competence), now = new Date().toISOString();
+  const includeGoalkeepers = payload.includeGoalkeepers === true, goalkeepersOnly = payload.goalkeepersOnly === true;
+  if (goalkeepersOnly && !includeGoalkeepers) throw new FinanceError("Confirme a inclusão dos goleiros nesta competência.");
   await assertCompetencesOpen(competence);
   const settings: any = await db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first();
   if (settings?.initial_competence && competence < settings.initial_competence) throw new FinanceError("A competência é anterior ao início configurado.");
-  const result = await db().prepare(`SELECT p.id,p.display_name,COALESCE(f.monthly_enabled,1) monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.active=1 AND p.deleted_at IS NULL AND p.type IN ('monthly','goalkeeper')`).bind(FINANCIAL_SCOPE).all();
-  const eligible = result.results.filter((row: any) => !!row.monthly_enabled);
-  if (!eligible.length) throw new FinanceError("Nenhum jogador mensalista está habilitado.");
+  const result = await db().prepare(`SELECT p.id,p.display_name,p.type,COALESCE(f.monthly_enabled,1) monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.active=1 AND p.deleted_at IS NULL AND p.type IN ('monthly','goalkeeper')`).bind(FINANCIAL_SCOPE).all();
+  const existingGoalkeeperIds = new Set<string>();
+  if (goalkeepersOnly) {
+    const existing = await db().prepare(`SELECT player_id FROM financial_charges WHERE scope_id=? AND competence=? AND type='MONTHLY_FEE'`).bind(FINANCIAL_SCOPE, competence).all();
+    for (const row of existing.results as any[]) existingGoalkeeperIds.add(String(row.player_id));
+  }
+  const eligible = result.results.filter((row: any) => {
+    if (row.type === "goalkeeper") return includeGoalkeepers && !existingGoalkeeperIds.has(String(row.id));
+    return !goalkeepersOnly && !!row.monthly_enabled;
+  });
+  if (!eligible.length) throw new FinanceError(goalkeepersOnly ? "Todos os goleiros ativos já foram incluídos nesta competência." : "Nenhum jogador mensalista está habilitado.", 409);
   const dueDate = dueDateFor(competence, Number(settings?.default_due_day || 10)), statements: any[] = [], createdIds: string[] = [];
   for (const player of eligible as any[]) {
     const amount = player.custom_monthly_fee_cents === null ? Number(settings?.default_monthly_fee_cents || 0) : Number(player.custom_monthly_fee_cents);
@@ -231,10 +241,13 @@ export async function generateMonthlyFees(payload: any, admin: any) {
     const id = crypto.randomUUID(); createdIds.push(id);
     statements.push(db().prepare(`INSERT INTO financial_charges (id,scope_id,player_id,type,description,category,amount_cents,competence,due_date,status,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,'MONTHLY_FEE',?,'MONTHLY_FEE',?,?,?,'PENDING',?,?,?)`).bind(id, FINANCIAL_SCOPE, player.id, `Mensalidade de ${player.display_name}`, amount, competence, dueDate, admin.id, now, now));
   }
-  statements.push(auditStatement(admin.id, "MONTHLY_FEES_GENERATED", "financial_charge_batch", competence, { competence, dueDate, chargeIds: createdIds }));
+  statements.push(auditStatement(admin.id, "MONTHLY_FEES_GENERATED", "financial_charge_batch", competence, { competence, dueDate, chargeIds: createdIds, includeGoalkeepers, goalkeepersOnly }));
   try { await db().batch(statements); }
   catch (error: any) { if (/unique|constraint/i.test(String(error?.message))) throw new FinanceError("As mensalidades desta competência já foram geradas.", 409); throw error; }
-  return { message: `${createdIds.length} mensalidades geradas.`, created: createdIds.length };
+  const message = goalkeepersOnly
+    ? createdIds.length === 1 ? "1 goleiro incluído nesta competência." : `${createdIds.length} goleiros incluídos nesta competência.`
+    : `${createdIds.length} mensalidades geradas.`;
+  return { message, created: createdIds.length };
 }
 
 export async function createCharge(payload: any, admin: any) {
