@@ -8,6 +8,7 @@ Documentação complementar:
 
 - [Aplicativo mobile](mobile/README.md)
 - [API mobile em OpenAPI](docs/mobile-openapi.yaml)
+- [Fórmulas das estatísticas avançadas](docs/estatisticas-avancadas.md)
 - [Operação de múltiplas peladas](docs/MULTI_INSTANCE.md)
 - [Notas da versão 1.0](RELEASE_NOTES_1.0.0.md)
 
@@ -25,6 +26,8 @@ Documentação complementar:
   - ranking de assiduidade;
   - comparação direta entre dois jogadores;
   - opção de incluir ou ocultar convidados.
+- Dashboard de estatísticas avançadas com IPI por posição e confiança da amostra, saldo +/-, forma recente, consistência, impacto com/sem, melhores duplas, rede de entrosamento, recordes e qualidade do balanceamento.
+- Filtros avançados por período, temporada, posição, mínimo de jogos, janela recente e amostra mínima das duplas; dados ausentes aparecem como **Dados insuficientes**.
 - Página oficial para download das versões Android e iOS publicadas pelos administradores.
 
 ### Jogadores e contas
@@ -40,6 +43,7 @@ Documentação complementar:
 - Contas comuns e administrativas podem ser associadas a um jogador.
 - Cada conta aceita um único jogador e cada jogador aceita um único login, independentemente do tipo da conta.
 - A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição principal, posição secundária e observações.
+- A área do jogador oferece acesso direto à sua análise avançada completa.
 - Recuperação de senha por e-mail para administradores e contas de jogadores.
 - Administradores podem redefinir uma senha temporária de conta de jogador e revogar todas as sessões anteriores.
 - Perfil intermediário de **moderador**, promovido a partir de uma conta de jogador e sempre reversível pelo administrador.
@@ -158,6 +162,7 @@ O aplicativo oferece:
 - partidas, confirmações de presença e notificações;
 - lista de espera e aprovação administrativa de convidados quando a funcionalidade estiver habilitada;
 - separações salvas e card do jogador;
+- estatísticas avançadas do jogador pelo card, com IPI, forma, consistência, saldo, impacto, parceria e ranking;
 - criação de separações para administradores a partir das presenças de uma partida;
 - importação manual por lista do WhatsApp quando habilitada na configuração da instância;
 - ordem de chegada por equipe;

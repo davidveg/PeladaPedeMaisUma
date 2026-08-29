@@ -109,7 +109,7 @@ export const separations = sqliteTable("team_separations", {
   id: text("id").primaryKey(), matchTitle: text("match_title").notNull(), matchDate: text("match_date"), location: text("location"),
   originalText: text("original_text").notNull(), snapshot: text("snapshot").notNull(), manuallyAdjusted: integer("manually_adjusted", { mode: "boolean" }).notNull().default(false),
   arrivalOrder: text("arrival_order"), matchDraft: text("match_draft"), balanceScore: real("balance_score").notNull(), balanceClassification: text("balance_classification").notNull(), confirmedAt: text("confirmed_at").notNull(), deletedAt: text("deleted_at"), ...timestamps,
-});
+}, table => [index("team_separations_statistics_date_idx").on(table.matchDate, table.deletedAt)]);
 
 export const configurations = sqliteTable("system_configuration", {
   id: integer("id").primaryKey().default(1), defaultPlayerCount: integer("default_player_count").notNull().default(22), minimumRecommendedPlayers: integer("minimum_recommended_players").notNull().default(14),
@@ -254,7 +254,7 @@ export const careerMatches = sqliteTable("career_matches", {
   winnerTeam: text("winner_team").notNull(), votingToken: text("voting_token").notNull().unique(), status: text("status").notNull().default("OPEN"), closesAt: text("closes_at").notNull(), closedAt: text("closed_at"),
   createdByAdministratorId: text("created_by_administrator_id").notNull(), configSnapshot: text("config_snapshot").notNull(), resultsSnapshot: text("results_snapshot"),
   teamMomentumApplied: integer("team_momentum_applied", { mode: "boolean" }).notNull().default(false), votesMomentumApplied: integer("votes_momentum_applied", { mode: "boolean" }).notNull().default(false), ...timestamps,
-});
+}, table => [index("career_matches_statistics_status_idx").on(table.status, table.closedAt)]);
 
 export const careerVotes = sqliteTable("career_votes", {
   id: text("id").primaryKey(), careerMatchId: text("career_match_id").notNull(), voterPlayerId: text("voter_player_id").notNull(),

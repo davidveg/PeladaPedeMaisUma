@@ -91,6 +91,7 @@ export default function AppLayout() {
       href: account.playerId ? undefined : null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="id-card" inactive="id-card-outline"/>,
     }}/>
+    <Tabs.Screen name="advanced-statistics" options={{ href: null, title: "Estatísticas avançadas" }}/>
     <Tabs.Screen name="finance" options={{
       title: "Financeiro",
       href: financeVisible ? undefined : null,

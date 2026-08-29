@@ -3,6 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, API_BASE_URL } from "@/api";
@@ -67,6 +68,7 @@ type ProfileDraft = { fullName: string; nickname: string; primaryPosition: strin
 const MAX_PHOTO_SIZE = 5_000_000;
 
 export default function MyCard() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const query = useQuery({
@@ -223,6 +225,7 @@ export default function MyCard() {
           </View>)}
         </View>
       </LinearGradient>
+      <Button title="Ver estatísticas avançadas" icon="line-chart" variant="secondary" onPress={() => router.push("/advanced-statistics" as never)}/>
       <Card style={styles.profileCard}>
         <View style={styles.profileHeading}>
           <Text style={styles.profileEyebrow}>MEU PERFIL</Text>

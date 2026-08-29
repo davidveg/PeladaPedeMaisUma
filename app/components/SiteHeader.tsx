@@ -31,9 +31,16 @@ export function SiteHeader({
   isAdmin?: boolean;
 }) {
   const { config } = useInstanceBranding();
+  const navigation = useRef<HTMLElement>(null);
   const activeLink = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
-    activeLink.current?.scrollIntoView({ block: "nearest", inline: "center" });
+    const menu = navigation.current;
+    const item = activeLink.current;
+    if (!menu || !item) return;
+
+    // Centraliza somente o eixo horizontal para não esconder o início das
+    // páginas sob o cabeçalho fixo.
+    menu.scrollLeft = Math.max(0, item.offsetLeft - (menu.clientWidth - item.offsetWidth) / 2);
   }, [active]);
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={active === section ? activeLink : undefined} className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
@@ -46,7 +53,7 @@ export function SiteHeader({
       <a href="/separacoes-salvas" className="brand" onClick={(event) => navigateWithDocument(event, "/separacoes-salvas")}>
         <BrandIdentity/>
       </a>
-      <nav aria-label="Navegação principal">
+      <nav ref={navigation} aria-label="Navegação principal">
         {link("players", "/jogadores", "Jogadores")}
         {link("statistics", "/estatisticas", "Estatísticas")}
         {link("separations", "/separacoes-salvas", "Separações salvas")}

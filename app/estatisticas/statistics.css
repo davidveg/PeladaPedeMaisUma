@@ -85,3 +85,8 @@
 .player-of-month>.player-of-month-profile>.player-avatar-wrap>.player-photo>img{display:block;width:100%;height:100%;margin:0;border:0;border-radius:50%;object-fit:cover;object-position:center}
 
 @media(max-width:760px){.formation-line article>.player-avatar-wrap,.formation-line article>.player-avatar-wrap>.player-photo{width:52px;height:52px}.player-of-month>.player-of-month-profile>.player-avatar-wrap,.player-of-month>.player-of-month-profile>.player-avatar-wrap>.player-photo{width:148px;height:148px}.player-of-month>.player-of-month-profile>.player-avatar-wrap:before{width:195px;height:195px}}
+
+.statistics-advanced-entry{display:flex;justify-content:flex-end;margin:-8px 0 18px}
+.statistics-advanced-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 16px;border:1px solid #bfd2c7;border-radius:12px;background:#fff;color:var(--green);font-size:12px;font-weight:850;text-decoration:none;box-shadow:0 8px 22px rgba(20,57,44,.06)}
+.statistics-advanced-link:hover{background:#eef6f1}
+@media(max-width:600px){.statistics-advanced-entry{margin:0 0 16px}.statistics-advanced-link{width:100%}}

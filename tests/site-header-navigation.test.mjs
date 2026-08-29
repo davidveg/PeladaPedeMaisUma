@@ -18,7 +18,8 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.match(source, /link\("separations", "\/separacoes-salvas", "Separações salvas"\)/);
   assert.match(source, /link\("admin", "\/admin", "Painel Administrativo"\)/);
   assert.match(source, /href="\/separacoes-salvas" className="brand"/);
-  assert.match(source, /scrollIntoView\(\{ block: "nearest", inline: "center" \}\)/);
+  assert.doesNotMatch(source, /scrollIntoView/);
+  assert.match(source, /menu\.scrollLeft = Math\.max\(0,/);
   assert.match(worker, /text\/html/);
   assert.match(worker, /text\/x-component/);
   assert.match(worker, /no-cache, must-revalidate/);
@@ -50,4 +51,11 @@ test("notificações ficam somente no menu compartilhado e não se repetem no ca
 
   assert.match(header, /link\("notifications", "\/notificacoes", "Notificações"\)/);
   assert.doesNotMatch(matches, /href="\/notificacoes"/);
+});
+
+test("a apresentação das estatísticas avançadas não herda o cabeçalho fixo global", async () => {
+  const advanced = await readFile(new URL("../app/estatisticas/avancadas/AdvancedStatisticsApp.tsx", import.meta.url), "utf8");
+
+  assert.match(advanced, /<section className="advanced-hero" aria-labelledby="advanced-statistics-title">/);
+  assert.doesNotMatch(advanced, /<header className="advanced-hero"/);
 });
