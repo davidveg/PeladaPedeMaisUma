@@ -11,6 +11,7 @@ import { hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 import { matchHubFilters, matchHubStatusLabel, type MatchHubFilter, type MatchHubPayload } from "@/match-hub";
 import { useMobileBranding } from "@/branding";
 import { MatchScoreboard } from "@/match-scoreboard";
+import { MatchWeatherSummary } from "@/match-weather-summary";
 
 export default function MatchesScreen() {
   const { account } = useAuth(), router = useRouter(), { palette } = useMobileBranding();
@@ -33,6 +34,7 @@ export default function MatchesScreen() {
         <Text style={[styles.status, { color: item.status === "CANCELLED" ? colors.danger : palette.green }]}>{matchHubStatusLabel[item.status]}</Text><Text style={[styles.title, { color: palette.text }]}>{item.title}</Text>
         <Text style={styles.help}>{item.date ? new Date(item.date.length === 10 ? `${item.date}T12:00:00` : item.date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", ...(item.date.length > 10 ? { timeStyle: "short" as const } : {}) }) : "Data não informada"}{item.location ? ` · ${item.location}` : ""}</Text>
         <MatchScoreboard blueScore={item.blueScore} yellowScore={item.yellowScore}/>
+        <MatchWeatherSummary weather={item.weatherSummary}/>
         <Text style={styles.help}>{item.present !== null ? `${item.present} presentes` : "Separação do histórico"}{item.votingStatus ? ` · Votação ${item.votingStatus === "OPEN" ? "aberta" : "encerrada"}` : ""}</Text><Text style={{ color: palette.green, fontWeight: "800" }}>Ver partida →</Text>
       </Card></Pressable>}
     />}</Screen>;

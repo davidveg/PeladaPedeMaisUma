@@ -1,6 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { describeWeatherSymbol, describeWmoWeatherCode, summarizeMetForecast, summarizeOpenMeteoForecast, weatherFromRow } from "../lib/weather-presentation.ts";
+import { describeWeatherSymbol, describeWmoWeatherCode, summarizeMetForecast, summarizeOpenMeteoForecast, weatherFromRow, weatherSummaryFromRow } from "../lib/weather-presentation.ts";
+
+test("resumo usa apenas a previsão salva, preserva zero e não expõe o snapshot completo", () => {
+  const weather = { status: "AVAILABLE", fetchedAt: "2020-01-01T00:00:00Z", requestedAddress: "Endereço", latitude: 12,
+    temperatureMin: -2, temperatureMax: 0, windSpeed: 0, description: "Nublado", icon: "☁️", usedDefaultLocation: true };
+  assert.deepEqual(weatherSummaryFromRow({ weather_snapshot: JSON.stringify(weather) }), {
+    description: "Nublado", icon: "☁️", temperatureMin: -2, temperatureMax: 0, windSpeed: 0, usedDefaultLocation: true,
+  });
+});
+
+test("resumo diferencia dados ausentes de valores zero e tolera registros inválidos", () => {
+  for (const value of [null, "{", "null", "[]", '"texto"', JSON.stringify({ status: "AVAILABLE" }),
+    ...["UNAVAILABLE", "OUT_OF_RANGE", "LOCATION_NOT_FOUND"].map(status => JSON.stringify({ status, temperatureMin: 22 }))]) {
+    assert.equal(weatherSummaryFromRow({ weather_snapshot: value }), null);
+  }
+  assert.deepEqual(weatherSummaryFromRow({ weather_snapshot: JSON.stringify({ status: "AVAILABLE", description: "Chuva", temperatureMin: "20", temperatureMax: null, windSpeed: -1, icon: {} }) }), {
+    description: "Chuva", icon: null, temperatureMin: null, temperatureMax: null, windSpeed: null, usedDefaultLocation: false,
+  });
+});
 
 test("traduz os símbolos do MET Norway para a apresentação da partida", () => {
   assert.deepEqual(describeWeatherSymbol("clearsky_day"), { description: "Céu limpo", icon: "☀️" });

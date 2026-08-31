@@ -1,12 +1,18 @@
 /** Shared, snapshot-free contract for the web/mobile match hub. */
 export type MatchHubStatus = "OPEN" | "TEAMS" | "FINISHED" | "CLOSED" | "CANCELLED";
 export type MatchHubFilter = "all" | "open" | "teams" | "finished" | "history" | "cancelled";
+export type MatchHubWeather = {
+  description: string | null; icon: string | null;
+  temperatureMin: number | null; temperatureMax: number | null; windSpeed: number | null;
+  usedDefaultLocation: boolean;
+};
 export type MatchHubItem = {
   id: string; matchId: string | null; separationId: string | null;
   title: string; date: string | null; location: string | null; status: MatchHubStatus;
   confirmedAt: string | null; present: number | null;
   blueScore: number | null; yellowScore: number | null;
   votingStatus: string | null; votingClosesAt: string | null;
+  weatherSummary?: MatchHubWeather | null;
 };
 export type MatchHubPayload = {
   items: MatchHubItem[]; page: number; hasMore: boolean;

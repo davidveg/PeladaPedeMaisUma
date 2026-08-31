@@ -16,6 +16,27 @@
 .match-hub-card p,.match-hub-card small{color:var(--muted);line-height:1.5;margin:6px 0}
 .match-hub-card-action{display:flex;flex-direction:column;gap:12px;align-items:flex-end;flex-shrink:0;max-width:min(420px,42vw)}
 .match-hub-card-action>span{font-weight:800;color:var(--green);font-size:13px}
+.match-hub-card-info{flex:1;min-width:0}
+.match-hub-weather{width:100%;max-width:520px;min-width:0;margin-top:16px}
+.match-hub-weather-heading{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1.5;margin-bottom:8px}
+.match-hub-weather-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.match-hub-weather-grid>div{min-width:0;padding:10px 6px;background:var(--surface,#f3f7f5);border:1px solid var(--line);border-radius:10px;text-align:center}
+.match-hub-weather-grid dt{font-size:11px;font-weight:700;line-height:1.4;color:var(--muted);overflow-wrap:anywhere}
+.match-hub-weather-grid dd{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;margin:6px 0 0}
+.match-hub-weather-icon{font-size:23px;line-height:1.2}
+.match-hub-weather-grid strong{max-width:100%;font-family:inherit;font-size:13px;font-weight:700;line-height:1.4;color:var(--ink);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.match-hub-weather-note{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.5}
+.match-hub-weather-empty{display:flex;align-items:center;gap:8px;min-width:0;margin-top:14px;color:var(--muted);font-size:12px;line-height:1.5}
+.match-hub-weather-empty>span:first-child{flex-shrink:0}
+.match-hub-final-score{display:grid;gap:8px;width:340px;max-width:100%;min-width:0}
+.match-hub-final-score-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:var(--muted);line-height:1.4}
+.match-hub-final-score-board{display:grid;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:8px;align-items:stretch;min-width:0}
+.match-hub-final-score-team{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:12px 10px;border-radius:12px;border:1px solid var(--line);border-top-width:4px;text-align:center}
+.match-hub-final-score-team.blue{background:var(--blue-soft,#eef5ff);border-top-color:var(--blue);color:var(--blue-ink,var(--blue))}
+.match-hub-final-score-team.yellow{background:var(--yellow-soft,#fffae8);border-top-color:var(--yellow);color:var(--yellow-ink,var(--yellow))}
+.match-hub-final-score-name{width:100%;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:750;line-height:1.35}
+.match-hub-final-score-team strong{display:block;max-width:100%;font-family:inherit;font-size:clamp(32px,3.5vw,46px);font-weight:850;line-height:1.1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.match-hub-final-score-divider{align-self:center;text-align:center;font-size:20px;font-weight:600;line-height:1;color:var(--muted)}
 .match-hub-score{display:inline-grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:stretch;gap:8px;font-weight:700;flex-shrink:0;width:max-content;max-width:100%}
 .match-hub-score i{align-self:center;font-style:normal;color:var(--muted)}
 .match-hub-score>span{display:flex;min-width:0;gap:8px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px}
@@ -42,7 +63,8 @@
   .match-hub-detail-head{grid-template-columns:minmax(0,1fr)}
   .match-hub-detail-head>.match-hub-score{max-width:100%;justify-self:start}
   .match-hub-card{flex-direction:column;align-items:stretch;padding:18px;gap:14px}
-  .match-hub-card-action{align-items:flex-start;flex-shrink:1;max-width:100%}
+  .match-hub-card-action{align-items:flex-start;flex-shrink:1;width:100%;max-width:100%}
+  .match-hub-final-score{width:100%}
   .match-hub-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .match-hub-tabs button{white-space:normal;padding:11px 8px;font-size:13px}
   .match-hub-main .match-admin-detail{padding:16px;min-width:0}

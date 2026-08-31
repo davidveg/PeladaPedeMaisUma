@@ -50,7 +50,35 @@ test("hub unifica histórico e agenda sem alterar dados, vínculos ou permissõe
       assert.equal(result.items.find(item => item.separationId === "legacy").date, null);
       assert.equal(result.items.find(item => item.separationId === "legacy").present, null);
       assert.deepEqual(result.viewer, { authenticated: true, permissions: [] });
-      for (const item of result.items) for (const key of ["snapshot", "attendance", "separationDraft", "draft", "originalText", "players", "weather"]) assert.equal(key in item, false, key);
+      for (const item of result.items) for (const key of ["snapshot", "attendance", "separationDraft", "draft", "originalText", "players", "weather", "weatherSnapshot", "weather_snapshot"]) assert.equal(key in item, false, key);
+    });
+    await t.test("previsão compacta aparece na lista e no detalhe sem atualizar o histórico nem consultar provedores", async () => {
+      const saved = JSON.stringify({ status: "AVAILABLE", description: "Chuva", icon: "🌧️", temperatureMin: 20.3, temperatureMax: 20.4, windSpeed: 15.1, fetchedAt: "2020-01-01T00:00:00Z", requestedAddress: "Endereço privado", latitude: 10 });
+      await db().prepare("UPDATE scheduled_matches SET weather_snapshot=?,weather_updated_at=? WHERE id='generated'").bind(saved, "2020-01-01T00:00:00Z").run();
+      const originalFetch = globalThis.fetch;
+      let requests = 0;
+      globalThis.fetch = async () => { requests++; throw new Error("A listagem não deve consultar previsão externa"); };
+      try {
+        const list = await get();
+        const expected = { description: "Chuva", icon: "🌧️", temperatureMin: 20.3, temperatureMax: 20.4, windSpeed: 15.1, usedDefaultLocation: false };
+        assert.deepEqual(list.items.find(item => item.matchId === "generated").weatherSummary, expected);
+        assert.equal(list.items.find(item => item.matchId === "open").weatherSummary, null);
+        assert.equal(list.items.find(item => item.separationId === "legacy").weatherSummary, null);
+        assert.deepEqual((await get("?separation=linked")).items[0].weatherSummary, expected);
+        assert.equal(JSON.stringify(list).includes("Endereço privado"), false);
+        assert.equal(JSON.stringify(list).includes("weatherSnapshot"), false);
+        const stored = await db().prepare("SELECT weather_snapshot,weather_updated_at FROM scheduled_matches WHERE id='generated'").first();
+        assert.equal(stored.weather_snapshot, saved);
+        assert.equal(stored.weather_updated_at, "2020-01-01T00:00:00Z");
+        assert.equal(requests, 0);
+        for (const invalid of ["{", JSON.stringify({ status: "UNAVAILABLE", message: "Erro do provedor" })]) {
+          await db().prepare("UPDATE scheduled_matches SET weather_snapshot=? WHERE id='generated'").bind(invalid).run();
+          assert.equal((await get("?match=generated")).items[0].weatherSummary, null);
+        }
+      } finally {
+        globalThis.fetch = originalFetch;
+        await db().prepare("UPDATE scheduled_matches SET weather_snapshot=?,weather_updated_at=? WHERE id='generated'").bind(saved, "2020-01-01T00:00:00Z").run();
+      }
     });
     await t.test("consultas anônimas não expõem agenda, separações nem rascunhos", async () => {
       for (const query of ["", "?match=open", "?match=generated", "?separation=legacy", "?filter=history", "?filter=cancelled", "?match=inexistente"]) {

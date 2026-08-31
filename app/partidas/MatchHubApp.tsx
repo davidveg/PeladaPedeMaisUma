@@ -10,6 +10,8 @@ import { useInstanceBranding } from "../InstanceBranding";
 import { MatchesPanel, MatchEditor } from "../admin/MatchesPanel";
 import MatchesApp from "./MatchesApp";
 import SeparationPane, { hubApi } from "./SeparationPane";
+import { MatchCardScore } from "./MatchCardScore";
+import { MatchCardWeather } from "./MatchCardWeather";
 
 const tabs = [{ id: "attendance", label: "Presenças" }, { id: "teams", label: "Times" }, { id: "result", label: "Súmula e resultado" }, { id: "voting", label: "Votação" }];
 
@@ -88,7 +90,7 @@ export default function MatchHubApp() {
     </> : <div className="empty">Partida não encontrada. <a href="/partidas">Voltar às partidas</a></div> : <>
       <nav className="match-hub-tabs" aria-label="Filtrar partidas">{matchHubFilters.map(value => <button key={value.value} className={filter === value.value ? "on" : ""} aria-pressed={filter === value.value} onClick={() => navigate(listHref(value.value))}>{value.label}</button>)}</nav>
       <p className="match-hub-help">Canceladas aparecem somente no filtro “Canceladas”. Finalizadas são partidas com resultado confirmado.</p>
-      <div className="match-hub-list">{data?.items.map(entry => <a key={entry.id} className="match-hub-card" href={matchHubHref(entry)}><div><span className={`match-state ${entry.status.toLowerCase()}`}>{matchHubStatusLabel[entry.status]}</span><h2>{entry.title}</h2><p>{dateLabel(entry.date)}{entry.location ? ` · ${entry.location}` : ""}</p><small>{entry.present !== null ? `${entry.present} presentes` : "Separação do histórico"}{entry.votingStatus ? ` · Votação ${entry.votingStatus === "OPEN" ? "aberta" : "encerrada"}` : ""}</small></div><div className="match-hub-card-action">{entry.blueScore !== null && <ScoreSummary item={entry} blueName={brand.teamBlueName} yellowName={brand.teamYellowName}/>}<span>Ver partida →</span></div></a>)}</div>
+      <div className="match-hub-list">{data?.items.map(entry => <a key={entry.id} className="match-hub-card" href={matchHubHref(entry)}><div className="match-hub-card-info"><span className={`match-state ${entry.status.toLowerCase()}`}>{matchHubStatusLabel[entry.status]}</span><h2>{entry.title}</h2><p>{dateLabel(entry.date)}{entry.location ? ` · ${entry.location}` : ""}</p><small>{entry.present !== null ? `${entry.present} presentes` : "Separação do histórico"}{entry.votingStatus ? ` · Votação ${entry.votingStatus === "OPEN" ? "aberta" : "encerrada"}` : ""}</small><MatchCardWeather weather={entry.weatherSummary}/></div><div className="match-hub-card-action"><MatchCardScore blueScore={entry.blueScore} yellowScore={entry.yellowScore} blueName={brand.teamBlueName} yellowName={brand.teamYellowName}/><span>Ver partida →</span></div></a>)}</div>
       {!data?.items.length && <div className="empty">Nenhuma partida neste filtro.</div>}
       <div className="match-hub-pagination"><button className="ghost" disabled={!data || data.page <= 1} onClick={() => navigate(listHref(filter, (data?.page || 1) - 1))}>← Anteriores</button><span>Página {data?.page || 1}</span><button className="ghost" disabled={!data?.hasMore} onClick={() => navigate(listHref(filter, (data?.page || 1) + 1))}>Próximas →</button></div>
     </>}

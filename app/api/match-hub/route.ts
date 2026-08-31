@@ -1,5 +1,6 @@
 import { db, ensureDb, playerAccountRequired } from "../../../lib/database";
 import { matchHubFilters, type MatchHubItem } from "../../../lib/match-hub";
+import { weatherSummaryFromRow } from "../../../lib/weather-presentation";
 
 const noStore = { "cache-control": "private, no-store", vary: "Cookie, Authorization" };
 
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     predicates.push(filters[filter || "all"]);
   }
   // UNION keeps standalone legacy separations without inventing a scheduled match.
-  // No snapshots, private drafts, player rosters or weather refreshes in this feed.
+  // No raw snapshots, private drafts, player rosters or weather refreshes in this feed.
   const query = `WITH entries AS (
     SELECT 'match:'||m.id id,m.id matchId,s.id separationId,m.title title,m.match_at date,m.location location,
       CASE WHEN m.status='CANCELLED' THEN 'CANCELLED' WHEN c.id IS NOT NULL THEN 'FINISHED'
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       s.confirmed_at confirmedAt,
       (SELECT COUNT(*) FROM match_attendance a WHERE a.match_id=m.id AND a.status='PRESENT') present,
       c.blue_score blueScore,c.yellow_score yellowScore,c.status votingStatus,c.closes_at votingClosesAt,
-      m.match_at sortDate
+      m.match_at sortDate,m.weather_snapshot weatherSnapshot
     FROM scheduled_matches m
     LEFT JOIN team_separations s ON s.id=m.separation_id AND s.deleted_at IS NULL
     LEFT JOIN career_matches c ON c.separation_id=s.id
@@ -42,17 +43,20 @@ export async function GET(request: Request) {
     SELECT 'separation:'||s.id,
       (SELECT m.id FROM scheduled_matches m WHERE m.separation_id=s.id LIMIT 1),s.id,s.match_title,s.match_date,s.location,
       CASE WHEN c.id IS NOT NULL THEN 'FINISHED' ELSE 'TEAMS' END,s.confirmed_at,NULL,
-      c.blue_score,c.yellow_score,c.status,c.closes_at,COALESCE(s.match_date,s.confirmed_at)
+      c.blue_score,c.yellow_score,c.status,c.closes_at,COALESCE(s.match_date,s.confirmed_at),NULL
     FROM team_separations s LEFT JOIN career_matches c ON c.separation_id=s.id
     WHERE s.deleted_at IS NULL AND (?=0 OR NOT EXISTS(SELECT 1 FROM scheduled_matches m WHERE m.separation_id=s.id))
   ) SELECT id,matchId,separationId,title,date,location,status,confirmedAt,present,
-      blueScore,yellowScore,votingStatus,votingClosesAt FROM entries
+      blueScore,yellowScore,votingStatus,votingClosesAt,weatherSnapshot FROM entries
     WHERE ${predicates.join(" AND ")}
     ORDER BY CASE WHEN status='OPEN' THEN 0 ELSE 1 END,
       CASE WHEN status='OPEN' THEN sortDate END ASC,sortDate DESC,id DESC LIMIT ? OFFSET ?`;
   values.push(detail ? 1 : 13, detail ? 0 : (page - 1) * 12);
-  const result = await db().prepare(query).bind(...values).all<MatchHubItem>();
-  return Response.json({ items: result.results.slice(0, detail ? 1 : 12), page, hasMore: !detail && result.results.length > 12,
+  const result = await db().prepare(query).bind(...values).all<MatchHubItem & { weatherSnapshot: string | null }>();
+  const items = result.results.slice(0, detail ? 1 : 12).map(({ weatherSnapshot, ...item }) => ({
+    ...item, weatherSummary: weatherSummaryFromRow({ weather_snapshot: weatherSnapshot }),
+  }));
+  return Response.json({ items, page, hasMore: !detail && result.results.length > 12,
     viewer: { authenticated: Boolean(account), permissions: account?.accountType === "administrator" ? ["*"] : account?.permissions || [] },
   }, { headers: noStore });
 }

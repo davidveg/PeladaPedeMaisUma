@@ -17,6 +17,20 @@ export function weatherFromRow(row: { weather_snapshot?: unknown } | null | unde
   } catch { return null; }
 }
 
+/** Only the saved forecast's display fields; never refresh historical weather here. */
+export function weatherSummaryFromRow(row: { weather_snapshot?: unknown } | null | undefined) {
+  const weather = weatherFromRow(row);
+  if (weather?.status !== "AVAILABLE") return null;
+  const number = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+  const text = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
+  const description = text(weather.description);
+  const temperatureMin = number(weather.temperatureMin), temperatureMax = number(weather.temperatureMax);
+  const wind = number(weather.windSpeed), windSpeed = wind !== null && wind >= 0 ? wind : null;
+  if (!description && temperatureMin === null && temperatureMax === null && windSpeed === null) return null;
+  return { description, icon: text(weather.icon), temperatureMin, temperatureMax, windSpeed,
+    usedDefaultLocation: weather.usedDefaultLocation === true };
+}
+
 export function describeWeatherSymbol(symbol: string) {
   if (symbol.includes("thunder")) return { description: "Trovoadas", icon: "⛈️" };
   if (symbol.includes("snow")) return { description: "Neve", icon: "🌨️" };
