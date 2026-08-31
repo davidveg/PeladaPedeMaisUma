@@ -1,2 +1,2 @@
-import FootballApp from "./FootballApp";
-export default function Home(){return <FootballApp/>}
+import HomeApp from "./HomeApp";
+export default function Home(){return <HomeApp/>}

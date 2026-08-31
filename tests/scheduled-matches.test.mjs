@@ -74,6 +74,8 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
       const response = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", { action: "attendance", matchId, playerId: player.id, status: "PRESENT" }, "ppm_session=match-admin-session", "PATCH"));
       assert.equal(response.status, 200);
     }
+    // An old enabled flag must not reactivate imports or interfere with match-based generation.
+    await db().prepare("UPDATE instance_configuration SET manual_separation_enabled=1 WHERE id=1").run();
     const firstProposalResponse = await separationProposal.POST(jsonRequest(
       "https://pelada.example/api/mobile/separations/proposal",
       { matchId, nonce: 0 },
@@ -83,6 +85,8 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
     const firstProposal = await firstProposalResponse.json();
     assert.equal(firstProposal.players.length, 4);
     assert.equal(firstProposal.result.proposal, 1);
+    assert.deepEqual(firstProposal.parsed, { title: firstProposal.match.title, date: firstProposal.match.date });
+    await db().prepare("UPDATE instance_configuration SET manual_separation_enabled=0 WHERE id=1").run();
 
     await db().prepare(`UPDATE instance_configuration SET separation_drafts_enabled=1 WHERE id=1`).run();
     const draftSaved = await separationDrafts.PUT(jsonRequest("https://pelada.example/api/admin/separation-drafts", {

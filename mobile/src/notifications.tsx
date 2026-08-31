@@ -28,7 +28,7 @@ export function NotificationCoordinator() {
       if (data?.type === "app_released" && typeof data.actionUrl === "string") {
         void Linking.openURL(data.actionUrl);
       } else if (data?.type === "career_vote_open" && typeof data.separationId === "string") {
-        router.push({ pathname: "/separations/[id]", params: { id: data.separationId } });
+        router.push({ pathname: "/separations/[id]", params: { id: data.separationId, tab: "voting" } });
       } else if (typeof data?.matchId === "string" && ["match_created", "match_updated", "attendance_changed", "match_closed", "match_cancelled"].includes(String(data.type))) {
         router.push(`/matches/${data.matchId}` as never);
       }

@@ -35,6 +35,13 @@ test("voto exige conta autenticada, usa o jogador associado e é único entre si
     await db().prepare(`INSERT INTO career_matches (id,separation_id,blue_score,yellow_score,winner_team,voting_token,status,closes_at,created_by_administrator_id,config_snapshot,team_momentum_applied,votes_momentum_applied,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind("m1", "s1", 3, 2, "BLUE", "token-vote", "OPEN", "2099-01-01T00:00:00.000Z", "admin", JSON.stringify({}), 1, 0, now, now).run();
 
+    for (const token of ["token-vote", "nao-existe"]) {
+      const response = await careerVote.GET(new Request(`https://pelada.example/api/career/vote?token=${token}`));
+      assert.equal(response.status, 401);
+      assert.match(response.headers.get("cache-control"), /private, no-store/);
+      assert.deepEqual(Object.keys(await response.json()), ["error"]);
+    }
+
     const body = { token: "token-vote", voterPlayerId: "p2", motmThirdId: "p2", motmSecondId: "p3", motmFirstId: "p4", dotmThirdId: "p5", dotmSecondId: "p6", dotmFirstId: "p7" };
     const unauthenticated = await careerVote.POST(jsonRequest("https://pelada.example/api/career/vote", body));
     assert.equal(unauthenticated.status, 401);

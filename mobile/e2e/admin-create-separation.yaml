@@ -1,6 +1,6 @@
 appId: br.com.peladapedemaisuma.app
-name: Administrador importa lista com recurso manual habilitado
-# Pré-requisito: habilitar "Lista copiada do WhatsApp" na configuração da instância.
+name: Administrador monta times pelas presenças da partida
+# Pré-requisito: partida aberta com pelo menos 4 presentes e título único em MATCH_TITLE.
 ---
 - launchApp:
     clearState: true
@@ -9,16 +9,23 @@ name: Administrador importa lista com recurso manual habilitado
 - tapOn: Senha
 - inputText: ${ADMIN_PASSWORD}
 - tapOn: Entrar
-- tapOn: Nova
-- assertVisible: Importar confirmações
-- tapOn: Lista do WhatsApp
-- inputText: ${WHATSAPP_CONFIRMED_LIST}
-- tapOn: Processar confirmações
-- assertVisible: Revisar jogadores
+- tapOn: Partidas
+- tapOn: ${MATCH_TITLE}
+- tapOn: Presenças
+- scrollUntilVisible:
+    element:
+      text: Fechar lista e gerar times
+- tapOn: Fechar lista e gerar times
+- assertVisible: Revisar presentes
+- scrollUntilVisible:
+    element:
+      text: Gerar times
 - tapOn: Gerar times
-- assertVisible: TIME AZUL
-- assertVisible: TIME AMARELO
+- assertVisible: Ajuste fino dos times
+- scrollUntilVisible:
+    element:
+      text: Continuar
 - tapOn: Continuar
-- tapOn: Confirmar e salvar
+- tapOn: Fechar lista e salvar
 - tapOn: Salvar
 - assertVisible: Equilíbrio e regras

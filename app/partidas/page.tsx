@@ -1,5 +1,5 @@
-import MatchesApp from "./MatchesApp";
+import MatchHubApp from "./MatchHubApp";
 
 export default function MatchesPage() {
-  return <MatchesApp/>;
+  return <MatchHubApp/>;
 }

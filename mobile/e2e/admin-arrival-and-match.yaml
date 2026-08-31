@@ -8,7 +8,7 @@ name: Ordem, rascunho e resultado
 - tapOn: Senha
 - inputText: ${ADMIN_PASSWORD}
 - tapOn: Entrar
-- tapOn: Separações
+- tapOn: Times gerados
 - tapOn: ${MATCH_TITLE}
 - assertVisible: Ordem de chegada
 - tapOn:
@@ -17,6 +17,8 @@ name: Ordem, rascunho e resultado
 - tapOn: Salvar ordem
 - tapOn: Salvar
 - assertVisible: Tudo certo
+- tapOn: OK
+- tapOn: Súmula e resultado
 - tapOn: Adicionar gol
 - tapOn: Time Azul
 - tapOn:

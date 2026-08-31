@@ -28,13 +28,13 @@ async function api(url: string, options?: RequestInit) {
   return payload;
 }
 
-export default function MatchesApp() {
+export default function MatchesApp({ matchId }: { matchId?: string }) {
   const [matches, setMatches] = useState<Match[]>([]), [loading, setLoading] = useState(true), [unauthorized, setUnauthorized] = useState(false);
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(""), [isAdmin, setIsAdmin] = useState(false);
   const [targetMatchId, setTargetMatchId] = useState(""), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
   async function load() {
     try {
-      const [matchPayload, authPayload] = await Promise.all([api("/api/matches"), api("/api/member-auth")]);
+      const [matchPayload, authPayload] = await Promise.all([api(`/api/matches${matchId ? `?id=${encodeURIComponent(matchId)}` : ""}`), api("/api/member-auth")]);
       setMatches(matchPayload.matches || []);
       setIsAdmin(authPayload.member?.accountType === "administrator");
       setUnauthorized(false);
@@ -43,11 +43,11 @@ export default function MatchesApp() {
     finally { setLoading(false); }
   }
   useEffect(() => {
-    setTargetMatchId(new URLSearchParams(window.location.search).get("match") || "");
+    setTargetMatchId(matchId || new URLSearchParams(window.location.search).get("match") || "");
     void load();
-  }, []);
+  }, [matchId]);
   useEffect(() => {
-    if (!targetMatchId || !matches.some(item => item.id === targetMatchId)) return;
+    if (matchId || !targetMatchId || !matches.some(item => item.id === targetMatchId)) return;
     if (onlyActiveOrSeparated && !isActiveOrSeparated(matches.find(item => item.id === targetMatchId)!)) { setOnlyActiveOrSeparated(false); return; }
     window.requestAnimationFrame(() => document.getElementById(targetMatchId)?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [matches, onlyActiveOrSeparated, targetMatchId]);
@@ -76,8 +76,10 @@ export default function MatchesApp() {
   if (loading) return <div className="member-loading">Carregando partidas…</div>;
   if (unauthorized) {
     const returnTo = targetMatchId ? `/partidas?match=${encodeURIComponent(targetMatchId)}` : "/partidas";
+    if (matchId) return <div className="member-access-card"><h2>Sua sessão expirou</h2><a className="primary" href={accountSignInHref(returnTo, true)}>Entrar na minha conta</a></div>;
     return <div className="member-page"><SiteHeader active="matches"/><main className="member-main"><div className="member-access-card match-login-required"><div className="ball">📅</div><h2>Entre para confirmar</h2><p>Use sua conta de jogador ou administrador para confirmar presença.</p><a className="primary" href={accountSignInHref(returnTo)}>Entrar na minha conta</a></div></main></div>;
   }
+  if (matchId) return <div className="match-site-list">{error && <div className="alert error">{error}</div>}{notice && <div role="status" className="alert">{notice}</div>}{matches.map(item => <MatchSiteCard key={item.id} item={item} busy={busy} onAnswer={answer} onShare={share}/>)}</div>;
   const visibleMatches = onlyActiveOrSeparated ? matches.filter(isActiveOrSeparated) : matches;
   return <div className="member-page"><SiteHeader active="matches" isAdmin={isAdmin}/><main className="member-main match-site-main"><div className="member-account-head"><div><div className="eyebrow">AGENDA DA PELADA</div><h1>Partidas e presenças</h1><p>Suas respostas são sincronizadas entre o site e o aplicativo.</p></div></div>{error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")}>×</button></div>}<label className="match-list-filter"><span><b>Somente abertas ou com times gerados</b><small>Oculta partidas canceladas e listas encerradas sem separação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label><div className="match-site-list">{visibleMatches.length ? visibleMatches.map(item => <MatchSiteCard key={item.id} item={item} busy={busy} onAnswer={answer} onShare={share}/>) : <div className="empty">Nenhuma partida corresponde ao filtro atual.</div>}</div></main></div>;
 }

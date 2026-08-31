@@ -225,7 +225,7 @@ export default function MyCard() {
           </View>)}
         </View>
       </LinearGradient>
-      <Button title="Ver estatísticas avançadas" icon="line-chart" variant="secondary" onPress={() => router.push("/advanced-statistics" as never)}/>
+      <Button title="Ver estatísticas avançadas" icon="line-chart" variant="secondary" onPress={() => router.push({ pathname: "/advanced-statistics" as never, params: { player: player.id } })}/>
       <Card style={styles.profileCard}>
         <View style={styles.profileHeading}>
           <Text style={styles.profileEyebrow}>MEU PERFIL</Text>

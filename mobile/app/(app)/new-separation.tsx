@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Crypto from "expo-crypto";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch, jsonMutation } from "@/api";
 import { BalanceDetails } from "@/balance-details";
-import { Button, Card, Field, Header, Screen } from "@/components";
+import { Button, Card, Header, Screen } from "@/components";
 import { recalculateTeamResult } from "@/team-balance";
 import { colors } from "@/theme";
 import { contrastTextColor, useMobileBranding } from "@/branding";
@@ -16,7 +15,6 @@ import type { Player, TeamResult } from "@/types";
 type TeamKey = "blue" | "yellow";
 type SaveMode = "draft" | "publish";
 type Proposal = {
-  parsed?: { title: string; date: string };
   match?: { id: string; title: string; date: string; location?: string | null; presentCount: number };
   players: Player[];
   result: TeamResult;
@@ -25,12 +23,11 @@ type Proposal = {
 };
 
 export default function NewSeparation() {
-  const { config: brand, loading: brandingLoading } = useMobileBranding();
+  const { config: brand } = useMobileBranding();
   const { account } = useAuth();
   const { matchId, draft } = useLocalSearchParams<{ matchId?: string; draft?: string }>();
   const draftMode = Boolean(matchId && draft === "1");
-  const [step, setStep] = useState(matchId ? 2 : 1);
-  const [text, setText] = useState("");
+  const [step, setStep] = useState(2);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [nonce, setNonce] = useState(0);
@@ -41,33 +38,29 @@ export default function NewSeparation() {
   const [location, setLocation] = useState("");
   const loadedMatch = useRef("");
   const router = useRouter(), client = useQueryClient();
-  const builderAllowed = separationBuilderAllowed(account, brand.manualSeparationEnabled, matchId);
-  const playersQuery = useQuery({ queryKey: ["admin-players"], queryFn: () => apiFetch<{ players: Player[] }>("/api/players"), enabled: builderAllowed && !matchId });
+  const builderAllowed = separationBuilderAllowed(account, matchId);
   const proposalMutation = useMutation({
     mutationFn: (body: unknown) => apiFetch<Proposal>("/api/mobile/separations/proposal", jsonMutation("POST", body)),
     onError: (error: Error) => Alert.alert("Revise a lista", error.message),
   });
   const saveMutation = useMutation({
     mutationFn: async (mode: SaveMode) => {
-      if (matchId) {
-        if (draftMode && mode === "draft") {
-          const saved = await apiFetch<{ result: TeamResult; draft: Proposal["draft"] }>("/api/admin/separation-drafts", jsonMutation("PUT", {
-            matchId, result: proposal?.result, manuallyAdjusted: manual,
-          }));
-          return { ...saved, mode };
-        }
-        const closed = await apiFetch<{ separationId: string }>("/api/admin/matches", jsonMutation("PATCH", {
-          action: "close", matchId, result: proposal?.result, manuallyAdjusted: manual,
+      if (!matchId) throw new Error("Abra uma partida para montar os times pelas presenças.");
+      if (draftMode && mode === "draft") {
+        const saved = await apiFetch<{ result: TeamResult; draft: Proposal["draft"] }>("/api/admin/separation-drafts", jsonMutation("PUT", {
+          matchId, result: proposal?.result, manuallyAdjusted: manual,
         }));
-        return { id: closed.separationId, mode: "publish" as const };
+        return { ...saved, mode };
       }
-      const key = Crypto.randomUUID();
-      const saved = await apiFetch<{ id: string }>("/api/mobile/separations", jsonMutation("POST", { title, date: date || null, location: location || null, originalText: text, result: proposal?.result, manuallyAdjusted: manual }, key));
-      return { ...saved, mode: "publish" as const };
+      const closed = await apiFetch<{ separationId: string }>("/api/admin/matches", jsonMutation("PATCH", {
+        action: "close", matchId, result: proposal?.result, manuallyAdjusted: manual,
+      }));
+      return { id: closed.separationId, mode: "publish" as const };
     },
     onSuccess: (saved) => {
       client.invalidateQueries({ queryKey: ["separations"] });
       client.invalidateQueries({ queryKey: ["matches"] });
+      client.invalidateQueries({ queryKey: ["match-hub"] });
       client.invalidateQueries({ queryKey: ["notifications"] });
       if (saved.mode === "draft") {
         setProposal(current => current ? { ...current, result: saved.result, draft: saved.draft } : current);
@@ -81,13 +74,13 @@ export default function NewSeparation() {
 
   useEffect(() => {
     const loadKey = `${matchId}:${draftMode}:${brand.separationDraftsEnabled}`;
-    if (!matchId || loadedMatch.current === loadKey) return;
+    if (!builderAllowed || !matchId || loadedMatch.current === loadKey) return;
     loadedMatch.current = loadKey;
     void proposalMutation.mutateAsync({ matchId, nonce: 0, loadDraft: draftMode }).then(next => {
       setProposal(next);
       setSelected(next.players.map(player => player.id));
-      setTitle(next.match?.title || next.parsed?.title || "Pelada");
-      setDate(next.match?.date || next.parsed?.date || "");
+      setTitle(next.match?.title || "Pelada");
+      setDate(next.match?.date || "");
       setLocation(next.match?.location || "");
       setNonce(Math.max(0, Number(next.result?.proposal || 1) - 1));
       setStep(2);
@@ -96,31 +89,21 @@ export default function NewSeparation() {
     });
   // The mutation object is intentionally excluded to avoid reloading the draft after each render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchId, draftMode, brand.separationDraftsEnabled]);
-
-  const importList = async () => {
-    const next = await proposalMutation.mutateAsync({ originalText: text, nonce: 0 }).catch(() => null);
-    if (!next) return;
-    setProposal(next);
-    setSelected(next.players.map(player => player.id));
-    setTitle(next.parsed?.title || "Pelada");
-    setDate(next.parsed?.date || "");
-    setStep(2);
-  };
+  }, [matchId, draftMode, brand.separationDraftsEnabled, builderAllowed]);
 
   const generate = async (retry = false) => {
     const nextNonce = retry ? nonce + 1 : nonce;
-    const body = matchId ? { matchId, nonce: nextNonce } : { playerIds: selected, nonce: nextNonce };
+    if (!builderAllowed) return;
+    const body = { matchId, nonce: nextNonce };
     const next = await proposalMutation.mutateAsync(body).catch(() => null);
     if (!next) return;
+    setSelected(next.players.map(player => player.id));
     setNonce(nextNonce);
     setProposal(next);
-      setManual(Boolean(next.draft?.exists&&!next.draft?.stale&&next.draft?.manuallyAdjusted));
+    setManual(Boolean(next.draft?.exists&&!next.draft?.stale&&next.draft?.manuallyAdjusted));
     setSwap(null);
     setStep(3);
   };
-
-  const toggle = (id: string) => setSelected(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
 
   const applyTeams = (blue: Player[], yellow: Player[]) => {
     setProposal(current => current ? { ...current, result: recalculateTeamResult(current.result, blue, yellow) } : current);
@@ -161,45 +144,33 @@ export default function NewSeparation() {
     applyTeams(blue, yellow);
   };
 
-  const reviewPlayers = matchId ? proposal?.players || [] : playersQuery.data?.players || [];
+  const reviewPlayers = proposal?.players || [];
 
   if (!builderAllowed) return <Screen>
-    <Header eyebrow="MONTAGEM DE TIMES" title={brandingLoading ? "Carregando configuração" : "Importação manual desativada"}/>
+    <Header eyebrow="MONTAGEM DE TIMES" title={matchId ? "Acesso restrito" : "Abra uma partida"}/>
     <View style={styles.content}>
       <Card style={styles.gap}>
-        <Text style={styles.sectionTitle}>{brandingLoading ? "Aguarde um instante" : "Use as presenças da partida"}</Text>
-        <Text style={styles.muted}>{brandingLoading ? "Consultando as configurações desta pelada." : "A importação da lista copiada do WhatsApp está oculta. Acesse Partidas, registre as presenças e feche a lista para gerar os times."}</Text>
+        <Text style={styles.muted}>{matchId ? "Sua conta não tem permissão para montar times." : "A montagem de times é feita pelas presenças de uma partida. A criação de separações avulsas foi encerrada."}</Text>
       </Card>
-      {!brandingLoading&&<Button title="Ir para Partidas" onPress={() => router.replace("/matches")}/>}
+      <Button title="Ir para Partidas" onPress={() => router.replace("/matches")}/>
     </View>
   </Screen>;
 
   return <Screen>
-    <Header eyebrow={`${matchId ? "PARTIDA · " : ""}ETAPA ${step} DE 4`} title={step === 1 ? "Importar confirmações" : step === 2 ? matchId ? "Revisar presentes" : "Revisar jogadores" : step === 3 ? "Ajuste fino dos times" : "Confirmar e salvar"}/>
+    <Header eyebrow={`PARTIDA · ETAPA ${step - 1} DE 3`} title={step === 2 ? "Revisar presentes" : step === 3 ? "Ajuste fino dos times" : "Confirmar e salvar"}/>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {step === 1 ? <Card style={styles.gap}>
-        <Text style={styles.muted}>Cole a lista com as seções Goleiros, Mensalistas e Convidados. Somente os confirmados serão usados.</Text>
-        <Field label="Lista do WhatsApp" multiline value={text} onChangeText={setText} placeholder={"PELADA - 25/07\n\nGoleiros:\n1 - João: ✅"}/>
-        <Button title="Processar confirmações" busy={proposalMutation.isPending} disabled={!text.trim()} onPress={importList}/>
-      </Card> : null}
-
       {step === 2 ? <>
         <Card>
-          <Text style={styles.sectionTitle}>{selected.length} {matchId ? "presentes confirmados" : "jogadores selecionados"}</Text>
-          {matchId ? <Text style={styles.muted}>A lista veio das confirmações da partida e será validada novamente antes do fechamento.</Text> : null}
+          <Text style={styles.sectionTitle}>{selected.length} presentes confirmados</Text>
+          <Text style={styles.muted}>A lista veio das confirmações da partida e será validada novamente antes do fechamento.</Text>
           <Text style={{ color: selected.length % 2 ? colors.yellow : colors.muted }}>{selected.length % 2 ? "Lista ímpar: um time terá um jogador extra." : "Quantidade par de jogadores."}</Text>
         </Card>
-        {reviewPlayers.map(player => matchId ? <Card key={player.id} style={[styles.playerChoice, styles.playerChoiceSelected]}>
+        {reviewPlayers.map(player => <Card key={player.id} style={[styles.playerChoice, styles.playerChoiceSelected]}>
           <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · Presença confirmada</Text></View>
           <Text style={styles.choiceMark}>✓</Text>
-        </Card> : <Pressable key={player.id} accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(player.id) }} onPress={() => toggle(player.id)}>
-          <Card style={[styles.playerChoice, selected.includes(player.id) && styles.playerChoiceSelected]}>
-            <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · {player.type === "goalkeeper" ? "Goleiro Mensalista" : player.type === "casual" ? "Avulso" : player.type === "monthly" ? "Mensalista" : "Convidado"}</Text></View>
-            <Text style={styles.choiceMark}>{selected.includes(player.id) ? "✓" : "+"}</Text>
-          </Card>
-        </Pressable>)}
+        </Card>)}
         <Button title="Gerar times" busy={proposalMutation.isPending} disabled={selected.length < 4} onPress={() => generate()}/>
-        <Button title={matchId ? "Voltar à partida" : "Voltar"} variant="secondary" onPress={() => matchId ? router.back() : setStep(1)}/>
+        <Button title="Voltar à partida" variant="secondary" onPress={() => router.back()}/>
       </> : null}
 
       {step === 3 && proposal ? <>
@@ -219,11 +190,11 @@ export default function NewSeparation() {
 
       {step === 4 && proposal ? <>
         <Card style={styles.gap}>
-          {matchId ? <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={draftMode?styles.draft:styles.official}>{draftMode?"O rascunho será salvo sem encerrar a lista ou notificar os jogadores.":"A lista será fechada somente após esta confirmação."}</Text>{draftMode&&proposal.draft?.updatedAt?<Text style={styles.muted}>Último rascunho: {new Date(proposal.draft.updatedAt).toLocaleString("pt-BR")}</Text>:null}</> : <><Field label="Título" value={title} onChangeText={setTitle}/><Field label="Data (AAAA-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none"/><Field label="Local (opcional)" value={location} onChangeText={setLocation}/></>}
+          <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={draftMode?styles.draft:styles.official}>{draftMode?"O rascunho será salvo sem encerrar a lista ou notificar os jogadores.":"A lista será fechada somente após esta confirmação."}</Text>{draftMode&&proposal.draft?.updatedAt?<Text style={styles.muted}>Último rascunho: {new Date(proposal.draft.updatedAt).toLocaleString("pt-BR")}</Text>:null}</>
           <Text style={styles.muted}>{proposal.result.blue.length} no {brand.teamBlueName} · {proposal.result.yellow.length} no {brand.teamYellowName} · {manual ? "Ajuste manual" : "Proposta oficial"} · {proposal.result.rating}</Text>
         </Card>
         {draftMode?<Button title="Salvar rascunho" variant="secondary" busy={saveMutation.isPending} onPress={() => Alert.alert("Salvar rascunho?", "A proposta ficará disponível somente aos administradores. A lista continuará aberta e ninguém será notificado.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate("draft") }])}/>:null}
-        <Button title={draftMode?"Fechar lista e publicar":matchId ? "Fechar lista e salvar" : "Confirmar e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(draftMode?"Fechar lista e publicar?":matchId ? "Fechar lista e salvar?" : "Salvar separação?", matchId ? "A partida será encerrada com esta proposta, publicada em Separações e os jogadores serão notificados." : "Os times e os indicadores atuais serão gravados na mesma base da aplicação web.", [{ text: "Cancelar", style: "cancel" }, { text: draftMode?"Publicar":"Salvar", onPress: () => saveMutation.mutate("publish") }])}/>
+        <Button title={draftMode?"Fechar lista e publicar":"Fechar lista e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(draftMode?"Fechar lista e publicar?":"Fechar lista e salvar?", "A lista da partida será encerrada, os times serão publicados e os jogadores serão notificados.", [{ text: "Cancelar", style: "cancel" }, { text: draftMode?"Publicar":"Salvar", onPress: () => saveMutation.mutate("publish") }])}/>
         <Button title="Voltar aos times" variant="secondary" onPress={() => setStep(3)}/>
       </> : null}
     </ScrollView>

@@ -1,5 +1,5 @@
 appId: br.com.peladapedemaisuma.app
-name: Login e consulta de separações
+name: Login e consulta de partidas e separações
 ---
 - launchApp:
     clearState: true
@@ -8,7 +8,8 @@ name: Login e consulta de separações
 - tapOn: Senha
 - inputText: ${PLAYER_PASSWORD}
 - tapOn: Entrar
-- assertVisible: Separações salvas
+- assertVisible: AGENDA E HISTÓRICO
+- assertVisible: Times gerados
 - swipe:
     direction: DOWN
 - assertNotVisible: Nova

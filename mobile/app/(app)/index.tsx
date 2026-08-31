@@ -1,2 +1,2 @@
 import { Redirect } from "expo-router";
-export default function AppIndex() { return <Redirect href="/separations"/>; }
+export default function AppIndex() { return <Redirect href="/matches"/>; }

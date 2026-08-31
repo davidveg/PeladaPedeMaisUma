@@ -31,6 +31,13 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.faviconUrl, null);
 });
 
+test("ignora a ativação legada sem afetar rascunhos ou outras configurações", () => {
+  const config = instanceConfigurationFromRow({ manual_separation_enabled: 1, separation_drafts_enabled: 1, team_blue_name: "Vermelho" });
+  assert.equal(config.manualSeparationEnabled, false);
+  assert.equal(config.separationDraftsEnabled, true);
+  assert.equal(config.teamBlueName, "Vermelho");
+});
+
 test("aceita identidade, cores e dia da semana personalizados", () => {
   const result = validateInstanceConfiguration({
     ...DEFAULT_INSTANCE_CONFIGURATION,
@@ -56,7 +63,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.defaultMatchWeekday, 3);
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
-  assert.equal(result.config.manualSeparationEnabled, true);
+  assert.equal(result.config.manualSeparationEnabled, false);
   assert.equal(result.config.separationDraftsEnabled, true);
   assert.equal(result.config.guestPreconfirmationEnabled, true);
   assert.equal(result.config.guestConfirmationThreshold, 18);
@@ -69,7 +76,7 @@ test("mantém colunas e valores alinhados ao salvar a configuração", () => {
   const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20, financeEnabled: false };
   assert.equal(INSTANCE_CONFIGURATION_COLUMNS.length, instanceConfigurationValues(config).length);
   const index = INSTANCE_CONFIGURATION_COLUMNS.indexOf("manual_separation_enabled");
-  assert.equal(instanceConfigurationValues(config)[index], 1);
+  assert.equal(instanceConfigurationValues(config)[index], 0);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("separation_drafts_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_preconfirmation_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_confirmation_threshold")], 20);

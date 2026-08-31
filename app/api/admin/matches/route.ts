@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const admin: any = await staffRequiredAny(request,["MATCHES_MANAGE","MATCH_ATTENDANCE_MANAGE","MATCHES_CANCEL","SEPARATIONS_MANAGE"]);
   if (!admin) return Response.json({ error: "Sem permissão para acessar a gestão de partidas." }, { status: 403, headers: noStore });
   const baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
-  return Response.json(await loadScheduledMatches(admin, true, baseUrl), { headers: noStore });
+  return Response.json(await loadScheduledMatches(admin, true, baseUrl, new URL(request.url).searchParams.get("id") || ""), { headers: noStore });
 }
 
 export async function POST(request: Request) {

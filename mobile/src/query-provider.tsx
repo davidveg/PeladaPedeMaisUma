@@ -17,5 +17,5 @@ const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: "ppm
 
 export function QueryProvider({ children }: PropsWithChildren) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, gcTime: 7 * 24 * 60 * 60_000, retry: 1, networkMode: "offlineFirst" }, mutations: { retry: 0, networkMode: "online" } } }));
-  return <PersistQueryClientProvider client={client} persistOptions={{ persister, maxAge: 7 * 24 * 60 * 60_000, dehydrateOptions: { shouldDehydrateQuery: query => ["separations", "matches", "notifications", "profile", "public-config"].includes(String(query.queryKey[0])) } }}>{children}</PersistQueryClientProvider>;
+  return <PersistQueryClientProvider client={client} persistOptions={{ persister, maxAge: 7 * 24 * 60 * 60_000, dehydrateOptions: { shouldDehydrateQuery: query => ["separations", "matches", "match-hub", "notifications", "profile", "public-config"].includes(String(query.queryKey[0])) } }}>{children}</PersistQueryClientProvider>;
 }

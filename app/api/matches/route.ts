@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const account: any = await playerAccountRequired(request);
   if (!account) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
   const baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
-  return Response.json(await loadScheduledMatches(account, false, baseUrl), { headers: noStore });
+  return Response.json(await loadScheduledMatches(account, false, baseUrl, new URL(request.url).searchParams.get("id") || ""), { headers: noStore });
 }
 
 export async function PUT(request: Request) {

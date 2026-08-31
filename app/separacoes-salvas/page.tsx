@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import FootballApp from "../FootballApp";
+import MatchHubApp from "../partidas/MatchHubApp";
 
 export const metadata: Metadata = {
   title: "Separações salvas | Pelada Pede Mais Uma",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SavedSeparationsPage() {
-  return <FootballApp initialStage="history"/>;
+  return <MatchHubApp/>;
 }

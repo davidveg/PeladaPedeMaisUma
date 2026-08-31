@@ -7,11 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api";
 import { useAuth } from "@/auth";
 import { colors } from "@/theme";
-import type { MatchListPayload, Separation } from "@/types";
 import { useMobileBranding } from "@/branding";
-import { manualSeparationEntryVisible } from "@/separation-access";
 import { financeEntryVisible } from "@/finance";
-import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
+import { hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -25,15 +23,11 @@ export default function AppLayout() {
   const { palette, config: instanceConfig, loading: brandingLoading } = useMobileBranding();
   const { account, loading } = useAuth();
   const insets = useSafeAreaInsets();
-  const separationsQuery = useQuery({
-    queryKey: ["separations"],
-    queryFn: () => apiFetch<{ separations: Separation[] }>("/api/mobile/separations"),
+  const badgesQuery = useQuery({
+    queryKey: ["match-hub", "badges", account?.id],
+    queryFn: () => apiFetch<{ attendance: number; votes: number }>("/api/match-hub/badges"),
     enabled: Boolean(account),
-  });
-  const matchesQuery = useQuery({
-    queryKey: ["matches"],
-    queryFn: () => apiFetch<MatchListPayload>(hasAnyPermission(account, [MODERATOR_PERMISSIONS.MATCHES_MANAGE, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE, MODERATOR_PERMISSIONS.MATCHES_CANCEL, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE]) ? "/api/admin/matches" : "/api/matches"),
-    enabled: Boolean(account),
+    refetchInterval: 30_000,
   });
   const notificationsQuery = useQuery({
     queryKey: ["notifications"],
@@ -44,8 +38,8 @@ export default function AppLayout() {
   if (!account) return <Redirect href="/login"/>;
   const canConfigureWeights = hasPermission(account, MODERATOR_PERMISSIONS.BALANCE_CONFIG_MANAGE);
   const financeVisible = financeEntryVisible(account, instanceConfig.financeEnabled);
-  const pendingVotes = separationsQuery.data?.separations.filter(item => item.career?.viewerCanVote).length || 0;
-  const pendingMatches = matchesQuery.data?.matches.filter(item => item.status === "OPEN" && item.viewer.canRespond && !item.viewer.status).length || 0;
+  const pendingVotes = badgesQuery.data?.votes || 0;
+  const pendingMatches = badgesQuery.data?.attendance || 0;
   const unreadNotifications = notificationsQuery.data?.unread || 0;
 
   return <Tabs screenOptions={{
@@ -66,7 +60,8 @@ export default function AppLayout() {
   }}>
     <Tabs.Screen name="index" options={{ href: null }}/>
     <Tabs.Screen name="separations/index" options={{
-      title: "Separações",
+      title: "Partidas",
+      href: null,
       tabBarBadge: pendingVotes || undefined,
       tabBarBadgeStyle: styles.badge,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="people" inactive="people-outline"/>,
@@ -74,7 +69,7 @@ export default function AppLayout() {
     <Tabs.Screen name="separations/[id]" options={{ href: null, title: "Detalhes" }}/>
     <Tabs.Screen name="matches/index" options={{
       title: "Partidas",
-      tabBarBadge: pendingMatches || undefined,
+      tabBarBadge: (pendingVotes + pendingMatches) || undefined,
       tabBarBadgeStyle: styles.badge,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="calendar" inactive="calendar-outline"/>,
     }}/>
@@ -92,14 +87,15 @@ export default function AppLayout() {
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="id-card" inactive="id-card-outline"/>,
     }}/>
     <Tabs.Screen name="advanced-statistics" options={{ href: null, title: "Estatísticas avançadas" }}/>
+    <Tabs.Screen name="statistics" options={{ href: null, title: "Estatísticas" }}/>
     <Tabs.Screen name="finance" options={{
       title: "Financeiro",
       href: financeVisible ? undefined : null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="wallet" inactive="wallet-outline"/>,
     }}/>
     <Tabs.Screen name="new-separation" options={{
-      title: "Nova",
-      href: manualSeparationEntryVisible(account, instanceConfig.manualSeparationEnabled) ? undefined : null,
+      title: "Montar times",
+      href: null,
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="add-circle" inactive="add-circle-outline"/>,
     }}/>
     <Tabs.Screen name="config" options={{

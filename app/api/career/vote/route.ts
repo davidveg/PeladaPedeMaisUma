@@ -29,16 +29,17 @@ async function context(token: string) {
 }
 
 export async function GET(request: Request) {
+  const headers = { "cache-control": "private, no-store", vary: "Cookie, Authorization" };
+  const account: any = await currentPlayerAccount(request);
+  if (!account) return Response.json({ error: "Entre na sua conta para consultar a votação." }, { status: 401, headers });
   const token = new URL(request.url).searchParams.get("token") || "";
   const data = await context(token);
-  const headers = { "cache-control": "no-store, max-age=0" };
   if (!data) return Response.json({ error: "Link de votação inválido." }, { status: 404, headers });
 
-  const [config, account, currentPlayerRows] = await Promise.all([
+  const [config, currentPlayerRows] = await Promise.all([
     getCareerConfig(),
-    currentPlayerAccount(request),
     db().prepare(`SELECT id,photo_url FROM players WHERE deleted_at IS NULL`).all(),
-  ]) as [any, any, { results: any[] }];
+  ]) as [any, { results: any[] }];
   const match = careerMatchFromRow(data.row);
   const names = Object.fromEntries(data.players.map((player: any) => [player.id, player.displayName]));
   const currentPhotos = new Map(currentPlayerRows.results.map(player => [String(player.id), player.photo_url ? String(player.photo_url) : null]));

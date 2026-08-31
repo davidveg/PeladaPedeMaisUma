@@ -10,7 +10,7 @@ import { refreshMatchWeather, weatherFromRow } from "./match-weather";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
 
-export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "") {
+export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "", matchId = "") {
   await ensureDb();
   const [matchResult, totalActive, allPlayerResult, instanceRow] = await Promise.all([db().prepare(
     `SELECT m.*,s.match_title separation_title,draft.id separation_draft_id,
@@ -18,10 +18,11 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
      FROM scheduled_matches m
      LEFT JOIN team_separations s ON s.id=m.separation_id
      LEFT JOIN match_separation_drafts draft ON draft.match_id=m.id
+     WHERE (?='' OR m.id=?)
      ORDER BY CASE m.status WHEN 'OPEN' THEN 0 ELSE 1 END,
               CASE WHEN m.status='OPEN' THEN m.match_at END ASC,
               m.match_at DESC`,
-  ).all(), db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>(),
+  ).bind(matchId, matchId).all(), db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>(),
     db().prepare(`SELECT id,display_name,photo_url,type,primary_position,secondary_position FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all(),
     db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first()]);
   const rows = matchResult.results as any[];

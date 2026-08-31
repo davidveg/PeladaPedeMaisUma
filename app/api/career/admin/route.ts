@@ -6,6 +6,7 @@ const adminRequired=(request:Request)=>request.method==="PUT"?fullAdminRequired(
 
 export async function GET(request:Request){
   if(!(await adminRequired(request)))return Response.json({error:"Não autorizado"},{status:401});await ensureDb();
+  if(new URL(request.url).searchParams.get("configOnly")==="1")return Response.json({config:await getCareerConfig()},{headers:{"cache-control":"no-store"}});
   const open=(await db().prepare(`SELECT * FROM career_matches WHERE status='OPEN' AND closes_at<=?`).bind(new Date().toISOString()).all()).results;
   for(const match of open) await finalizeIfExpired(match);
   const config=await getCareerConfig();

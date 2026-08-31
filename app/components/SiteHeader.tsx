@@ -42,21 +42,21 @@ export function SiteHeader({
     // páginas sob o cabeçalho fixo.
     menu.scrollLeft = Math.max(0, item.offsetLeft - (menu.clientWidth - item.offsetWidth) / 2);
   }, [active]);
+  const currentSection = active === "separations" || active === "home" ? "matches" : active;
   const link = (section: SiteSection, href: string, label: string) => (
-    <a ref={active === section ? activeLink : undefined} className={active === section ? "active" : undefined} aria-current={active === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
+    <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       {label}
     </a>
   );
 
   return (
     <header className="site-header">
-      <a href="/separacoes-salvas" className="brand" onClick={(event) => navigateWithDocument(event, "/separacoes-salvas")}>
+      <a href="/partidas" className="brand" onClick={(event) => navigateWithDocument(event, "/partidas")}>
         <BrandIdentity/>
       </a>
       <nav ref={navigation} aria-label="Navegação principal">
         {link("players", "/jogadores", "Jogadores")}
         {link("statistics", "/estatisticas", "Estatísticas")}
-        {link("separations", "/separacoes-salvas", "Separações salvas")}
         {link("matches", "/partidas", "Partidas")}
         {config.financeEnabled && link("finance", "/financeiro", "Financeiro")}
         {link("notifications", "/notificacoes", "Notificações")}

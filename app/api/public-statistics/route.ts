@@ -1,4 +1,4 @@
-import { db, ensureDb } from "../../../lib/database";
+import { currentPlayerAccount, db, ensureDb } from "../../../lib/database";
 import { buildMonthlyCareerHighlights, buildPublicStatistics, type MonthlyCareerAward, type StatisticsMatch } from "../../../lib/public-statistics";
 import { tryFinalizeCurrentMonthFromHistory } from "../../../lib/career-awards";
 import { finalizeIfExpired } from "../../../lib/career-service";
@@ -7,6 +7,7 @@ const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: Request) {
   await ensureDb();
+  const account = await currentPlayerAccount(request);
   const expiredVoting = await db().prepare(`SELECT * FROM career_matches WHERE status='OPEN' AND closes_at<=?`).bind(new Date().toISOString()).all();
   for (const match of expiredVoting.results) await finalizeIfExpired(match);
   const params = new URL(request.url).searchParams;
@@ -89,7 +90,10 @@ export async function GET(request: Request) {
     careerHighlights.annualMvpAvailable = true;
     careerHighlights.annualMvpAvailableAt = String(seasonAwardRow?.ended_at || seasonAwardRow?.finalized_at || annualAwardsAvailableAt).slice(0, 10);
   }
-  return Response.json({ from, to, players, ...statistics, careerHighlights }, { headers: { "cache-control": "no-store, max-age=0" } });
+  // Rankings remain public; the match-by-match history follows the Partidas access policy.
+  const versus = { ...statistics.versus, totalMatches: statistics.versus.matches.length,
+    matchDetailsRestricted: !account, matches: account ? statistics.versus.matches : [] };
+  return Response.json({ from, to, players, ...statistics, versus, careerHighlights }, { headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
 }
 
 function parseJson(value: unknown, fallback: any) { try { return value ? JSON.parse(String(value)) : fallback; } catch { return fallback; } }

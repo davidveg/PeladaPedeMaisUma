@@ -21,6 +21,7 @@ export type MobileInstanceConfiguration = {
   defaultMatchTime: string;
   defaultMatchLocation: string;
   confirmationLeadMinutes: number;
+  /** Legacy server compatibility only; standalone creation is no longer available. */
   manualSeparationEnabled: boolean;
   separationDraftsEnabled: boolean;
   guestPreconfirmationEnabled: boolean;

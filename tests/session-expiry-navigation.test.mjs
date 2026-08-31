@@ -19,6 +19,9 @@ test("rotas protegidas preservam o destino e rejeitam retornos externos", () => 
   assert.equal(navigation.isAccountProtectedPath("/partidas#proxima"), true);
   assert.equal(navigation.isAccountProtectedPath("/notificacoes?page=2"), true);
   assert.equal(navigation.isAccountProtectedPath("/jogadores"), false);
+  assert.equal(navigation.isAccountProtectedPath("/separacoes-salvas?separation=antiga"), true);
+  assert.equal(navigation.isAccountProtectedPath("/votacao?token=link"), true);
+  assert.equal(navigation.accountSignInHref("/partidas?match=pelada&tab=voting"), "/conta?returnTo=%2Fpartidas%3Fmatch%3Dpelada%26tab%3Dvoting");
   assert.equal(navigation.accountSignInHref("/partidas#proxima", true), "/conta?returnTo=%2Fpartidas%23proxima&reason=session-expired");
   assert.equal(navigation.safeSiteReturnTo("https://malicioso.example"), "");
   assert.equal(navigation.safeSiteReturnTo("//malicioso.example"), "");

@@ -9,7 +9,7 @@ import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { WeatherPreview } from "../components/WeatherPreview";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
-type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[] };
+type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string };
 type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "ABSENT"; changeCount: number };
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
@@ -24,22 +24,22 @@ type Match = {
 };
 type Player = { id: string; displayName: string; type: string; primaryPosition: string };
 
-export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[] }: Props) {
+export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[], matchId }: Props) {
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
+  const [loading, setLoading] = useState(true), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(!matchId);
   const allowed=(permission:string)=>permissions.includes("*")||permissions.includes(permission),canManage=allowed("MATCHES_MANAGE"),canAttend=allowed("MATCH_ATTENDANCE_MANAGE"),canCancel=allowed("MATCHES_CANCEL"),canSeparate=allowed("SEPARATIONS_MANAGE");
   async function load() {
     setLoading(true);
     try {
-      const result = await api("/api/admin/matches");
+      const result = await api(`/api/admin/matches${matchId ? `?id=${encodeURIComponent(matchId)}` : ""}`);
       setData(result);
-      const defaultMatches = result.matches.filter(isActiveOrSeparated);
+      const defaultMatches = matchId ? result.matches : result.matches.filter(isActiveOrSeparated);
       setSelected(current => current && defaultMatches.some((item: Match) => item.id === current) ? current : defaultMatches[0]?.id || null);
     } catch (cause: any) { setError(cause.message); } finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [matchId]);
   const visibleMatches = useMemo(() => onlyActiveOrSeparated ? data.matches.filter(isActiveOrSeparated) : data.matches, [data.matches, onlyActiveOrSeparated]);
   useEffect(() => { if (!visibleMatches.some(item => item.id === selected)) setSelected(visibleMatches[0]?.id || null); }, [visibleMatches, selected]);
   const current = visibleMatches.find(item => item.id === selected) || null;
@@ -81,13 +81,13 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
 
   if (loading && !data.matches.length) return <div className="admin-card match-admin-empty">Carregando partidas…</div>;
   return <section className="admin-matches">
-    <div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p>{canManage&&<button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button>}</div>
-    <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem separação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label>
-    <div className="match-admin-layout"><div className="match-admin-list">{visibleMatches.length ? visibleMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
+    {!matchId && <><div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p>{canManage&&<button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button>}</div>
+    <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem separação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label></>}
+    <div className={matchId ? "match-admin-single" : "match-admin-layout"}>{!matchId && <div className="match-admin-list">{visibleMatches.length ? visibleMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
       <span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
-    </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}</div>
+    </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}</div>}
     <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
     {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
@@ -133,7 +133,7 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
   </section>;
 }
 
-function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { match: Match | null; api: Api; instanceConfig?: any; onClose(): void; onSaved(message: string): Promise<void> }) {
+export function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { match: Match | null; api: Api; instanceConfig?: any; onClose(): void; onSaved(message: string): Promise<void> }) {
   const defaults = nextMatchDefaults(instanceConfig);
   const matchParts = match ? brazilianDateTimeParts(match.matchAt) : defaults.match;
   const deadlineParts = match ? brazilianDateTimeParts(match.confirmationDeadline) : defaults.deadline;

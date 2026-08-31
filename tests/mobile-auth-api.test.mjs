@@ -33,10 +33,12 @@ test("sessão mobile rotativa aplica papel administrativo no servidor", async ()
     const key = "00000000-0000-4000-8000-000000000001", separationBody = { title: "Teste mobile", originalText: "lista", result: { blue: [{ id: "b1" }], yellow: [{ id: "y1" }], cost: 1, rating: "Bom equilíbrio" } };
     const created = await mobileSeparations.POST(authorizedJson("https://pelada.example/api/mobile/separations", adminSession.accessToken, separationBody, key));
     const replayed = await mobileSeparations.POST(authorizedJson("https://pelada.example/api/mobile/separations", adminSession.accessToken, separationBody, key));
-    assert.equal(created.status, 201);
-    assert.equal(replayed.headers.get("x-idempotent-replay"), "true");
-    assert.equal((await created.json()).id, (await replayed.json()).id);
-    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM team_separations WHERE match_title='Teste mobile'`).first("total"), 1);
+    assert.equal(created.status, 410);
+    assert.equal(replayed.status, 410);
+    assert.equal(replayed.headers.get("x-idempotent-replay"), null);
+    assert.equal((await created.json()).code, "STANDALONE_SEPARATION_REMOVED");
+    assert.equal((await replayed.json()).code, "STANDALONE_SEPARATION_REMOVED");
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM team_separations WHERE match_title='Teste mobile'`).first("total"), 0);
 
     const memberLogin = await mobileAuth.POST(jsonRequest("https://pelada.example/api/mobile/auth", "POST", { email: "member-mobile@example.com", password }));
     const memberSession = await memberLogin.json();

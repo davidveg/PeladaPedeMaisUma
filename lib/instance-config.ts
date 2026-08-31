@@ -27,6 +27,7 @@ export type InstanceConfiguration = {
   defaultMatchTime: string;
   defaultMatchLocation: string;
   confirmationLeadMinutes: number;
+  /** Deprecated compatibility field for older apps; standalone creation is retired. */
   manualSeparationEnabled: boolean;
   separationDraftsEnabled: boolean;
   guestPreconfirmationEnabled: boolean;
@@ -107,7 +108,7 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     defaultMatchTime: value("default_match_time", DEFAULT_INSTANCE_CONFIGURATION.defaultMatchTime),
     defaultMatchLocation: value("default_match_location", DEFAULT_INSTANCE_CONFIGURATION.defaultMatchLocation),
     confirmationLeadMinutes: Number(row.confirmation_lead_minutes ?? DEFAULT_INSTANCE_CONFIGURATION.confirmationLeadMinutes),
-    manualSeparationEnabled: Boolean(row.manual_separation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.manualSeparationEnabled),
+    manualSeparationEnabled: false,
     separationDraftsEnabled: Boolean(row.separation_drafts_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.separationDraftsEnabled),
     guestPreconfirmationEnabled: Boolean(row.guest_preconfirmation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.guestPreconfirmationEnabled),
     guestConfirmationThreshold: Number(row.guest_confirmation_threshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
@@ -156,7 +157,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     defaultMatchTime: String(source.defaultMatchTime ?? DEFAULT_INSTANCE_CONFIGURATION.defaultMatchTime).trim(),
     defaultMatchLocation: text("defaultMatchLocation", 300, DEFAULT_INSTANCE_CONFIGURATION.defaultMatchLocation),
     confirmationLeadMinutes: Number(source.confirmationLeadMinutes ?? DEFAULT_INSTANCE_CONFIGURATION.confirmationLeadMinutes),
-    manualSeparationEnabled: source.manualSeparationEnabled === true,
+    manualSeparationEnabled: false,
     separationDraftsEnabled: source.separationDraftsEnabled === true,
     guestPreconfirmationEnabled: source.guestPreconfirmationEnabled === true,
     guestConfirmationThreshold: Number(source.guestConfirmationThreshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
@@ -217,7 +218,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
-    Number(config.manualSeparationEnabled), Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.financeEnabled),
+    0, Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.financeEnabled),
     config.timezone,
   ];
 }

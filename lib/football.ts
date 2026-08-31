@@ -31,47 +31,6 @@ export const score = (p: Player, c = defaultConfig) => {
 export const historicalLearningContribution = (p: Player, c: Config = defaultConfig) => c.historicalLearningEnabled ? Number(p.historicalPerformance?.adjustment ?? 0) : 0;
 export const balancingScore = (p: Player, c: Config = defaultConfig) => Math.max(1, Math.min(5, score(p, c) + historicalLearningContribution(p, c)));
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-export type ImportedPlayerType = "monthly" | "guest" | "goalkeeper";
-
-export function parseWhatsApp(text: string) {
-  const clean = text.replace(/[\u200B-\u200D\uFEFF\uFE0E\uFE0F]/g, "");
-  const lines = clean.split(/\r?\n/).map((raw, index) => ({ raw, index: index + 1 }));
-  const first = lines.find(x => x.raw.trim())?.raw.trim() || "Pelada";
-  const dateMatch = clean.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);
-  let section: ImportedPlayerType = "monthly";
-  const confirmed: string[] = [], absent: string[] = [], unrecognized: string[] = [];
-  const typesByName: Record<string,ImportedPlayerType> = {};
-  for (const line of lines) {
-    const value = line.raw.trim();
-    if (!value) continue;
-    const normalized = normalizeName(value);
-    if (/^goleiros?\b/.test(normalized)) { section = "goalkeeper"; continue; }
-    if (/^mensalistas?\b/.test(normalized)) { section = "monthly"; continue; }
-    if (/^convidados?\b/.test(normalized)) { section = "guest"; continue; }
-    if (/nao vai comparecer|vai comparecer|em branco/.test(normalized)) continue;
-    const match = value.match(/^\s*\d+\s*[-.)]?\s*(.+?)(?:\s*:\s*)?([✅❌]*)\s*$/u);
-    if (!match) { if (line.index > 1 && value !== first) unrecognized.push(value); continue; }
-    const name = match[1].replace(/\s*:\s*$/, "").trim();
-    if (!name) continue;
-    typesByName[normalizeName(name)] = section;
-    if (value.includes("✅") || (section === "goalkeeper" && !value.includes("❌"))) confirmed.push(name);
-    else absent.push(name);
-  }
-  const duplicates = confirmed.filter((n, i) => confirmed.findIndex(x => normalizeName(x) === normalizeName(n)) !== i);
-  return { title: first.replace(/^\*|\*$/g,""), date: dateMatch ? `${dateMatch[3] || new Date().getFullYear()}-${dateMatch[2].padStart(2,"0")}-${dateMatch[1].padStart(2,"0")}` : "", confirmed, absent, unrecognized, duplicates, typesByName };
-}
-
-export function matchPlayers(names: string[], players: Player[]) {
-  return names.map(name => {
-    const n = normalizeName(name);
-    const exact = players.filter(p => [p.displayName, ...(p.aliases || []), p.nickname || "", p.fullName].some(v => normalizeName(v) === n));
-    if (exact.length === 1) return { name, status: "found" as const, player: exact[0] };
-    if (exact.length > 1) return { name, status: "ambiguous" as const, suggestions: exact };
-    const suggestions = players.filter(p => [p.displayName, p.nickname || "", ...(p.aliases || [])].some(v => normalizeName(v).startsWith(n) || n.startsWith(normalizeName(v)))).slice(0, 3);
-    return { name, status: suggestions.length ? "ambiguous" as const : "missing" as const, suggestions };
-  });
-}
-
 type PositionCounts = Record<Position, number>;
 const emptyPositionCounts = (): PositionCounts => ({ Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 });
 const linePositionNames: Position[] = ["Defesa", "Meio-campo", "Ataque"];

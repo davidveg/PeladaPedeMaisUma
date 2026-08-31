@@ -20,7 +20,7 @@ Documentação complementar:
 - Ordenação crescente e decrescente por nome, tipo, posição, atributos, momentum, histórico e overall.
 - Cards completos com foto, atributos, overall com uma casa decimal, jogos, vitórias, derrotas, gols e assistências.
 - Cards opcionais por nível — Bronze, Prata, Ouro e Lendário — com limites configuráveis.
-- Separações salvas com link público permanente, times, regras utilizadas, ordem de chegada, placar, súmula e resultado da votação.
+- Separações salvas com link permanente protegido por login, times, regras utilizadas, ordem de chegada, placar, súmula e resultado da votação.
 - Página pública de estatísticas com período mensal, anual ou personalizado:
   - ranking de gols, assistências e participações;
   - ranking de assiduidade;
@@ -71,14 +71,13 @@ Documentação complementar:
   - lembretes de votação do Modo Carreira.
 - Push Android/iOS via Expo quando disponível. A central interna continua funcionando mesmo sem push.
 
-### Importação e separação dos times
+### Montagem de times pelas partidas
 
 - O fluxo principal parte das presenças registradas em **Partidas**: o administrador fecha a lista e gera os times com os jogadores confirmados.
-- A importação manual de uma lista copiada do WhatsApp é opcional, vem desativada por padrão e pode ser reativada em **Painel administrativo → Identidade e agenda → Formas de montar times**.
-- Ao desativar a importação manual, o site oculta **Montar times** e o aplicativo oculta **Nova**, preservando integralmente a geração iniciada por uma partida e todas as separações já salvas.
-- Parser de listas do WhatsApp com suporte a confirmações, ausências, campos vazios, caracteres Unicode invisíveis, datas, títulos e duplicidades.
-- Reconhecimento das seções **Goleiros**, **Mensalistas** e **Convidados**.
-- Jogadores desconhecidos ou ambíguos nunca são vinculados automaticamente.
+- Toda nova separação parte de uma partida criada e dos seus presentes confirmados. O importador por texto do WhatsApp e sua opção administrativa foram removidos.
+- Separações avulsas antigas continuam no histórico, com seus snapshots, resultados, votos e ordens de chegada preservados.
+- As APIs antigas de criação avulsa retornam `410 Gone` com orientação para usar Partidas. A geração por `matchId`, os rascunhos e a publicação continuam usando as APIs existentes.
+- O campo legado `manualSeparationEnabled` permanece na configuração como `false`, inclusive se o banco antigo contiver `1` ou um cliente tentar reativá-lo. A coluna é mantida por compatibilidade; não há exclusão ou migração destrutiva de dados.
 - Propostas calculadas pelo algoritmo oficial do servidor.
 - Rascunhos de Separação opcionais, desativados por padrão e configuráveis em **Painel administrativo → Separações**.
 - Quando ativados, a partida mantém o caminho direto **Fechar lista e gerar times** e ganha o caminho adicional **Criar/Editar rascunho de separação**. Site e aplicativo compartilham o mesmo rascunho.
@@ -91,7 +90,7 @@ Documentação complementar:
 - Criação e confirmação de separações exclusivas para administradores.
 - Snapshot histórico das equipes e das regras utilizadas, preservando a partida mesmo após alterações futuras nos cadastros.
 - Ordem de chegada independente para cada equipe, editável e confirmável novamente.
-- Compartilhamento dos times e do link público pelo WhatsApp.
+- Compartilhamento dos times e do link pelo WhatsApp (consulta do link exige login).
 
 ### Modo Carreira
 
@@ -144,7 +143,6 @@ O painel possui:
 - moderadores e suas permissões;
 - identidade, agenda, nomes e cores das equipes;
 - ativação e limite da lista de espera administrativa de convidados;
-- ativação opcional da importação manual por lista do WhatsApp, compartilhada entre site e aplicativo;
 - configurações de equilíbrio;
 - configurações, votos e encerramento do Modo Carreira;
 - auditoria pesquisável, filtrável e paginada.
@@ -164,7 +162,7 @@ O aplicativo oferece:
 - separações salvas e card do jogador;
 - estatísticas avançadas do jogador pelo card, com IPI, forma, consistência, saldo, impacto, parceria e ranking;
 - criação de separações para administradores a partir das presenças de uma partida;
-- importação manual por lista do WhatsApp quando habilitada na configuração da instância;
+- montagem de times a partir das presenças de uma partida, com revisão, ajustes e rascunhos opcionais;
 - ordem de chegada por equipe;
 - rascunho e confirmação de resultado;
 - compartilhamento pelo WhatsApp;
@@ -364,7 +362,7 @@ Somente a confirmação oficial do resultado atualiza estatísticas e momentum. 
 | `/` | Organização e criação de times para administradores |
 | `/admin` | Painel completo para administradores e painel limitado às permissões concedidas para moderadores |
 | `/jogadores` | Lista pública e cards |
-| `/separacoes-salvas` | Histórico público das separações |
+| `/separacoes-salvas` | Acesso legado ao histórico de partidas, protegido por login |
 | `/estatisticas` | Rankings e confrontos |
 | `/partidas` | Agenda e confirmação de presença |
 | `/notificacoes` | Central da conta autenticada |
@@ -383,7 +381,7 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 - `GET /api/public-config` — URL canônica, identidade, agenda, nomes e cores das equipes.
 - `GET /api/public-players` — jogadores e estatísticas esportivas públicas.
 - `GET /api/public-statistics` — rankings, assiduidade e confrontos por período.
-- `GET /api/separations` — separações confirmadas.
+- `GET /api/separations` — separações confirmadas, somente para contas autenticadas.
 - `GET /api/mobile/version` — versão e link oficial por plataforma.
 - `GET /api/health` — saúde da aplicação e banco.
 
@@ -401,10 +399,11 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 - `GET/PUT /api/matches` — agenda e confirmação do jogador.
 - `GET/POST/PATCH /api/admin/matches` — gestão administrativa das partidas, presenças e lista de espera de convidados.
 - `GET/PUT /api/admin/separation-drafts` — consulta e gravação privada dos rascunhos de separação.
-- `GET/POST/PATCH/DELETE /api/separations` — histórico, criação, chegada e exclusão lógica.
+- `GET/PATCH/DELETE /api/separations` — histórico, edição dos times/chegada e exclusão lógica (permissões existentes preservadas).
+- `POST /api/separations` — criação avulsa encerrada: `410 Gone` para clientes autorizados.
 - `GET/PUT /api/career/draft` — rascunho de súmula.
 - `POST/PUT /api/career/match` — confirmação e correção de resultado.
-- `GET/POST /api/career/vote` — consulta da votação e voto autenticado.
+- `GET/POST /api/career/vote` — consulta e voto exigem autenticação; somente participantes elegíveis podem votar.
 - `GET/PUT/POST/DELETE /api/career/admin` — configuração, acompanhamento e encerramento.
 
 ### Administração
@@ -423,8 +422,9 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 ### Mobile
 
 - `GET/POST/PUT/DELETE /api/mobile/auth` — login, refresh rotativo e revogação.
-- `GET/POST/PATCH /api/mobile/separations` — separações.
-- `POST /api/mobile/separations/proposal` — parser e algoritmo oficial.
+- `GET/PATCH /api/mobile/separations` — consulta e edição de separações.
+- `POST /api/mobile/separations` — criação avulsa encerrada: `410 Gone`, inclusive para repetições com chaves de idempotência antigas.
+- `POST /api/mobile/separations/proposal` — algoritmo oficial sobre presenças da partida; exige `matchId`. Sem partida, `originalText` ou `playerIds` não geram mais propostas.
 - `GET/PUT /api/mobile/config` — os três pesos editáveis.
 - `POST/PUT /api/mobile/career/match` — resultado idempotente.
 - `POST/DELETE /api/mobile/notifications` — registro e desativação de push.
@@ -569,6 +569,20 @@ Uma única imagem pode atender vários grupos, desde que cada Compose use valore
 - `LOGGING_JOB_NAME`.
 
 Nunca compartilhe `INSTANCE_DATA_PATH` entre grupos. Consulte [docs/MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md) para configuração da identidade, agenda e builds personalizados do aplicativo.
+
+## Partidas: agenda e separações no mesmo lugar
+
+A navegação principal do site e do aplicativo usa **Partidas** como entrada única para presenças, times, súmula/resultado e votação. A página inicial do site também usa essa área.
+
+- Filtros: Todas (abertas ou com times publicados), Abertas, Times gerados, Finalizadas (resultado confirmado), Histórico e Canceladas. Canceladas ficam ocultas por padrão.
+- A listagem é paginada, com 12 registros por página, e não transfere snapshots, súmulas, presenças individuais ou rascunhos. Esses detalhes são carregados ao abrir uma partida.
+- Separações antigas sem agendamento continuam disponíveis, sem inventar listas de presenças ou datas. As URLs antigas de separações e de votação continuam funcionando.
+- Toda a área de Partidas exige login de administrador, moderador ou conta de jogador, inclusive histórico, times, súmulas, resultados e votações. Links antigos e links compartilhados preservam o destino após o login, sem expor dados da partida antes da autenticação. Sessões inválidas, expiradas ou de contas desativadas não dão acesso. As APIs de consulta retornam 401 sem dados e não permitem cache compartilhado.
+- As permissões de edição e de voto permanecem inalteradas; rascunhos continuam restritos a quem tem permissão. O aplicativo usa a mesma proteção com sua sessão autenticada. Estatísticas agregadas continuam públicas, mas históricos e recordes detalhados de partidas exigem login.
+- O algoritmo, o Modo Carreira e os registros históricos não foram migrados ou recalculados por essa reorganização. O painel administrativo mantém as configurações e ferramentas próprias de gestão.
+- As APIs anteriores mantêm o comportamento padrão para versões antigas do aplicativo. Os novos parâmetros `?id=` permitem consultar uma partida/separação específica, inclusive separações anteriores ao limite legado de 50 registros.
+
+**Ordem de publicação:** atualizar primeiro o servidor/site, que disponibiliza `/api/match-hub` e `/api/match-hub/badges`, e depois distribuir a atualização mobile. Não há mudança de dependências nativas nesta funcionalidade; uma OTA deve usar o canal e o runtime compatíveis com o aplicativo instalado. Não publicar a OTA antes do servidor, pois a nova navegação depende desses endpoints.
 
 ## Licença e operação
 

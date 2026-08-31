@@ -11,23 +11,34 @@ type VotePlayer = { id: string; displayName: string; photoUrl?: string | null; t
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Não foi possível concluir a operação.");
+  if (!response.ok) throw Object.assign(new Error(payload.error || "Não foi possível concluir a operação."), { status: response.status });
   return payload;
 }
 
-export default function VotingApp() {
+export default function VotingApp({ votingToken, embedded = false }: { votingToken?: string; embedded?: boolean }) {
+  const Container = embedded ? "div" : "main";
   const { config: brand } = useInstanceBranding();
   const [data, setData] = useState<any>(null);
+  const [accessRequired, setAccessRequired] = useState(false);
   const [votes, setVotes] = useState<Record<Field, string>>(emptyVotes());
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const token = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") || "" : "";
+  const token = votingToken || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") || "" : "");
 
   const load = async () => {
-    const payload = await api(`/api/career/vote?token=${encodeURIComponent(token)}`, { cache: "no-store" });
-    setData(payload);
-    return payload;
+    try {
+      const payload = await api(`/api/career/vote?token=${encodeURIComponent(token)}`, { cache: "no-store" });
+      setData(payload); setAccessRequired(false);
+      return payload;
+    } catch (cause) {
+      if ((cause as { status?: number }).status === 401) {
+        setData(null); setVotes(emptyVotes()); setMessage(""); setError(""); setAccessRequired(true);
+        window.dispatchEvent(new Event("ppm:match-access-required"));
+        return null;
+      }
+      throw cause;
+    }
   };
 
   useEffect(() => {
@@ -72,7 +83,8 @@ export default function VotingApp() {
       setVotes(emptyVotes());
       await load();
     } catch (cause: any) {
-      setError(cause.message);
+      if (cause.status === 401) await load();
+      else setError(cause.message);
     } finally {
       setBusy(false);
     }
@@ -93,15 +105,16 @@ export default function VotingApp() {
     }
   }
 
-  if (!data) return <main className="vote-page"><div className="vote-card"><b>{error || "Carregando votação…"}</b></div></main>;
+  if (accessRequired) return <Container className={embedded ? "vote-page match-vote-embedded" : "vote-page"}><section className="vote-card"><VoteLogin onDone={async () => { setError(""); await load(); }}/></section></Container>;
+  if (!data) return <Container className={embedded ? "vote-page match-vote-embedded" : "vote-page"}><div className="vote-card"><b>{error || "Carregando votação…"}</b></div></Container>;
 
   const match = data.match;
   const closed = match.status === "CLOSED";
   const viewer = data.viewer || {};
 
   return (
-    <main className="vote-page">
-      <header className="vote-brand"><a href="/">⚽ <b>{brand.siteName}</b></a><span>Modo Carreira</span></header>
+    <Container className={embedded ? "vote-page match-vote-embedded" : "vote-page"}>
+      {!embedded && <header className="vote-brand"><a href="/">⚽ <b>{brand.siteName}</b></a><span>Modo Carreira</span></header>}
       <section className="vote-card">
         <div className="vote-head">
           <div><small>VOTAÇÃO DA PARTIDA</small><h1>{match.matchTitle}</h1><p>{match.matchDate ? new Date(match.matchDate + "T12:00:00").toLocaleDateString("pt-BR") : "Data não informada"}</p></div>
@@ -150,7 +163,7 @@ export default function VotingApp() {
           </section>
         )}
       </section>
-    </main>
+    </Container>
   );
 }
 
@@ -184,7 +197,7 @@ function VoteLogin({ onDone }: { onDone: () => Promise<void> }) {
 
   return (
     <form className="vote-login" onSubmit={submit}>
-      <div><span>LOGIN OBRIGATÓRIO</span><h2>Entre para registrar seu voto</h2><p>O voto será associado automaticamente ao jogador vinculado à sua conta.</p></div>
+      <div><span>LOGIN OBRIGATÓRIO</span><h2>Entre para acessar a votação</h2><p>Os dados da partida e os resultados da votação são exclusivos para contas autenticadas. Use sua conta de jogador, moderador ou administrador.</p></div>
       {error && <div className="alert error" role="alert">{error}</div>}
       <label>E-mail<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" required /></label>
       <label>Senha<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" minLength={8} required /></label>

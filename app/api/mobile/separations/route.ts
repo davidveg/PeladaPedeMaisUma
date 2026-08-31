@@ -2,15 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GET as getSeparations, PATCH as patchSeparation, POST as postSeparation } from "../../separations/route";
 import { db, playerAccountRequired, staffRequired } from "../../../../lib/database";
-import { claimIdempotency, readIdempotencyKey, releaseIdempotency, storeIdempotentResponse } from "../../../../lib/mobile-idempotency";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 const adminRequired=(request:Request)=>staffRequired(request,"SEPARATIONS_MANAGE");
 
 export async function GET(request: Request) {
   const account: any = await playerAccountRequired(request);
-  if (!account) return Response.json({ error: "Não autorizado." }, { status: 401 });
-  const response = await getSeparations(), payload = await response.json() as any, baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
+  if (!account) return Response.json({ error: "Não autorizado." }, { status: 401, headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
+  const response = await getSeparations(request), payload = await response.json() as any, baseUrl = resolvePublicBaseUrl(request, getRuntimeBindings().APP_BASE_URL);
   const playerId = String(account.playerId || "");
   const votedMatches = playerId
     ? new Set(((await db().prepare(`SELECT career_match_id FROM career_votes WHERE voter_player_id=?`).bind(playerId).all()).results as any[]).map(row => String(row.career_match_id)))
@@ -31,20 +30,11 @@ export async function GET(request: Request) {
       },
     };
   });
-  return Response.json(payload, { status: response.status, headers: { "cache-control": "no-store" } });
+  return Response.json(payload, { status: response.status, headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
 }
 
 export async function POST(request: Request) {
-  const admin: any = await adminRequired(request);
-  if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401 });
-  const key = readIdempotencyKey(request);
-  if (!key) return Response.json({ error: "Envie uma Idempotency-Key entre 16 e 128 caracteres." }, { status: 400 });
-  const previous = await claimIdempotency(admin.id, "CREATE_SEPARATION", key);
-  if (previous) return previous;
-  let response: Response;
-  try { response = await postSeparation(request); } catch (error) { await releaseIdempotency(admin.id, "CREATE_SEPARATION", key); throw error; }
-  if (!response.ok) { await releaseIdempotency(admin.id, "CREATE_SEPARATION", key); return response; }
-  return storeIdempotentResponse(admin.id, "CREATE_SEPARATION", key, response);
+  return postSeparation(request);
 }
 
 export async function PATCH(request: Request) {

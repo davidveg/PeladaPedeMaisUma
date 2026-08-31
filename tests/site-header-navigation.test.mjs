@@ -15,9 +15,10 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.match(source, /accountSignInHref\(href, true\)/);
   assert.doesNotMatch(source, />Início<|"Início"/);
   assert.doesNotMatch(source, /Entrar como administrador|Últimas separações/);
-  assert.match(source, /link\("separations", "\/separacoes-salvas", "Separações salvas"\)/);
+  assert.doesNotMatch(source, /link\("separations"/);
+  assert.match(source, /link\("matches", "\/partidas", "Partidas"\)/);
   assert.match(source, /link\("admin", "\/admin", "Painel Administrativo"\)/);
-  assert.match(source, /href="\/separacoes-salvas" className="brand"/);
+  assert.match(source, /href="\/partidas" className="brand"/);
   assert.doesNotMatch(source, /scrollIntoView/);
   assert.match(source, /menu\.scrollLeft = Math\.max\(0,/);
   assert.match(worker, /text\/html/);
