@@ -259,6 +259,8 @@ test("site e app compartilham filtros; rotas antigas chegam às mesmas abas", as
   assert.match(await read("mobile/app/(app)/matches/[id].tsx"), /matchId=\{id\}/);
   assert.doesNotMatch(await read("mobile/app/(app)/_layout.tsx"), /api\/mobile\/separations|api\/admin\/matches/);
   assert.match(await read("mobile/src/query-provider.tsx"), /"match-hub"/);
+  const football = await read("app/FootballApp.tsx");
+  assert.match(football, /section === "result"[^\n]+RoundRecapCard[^\n]+CareerMatchCard/, "a aba Súmula e resultado deve exibir o jornal antes da súmula");
   assert.match(web, /accessRequired \? <SignIn returnTo=\{returnTo\}/);
   assert.match(web, /<a className="primary" href=\{accountSignInHref\(returnTo\)\}>Entrar na minha conta<\/a>/);
   const globalCss = await read("app/globals.css");

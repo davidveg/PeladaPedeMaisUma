@@ -71,6 +71,8 @@ test("monta a resenha automática com placar, destaques e marcos da rodada", () 
   assert.ok(recap.highlights.some(item => item.includes("Ana liderou com 3 gols")));
   assert.ok(recap.highlights.some(item => item.includes("Man of the Match")));
   assert.ok(recap.milestones.some(item => item.title === "Hat-trick"));
+  assert.equal(recap.milestones.find(item => item.title === "Hat-trick")?.playerName, "Ana");
+  assert.equal(recap.milestones.find(item => item.title === "Hat-trick")?.playerId, "ana");
   assert.match(recap.shareText, /Resenha da rodada/);
 });
 

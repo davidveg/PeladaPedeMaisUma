@@ -6,7 +6,7 @@ export type Player = { id: string; displayName: string; fullName?: string; nickn
 export type Contribution = { team: "BLUE" | "YELLOW"; scorerPlayerId: string; assistPlayerId?: string | null; ownGoal?: boolean; scorerName?: string; assistName?: string | null };
 export type CareerResultEntry = { playerId: string; place: number; points: number; firstVotes: number; secondVotes: number; thirdVotes: number; momentum: number };
 export type CareerVotingResults = { voteCount: number; motm: CareerResultEntry[]; dotm: CareerResultEntry[] };
-export type CareerAchievement = { id: string; title: string; description: string; icon: string; achievedAt: string; matchId?: string };
+export type CareerAchievement = { id: string; title: string; description: string; icon: string; achievedAt: string; matchId?: string; playerId?: string; playerName?: string };
 export type PlayerEngagement = {
   achievements: { unlocked: CareerAchievement[]; next: Array<{ id: string; label: string; current: number; target: number; percent: number }> };
   retrospective: { seasonNumber: number; title: string; summary: string; games: number; wins: number; draws: number; losses: number; goals: number; assists: number; winRate: number; bestWinningStreak: number; bestGoalsInMatch: number; bestAssistsInMatch: number; motmAwards: number; playerOfMonthAwards: number; monthlySelections: number; topPartner: { id: string; displayName: string; games: number } | null; highlights: CareerAchievement[]; shareText: string };

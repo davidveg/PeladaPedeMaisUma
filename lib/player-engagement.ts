@@ -25,6 +25,8 @@ export type CareerAchievement = {
   icon: string;
   achievedAt: string;
   matchId?: string;
+  playerId?: string;
+  playerName?: string;
 };
 
 export type AchievementProgress = {
@@ -144,8 +146,10 @@ export function buildRoundRecaps(params: {
     for (const text of records) { highlights.push(text); stories.push({ kind: "record", label: "Recorde quebrado", text, icon: "📈" }); }
     recordGoals = Math.max(recordGoals, totalGoals);
     recordMargin = Math.max(recordMargin, goalDifference);
-    const milestones = (scan.matchAchievements.get(match.separationId) || []).sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
-    for (const achievement of milestones.slice(0, Math.max(0, 6 - highlights.length))) { const text = `${names[playerIdFromAchievement(achievement)] || "Um jogador"} conquistou “${achievement.title}”.`; highlights.push(text); stories.push({ kind: "achievement", label: "Conquista desbloqueada", text, icon: achievement.icon || "🏆" }); }
+    const milestones = (scan.matchAchievements.get(match.separationId) || [])
+      .map(item => ({ ...item, playerName: names[playerIdFromAchievement(item)] || "Jogador" }))
+      .sort((a, b) => a.title.localeCompare(b.title, "pt-BR") || String(a.playerName).localeCompare(String(b.playerName), "pt-BR"));
+    for (const achievement of milestones.slice(0, Math.max(0, 6 - highlights.length))) { const text = `${achievement.playerName} conquistou “${achievement.title}”.`; highlights.push(text); stories.push({ kind: "achievement", label: "Conquista desbloqueada", text, icon: achievement.icon || "🏆" }); }
     const visible = highlights.slice(0, 5);
     const title = `Resenha da rodada · ${match.title}`;
     const shareText = [`⚽ *${params.siteName || "Pelada"}*`, "", `📰 *${title}*`, headline, ...visible.map(item => `• ${item}`)].join("\n");
@@ -194,7 +198,7 @@ function scanCareer(matches: EngagementMatch[]) {
     const list = achievements.get(playerId) || [];
     if (list.some(item => item.id === achievement.id)) return;
     list.push(achievement); achievements.set(playerId, list);
-    const matchList = matchAchievements.get(achievement.matchId || "") || []; matchList.push({ ...achievement, id: `${achievement.id}:${playerId}` }); matchAchievements.set(achievement.matchId || "", matchList);
+    const matchList = matchAchievements.get(achievement.matchId || "") || []; matchList.push({ ...achievement, id: `${achievement.id}:${playerId}`, playerId }); matchAchievements.set(achievement.matchId || "", matchList);
   };
   for (const match of matches) {
     const participants = [...match.blue.map(player => ({ player, team: "BLUE" as const })), ...match.yellow.map(player => ({ player, team: "YELLOW" as const }))];
@@ -253,7 +257,7 @@ function playerNames(match: EngagementMatch) { return Object.fromEntries([...mat
 function countBy<T>(items: T[], key: (item: T) => string) { const result = new Map<string, number>(); for (const item of items) { const id = key(item); if (id) result.set(id, (result.get(id) || 0) + 1); } return result; }
 function leaders(values: Map<string, number>) { const value = Math.max(0, ...values.values()); return { value, ids: [...values].filter(([, count]) => count === value && value > 0).map(([id]) => id) }; }
 function joinNames(ids: string[], names: Record<string, string>) { const values = ids.map(id => names[id] || "Jogador"); return values.length < 2 ? values[0] || "Jogador" : `${values.slice(0, -1).join(", ")} e ${values.at(-1)}`; }
-function playerIdFromAchievement(achievement: CareerAchievement) { return achievement.id.split(":").at(-1) || ""; }
+function playerIdFromAchievement(achievement: CareerAchievement) { return achievement.playerId || achievement.id.split(":").at(-1) || ""; }
 function uniqueAchievements(items: CareerAchievement[]) { const byId = new Map<string, CareerAchievement>(); for (const item of items.sort((a, b) => a.achievedAt.localeCompare(b.achievedAt))) if (!byId.has(item.id)) byId.set(item.id, item); return [...byId.values()]; }
 function nextProgress(totals: Totals): AchievementProgress[] {
   const definitions: Array<[AchievementProgress["id"], string, number, number[]]> = [["games", "Jogos", totals.games, gameMilestones], ["wins", "Vitórias", totals.wins, winMilestones], ["goals", "Gols", totals.goals, goalMilestones], ["assists", "Assistências", totals.assists, assistMilestones]];
