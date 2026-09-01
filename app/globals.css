@@ -513,3 +513,18 @@
 .career-award-closing{margin:4px 0 22px;padding:18px;border:1px solid #cddbd3;border-radius:14px;background:#fff}.career-award-closing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.career-award-closing-head small{color:var(--green);font-size:8px;font-weight:900;letter-spacing:1.4px}.career-award-closing-head h3{margin:5px 0 0;font:700 20px Georgia,serif}.career-award-closing-head p{max-width:760px;margin:6px 0 0;color:var(--muted);font-size:11px;line-height:1.55}.career-award-closing-grid{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:18px;align-items:end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.career-award-closing-grid>label{display:flex;flex-direction:column;gap:6px}.career-award-closing-grid>label>span{font-size:10px;font-weight:800}.career-award-closing-grid input{width:100%;max-width:300px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f9fbfa;font-weight:700}.career-award-closing-grid label small{color:var(--muted);font-size:9px}.career-award-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}.career-award-warning{margin:13px 0 0;color:#8a4d3e;font-size:9px;font-weight:700}@media(max-width:850px){.career-award-closing-grid{grid-template-columns:1fr}.career-award-actions{justify-content:flex-start}}@media(max-width:560px){.career-award-closing-head{flex-direction:column}.career-award-actions{display:grid}.career-award-actions button{width:100%}.career-award-closing-grid input{max-width:none}}
 .card-role.has-secondary,.member-role.has-secondary{grid-template-columns:repeat(3,minmax(0,1fr))}
 .member-access-card>a.primary{color:#fff}
+
+/* Engagement panel layout */
+.engagement-panel-head,.round-recap-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;min-height:0;padding:0 0 20px;border-bottom:1px solid var(--line);background:transparent}
+.engagement-panel-head>div,.round-recap-head>div{min-width:0}
+.engagement-panel-head p,.round-recap-head p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.player-achievements .engagement-panel-head>strong{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:112px;min-height:74px;padding:12px;border-radius:14px;background:#edf7f1;color:var(--green);font:800 28px Georgia,serif}
+.player-achievements .engagement-panel-head>strong small{font:800 8px Arial,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#587369}
+.season-retrospective .engagement-panel-head>button{min-width:210px;white-space:nowrap}
+.round-recap-head>span{display:grid;flex:0 0 48px;width:48px;height:48px;place-items:center;border-radius:14px;background:var(--green);color:#fff;font-size:23px}
+.achievement-grid article{min-height:102px}
+.achievement-grid article>div>a{align-self:flex-start;margin-top:auto;padding-top:6px}
+.achievement-progress article{grid-template-columns:minmax(190px,auto) minmax(0,1fr);gap:18px;margin-top:11px}
+.achievement-progress article>span{align-items:center}
+.achievement-progress article>div{height:9px}
+@media(max-width:620px){.engagement-panel-head,.round-recap-head{grid-template-columns:1fr;gap:15px}.player-achievements .engagement-panel-head>strong{align-items:flex-start;justify-self:start;min-width:104px}.season-retrospective .engagement-panel-head>button{width:100%;min-width:0}.round-recap-head>span{grid-row:1;justify-self:start}.round-recap-head>div{grid-row:2}.achievement-progress article{grid-template-columns:1fr;gap:7px}}
