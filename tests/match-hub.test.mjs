@@ -260,6 +260,10 @@ test("site e app compartilham filtros; rotas antigas chegam às mesmas abas", as
   assert.doesNotMatch(await read("mobile/app/(app)/_layout.tsx"), /api\/mobile\/separations|api\/admin\/matches/);
   assert.match(await read("mobile/src/query-provider.tsx"), /"match-hub"/);
   assert.match(web, /accessRequired \? <SignIn returnTo=\{returnTo\}/);
+  assert.match(web, /<a className="primary" href=\{accountSignInHref\(returnTo\)\}>Entrar na minha conta<\/a>/);
+  const globalCss = await read("app/globals.css");
+  assert.match(globalCss, /\.member-access-card>a\.primary\{color:#fff\}/);
+  assert.ok(globalCss.indexOf(".member-access-card>a.primary") > globalCss.indexOf(".member-access-card>a{"));
   assert.doesNotMatch(web, /continuam acessíveis sem login|Você está consultando os times publicados/);
   assert.match(await read("app/votacao/VotingApp.tsx"), /if \(accessRequired\) return <Container/);
   assert.match(web, /ppm:match-access-required/);
