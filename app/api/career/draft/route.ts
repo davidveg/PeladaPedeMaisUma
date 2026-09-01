@@ -9,7 +9,7 @@ async function draftContext(request: Request) {
   await ensureDb();
   const separationId = new URL(request.url).searchParams.get("separationId") || "";
   const row: any = await db().prepare(`SELECT s.id,s.match_title,s.match_date,s.snapshot,s.match_draft,c.id career_id FROM team_separations s LEFT JOIN career_matches c ON c.separation_id=s.id WHERE s.id=? AND s.deleted_at IS NULL`).bind(separationId).first();
-  if (!row) return { error: Response.json({ error: "Separação não encontrada." }, { status: 404 }) };
+  if (!row) return { error: Response.json({ error: "Escalação não encontrada." }, { status: 404 }) };
   const snapshot = JSON.parse(row.snapshot);
   return { admin, row, snapshot, separationId };
 }

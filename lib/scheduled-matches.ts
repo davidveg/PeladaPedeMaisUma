@@ -115,7 +115,9 @@ export async function setAttendance(params: {
   if (goalkeeperConfirmation && await confirmedGoalkeeperCount(matchId, playerId) >= 2) {
     throw statusError("Esta partida já possui 2 goleiros confirmados. Aguarde a desistência de um deles.", 409);
   }
-  const nextChanges = previous ? Number(previous.change_count || 0) + 1 : 0;
+  const nextChanges = previous?.absence_period_id
+    ? Number(previous.absence_previous_change_count || 0)
+    : previous ? Number(previous.change_count || 0) + 1 : 0;
   if (!administratorOverride && nextChanges > Number(match.max_changes)) {
     throw statusError(`Você atingiu o limite de ${match.max_changes} remarcações para esta partida.`, 409);
   }
@@ -124,7 +126,8 @@ export async function setAttendance(params: {
     const updated = await db().prepare(
       `UPDATE match_attendance
        SET status=?,change_count=?,responded_by_account_type=?,responded_by_account_id=?,
-           updated_by_administrator_id=?,updated_at=?
+           updated_by_administrator_id=?,absence_period_id=NULL,absence_previous_status=NULL,
+           absence_previous_change_count=NULL,updated_at=?
        WHERE id=? AND status=? AND change_count=?
          AND (?=0 OR (
            SELECT COUNT(*) FROM match_attendance slots
@@ -245,14 +248,14 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
   await ensureCareerSeasonCurrent();
   const match: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first();
   if (!match) throw statusError("Partida não encontrada.", 404);
-  if (match.separation_id) throw statusError("Esta partida já possui uma separação confirmada.", 409);
-  if (match.status !== "OPEN") throw statusError("Somente uma partida aberta pode gerar a separação.", 409);
+  if (match.separation_id) throw statusError("Esta partida já possui uma escalação confirmada.", 409);
+  if (match.status !== "OPEN") throw statusError("Somente uma partida aberta pode gerar a escalação.", 409);
   const presentRows = (await db().prepare(
     `SELECT p.* FROM match_attendance a JOIN players p ON p.id=a.player_id
      WHERE a.match_id=? AND a.status='PRESENT' AND p.active=1 AND p.deleted_at IS NULL
      ORDER BY p.display_name`,
   ).bind(matchId).all()).results as any[];
-  if (presentRows.length < 4) throw statusError("São necessários pelo menos 4 jogadores presentes para gerar a separação.", 409);
+  if (presentRows.length < 4) throw statusError("São necessários pelo menos 4 jogadores presentes para gerar a escalação.", 409);
   const [systemConfig, careerConfig] = await Promise.all([
     db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),
     db().prepare(`SELECT result_momentum_multiplier,momentum_multiplier FROM career_configuration WHERE id=1`).first<any>(),
@@ -294,7 +297,7 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
 export async function loadMatchSeparationDraft(matchId: string) {
   await ensureDb();
   const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
-  if (!instance.separationDraftsEnabled) throw statusError("Os rascunhos de separação estão desativados.", 403);
+  if (!instance.separationDraftsEnabled) throw statusError("Os rascunhos de escalação estão desativados.", 403);
   const stored: any = await db().prepare(`SELECT * FROM match_separation_drafts WHERE match_id=?`).bind(matchId).first();
   const proposalNumber = Math.max(1, Math.floor(Number(stored?.proposal_number) || 1));
   const proposal = await createMatchSeparationProposal(matchId, proposalNumber - 1);
@@ -316,7 +319,7 @@ export async function loadMatchSeparationDraft(matchId: string) {
 export async function saveMatchSeparationDraft(matchId: string, admin: any, input: { result?: any; manuallyAdjusted?: boolean }) {
   await ensureDb();
   const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
-  if (!instance.separationDraftsEnabled) throw statusError("Os rascunhos de separação estão desativados.", 403);
+  if (!instance.separationDraftsEnabled) throw statusError("Os rascunhos de escalação estão desativados.", 403);
   if (!input?.result) throw statusError("Gere uma proposta antes de salvar o rascunho.", 400);
   const proposalNumber = Math.max(1, Math.floor(Number(input.result.proposal) || 1));
   const proposal = await createMatchSeparationProposal(matchId, proposalNumber - 1);
@@ -373,7 +376,7 @@ export async function createSeparationFromMatch(
     await db().prepare(`DELETE FROM team_separations WHERE id=?`).bind(id).run();
     const latest: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(matchId).first();
     if (latest?.separation_id) return { match: latest, separationId: String(latest.separation_id), alreadyCreated: true };
-    throw statusError("A partida foi alterada enquanto a separação era gerada. Atualize e tente novamente.", 409);
+    throw statusError("A partida foi alterada enquanto a escalação era gerada. Atualize e tente novamente.", 409);
   }
   await audit(admin.id, "MATCH_CLOSED_AND_SEPARATED", "scheduled_match", matchId, {
     separationId: id, presentPlayers: proposal.players.length, balanceClassification: result.rating,

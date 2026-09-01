@@ -35,7 +35,7 @@ export default function MatchesScreen() {
         <Text style={styles.help}>{item.date ? new Date(item.date.length === 10 ? `${item.date}T12:00:00` : item.date).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", ...(item.date.length > 10 ? { timeStyle: "short" as const } : {}) }) : "Data não informada"}{item.location ? ` · ${item.location}` : ""}</Text>
         <MatchScoreboard blueScore={item.blueScore} yellowScore={item.yellowScore}/>
         <MatchWeatherSummary weather={item.weatherSummary}/>
-        <Text style={styles.help}>{item.present !== null ? `${item.present} presentes` : "Separação do histórico"}{item.votingStatus ? ` · Votação ${item.votingStatus === "OPEN" ? "aberta" : "encerrada"}` : ""}</Text><Text style={{ color: palette.green, fontWeight: "800" }}>Ver partida →</Text>
+        <Text style={styles.help}>{item.present !== null ? `${item.present} presentes` : "Escalação do histórico"}{item.votingStatus ? ` · Votação ${item.votingStatus === "OPEN" ? "aberta" : "encerrada"}` : ""}</Text><Text style={{ color: palette.green, fontWeight: "800" }}>Ver partida →</Text>
       </Card></Pressable>}
     />}</Screen>;
 }

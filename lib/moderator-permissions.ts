@@ -21,7 +21,7 @@ export const MODERATOR_PERMISSION_DEFINITIONS: ReadonlyArray<{
   { key: "MATCHES_MANAGE", label: "Criar e editar partidas", description: "Criar partidas e alterar data, local, prazo e regras enquanto estiverem abertas." },
   { key: "MATCH_ATTENDANCE_MANAGE", label: "Presenças e lista de espera", description: "Confirmar presença ou ausência e administrar convidados na lista de espera." },
   { key: "MATCHES_CANCEL", label: "Cancelar partidas", description: "Cancelar partidas abertas e notificar os participantes." },
-  { key: "SEPARATIONS_MANAGE", label: "Separações e rascunhos", description: "Gerar, ajustar e publicar times, editar ordem de chegada e trabalhar com rascunhos." },
+  { key: "SEPARATIONS_MANAGE", label: "Times e rascunhos", description: "Dentro das partidas, gerar, ajustar e publicar times, editar a ordem de chegada e trabalhar com rascunhos." },
   { key: "MATCH_RESULTS_MANAGE", label: "Súmula e resultado", description: "Registrar e corrigir placar, gols, assistências e o rascunho da súmula." },
   { key: "CAREER_VOTES_MANAGE", label: "Votações da partida", description: "Consultar votos, remover votos inválidos e encerrar uma votação antecipadamente." },
   { key: "BALANCE_CONFIG_MANAGE", label: "Pesos do algoritmo", description: "Alterar os pesos e limites usados pelo algoritmo de equilíbrio." },

@@ -27,7 +27,7 @@ export async function PUT(request: Request) {
       result: payload.result,
       manuallyAdjusted: Boolean(payload.manuallyAdjusted),
     });
-    return Response.json({ ok: true, ...saved, message: "Rascunho da separação salvo sem encerrar a lista." }, { headers: noStore });
+    return Response.json({ ok: true, ...saved, message: "Rascunho da escalação salvo sem encerrar a lista." }, { headers: noStore });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Não foi possível salvar o rascunho." }, { status: Number(error?.status || 400), headers: noStore });
   }

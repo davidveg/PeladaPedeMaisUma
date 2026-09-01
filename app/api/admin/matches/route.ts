@@ -7,6 +7,7 @@ import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 import { instanceConfigurationFromRow } from "../../../../lib/instance-config";
 import { refreshMatchWeather } from "../../../../lib/match-weather";
+import { refreshAutomaticAbsencesForMatch } from "../../../../lib/player-absence";
 
 const noStore = { "cache-control": "no-store" };
 
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
      (id,title,match_at,confirmation_deadline,location,max_changes,status,created_by_administrator_id,created_at,updated_at)
      VALUES (?,?,?,?,?,?,'OPEN',?,?,?)`,
   ).bind(id, validation.title, validation.matchAt, validation.deadline, validation.location, validation.maxChanges, admin.id, now, now).run();
+  await refreshAutomaticAbsencesForMatch(id);
   const created: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
   if (created) await refreshMatchWeather(created, instance.defaultMatchLocation, true).catch(() => undefined);
   await audit(admin.id, "MATCH_CREATED", "scheduled_match", id, validation);
@@ -85,11 +87,11 @@ export async function PATCH(request: Request) {
         await broadcastAccountNotification({
           type: "MATCH_CLOSED",
           title: "Lista de presença encerrada",
-          body: `${result.match.title}: a separação dos times já está disponível.`,
+          body: `${result.match.title}: a escalação dos times já está disponível.`,
           matchId: String(result.match.id),
         });
       }
-      return Response.json({ ok: true, separationId: result.separationId, message: result.alreadyCreated ? "A separação desta partida já havia sido criada." : "Lista fechada e separação criada." }, { headers: noStore });
+      return Response.json({ ok: true, separationId: result.separationId, message: result.alreadyCreated ? "A escalação desta partida já havia sido criada." : "Lista fechada e escalação criada." }, { headers: noStore });
     }
     if (action === "cancel") {
       const id = String(payload.matchId || ""), previous: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
@@ -115,6 +117,7 @@ export async function PATCH(request: Request) {
     await db().prepare(
       `UPDATE scheduled_matches SET title=?,match_at=?,confirmation_deadline=?,location=?,max_changes=?,weather_snapshot=NULL,weather_updated_at=NULL,updated_at=? WHERE id=?`,
     ).bind(validation.title, validation.matchAt, validation.deadline, validation.location, validation.maxChanges, now, id).run();
+    await refreshAutomaticAbsencesForMatch(id);
     const updated: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
     if (updated) await refreshMatchWeather(updated, instance.defaultMatchLocation, true).catch(() => undefined);
     await audit(admin.id, "MATCH_UPDATED", "scheduled_match", id, validation, previous);

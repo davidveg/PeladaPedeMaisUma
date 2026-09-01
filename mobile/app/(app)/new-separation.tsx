@@ -64,7 +64,7 @@ export default function NewSeparation() {
       client.invalidateQueries({ queryKey: ["notifications"] });
       if (saved.mode === "draft") {
         setProposal(current => current ? { ...current, result: saved.result, draft: saved.draft } : current);
-        Alert.alert("Rascunho salvo", "A lista continua aberta. Você pode continuar ajustando os times ou fechar a lista e publicar esta separação.");
+        Alert.alert("Rascunho salvo", "A lista continua aberta. Você pode continuar ajustando os times ou fechar a lista e publicar esta escalação.");
         return;
       }
       router.replace({ pathname: "/separations/[id]", params: { id: saved.id! } });
@@ -150,7 +150,7 @@ export default function NewSeparation() {
     <Header eyebrow="MONTAGEM DE TIMES" title={matchId ? "Acesso restrito" : "Abra uma partida"}/>
     <View style={styles.content}>
       <Card style={styles.gap}>
-        <Text style={styles.muted}>{matchId ? "Sua conta não tem permissão para montar times." : "A montagem de times é feita pelas presenças de uma partida. A criação de separações avulsas foi encerrada."}</Text>
+        <Text style={styles.muted}>{matchId ? "Sua conta não tem permissão para montar times." : "A montagem de times é feita pelas presenças de uma partida. A criação de escalações avulsas foi encerrada."}</Text>
       </Card>
       <Button title="Ir para Partidas" onPress={() => router.replace("/matches")}/>
     </View>

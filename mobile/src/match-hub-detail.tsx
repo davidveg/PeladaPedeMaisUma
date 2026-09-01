@@ -27,9 +27,9 @@ export default function MatchHubDetail({ matchId, separationId, initialTab }: { 
     {!item ? <EmptyState title="Partida não encontrada" message="Este registro não está mais disponível."/> : <>
       <View style={styles.tabs}>{tabs.map(value => <Pressable key={value.id} accessibilityRole="tab" accessibilityState={{ selected: tab === value.id }} onPress={() => setSelected(value.id)} style={[styles.tab, { backgroundColor: tab === value.id ? palette.green : palette.card }]}><Text style={[styles.tabText, { color: tab === value.id ? "#fff" : palette.green }]}>{value.label}</Text></Pressable>)}</View>
       {panel === "attendance" && item.matchId ? <MatchAttendance key={item.matchId} id={item.matchId}/> : null}
-      {panel === "legacy-attendance" ? <EmptyState title="Separação do histórico" message="Esta separação antiga não tem partida agendada vinculada nem lista de presenças registrada."/> : null}
+      {panel === "legacy-attendance" ? <EmptyState title="Escalação do histórico" message="Esta escalação antiga não tem partida agendada vinculada nem lista de presenças registrada."/> : null}
       {panel === "separation" && item.separationId ? <SeparationDetail key={`${item.separationId}:${tab}`} id={item.separationId} section={tab}/> : null}
-      {panel === "awaiting-teams" ? <EmptyState title="Times ainda não publicados" message="Os times desta partida aparecerão aqui após a publicação da separação."/> : null}
+      {panel === "awaiting-teams" ? <EmptyState title="Times ainda não publicados" message="Os times desta partida aparecerão aqui após a publicação da escalação."/> : null}
       {panel === "unavailable" ? <EmptyState title="Ainda indisponível" message="A súmula e a votação ficam disponíveis após a publicação dos times."/> : null}
     </>}
   </View>;

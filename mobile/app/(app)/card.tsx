@@ -4,7 +4,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, API_BASE_URL } from "@/api";
 import { Button, Card, EmptyState, ErrorState, Field, Header, Screen, UpdatedAt } from "@/components";
@@ -16,7 +16,7 @@ import {
   type PlayerCardTier,
 } from "@/player-card";
 import { colors } from "@/theme";
-import type { Player, ProfilePayload } from "@/types";
+import type { Player, PlayerEngagement, ProfilePayload } from "@/types";
 
 const palettes = {
   default: {
@@ -226,6 +226,7 @@ export default function MyCard() {
         </View>
       </LinearGradient>
       <Button title="Ver estatísticas avançadas" icon="line-chart" variant="secondary" onPress={() => router.push({ pathname: "/advanced-statistics" as never, params: { player: player.id } })}/>
+      {query.data?.engagement ? <MobileEngagement engagement={query.data.engagement}/> : null}
       <Card style={styles.profileCard}>
         <View style={styles.profileHeading}>
           <Text style={styles.profileEyebrow}>MEU PERFIL</Text>
@@ -244,6 +245,23 @@ export default function MyCard() {
     </ScrollView>
     {editing ? <ProfileEditor player={player} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void queryClient.invalidateQueries({ queryKey: ["profile"] }); }}/> : null}
   </Screen>;
+}
+
+function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
+  const season = engagement.retrospective;
+  return <View style={styles.engagementStack}>
+    <Card style={styles.engagementCard}>
+      <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>CONQUISTAS</Text><Text style={styles.profileTitle}>Minha coleção</Text><Text style={styles.profileDescription}>Marcos liberados pelos resultados oficiais.</Text></View><View style={styles.achievementCount}><Text style={styles.achievementCountValue}>{engagement.achievements.unlocked.length}</Text><Text style={styles.achievementCountLabel}>LIBERADAS</Text></View></View>
+      {engagement.achievements.unlocked.length ? <View style={styles.mobileAchievementGrid}>{engagement.achievements.unlocked.slice(0,8).map(item=><View key={item.id} style={styles.mobileAchievement}><Text style={styles.achievementIcon}>{item.icon}</Text><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text></View></View>)}</View> : <Text style={styles.profileDescription}>A primeira conquista aparecerá após um resultado oficial.</Text>}
+      {engagement.achievements.next.slice(0,3).map(item=><View key={item.id} style={styles.mobileProgress}><View style={styles.mobileProgressLabel}><Text style={styles.achievementTitle}>{item.label}</Text><Text style={styles.achievementDescription}>{item.current} de {item.target}</Text></View><View style={styles.mobileProgressTrack}><View style={[styles.mobileProgressValue,{width:`${item.percent}%`}]}/></View></View>)}
+    </Card>
+    <Card style={styles.engagementCard}>
+      <Text style={styles.profileEyebrow}>RETROSPECTIVA PESSOAL</Text><Text style={styles.profileTitle}>{season.title}</Text><Text style={styles.profileDescription}>{season.summary}</Text>
+      <View style={styles.seasonNumbers}>{[[season.games,"Jogos"],[season.wins,"Vitórias"],[season.draws,"Empates"],[season.goals,"Gols"],[season.assists,"Assist."],[`${season.winRate}%`,"Aproveit."]].map(([value,label])=><View key={String(label)} style={styles.seasonNumber}><Text style={styles.seasonNumberValue}>{value}</Text><Text style={styles.seasonNumberLabel}>{label}</Text></View>)}</View>
+      <View style={styles.seasonStories}><Text style={styles.seasonStory}>🔥 Melhor sequência: <Text style={styles.seasonStoryStrong}>{season.bestWinningStreak} vitórias</Text></Text><Text style={styles.seasonStory}>🤝 Parceria: <Text style={styles.seasonStoryStrong}>{season.topPartner?`${season.topPartner.displayName} (${season.topPartner.games} jogos)`:"sem dados"}</Text></Text><Text style={styles.seasonStory}>⭐ Reconhecimentos: <Text style={styles.seasonStoryStrong}>{season.motmAwards}× craque · {season.playerOfMonthAwards}× jogador do mês</Text></Text></View>
+      <Button title="Compartilhar retrospectiva" icon="share-alt" onPress={()=>Share.share({title:season.title,message:season.shareText}).catch(error=>Alert.alert("Compartilhamento indisponível",error.message))}/>
+    </Card>
+  </View>;
 }
 
 function ProfileInfo({ label, value }: { label: string; value: string }) {
@@ -334,6 +352,28 @@ const styles = StyleSheet.create({
   profileInfo: { backgroundColor: "#F1F5F2", borderRadius: 12, padding: 13, gap: 4 },
   profileInfoLabel: { color: colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 0.7, textTransform: "uppercase" },
   profileInfoValue: { color: colors.text, fontSize: 14, lineHeight: 20, fontWeight: "800" },
+  engagementStack: { gap: 16 },
+  engagementCard: { gap: 14 },
+  engagementHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  achievementCount: { minWidth: 72, alignItems: "center", borderRadius: 14, padding: 10, backgroundColor: "#E7F3EB" },
+  achievementCountValue: { color: colors.green, fontSize: 25, lineHeight: 28, fontWeight: "900" },
+  achievementCountLabel: { color: colors.muted, fontSize: 8, fontWeight: "900", letterSpacing: .6 },
+  mobileAchievementGrid: { gap: 8 },
+  mobileAchievement: { flexDirection: "row", alignItems: "center", gap: 10, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "#FBFCFB" },
+  achievementIcon: { width: 38, textAlign: "center", fontSize: 22 },
+  achievementTitle: { color: colors.text, fontSize: 13, fontWeight: "900" },
+  achievementDescription: { marginTop: 2, color: colors.muted, fontSize: 11, lineHeight: 15 },
+  mobileProgress: { gap: 6 },
+  mobileProgressLabel: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  mobileProgressTrack: { height: 8, overflow: "hidden", borderRadius: 99, backgroundColor: "#E6EDE8" },
+  mobileProgressValue: { height: 8, borderRadius: 99, backgroundColor: colors.green },
+  seasonNumbers: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  seasonNumber: { flexGrow: 1, flexBasis: "29%", alignItems: "center", borderRadius: 12, padding: 10, backgroundColor: "#F0F5F2" },
+  seasonNumberValue: { color: colors.green, fontSize: 21, fontWeight: "900" },
+  seasonNumberLabel: { marginTop: 2, color: colors.muted, fontSize: 9, fontWeight: "800" },
+  seasonStories: { gap: 7, padding: 12, borderRadius: 12, backgroundColor: "#F7F9F7" },
+  seasonStory: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  seasonStoryStrong: { color: colors.text, fontWeight: "900" },
   editorScreen: { flex: 1, backgroundColor: colors.cream },
   editorContent: { flexGrow: 1, padding: 22, paddingBottom: 36, gap: 16 },
   editorHeading: { flexDirection: "row", alignItems: "center", gap: 12 },

@@ -39,7 +39,7 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
     <View style={[styles.rating, { backgroundColor: palette.soft, borderColor: palette.color }]}>
       <Text style={[styles.ratingLabel, { color: palette.color }]}>INDICADOR ATUAL</Text>
       <Text style={[styles.ratingTitle, { color: palette.color }]}>{rating}</Text>
-      <Text style={styles.explanation}>{explanations[rating] || "Classificação registrada para esta separação."}</Text>
+      <Text style={styles.explanation}>{explanations[rating] || "Classificação registrada para esta escalação."}</Text>
     </View>
     <View style={styles.section}>
       <Text style={styles.heading}>Diferenças entre os times</Text>

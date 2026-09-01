@@ -9,6 +9,7 @@ Documentação complementar:
 - [Aplicativo mobile](mobile/README.md)
 - [API mobile em OpenAPI](docs/mobile-openapi.yaml)
 - [Fórmulas das estatísticas avançadas](docs/estatisticas-avancadas.md)
+- [Engajamento, conquistas e retrospectivas](docs/engajamento.md)
 - [Operação de múltiplas peladas](docs/MULTI_INSTANCE.md)
 - [Notas da versão 1.0](RELEASE_NOTES_1.0.0.md)
 

@@ -141,7 +141,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
             ) : !viewer.isParticipant ? (
               <VoteAccessState
                 title="Seu jogador não participou desta partida"
-                description="A votação é exclusiva para os jogadores presentes nesta separação. Se você entrou com a conta errada, troque de usuário."
+                description="A votação é exclusiva para os jogadores presentes nesta escalação. Se você entrou com a conta errada, troque de usuário."
                 onLogout={logout}
                 busy={busy}
               />

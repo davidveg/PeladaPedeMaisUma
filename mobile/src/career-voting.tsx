@@ -79,7 +79,7 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
   if (!data.enabled) return <VotingNotice title="Votação indisponível" message="O Modo Carreira está desativado neste momento."/>;
   if (data.match.status !== "OPEN") return <VotingNotice title="Votação encerrada" message="Os resultados finais estão sendo atualizados."/>;
   if (!data.viewer.hasPlayerAssociation) return <VotingNotice title="Associe seu jogador" message="Sua conta precisa estar associada a um jogador para participar. Faça a associação em Conta."/>;
-  if (!data.viewer.isParticipant) return <VotingNotice title="Votação da partida" message="Somente jogadores que participaram desta separação podem votar."/>;
+  if (!data.viewer.isParticipant) return <VotingNotice title="Votação da partida" message="Somente jogadores que participaram desta escalação podem votar."/>;
   if (data.viewer.hasVoted) return <VotingNotice title="Seu voto já foi registrado" message="O voto é único por partida. Se você votou pelo site, ele também vale no aplicativo — e vice-versa."/>;
   if (!data.viewer.canVote) return <VotingNotice title="Votação indisponível" message="Não é possível registrar um voto nesta partida."/>;
 

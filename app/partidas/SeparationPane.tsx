@@ -76,7 +76,7 @@ export default function SeparationPane({ id, section, permissions, onChanged }: 
     } catch { setError("Não foi possível copiar os times."); }
   }
   if (loading) return <div className="empty" role="status">Carregando detalhes…</div>;
-  if (!item) return <div className="alert">{error || "Esta separação não está mais disponível."}</div>;
+  if (!item) return <div className="alert">{error || "Esta escalação não está mais disponível."}</div>;
   return <div className="match-separation-pane">
     {error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="alert" role="status">{notice}</div>}
     {section === "voting" ? item.career ? <><MatchVotingSharing item={item}/><VotingApp key={item.career.votingToken} votingToken={item.career.votingToken} embedded/></> : <div className="empty">A votação ficará disponível após a confirmação do resultado, quando o Modo Carreira estiver habilitado.</div> :

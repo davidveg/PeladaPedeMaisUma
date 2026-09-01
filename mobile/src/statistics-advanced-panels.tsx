@@ -7,11 +7,11 @@ import { advancedHighlights, dateLabel, fmt, playerPartnerships, signed, type Ad
 export const statisticsHelp = {
   ipi: "O Índice de Performance Individual combina resultado, saldo, produção ofensiva, forma recente, consistência e avaliação dos colegas. Os pesos variam conforme a posição. Componentes sem dados não valem zero: o servidor usa apenas os disponíveis. A confiança cresce com o número de jogos.",
   impact: "Compara o aproveitamento dos times com o jogador e a base das partidas sem ele. É uma associação estatística, não uma relação de causa e efeito. Sem amostra para comparação, o campo fica sem dados.",
-  plusMinus: "Saldo de gols da equipe nas partidas em que o jogador participou. Não é uma medição de minutos em campo: considera a equipe registrada na separação.",
+  plusMinus: "Saldo de gols da equipe nas partidas em que o jogador participou. Não é uma medição de minutos em campo: considera a equipe registrada na escalação.",
   form: "Resultados nas últimas 5, 10 ou 20 partidas do período escolhido, em ordem cronológica. V = vitória, E = empate, D = derrota. A variação compara o aproveitamento recente com o anterior, em pontos percentuais.",
   chemistry: "Índice de entrosamento calculado com partidas juntos, aproveitamento e saldo médio. A amostra mínima filtra duplas com poucos jogos e a confiança cresce com o histórico compartilhado.",
   consistency: "Regularidade do desempenho nas partidas do período. Valores mais altos indicam menor oscilação. Quando a amostra é insuficiente, não há percentual disponível.",
-  balance: "A previsão usa apenas separações automáticas com força registrada. Ajustes manuais ficam fora da correlação entre força prevista e placar. As distribuições de placar consideram todas as partidas do período.",
+  balance: "A previsão usa apenas escalações automáticas com força registrada. Ajustes manuais ficam fora da correlação entre força prevista e placar. As distribuições de placar consideram todas as partidas do período.",
 };
 
 export function AdvancedOverview({ data, onPlayer }: { data: AdvancedStatistics; onPlayer(id: string): void }) {

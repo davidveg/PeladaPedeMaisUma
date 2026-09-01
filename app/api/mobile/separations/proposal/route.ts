@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({}));
   const matchId = typeof payload?.matchId === "string" ? payload.matchId.trim() : "";
   if (!matchId) return Response.json({
-    error: "A criação de separações avulsas foi encerrada. Abra uma partida e monte os times pelas presenças.",
+    error: "A criação de escalações avulsas foi encerrada. Abra uma partida e monte os times pelas presenças.",
     code: "STANDALONE_SEPARATION_REMOVED",
   }, { status: 410, headers: { "cache-control": "no-store" } });
   try {

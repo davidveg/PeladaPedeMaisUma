@@ -10,6 +10,7 @@ import { SiteHeader } from "../components/SiteHeader";
 import { useInstanceBranding } from "../InstanceBranding";
 import { playerTypeLabel } from "../../lib/player-types";
 import { PlayerFinancialHistory } from "../components/PlayerFinancialHistory";
+import type { PlayerEngagement } from "../../lib/player-engagement";
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options), text = await response.text();
@@ -27,20 +28,22 @@ type NotificationPreferences = {
   careerVotesPush: boolean; pageSize: number;
 };
 
+type PlayerAbsence = { id: string; startDate: string; endDate: string; reason: string | null; updatedAt: string };
+
 export default function MemberApp() {
   const { config: instance } = useInstanceBranding();
-  const [member, setMember] = useState<any>(undefined), [player, setPlayer] = useState<Player | null>(null), [config, setConfig] = useState<Config>(defaultConfig), [available, setAvailable] = useState<any[]>([]), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
+  const [member, setMember] = useState<any>(undefined), [player, setPlayer] = useState<Player | null>(null), [engagement, setEngagement] = useState<PlayerEngagement | null>(null), [config, setConfig] = useState<Config>(defaultConfig), [available, setAvailable] = useState<any[]>([]), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
   async function load() {
     const auth = await api("/api/member-auth");
     setMember(auth.member);
-    if (!auth.member) { setPlayer(null); setAvailable([]); return { member: null, player: null }; }
+    if (!auth.member) { setPlayer(null); setEngagement(null); setAvailable([]); return { member: null, player: null }; }
     const profile = await api("/api/member-profile");
-    setMember(profile.member); setPlayer(profile.player); setConfig({ ...defaultConfig, ...(profile.config || {}) });
+    setMember(profile.member); setPlayer(profile.player); setEngagement(profile.engagement || null); setConfig({ ...defaultConfig, ...(profile.config || {}) });
     if (!profile.player) setAvailable((await api("/api/member-players")).players || []); else setAvailable([]);
     return { member: profile.member, player: profile.player };
   }
   useEffect(() => { load().catch((cause) => setError(cause.message)); }, []);
-  async function logout() { await api("/api/member-auth", { method: "DELETE" }); setMember(null); setPlayer(null); }
+  async function logout() { await api("/api/member-auth", { method: "DELETE" }); setMember(null); setPlayer(null); setEngagement(null); }
   async function associate(candidate: any) {
     if (!confirm(`Confirmar a associação da sua conta com ${candidate.displayName}? Depois disso, somente um administrador poderá desfazer a associação.`)) return;
     setError("");
@@ -55,7 +58,59 @@ export default function MemberApp() {
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
   if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
-  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && engagement && <PlayerEngagementPanels engagement={engagement}/>} {player && <PlayerAbsenceCard/>}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+}
+
+function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }) {
+  const [copied, setCopied] = useState(false), season = engagement.retrospective;
+  async function share() {
+    if (navigator.share) { try { await navigator.share({ title: season.title, text: season.shareText, url: window.location.href }); return; } catch (error: any) { if (error?.name === "AbortError") return; } }
+    await navigator.clipboard.writeText(`${season.shareText}\n\n${window.location.href}`); setCopied(true); window.setTimeout(() => setCopied(false), 2500);
+  }
+  return <div className="player-engagement-layout">
+    <section className="player-achievements"><header><div><div className="eyebrow">CONQUISTAS</div><h2>Minha coleção</h2><p>Marcos liberados automaticamente pelos resultados oficiais da pelada.</p></div><strong>{engagement.achievements.unlocked.length}<small>desbloqueadas</small></strong></header>
+      {engagement.achievements.unlocked.length ? <div className="achievement-grid">{engagement.achievements.unlocked.slice(0,12).map(item=><article key={item.id}><i aria-hidden="true">{item.icon}</i><div><b>{item.title}</b><p>{item.description}</p><small>{new Date(`${item.achievedAt.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR")}</small>{item.matchId&&<a href={`/separacoes-salvas?separation=${encodeURIComponent(item.matchId)}`}>Ver partida →</a>}</div></article>)}</div> : <div className="engagement-empty">A primeira conquista aparecerá após um resultado oficial.</div>}
+      {engagement.achievements.next.length>0&&<div className="achievement-progress"><h3>Próximos objetivos</h3>{engagement.achievements.next.map(item=><article key={item.id}><span><b>{item.label}</b><small>{item.current} de {item.target}</small></span><div><i style={{width:`${item.percent}%`}}/></div></article>)}</div>}
+    </section>
+    <section className="season-retrospective"><header><div><div className="eyebrow">RETROSPECTIVA PESSOAL</div><h2>{season.title}</h2><p>{season.summary}</p></div><button className="primary" type="button" onClick={share}>{copied?"Resumo copiado ✓":"Compartilhar resumo"}</button></header>
+      <div className="retrospective-numbers"><span><b>{season.games}</b><small>JOGOS</small></span><span><b>{season.wins}</b><small>VITÓRIAS</small></span><span><b>{season.draws}</b><small>EMPATES</small></span><span><b>{season.goals}</b><small>GOLS</small></span><span><b>{season.assists}</b><small>ASSISTÊNCIAS</small></span><span><b>{season.winRate}%</b><small>APROVEITAMENTO</small></span></div>
+      <div className="retrospective-stories"><article><i>🔥</i><span><small>MELHOR SEQUÊNCIA</small><b>{season.bestWinningStreak} {season.bestWinningStreak===1?"vitória":"vitórias"}</b></span></article><article><i>🤝</i><span><small>PARCERIA MAIS FREQUENTE</small><b>{season.topPartner?`${season.topPartner.displayName} · ${season.topPartner.games} jogos`:"Ainda sem dados"}</b></span></article><article><i>⭐</i><span><small>RECONHECIMENTOS</small><b>{season.motmAwards}× craque · {season.playerOfMonthAwards}× jogador do mês</b></span></article><article><i>🏅</i><span><small>SELEÇÕES DO MÊS</small><b>{season.monthlySelections}</b></span></article></div>
+    </section>
+  </div>;
+}
+
+function PlayerAbsenceCard() {
+  const [absence, setAbsence] = useState<PlayerAbsence | null>(null);
+  const [form, setForm] = useState({ startDate: "", endDate: "", reason: "" });
+  const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [message, setMessage] = useState(""), [error, setError] = useState("");
+  useEffect(() => {
+    api("/api/player-absence").then(result => {
+      const current = result.absence as PlayerAbsence | null;
+      setAbsence(current);
+      if (current) setForm({ startDate: current.startDate, endDate: current.endDate, reason: current.reason || "" });
+    }).catch(cause => setError(cause.message)).finally(() => setLoading(false));
+  }, []);
+  const set = (key: keyof typeof form, value: string) => setForm(current => ({ ...current, [key]: value }));
+  async function save(event: React.FormEvent) {
+    event.preventDefault(); setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await api("/api/player-absence", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(form) });
+      setAbsence(result.absence); setMessage(result.message);
+    } catch (cause: any) { setError(cause.message); } finally { setSaving(false); }
+  }
+  async function remove() {
+    if (!absence || !confirm("Remover este período de ausência? As partidas ainda abertas voltarão ao estado anterior.")) return;
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await api("/api/player-absence", { method: "DELETE" });
+      setAbsence(null); setForm({ startDate: "", endDate: "", reason: "" }); setMessage(result.message);
+    } catch (cause: any) { setError(cause.message); } finally { setSaving(false); }
+  }
+  return <section className="player-absence-card"><div className="player-absence-head"><div><div className="eyebrow">DISPONIBILIDADE</div><h2>Período de ausência</h2><p>Informe férias, lesão ou outro afastamento. Nas partidas abertas dentro do intervalo, você será marcado como ausente automaticamente e sem consumir remarcações.</p></div>{absence && <span className="status active">Configurado</span>}</div>
+    {error && <div className="alert error" role="alert">{error}</div>}{message && <div className="admin-notice" role="status"><span>✓</span><b>{message}</b></div>}
+    {loading ? <div className="member-empty">Carregando período…</div> : <form className="player-absence-form" onSubmit={save}><label>De<input type="date" value={form.startDate} onChange={event => set("startDate", event.target.value)} required /></label><label>Até<input type="date" value={form.endDate} min={form.startDate || undefined} onChange={event => set("endDate", event.target.value)} required /></label><label className="player-absence-reason">Motivo (opcional)<input value={form.reason} maxLength={160} placeholder="Ex.: férias ou recuperação de lesão" onChange={event => set("reason", event.target.value)} /></label><div className="player-absence-actions">{absence && <button className="danger-soft" type="button" onClick={remove} disabled={saving}>Remover período</button>}<button className="primary" disabled={saving}>{saving ? "Salvando…" : absence ? "Atualizar período" : "Salvar período"}</button></div></form>}
+    <small className="player-absence-note">O intervalo inclui as datas inicial e final. Ao alterar ou remover, respostas anteriores são restauradas somente nas partidas que continuam abertas.</small>
+  </section>;
 }
 
 function NotificationPreferencesCard() {
@@ -80,7 +135,7 @@ function NotificationPreferencesCard() {
   const rows = [
     { label: "Confirmações e ausências", description: "Mudanças na lista de presença.", inApp: "attendanceInApp", push: "attendancePush" },
     { label: "Partidas", description: "Criação, alteração ou cancelamento.", inApp: "matchesInApp", push: "matchesPush" },
-    { label: "Separações prontas", description: "Lista encerrada e times disponíveis.", inApp: "separationsInApp", push: "separationsPush" },
+    { label: "Escalações prontas", description: "Lista encerrada e times disponíveis.", inApp: "separationsInApp", push: "separationsPush" },
     { label: "Atualizações do aplicativo", description: "Novas versões disponíveis para Android e iOS.", inApp: "appUpdatesInApp", push: "appUpdatesPush" },
   ] as const;
   return <section className="notification-preferences-card"><div className="notification-preferences-head"><div><div className="eyebrow">PREFERÊNCIAS</div><h2>Notificações e pushes</h2><p>Escolha quais novidades aparecem no feed e quais chegam à central de notificações do celular. A alteração vale para site, Android e iOS.</p></div><button className="ghost" type="button" onClick={disableAll} disabled={!preferences}>Desativar tudo</button></div>

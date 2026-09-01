@@ -20,9 +20,9 @@ export async function createCareerMatch(separationId: string, blueScore: number,
   if (![blueScore,yellowScore].every(score=>Number.isInteger(score)&&score>=0&&score<=99)) throw new Error("Informe um placar válido entre 0 e 99 gols.");
   if (await db().prepare(`SELECT id FROM career_matches WHERE separation_id=?`).bind(separationId).first()) throw new Error("Esta partida já foi confirmada no Modo Carreira.");
   const separation: any = await db().prepare(`SELECT snapshot FROM team_separations WHERE id=? AND deleted_at IS NULL`).bind(separationId).first();
-  if (!separation) throw new Error("Separação não encontrada.");
+  if (!separation) throw new Error("Escalação não encontrada.");
   const snapshot = JSON.parse(separation.snapshot), blueIds=(snapshot.blue||[]).map((player:any)=>player.id),yellowIds=(snapshot.yellow||[]).map((player:any)=>player.id);
-  if (!blueIds.length || !yellowIds.length) throw new Error("A separação não possui dois times válidos.");
+  if (!blueIds.length || !yellowIds.length) throw new Error("A escalação não possui dois times válidos.");
   if (new Set([...blueIds,...yellowIds]).size < 7) throw new Error("O Modo Carreira exige pelo menos 7 jogadores para que cada participante escolha seis destaques diferentes de si mesmo.");
   const contributionValidation=config.trackContributions?validateMatchContributions({contributions:contributionInput,blueScore,yellowScore,blueIds,yellowIds}):{error:null,contributions:[] as MatchContributionInput[]};
   if(contributionValidation.error)throw new Error(contributionValidation.error);

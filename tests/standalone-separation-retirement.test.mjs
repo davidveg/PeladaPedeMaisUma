@@ -75,6 +75,10 @@ test("aposenta criação avulsa sem alterar o histórico nem permitir reativaç�
       assert.equal(historical.snapshot.blue[0].displayName, "Antigo Azul");
       assert.equal(historical.originalText, undefined);
     }
+    const isolatedDeletion = await separations.DELETE(request("/api/separations?id=legacy", "DELETE"));
+    assert.equal(isolatedDeletion.status, 410);
+    assert.match((await isolatedDeletion.json()).error, /histórico agora pertence à partida/i);
+    assert.equal(await db().prepare("SELECT deleted_at FROM team_separations WHERE id='legacy'").first("deleted_at"), null);
     // Editing existing data remains supported, even without a scheduled match.
     const arrivalOrder = { blue: ["old-blue"], yellow: ["old-yellow"] };
     for (const handler of [separations.PATCH, mobile.PATCH]) {
@@ -85,6 +89,17 @@ test("aposenta criação avulsa sem alterar o histórico nem permitir reativaç�
     const stored = await db().prepare("SELECT original_text,snapshot FROM team_separations WHERE id='legacy'").first();
     assert.equal(stored.snapshot, snapshot);
     assert.equal(stored.original_text, "Lista original do WhatsApp");
+
+    await db().batch([
+      db().prepare("INSERT INTO team_separations (id,match_title,match_date,original_text,snapshot,manually_adjusted,balance_score,balance_classification,confirmed_at,created_at,updated_at) VALUES ('linked-delete','Partida vinculada','2099-10-03','',?,0,1,'Bom equilíbrio',?,?,?)").bind(snapshot, now, now, now),
+      db().prepare("INSERT INTO scheduled_matches (id,title,match_at,confirmation_deadline,location,max_changes,status,created_by_administrator_id,separation_id,created_at,updated_at) VALUES ('match-delete','Partida vinculada','2099-10-03T12:00:00.000Z','2099-10-03T11:00:00.000Z','Campo',2,'CLOSED','retirement-admin','linked-delete',?,?)").bind(now, now),
+      db().prepare("INSERT INTO match_separation_drafts (id,match_id,snapshot,manually_adjusted,present_player_ids,proposal_number,created_by_administrator_id,created_at,updated_at) VALUES ('draft-delete','match-delete',?,0,'[]',1,'retirement-admin',?,?)").bind(snapshot, now, now),
+      db().prepare("INSERT INTO account_notifications (id,account_type,account_id,type,title,body,match_id,created_at) VALUES ('notice-delete','administrator','retirement-admin','MATCH_CREATED','Partida','Partida','match-delete',?)").bind(now),
+    ]);
+    await db().prepare("DELETE FROM scheduled_matches WHERE id='match-delete'").run();
+    assert.ok(await db().prepare("SELECT deleted_at FROM team_separations WHERE id='linked-delete'").first("deleted_at"));
+    assert.equal(await db().prepare("SELECT COUNT(*) total FROM match_separation_drafts WHERE match_id='match-delete'").first("total"), 0);
+    assert.equal(await db().prepare("SELECT COUNT(*) total FROM account_notifications WHERE match_id='match-delete'").first("total"), 0);
   } finally {
     bindings.DB.close();
     setRuntimeBindings(undefined);
@@ -100,4 +115,22 @@ test("interfaces não oferecem importação nem ativação da criação avulsa",
   const home = await readFile(new URL("../app/HomeApp.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(home, /params\.get\("view"\)/);
   assert.match(home, /params\.get\("matchId"\)/);
+});
+
+test("painel consolida rascunhos e times dentro de Partidas sem remover o histórico", async () => {
+  const [admin, matches, memberMatches, permissions] = await Promise.all([
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/MatchesPanel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/partidas/MatchesApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/moderator-permissions.ts", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(admin, /\['separations','Separações'\]|tab==='separations'|SeparationAdminPanel|removeSep/);
+  assert.match(admin, /canConfigureDrafts=\{fullAdministrator\}/);
+  assert.match(matches, /function SeparationDraftSetting/);
+  assert.match(matches, /\/api\/instance-config/);
+  assert.match(matches, /CONFIGURAÇÃO DAS PARTIDAS/);
+  assert.match(matches, /Rascunhos de Escalação/);
+  assert.match(matches, /\/partidas\?match=\$\{encodeURIComponent\(match\.id\)\}&tab=teams/);
+  assert.match(memberMatches, /\/partidas\?match=\$\{encodeURIComponent\(item\.id\)\}&tab=teams/);
+  assert.match(permissions, /label: "Times e rascunhos"/);
 });
