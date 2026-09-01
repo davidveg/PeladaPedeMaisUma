@@ -47,7 +47,7 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
        FROM match_guest_preconfirmations waiting
        JOIN players p ON p.id=waiting.player_id
        WHERE waiting.match_id=? AND p.active=1 AND p.deleted_at IS NULL AND p.type='guest'
-       ORDER BY p.display_name`,
+       ORDER BY waiting.created_at ASC,waiting.rowid ASC`,
     ).bind(row.id).all()).results as any[];
     matches.push(publicMatch(
       row, attendance, guestPreconfirmations, account, Number(totalActive?.total || 0), playerRows, publicBaseUrl, instance,

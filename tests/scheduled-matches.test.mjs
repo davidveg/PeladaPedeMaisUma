@@ -195,6 +195,29 @@ test("lista de espera mantém convidado fora dos presentes até a aprovação ad
     assert.match(waitingMatch.shareMessage, /Convidados:\n1 - Convidado Espera: /);
     assert.doesNotMatch(waitingMatch.shareMessage, /Convidado Espera: ✅/);
 
+    const extraGuests = [
+      { id: "waiting-guest-zeca", name: "Zeca Espera", createdAt: "2030-01-02T00:00:00.000Z" },
+      { id: "waiting-guest-ana", name: "Ana Espera", createdAt: "2030-01-03T00:00:00.000Z" },
+    ];
+    for (const guest of extraGuests) {
+      await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,active,created_at,updated_at) VALUES (?,?,?,?,?,'guest','Ataque',3,3,3,1,?,?)`)
+        .bind(guest.id, guest.name, guest.name, guest.name, "[]", now, now).run();
+      assert.equal((await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
+        action: "guest-preconfirmation", matchId, playerId: guest.id, guestAction: "ADD",
+      }, "ppm_session=waiting-admin-session", "PATCH"))).status, 200);
+      await db().prepare(`UPDATE match_guest_preconfirmations SET created_at=? WHERE match_id=? AND player_id=?`)
+        .bind(guest.createdAt, matchId, guest.id).run();
+    }
+    await db().prepare(`UPDATE match_guest_preconfirmations SET created_at='2030-01-01T00:00:00.000Z' WHERE match_id=? AND player_id=?`)
+      .bind(matchId, guestId).run();
+    const orderedList = await matches.GET(new Request("https://pelada.example/api/matches", { headers: { cookie: "ppm_member_session=waiting-member-session" } }));
+    const orderedMatch = (await orderedList.json()).matches.find(item => item.id === matchId);
+    assert.deepEqual(orderedMatch.preconfirmedGuests.map(item => item.playerName), ["Convidado Espera", "Zeca Espera", "Ana Espera"]);
+    assert.match(orderedMatch.shareMessage, /Convidados:\n1 - Convidado Espera: \n2 - Zeca Espera: \n3 - Ana Espera: /);
+    for (const guest of extraGuests) assert.equal((await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
+      action: "guest-preconfirmation", matchId, playerId: guest.id, guestAction: "REMOVE",
+    }, "ppm_session=waiting-admin-session", "PATCH"))).status, 200);
+
     const approved = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
       action: "attendance", matchId, playerId: guestId, status: "PRESENT",
     }, "ppm_session=waiting-admin-session", "PATCH"));

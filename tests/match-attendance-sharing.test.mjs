@@ -67,3 +67,44 @@ test("exibe convidados na lista de espera sem check e sem contá-los como presen
   assert.match(message, /Convidados:\n1 - Bruno Varella: \n2 - Edu Fraga: /);
   assert.doesNotMatch(message, /Bruno Varella: ✅|Edu Fraga: ✅/);
 });
+
+test("mantém convidados confirmados em ordem alfabética e a fila na ordem de entrada", () => {
+  const message = buildMatchAttendanceShareMessage({
+    title: "Pelada com fila",
+    matchAt: "2026-09-06T09:00:00-03:00",
+    players: [
+      { id: "w3", displayName: "Ana Espera", type: "guest" },
+      { id: "p2", displayName: "Bruno Presente", type: "guest" },
+      { id: "w1", displayName: "Zeca Espera", type: "guest" },
+      { id: "p1", displayName: "Alice Presente", type: "guest" },
+      { id: "w2", displayName: "Marcos Espera", type: "guest" },
+      { id: "m2", displayName: "William", type: "monthly" },
+      { id: "m1", displayName: "Cussa", type: "monthly" },
+    ],
+    attendance: [
+      { playerId: "p1", status: "PRESENT" }, { playerId: "p2", status: "PRESENT" },
+    ],
+    // Ordem real de inclusão na espera: Zeca, Marcos e Ana.
+    preconfirmedGuestIds: ["w1", "w2", "w3"],
+  });
+  assert.match(message, /Mensalistas:\n1 - Cussa: \n2 - William: /);
+  assert.match(message, /Convidados:\n1 - Alice Presente: ✅\n2 - Bruno Presente: ✅\n3 - Zeca Espera: \n4 - Marcos Espera: \n5 - Ana Espera: /);
+});
+
+test("sem lista de espera ordena normalmente os convidados por nome", () => {
+  const message = buildMatchAttendanceShareMessage({
+    title: "Pelada sem fila",
+    matchAt: "2026-09-06T09:00:00-03:00",
+    players: [
+      { id: "c3", displayName: "Zeca", type: "guest" },
+      { id: "c1", displayName: "Ana", type: "guest" },
+      { id: "c2", displayName: "Marcos", type: "guest" },
+    ],
+    attendance: [
+      { playerId: "c3", status: "PRESENT" },
+      { playerId: "c1", status: "PRESENT" },
+      { playerId: "c2", status: "PRESENT" },
+    ],
+  });
+  assert.match(message, /Convidados:\n1 - Ana: ✅\n2 - Marcos: ✅\n3 - Zeca: ✅/);
+});
