@@ -140,7 +140,9 @@ export function buildRoundRecaps(params: {
     const visible = highlights.slice(0, 5);
     const title = `Resenha da rodada · ${match.title}`;
     const shareText = [`⚽ *${params.siteName || "Pelada"}*`, "", `📰 *${title}*`, headline, ...visible.map(item => `• ${item}`)].join("\n");
-    recaps[match.id] = { title, headline, highlights: visible, milestones, shareText };
+    const recap = { title, headline, highlights: visible, milestones, shareText };
+    recaps[match.id] = recap;
+    recaps[match.separationId] = recap;
   }
   return recaps;
 }

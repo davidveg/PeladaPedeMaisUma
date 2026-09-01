@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildVotingUrl, buildWhatsAppCareerResultsMessage, buildWhatsAppShareUrl, buildWhatsAppVotingMessage } from "../lib/career-sharing.ts";
+import { buildVotingUrl, buildWhatsAppCareerResultsMessage, buildWhatsAppRoundRecapMessage, buildWhatsAppShareUrl, buildWhatsAppVotingMessage } from "../lib/career-sharing.ts";
 import { normalizePublicBaseUrl, resolvePublicBaseUrl } from "../lib/public-url.ts";
 
 test("monta a URL de votação a partir do endereço público", () => {
@@ -39,6 +39,13 @@ test("preserva emojis e acentos na URL enviada ao WhatsApp", () => {
   assert.ok(message.includes(String.fromCodePoint(0x1f3c6)));
   assert.ok(message.includes(String.fromCodePoint(0x1f449)));
   assert.ok(message.includes(String.fromCodePoint(0x23f3)));
+});
+
+test("envia o texto integral da resenha junto com o link da partida", () => {
+  const message = buildWhatsAppRoundRecapMessage("📰 Resenha da rodada\n• Ana marcou 3 gols.", "https://pelada.example.com/separacoes-salvas?separation=one");
+  assert.match(message, /Ana marcou 3 gols/);
+  assert.match(message, /separation=one/);
+  assert.equal(new URL(buildWhatsAppShareUrl(message)).searchParams.get("text"), message);
 });
 
 test("monta uma mensagem legível com o resultado final da votação",()=>{

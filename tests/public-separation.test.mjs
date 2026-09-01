@@ -26,7 +26,7 @@ test("snapshot público preserva times e regras sem expor a lista original", () 
     career_config_snapshot: JSON.stringify({ winnerBonus: .1, loserPenalty: -.1, votingDays: 5 }),
     career_results_snapshot: null,
     deleted_at: null,
-  }, { "blue-player": { games: 4, wins: 3, losses: 1 } });
+  }, { "blue-player": { games: 4, wins: 3, losses: 1 } }, [], { title: "Resenha", headline: "Azul venceu", highlights: ["Azul marcou primeiro."], milestones: [], shareText: "Texto completo" });
   assert.equal(result.matchTitle, "Pelada pública");
   assert.equal(result.snapshot.blue[0].displayName, "Azul");
   assert.equal(result.snapshot.markingWeight, .2);
@@ -40,4 +40,5 @@ test("snapshot público preserva times e regras sem expor a lista original", () 
   assert.equal(result.career.blueScore, 3);
   assert.equal(result.career.winnerTeam, "BLUE");
   assert.equal(result.career.config.votingDays, 5);
+  assert.equal(result.career.recap.shareText, "Texto completo");
 });

@@ -63,6 +63,7 @@ test("resume a temporada pessoal com parceria, votação e números esportivos",
 test("monta a resenha automática com placar, destaques e marcos da rodada", () => {
   const recaps = buildRoundRecaps({ matches: history, siteName: "Pelada Teste", teamBlueName: "Verde", teamYellowName: "Branco" });
   const recap = recaps["career-one"];
+  assert.equal(recaps["separation-one"], recap);
   assert.equal(recap.headline, "Verde venceu por 3 × 1");
   assert.ok(recap.highlights.some(item => item.includes("Ana liderou com 3 gols")));
   assert.ok(recap.highlights.some(item => item.includes("Man of the Match")));

@@ -34,6 +34,10 @@ export function buildWhatsAppShareUrl(message: string): string {
   return url.toString();
 }
 
+export function buildWhatsAppRoundRecapMessage(shareText: string, separationUrl: string): string {
+  return [shareText.trim(), separationUrl.trim()].filter(Boolean).join("\n\n");
+}
+
 export function buildWhatsAppCareerResultsMessage({matchTitle,blueScore,yellowScore,results,names,separationUrl,siteName="Pelada Pede Mais Uma",teamBlueName="Azul",teamYellowName="Amarelo"}:{matchTitle:string;blueScore:number;yellowScore:number;results:any;names:Record<string,string>;separationUrl?:string;siteName?:string;teamBlueName?:string;teamYellowName?:string}) {
   const ball=String.fromCodePoint(0x26bd,0xfe0f),trophy=String.fromCodePoint(0x1f3c6),chart=String.fromCodePoint(0x1f4ca),warning=String.fromCodePoint(0x26a0,0xfe0f),medals=[0x1f947,0x1f948,0x1f949].map(code=>String.fromCodePoint(code));
   const title=matchTitle.replace(/\*/g,"").trim(),signed=(value:number)=>`${value>0?"+":""}${Number(value).toFixed(1)}`;
