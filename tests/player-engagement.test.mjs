@@ -65,8 +65,19 @@ test("monta a resenha automática com placar, destaques e marcos da rodada", () 
   const recap = recaps["career-one"];
   assert.equal(recaps["separation-one"], recap);
   assert.equal(recap.headline, "Verde venceu por 3 × 1");
+  assert.equal(recap.result.totalGoals, 4);
+  assert.equal(recap.date, "2026-01-10");
+  assert.ok(recap.stories.some(item => item.kind === "goals"));
   assert.ok(recap.highlights.some(item => item.includes("Ana liderou com 3 gols")));
   assert.ok(recap.highlights.some(item => item.includes("Man of the Match")));
   assert.ok(recap.milestones.some(item => item.title === "Hat-trick"));
   assert.match(recap.shareText, /Resenha da rodada/);
+});
+
+test("destaca recordes de gols e de diferença no placar no jornal da partida", () => {
+  const recordMatch = { ...match("record", "2026-01-31", "BLUE"), blueScore: 8, yellowScore: 1 };
+  const recaps = buildRoundRecaps({ matches: [...history, recordMatch], teamBlueName: "Verde", teamYellowName: "Branco" });
+  assert.ok(recaps[recordMatch.id].records.some(item => item.includes("recorde de gols")));
+  assert.ok(recaps[recordMatch.id].records.some(item => item.includes("Maior diferença")));
+  assert.ok(recaps[recordMatch.id].stories.some(item => item.kind === "record"));
 });

@@ -75,9 +75,14 @@ export type PlayerEngagement = {
 };
 
 export type RoundRecap = {
+  date: string;
   title: string;
   headline: string;
+  deck: string;
   highlights: string[];
+  stories: Array<{ kind: "goals" | "assists" | "motm" | "record" | "achievement"; label: string; text: string; icon: string }>;
+  records: string[];
+  result: { blueScore: number; yellowScore: number; winnerTeam: "BLUE" | "YELLOW" | "DRAW"; winnerLabel: string; totalGoals: number; goalDifference: number };
   milestones: CareerAchievement[];
   shareText: string;
 };
@@ -117,30 +122,37 @@ export function buildRoundRecaps(params: {
   teamYellowName?: string;
 }): Record<string, RoundRecap> {
   const ordered = orderMatches(params.matches), scan = scanCareer(ordered), recaps: Record<string, RoundRecap> = {};
-  let recordGoals = -1;
+  let recordGoals = -1, recordMargin = -1;
   for (const match of ordered) {
     const names = playerNames(match);
     const winner = match.winnerTeam === "BLUE" ? params.teamBlueName || "Azul" : match.winnerTeam === "YELLOW" ? params.teamYellowName || "Amarelo" : "Empate";
     const headline = match.winnerTeam === "DRAW"
       ? `Empate em ${match.blueScore} × ${match.yellowScore}`
       : `${winner} venceu por ${match.blueScore} × ${match.yellowScore}`;
-    const highlights: string[] = [];
+    const highlights: string[] = [], records: string[] = [], stories: RoundRecap["stories"] = [];
     const goals = countBy(match.contributions.filter(item => !item.ownGoal), item => item.scorerPlayerId);
     const assists = countBy(match.contributions.filter(item => !item.ownGoal && item.assistPlayerId), item => String(item.assistPlayerId));
     const goalLeaders = leaders(goals), assistLeaders = leaders(assists);
-    if (goalLeaders.value > 0) highlights.push(`${joinNames(goalLeaders.ids, names)} ${goalLeaders.ids.length === 1 ? "liderou" : "lideraram"} com ${goalLeaders.value} ${goalLeaders.value === 1 ? "gol" : "gols"}.`);
-    if (assistLeaders.value > 0) highlights.push(`${joinNames(assistLeaders.ids, names)} ${assistLeaders.ids.length === 1 ? "deu" : "deram"} ${assistLeaders.value} ${assistLeaders.value === 1 ? "assistência" : "assistências"}.`);
+    if (goalLeaders.value > 0) { const text = `${joinNames(goalLeaders.ids, names)} ${goalLeaders.ids.length === 1 ? "liderou" : "lideraram"} com ${goalLeaders.value} ${goalLeaders.value === 1 ? "gol" : "gols"}.`; highlights.push(text); stories.push({ kind: "goals", label: "Artilharia da rodada", text, icon: "⚽" }); }
+    if (assistLeaders.value > 0) { const text = `${joinNames(assistLeaders.ids, names)} ${assistLeaders.ids.length === 1 ? "deu" : "deram"} ${assistLeaders.value} ${assistLeaders.value === 1 ? "assistência" : "assistências"}.`; highlights.push(text); stories.push({ kind: "assists", label: "Garçom da rodada", text, icon: "🎯" }); }
     const motm = match.status === "CLOSED" ? match.results?.motm?.find(entry => Number(entry.place || 1) === 1) || match.results?.motm?.[0] : null;
-    if (motm?.playerId && names[motm.playerId]) highlights.push(`${names[motm.playerId]} foi o Man of the Match.`);
+    if (motm?.playerId && names[motm.playerId]) { const text = `${names[motm.playerId]} foi o Man of the Match.`; highlights.push(text); stories.push({ kind: "motm", label: "Craque da partida", text, icon: "⭐" }); }
     const totalGoals = match.blueScore + match.yellowScore;
-    if (recordGoals >= 0 && totalGoals > recordGoals) highlights.push(`Novo recorde da pelada: ${totalGoals} gols em uma partida.`);
+    const goalDifference = Math.abs(match.blueScore - match.yellowScore);
+    if (recordGoals >= 0 && totalGoals > recordGoals) records.push(`Novo recorde de gols: ${totalGoals} em uma única partida.`);
+    if (recordMargin >= 0 && match.winnerTeam !== "DRAW" && goalDifference > recordMargin) records.push(`Maior diferença no placar até aqui: ${goalDifference} ${goalDifference === 1 ? "gol" : "gols"}.`);
+    for (const text of records) { highlights.push(text); stories.push({ kind: "record", label: "Recorde quebrado", text, icon: "📈" }); }
     recordGoals = Math.max(recordGoals, totalGoals);
+    recordMargin = Math.max(recordMargin, goalDifference);
     const milestones = (scan.matchAchievements.get(match.separationId) || []).sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
-    for (const achievement of milestones.slice(0, Math.max(0, 5 - highlights.length))) highlights.push(`${names[playerIdFromAchievement(achievement)] || "Um jogador"} conquistou “${achievement.title}”.`);
+    for (const achievement of milestones.slice(0, Math.max(0, 6 - highlights.length))) { const text = `${names[playerIdFromAchievement(achievement)] || "Um jogador"} conquistou “${achievement.title}”.`; highlights.push(text); stories.push({ kind: "achievement", label: "Conquista desbloqueada", text, icon: achievement.icon || "🏆" }); }
     const visible = highlights.slice(0, 5);
     const title = `Resenha da rodada · ${match.title}`;
     const shareText = [`⚽ *${params.siteName || "Pelada"}*`, "", `📰 *${title}*`, headline, ...visible.map(item => `• ${item}`)].join("\n");
-    const recap = { title, headline, highlights: visible, milestones, shareText };
+    const deck = match.winnerTeam === "DRAW"
+      ? `Uma partida equilibrada terminou com ${totalGoals} ${totalGoals === 1 ? "gol" : "gols"} e ninguém conseguiu abrir vantagem no placar.`
+      : `${winner} comandou o placar em uma rodada com ${totalGoals} ${totalGoals === 1 ? "gol" : "gols"} e ${goalDifference} de diferença.`;
+    const recap = { date: match.date, title, headline, deck, highlights: visible, stories: stories.slice(0, 6), records, result: { blueScore: match.blueScore, yellowScore: match.yellowScore, winnerTeam: match.winnerTeam, winnerLabel: winner, totalGoals, goalDifference }, milestones, shareText };
     recaps[match.id] = recap;
     recaps[match.separationId] = recap;
   }
