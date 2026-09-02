@@ -7,6 +7,8 @@ import VotingApp from "../votacao/VotingApp";
 import MatchVotingSharing from "./MatchVotingSharing";
 import { useInstanceBranding } from "../InstanceBranding";
 import { teamColorMarker } from "../../lib/team-colors";
+import { buildWhatsAppRoundRecapMessage, buildWhatsAppShareUrl } from "../../lib/career-sharing";
+import { shareRecapFile } from "../recap-image-client";
 import { type Player } from "../../lib/football";
 
 export async function hubApi(url: string, options?: RequestInit) {
@@ -55,12 +57,19 @@ export default function SeparationPane({ id, section, permissions, onChanged }: 
     const result = await hubApi(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     await load(); onChanged(); setNotice(result.message || "Alterações salvas.");
   }
-  async function share() {
+  async function share(image?: File) {
     try {
       const url = `${window.location.origin}/partidas?separation=${encodeURIComponent(id)}`;
-      if (navigator.share) await navigator.share({ title: item.matchTitle, url });
-      else { await navigator.clipboard.writeText(url); setNotice("Link copiado."); }
-    } catch (cause: any) { if (cause.name !== "AbortError") setError("Não foi possível compartilhar o link."); }
+      const message = buildWhatsAppRoundRecapMessage(item.career?.recap?.shareText || `⚽ ${item.matchTitle}\nConfira os detalhes desta partida:`, url);
+      if (image) {
+        const outcome = await shareRecapFile(image, item.matchTitle, message);
+        if (outcome === "shared" || outcome === "cancelled") return;
+        setNotice("Imagem do jornal baixada. O WhatsApp foi aberto com o texto da resenha.");
+      }
+      if (item.career?.recap?.shareText) window.open(buildWhatsAppShareUrl(message), "_blank", "noopener,noreferrer");
+      else if (navigator.share) await navigator.share({ title: item.matchTitle, text: message, url });
+      else { await navigator.clipboard.writeText(message); setNotice("Texto e link copiados."); }
+    } catch (cause: any) { if (cause.name !== "AbortError") setError("Não foi possível compartilhar a resenha."); }
   }
   async function copy(withScores: boolean) {
     try {

@@ -16,6 +16,7 @@ import { playerTypeLabel } from "../lib/player-types";
 import { buildVotingUrl, buildWhatsAppCareerResultsMessage, buildWhatsAppRoundRecapMessage, buildWhatsAppShareUrl, buildWhatsAppVotingMessage } from "../lib/career-sharing";
 import { playerCardTier, playerCardTierLabel } from "../lib/player-card-tier";
 import { teamColorMarker } from "../lib/team-colors";
+import { renderRecapPng, shareRecapFile } from "./recap-image-client";
 import QRCode from "qrcode";
 
 type Stage = "result" | "history" | "players";
@@ -149,7 +150,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   function openSavedSeparation(item:any){setHistoryDetail(item);setStage("history");window.history.pushState({},"",`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`);window.scrollTo({top:0,behavior:"smooth"})}
   function closeSavedSeparation(){setHistoryDetail(null);setStage("history");window.history.pushState({},"","/separacoes-salvas")}
   function savedSeparationUrl(item:any){return `${window.location.origin}/separacoes-salvas?separation=${encodeURIComponent(item.id)}`}
-  async function shareSavedSeparation(item:any){const url=savedSeparationUrl(item),recap=item.career?.recap;if(recap?.shareText){window.open(buildWhatsAppShareUrl(buildWhatsAppRoundRecapMessage(recap.shareText,url)),'_blank','noopener,noreferrer');return}const text=`⚽ ${item.matchTitle}\nConfira os times e os detalhes desta escalação:`,message=buildWhatsAppRoundRecapMessage(text,url);if(navigator.share){try{await navigator.share({title:item.matchTitle,text:message});return}catch(error:any){if(error?.name==="AbortError")return}}await navigator.clipboard.writeText(message);setToast("Link da escalação copiado.")}
+  async function shareSavedSeparation(item:any,image?:File){const url=savedSeparationUrl(item),recap=item.career?.recap,message=recap?.shareText?buildWhatsAppRoundRecapMessage(recap.shareText,url):buildWhatsAppRoundRecapMessage(`⚽ ${item.matchTitle}\nConfira os times e os detalhes desta escalação:`,url);if(image){const outcome=await shareRecapFile(image,item.matchTitle,message);if(outcome==="shared"||outcome==="cancelled")return;setToast("Imagem do jornal baixada. O WhatsApp foi aberto com o texto da resenha.")}if(recap?.shareText){window.open(buildWhatsAppShareUrl(message),'_blank','noopener,noreferrer');return}if(navigator.share){try{await navigator.share({title:item.matchTitle,text:message});return}catch(error:any){if(error?.name==="AbortError")return}}await navigator.clipboard.writeText(message);setToast("Link da escalação copiado.")}
 
   useEffect(() => {
     load().catch(() => setToast("Não foi possível carregar os dados."));
@@ -333,14 +334,16 @@ export function SavedSeparation({ item, isAdmin, canManageResults = isAdmin, sec
 }
 
 function RoundRecapCard({recap,onShare}:any){
+  const newspaperRef=useRef<HTMLDivElement|null>(null),[sharingImage,setSharingImage]=useState(false),[imageError,setImageError]=useState("");
   const stories=(recap.stories?.length?recap.stories:(recap.highlights||[]).map((text:string)=>({kind:'highlight',label:'Destaque da rodada',text,icon:'•'}))).filter((story:any)=>story.kind!=='record'&&story.kind!=='achievement');
   const records=recap.records||[],milestones=recap.milestones||[],result=recap.result,date=recap.date?new Date(`${String(recap.date).slice(0,10)}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):'Edição especial';
-  return <section className="round-recap newspaper-recap">
+  const share=async()=>{setSharingImage(true);setImageError('');try{if(!newspaperRef.current)throw new Error('Jornal indisponível.');const image=await renderRecapPng(newspaperRef.current,recap.title||'Resenha da pelada');await onShare(image)}catch(error:any){setImageError(error?.message||'Não foi possível gerar a imagem.');await onShare()}finally{setSharingImage(false)}};
+  return <section className="round-recap newspaper-recap"><div ref={newspaperRef} className="newspaper-share-area">
     <div className="newspaper-masthead"><div><span>DESDE O PRIMEIRO APITO</span><h2>A Gazeta da Pelada</h2><small>{date} · RESULTADO OFICIAL</small></div><i aria-hidden="true">⚽</i></div>
     <div className="newspaper-front"><div><span className="newspaper-kicker">RESENHA DA RODADA</span><h3>{String(recap.title||'Resenha').replace(/^Resenha da rodada · /,'')}</h3><p>{recap.deck||'Os fatos e destaques registrados oficialmente nesta partida.'}</p></div>{result?<div className="newspaper-score" aria-label={`Placar ${result.blueScore} a ${result.yellowScore}`}><span><small>{result.winnerTeam==='BLUE'?'VENCEDOR':'TIME AZUL'}</small><b>{result.blueScore}</b></span><i>×</i><span><small>{result.winnerTeam==='YELLOW'?'VENCEDOR':'TIME AMARELO'}</small><b>{result.yellowScore}</b></span></div>:<strong className="newspaper-headline">{recap.headline}</strong>}</div>
     <div className="newspaper-rule"><span>{recap.headline}</span></div>
     <div className="newspaper-columns"><section><h4>Destaques do jogo</h4>{stories.length?<div className="newspaper-stories">{stories.map((story:any,index:number)=><article key={`${story.kind}-${index}`}><i aria-hidden="true">{story.icon}</i><div><small>{story.label}</small><p>{story.text}</p></div></article>)}</div>:<p className="newspaper-empty">O placar foi registrado, mas a súmula ainda não possui destaques individuais.</p>}</section><aside><h4>Recordes e marcas</h4>{records.map((record:string,index:number)=><p className="newspaper-record" key={`record-${index}`}><span>📈</span>{record}</p>)}{milestones.slice(0,4).map((milestone:any,index:number)=><p className="newspaper-record" key={`${milestone.id}-${index}`}><span>{milestone.icon||'🏆'}</span><b>{milestone.playerName?`${milestone.playerName} — `:''}{milestone.title}</b>{milestone.description}</p>)}{!records.length&&!milestones.length?<p className="newspaper-empty">Nenhum recorde foi quebrado nesta rodada. O livro da pelada continua aberto para a próxima partida.</p>:null}</aside></div>
-    <div className="newspaper-footer"><p><b>Leve a notícia para o grupo.</b><span>O texto compartilhado inclui o placar, os destaques e o link desta partida.</span></p><button className="primary whatsapp-button" type="button" onClick={onShare}><WhatsAppIcon/>Compartilhar resenha no WhatsApp</button></div>
+    </div><div className="newspaper-footer"><p><b>Leve a notícia para o grupo.</b><span>A imagem acompanha o placar, os destaques e o texto com o link desta partida.</span>{imageError&&<em role="status">{imageError} O texto será compartilhado normalmente.</em>}</p><button className="primary whatsapp-button" type="button" disabled={sharingImage} onClick={share}><WhatsAppIcon/>{sharingImage?'Gerando imagem…':'Compartilhar jornal no WhatsApp'}</button></div>
   </section>;
 }
 
