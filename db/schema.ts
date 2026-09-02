@@ -252,7 +252,7 @@ export const careerConfiguration = sqliteTable("career_configuration", {
 export const careerMatches = sqliteTable("career_matches", {
   id: text("id").primaryKey(), separationId: text("separation_id").notNull().unique(), blueScore: integer("blue_score").notNull(), yellowScore: integer("yellow_score").notNull(),
   winnerTeam: text("winner_team").notNull(), votingToken: text("voting_token").notNull().unique(), status: text("status").notNull().default("OPEN"), closesAt: text("closes_at").notNull(), closedAt: text("closed_at"),
-  createdByAdministratorId: text("created_by_administrator_id").notNull(), configSnapshot: text("config_snapshot").notNull(), resultsSnapshot: text("results_snapshot"),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), configSnapshot: text("config_snapshot").notNull(), resultsSnapshot: text("results_snapshot"), participationSnapshot: text("participation_snapshot"),
   teamMomentumApplied: integer("team_momentum_applied", { mode: "boolean" }).notNull().default(false), votesMomentumApplied: integer("votes_momentum_applied", { mode: "boolean" }).notNull().default(false), ...timestamps,
 }, table => [index("career_matches_statistics_status_idx").on(table.status, table.closedAt)]);
 

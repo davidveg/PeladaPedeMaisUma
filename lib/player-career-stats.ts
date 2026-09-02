@@ -8,6 +8,8 @@ export type PlayerCareerStats = {
 
 type CareerMatchStatsRow = {
   snapshot: string | Record<string, unknown>;
+  participation_snapshot?: string | Record<string, unknown> | null;
+  participationSnapshot?: string | Record<string, unknown> | null;
   winner_team?: string;
   winnerTeam?: string;
 };
@@ -20,7 +22,8 @@ export function calculatePlayerCareerStats(rows: CareerMatchStatsRow[], contribu
   for (const row of rows) {
     let snapshot: any;
     try {
-      snapshot = typeof row.snapshot === "string" ? JSON.parse(row.snapshot) : row.snapshot;
+      const source = row.participation_snapshot ?? row.participationSnapshot ?? row.snapshot;
+      snapshot = typeof source === "string" ? JSON.parse(source) : source;
     } catch {
       continue;
     }

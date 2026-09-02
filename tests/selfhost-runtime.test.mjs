@@ -78,6 +78,22 @@ test("migração adiciona rascunho de súmula às separações existentes", asyn
   }
 });
 
+test("migração adiciona participação efetiva sem alterar resultados existentes", async () => {
+  const directory=await mkdtemp(join(tmpdir(),"pelada-match-participation-")),bindings=await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_matches (id TEXT PRIMARY KEY, results_snapshot TEXT)").run();
+    await bindings.DB.prepare("INSERT INTO career_matches (id,results_snapshot) VALUES (?,?)").bind("match-1",JSON.stringify({voteCount:3})).run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0042_career_match_participation.sql",import.meta.url),"utf8"));
+    const columns=await bindings.DB.prepare("PRAGMA table_info(career_matches)").all(),row=await bindings.DB.prepare("SELECT results_snapshot,participation_snapshot FROM career_matches WHERE id='match-1'").first();
+    assert.ok(columns.results.some(column=>column.name==="participation_snapshot"));
+    assert.equal(row.participation_snapshot,null);
+    assert.deepEqual(JSON.parse(row.results_snapshot),{voteCount:3});
+  } finally {
+    bindings.DB.close();
+    await rm(directory,{recursive:true,force:true});
+  }
+});
+
 test("adaptador de uploads persiste bytes e metadados", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-selfhost-upload-"));
   const bindings = await createSelfhostBindings(directory);

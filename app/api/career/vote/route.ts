@@ -21,9 +21,10 @@ async function context(token: string) {
   ).bind(row.id).first();
 
   const snapshot = JSON.parse(row.snapshot);
+  const participation = row.participation_snapshot ? JSON.parse(row.participation_snapshot) : snapshot;
   const players = [
-    ...(snapshot.blue || []).map((player: any) => ({ ...player, team: "BLUE" })),
-    ...(snapshot.yellow || []).map((player: any) => ({ ...player, team: "YELLOW" })),
+    ...(participation.blue || []).map((player: any) => ({ ...player, team: "BLUE" })),
+    ...(participation.yellow || []).map((player: any) => ({ ...player, team: "YELLOW" })),
   ];
   return { row, snapshot, players };
 }

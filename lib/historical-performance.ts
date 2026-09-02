@@ -40,7 +40,7 @@ export function calculateHistoricalPerformance(matchRows: any[], contributionRow
 
   for (const row of matchRows) {
     const matchId = String(row.id ?? row.career_match_id ?? "");
-    const snapshot = parse(row.snapshot, {}), blue = Array.isArray(snapshot.blue) ? snapshot.blue : [], yellow = Array.isArray(snapshot.yellow) ? snapshot.yellow : [];
+    const snapshot = parse(row.participation_snapshot ?? row.participationSnapshot ?? row.snapshot, {}), blue = Array.isArray(snapshot.blue) ? snapshot.blue : [], yellow = Array.isArray(snapshot.yellow) ? snapshot.yellow : [];
     const participants = new Map<string, { team: "BLUE" | "YELLOW"; position: string }>();
     for (const player of blue) if (player?.id) participants.set(String(player.id), { team: "BLUE", position: String(player.primaryPosition ?? "") });
     for (const player of yellow) if (player?.id) participants.set(String(player.id), { team: "YELLOW", position: String(player.primaryPosition ?? "") });

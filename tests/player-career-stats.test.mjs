@@ -27,6 +27,17 @@ test("ignora snapshots inválidos e não duplica jogador na mesma partida", () =
   assert.deepEqual(stats.bia, { games: 1, wins: 1, losses: 0, goals: 0, assists: 0 });
 });
 
+test("usa a participação efetiva quando registrada e mantém fallback para partidas antigas", () => {
+  const stats=calculatePlayerCareerStats([
+    {winner_team:"BLUE",snapshot:JSON.stringify({blue:[{id:"faltoso"}],yellow:[{id:"bia"}]}),participation_snapshot:JSON.stringify({blue:[{id:"ana"}],yellow:[{id:"bia"}]})},
+    {winner_team:"YELLOW",snapshot:JSON.stringify({blue:[{id:"ana"}],yellow:[{id:"carla"}]})},
+  ]);
+  assert.equal(stats.faltoso,undefined);
+  assert.deepEqual(stats.ana,{games:2,wins:1,losses:1,goals:0,assists:0});
+  assert.deepEqual(stats.bia,{games:1,wins:0,losses:1,goals:0,assists:0});
+  assert.deepEqual(stats.carla,{games:1,wins:1,losses:0,goals:0,assists:0});
+});
+
 test("contabiliza gols e apenas assistências vinculadas aos gols registrados", () => {
   const stats = calculatePlayerCareerStats([], [
     { scorer_player_id: "ana", assist_player_id: "bia" },

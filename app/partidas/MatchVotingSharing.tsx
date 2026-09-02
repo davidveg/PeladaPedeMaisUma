@@ -23,7 +23,7 @@ export default function MatchVotingSharing({ item }: { item: any }) {
   function share() {
     const text = closed ? buildWhatsAppCareerResultsMessage({
       matchTitle: item.matchTitle, blueScore: item.career.blueScore, yellowScore: item.career.yellowScore,
-      results: item.career.results, names: Object.fromEntries([...item.snapshot.blue, ...item.snapshot.yellow].map((p: any) => [p.id, p.displayName])),
+      results: item.career.results, names: Object.fromEntries([...(item.career.participation?.blue || item.snapshot.blue), ...(item.career.participation?.yellow || item.snapshot.yellow)].map((p: any) => [p.id, p.displayName])),
       separationUrl: `${window.location.origin}/partidas?separation=${encodeURIComponent(item.id)}&tab=voting`,
       siteName: brand.siteName, teamBlueName: brand.teamBlueName, teamYellowName: brand.teamYellowName,
     }) : buildWhatsAppVotingMessage({ matchTitle: item.matchTitle, votingUrl: votingUrl(), closesAt: item.career.closesAt, siteName: brand.siteName });

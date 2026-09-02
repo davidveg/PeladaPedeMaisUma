@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     : new Set<string>();
   payload.separations = (payload.separations || []).map((item: any) => {
     if (!item.career) return item;
-    const participants = [...(item.snapshot?.blue || []), ...(item.snapshot?.yellow || [])];
+    const participants = item.career?.participation ? [...(item.career.participation.blue || []), ...(item.career.participation.yellow || [])] : [...(item.snapshot?.blue || []), ...(item.snapshot?.yellow || [])];
     const viewerIsParticipant = Boolean(playerId && participants.some((player: any) => String(player.id) === playerId));
     const viewerHasVoted = votedMatches.has(String(item.career.id));
     return {

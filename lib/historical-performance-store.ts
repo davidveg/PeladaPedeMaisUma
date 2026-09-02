@@ -4,7 +4,7 @@ import { calculateHistoricalPerformance, emptyHistoricalPerformance, type Histor
 
 export async function loadHistoricalPerformance(): Promise<Record<string, HistoricalPerformance>> {
   const [matches, contributions, votes] = await Promise.all([
-    db().prepare(`SELECT c.id,c.blue_score,c.yellow_score,c.winner_team,c.status,c.config_snapshot,c.results_snapshot,c.created_at,s.match_date,s.snapshot
+    db().prepare(`SELECT c.id,c.blue_score,c.yellow_score,c.winner_team,c.status,c.config_snapshot,c.results_snapshot,c.participation_snapshot,c.created_at,s.match_date,s.snapshot
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL
       ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)),c.created_at`).all(),

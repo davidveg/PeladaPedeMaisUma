@@ -36,7 +36,7 @@ export async function loadRoundRecaps() {
 async function loadEngagementHistory() {
   await ensureDb();
   const [matchRows, contributionRows, monthlyRows, seasonRows, careerConfig, instance] = await Promise.all([
-    db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,
+    db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,
       s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)),c.created_at`).all(),
@@ -48,7 +48,7 @@ async function loadEngagementHistory() {
   ]);
   const contributions = groupBy(contributionRows.results as any[], row => String(row.career_match_id));
   const matches = (matchRows.results as any[]).flatMap(row => {
-    const snapshot = parseJson(row.snapshot, null), config = parseJson(row.config_snapshot, {});
+    const snapshot = parseJson(row.participation_snapshot ?? row.snapshot, null), config = parseJson(row.config_snapshot, {});
     if (!snapshot || !Array.isArray(snapshot.blue) || !Array.isArray(snapshot.yellow)) return [];
     const players = (entries: any[]): EngagementPlayer[] => entries.flatMap(value => value?.id ? [{ id: String(value.id), displayName: String(value.displayName || value.fullName || "Jogador") }] : []);
     return [{

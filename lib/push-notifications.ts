@@ -14,6 +14,7 @@ type MatchRow = {
   separationId: string;
   matchTitle: string;
   snapshot: string;
+  participationSnapshot: string | null;
   closesAt: string;
 };
 type PendingDelivery = { match: MatchRow; token: PushTokenRow };
@@ -36,7 +37,7 @@ export async function notifyPendingCareerVotesForAccount(identity: AccountIdenti
 
 async function loadMatch(id: string): Promise<MatchRow | null> {
   const row: any = await db().prepare(
-    `SELECT c.id,c.separation_id,c.closes_at,s.match_title,s.snapshot
+    `SELECT c.id,c.separation_id,c.closes_at,c.participation_snapshot,s.match_title,s.snapshot
      FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
      WHERE c.id=? AND c.status='OPEN' AND c.closes_at>? AND s.deleted_at IS NULL`,
   ).bind(id, new Date().toISOString()).first();
@@ -45,7 +46,7 @@ async function loadMatch(id: string): Promise<MatchRow | null> {
 
 async function loadOpenMatches(): Promise<MatchRow[]> {
   const rows = (await db().prepare(
-    `SELECT c.id,c.separation_id,c.closes_at,s.match_title,s.snapshot
+    `SELECT c.id,c.separation_id,c.closes_at,c.participation_snapshot,s.match_title,s.snapshot
      FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
      WHERE c.status='OPEN' AND c.closes_at>? AND s.deleted_at IS NULL`,
   ).bind(new Date().toISOString()).all()).results as any[];
@@ -79,6 +80,7 @@ function mapMatch(row: any): MatchRow {
     separationId: String(row.separation_id),
     matchTitle: String(row.match_title || "Pelada"),
     snapshot: String(row.snapshot || "{}"),
+    participationSnapshot: row.participation_snapshot ? String(row.participation_snapshot) : null,
     closesAt: String(row.closes_at),
   };
 }
@@ -86,7 +88,7 @@ function mapMatch(row: any): MatchRow {
 function eligible(match: MatchRow, token: PushTokenRow) {
   if (!token.playerId) return false;
   try {
-    const snapshot = JSON.parse(match.snapshot);
+    const snapshot = JSON.parse(match.participationSnapshot || match.snapshot);
     return [...(snapshot.blue || []), ...(snapshot.yellow || [])].some((player: any) => String(player.id) === token.playerId);
   } catch {
     return false;

@@ -96,7 +96,7 @@ async function loadMonthData(month: string) {
   const from = `${month}-01`, to = monthEnd(month);
   const [playerRows, matchRows, configRow] = await Promise.all([
     db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players ORDER BY display_name`).all(),
-    db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,s.match_title,s.match_date,s.snapshot FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE s.deleted_at IS NULL AND s.match_date BETWEEN ? AND ? ORDER BY s.match_date,c.created_at`).bind(from, to).all(),
+    db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE s.deleted_at IS NULL AND s.match_date BETWEEN ? AND ? ORDER BY s.match_date,c.created_at`).bind(from, to).all(),
     db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first(),
   ]);
   const players = (playerRows.results as any[]).map(row => ({ id: String(row.id), displayName: String(row.display_name), photoUrl: row.photo_url || null, type: row.type || null, primaryPosition: row.primary_position || null })) as StatisticsPlayer[];
@@ -107,7 +107,7 @@ async function loadMonthData(month: string) {
 }
 
 function mapStatisticsMatch(row: any): StatisticsMatch {
-  const snapshot = parseJson(row.snapshot, {});
+  const snapshot = parseJson(row.participation_snapshot ?? row.snapshot, {});
   return { id: String(row.id), separationId: String(row.separation_id), title: String(row.match_title), date: String(row.match_date), blueScore: Number(row.blue_score), yellowScore: Number(row.yellow_score), winnerTeam: row.winner_team === "BLUE" || row.winner_team === "YELLOW" ? row.winner_team : "DRAW", blueIds: (snapshot.blue || []).map((player: any) => String(player.id)), yellowIds: (snapshot.yellow || []).map((player: any) => String(player.id)), config: parseJson(row.config_snapshot, null), results: parseJson(row.results_snapshot, null) };
 }
 

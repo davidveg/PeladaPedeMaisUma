@@ -18,8 +18,10 @@ export function publicSeparation(row: any, careerStats: Record<string, PublicPla
     arrivalOrder: parseTeamArrivalOrder(row.arrival_order,(snapshot.blue||[]).map((player:any)=>String(player.id)),(snapshot.yellow||[]).map((player:any)=>String(player.id))),
   };
   if(row.career_id) {
-    const names=Object.fromEntries([...(snapshot.blue||[]),...(snapshot.yellow||[])].map((player:any)=>[player.id,player.displayName]));
-    separation.career={id:row.career_id,blueScore:Number(row.career_blue_score),yellowScore:Number(row.career_yellow_score),winnerTeam:row.career_winner_team,votingToken:row.career_voting_token,status:row.career_status,closesAt:row.career_closes_at,closedAt:row.career_closed_at,config:row.career_config_snapshot?JSON.parse(row.career_config_snapshot):null,results:row.career_results_snapshot?JSON.parse(row.career_results_snapshot):null,contributions:contributions.map(goal=>({team:goal.team,scorerPlayerId:goal.scorer_player_id,scorerName:names[goal.scorer_player_id]||"Jogador",assistPlayerId:goal.assist_player_id||null,assistName:goal.assist_player_id?names[goal.assist_player_id]||"Jogador":null,ownGoal:Boolean(goal.is_own_goal)})),...(recap?{recap}:{})};
+    const participation=row.career_participation_snapshot?JSON.parse(row.career_participation_snapshot):null;
+    const actualPlayers=participation?[...(participation.blue||[]),...(participation.yellow||[])]:[...(snapshot.blue||[]),...(snapshot.yellow||[])];
+    const names=Object.fromEntries(actualPlayers.map((player:any)=>[player.id,player.displayName]));
+    separation.career={id:row.career_id,blueScore:Number(row.career_blue_score),yellowScore:Number(row.career_yellow_score),winnerTeam:row.career_winner_team,votingToken:row.career_voting_token,status:row.career_status,closesAt:row.career_closes_at,closedAt:row.career_closed_at,config:row.career_config_snapshot?JSON.parse(row.career_config_snapshot):null,results:row.career_results_snapshot?JSON.parse(row.career_results_snapshot):null,participation,contributions:contributions.map(goal=>({team:goal.team,scorerPlayerId:goal.scorer_player_id,scorerName:names[goal.scorer_player_id]||"Jogador",assistPlayerId:goal.assist_player_id||null,assistName:goal.assist_player_id?names[goal.assist_player_id]||"Jogador":null,ownGoal:Boolean(goal.is_own_goal)})),...(recap?{recap}:{})};
   }
   return separation;
 }

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const [playerRows, matchRows, contributionRows, yearMatchRows, careerRow] = await Promise.all([
     // Jogadores excluídos logicamente continuam aqui para preservar rankings e confrontos históricos.
     db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players ORDER BY display_name`).all(),
-    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
+    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
       ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)) DESC,c.created_at DESC`).bind(from, to).all(),
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       FROM career_match_contributions g JOIN career_matches c ON c.id=g.career_match_id
       JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?`).bind(from, to).all(),
-    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
+    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
       ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)),c.created_at`).bind(yearFrom, yearTo).all(),
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     primaryPosition: row.primary_position ? String(row.primary_position) : null,
   }));
   const mapMatch = (row: Record<string, unknown>): StatisticsMatch => {
-    const snapshot = parseJson(row.snapshot, {});
+    const snapshot = parseJson(row.participation_snapshot ?? row.snapshot, {});
     return {
       id: String(row.id), separationId: String(row.separation_id), title: String(row.match_title), date: String(row.match_date || row.created_date),
       blueScore: Number(row.blue_score), yellowScore: Number(row.yellow_score),

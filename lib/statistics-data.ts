@@ -6,7 +6,7 @@ export async function loadAdvancedStatisticsData(from: string, to: string) {
   await ensureDb();
   const [playerRows, matchRows, contributionRows, voteRows] = await Promise.all([
     db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players ORDER BY display_name`).all(),
-    db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,
+    db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.participation_snapshot,
       s.match_title,s.match_date,s.snapshot,s.manually_adjusted,s.balance_score,s.balance_classification,
       substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
@@ -25,7 +25,7 @@ export async function loadAdvancedStatisticsData(from: string, to: string) {
   const contributions = groupBy(contributionRows.results as any[], row => String(row.career_match_id));
   const votes = groupBy(voteRows.results as any[], row => String(row.career_match_id));
   const matches = (matchRows.results as any[]).flatMap(row => {
-    const snapshot = parseJson(row.snapshot, null), config = parseJson(row.config_snapshot, {});
+    const snapshot = parseJson(row.snapshot, null), participation = parseJson(row.participation_snapshot, snapshot), config = parseJson(row.config_snapshot, {});
     if (!snapshot || !Array.isArray(snapshot.blue) || !Array.isArray(snapshot.yellow)) return [];
     const mapParticipants = (entries: any[]): StatisticsParticipant[] => entries.flatMap(player => player?.id ? [{ playerId: String(player.id), position: normalizePosition(player.primaryPosition) }] : []);
     const strength = (team: any) => finite(team?.balancingTotal ?? team?.total);
@@ -33,7 +33,7 @@ export async function loadAdvancedStatisticsData(from: string, to: string) {
       id: String(row.id), separationId: String(row.separation_id), title: String(row.match_title), date: String(row.match_date || row.created_date), status: String(row.status),
       seasonNumber: Number(config.seasonNumber || 1), manuallyAdjusted: Boolean(row.manually_adjusted), blueScore: Number(row.blue_score), yellowScore: Number(row.yellow_score),
       winnerTeam: row.winner_team === "BLUE" || row.winner_team === "YELLOW" ? row.winner_team : "DRAW",
-      blue: mapParticipants(snapshot.blue), yellow: mapParticipants(snapshot.yellow),
+      blue: mapParticipants(participation.blue), yellow: mapParticipants(participation.yellow),
       contributionsAvailable: Boolean(config.trackContributions),
       contributions: (contributions.get(String(row.id)) || []).map(entry => ({ scorerPlayerId: String(entry.scorer_player_id), assistPlayerId: entry.assist_player_id ? String(entry.assist_player_id) : null, ownGoal: Boolean(entry.is_own_goal) })),
       votes: (votes.get(String(row.id)) || []).map(entry => ({ motmFirstId: String(entry.motm_first_id), motmSecondId: String(entry.motm_second_id), motmThirdId: String(entry.motm_third_id), dotmFirstId: String(entry.dotm_first_id), dotmSecondId: String(entry.dotm_second_id), dotmThirdId: String(entry.dotm_third_id) })),
