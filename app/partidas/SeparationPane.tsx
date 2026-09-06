@@ -89,11 +89,11 @@ export default function SeparationPane({ id, section, permissions, onChanged }: 
   return <div className="match-separation-pane">
     {error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="alert" role="status">{notice}</div>}
     {section === "voting" ? item.career ? <><MatchVotingSharing item={item}/><VotingApp key={item.career.votingToken} votingToken={item.career.votingToken} embedded/></> : <div className="empty">A votação ficará disponível após a confirmação do resultado, quando o Modo Carreira estiver habilitado.</div> :
-      <SavedSeparation key={`${id}:${section}`} item={item} section={section} isAdmin={allowed("SEPARATIONS_MANAGE")} canManageResults={canManageResults} careerConfig={careerConfig || { enabled: false }} publicBaseUrl={typeof window === "undefined" ? "" : window.location.origin}
-        onConfirmCareer={(separationId: string, blueScore: number, yellowScore: number, contributions: any[]) => mutate("/api/career/match", "POST", { separationId, blueScore, yellowScore, contributions })}
-        onEditCareer={(matchId: string, blueScore: number, yellowScore: number, contributions: any[]) => mutate("/api/career/match", "PUT", { matchId, blueScore, yellowScore, contributions })}
+      <SavedSeparation key={`${id}:${section}`} item={item} section={section} isAdmin={allowed("SEPARATIONS_MANAGE")} canCorrectConfirmedTeams={permissions.includes("*") && item.canCorrectConfirmedTeams} canManageResults={canManageResults} careerConfig={careerConfig || { enabled: false }} publicBaseUrl={typeof window === "undefined" ? "" : window.location.origin}
+        onConfirmCareer={(separationId: string, blueScore: number, yellowScore: number, contributions: any[], participation: any) => mutate("/api/career/match", "POST", { separationId, blueScore, yellowScore, contributions, participationReviewed: true, participation })}
+        onEditCareer={(matchId: string, blueScore: number, yellowScore: number, contributions: any[], participation: any) => mutate("/api/career/match", "PUT", { matchId, blueScore, yellowScore, contributions, participationReviewed: true, participation })}
         onSaveArrivalOrder={(id: string, arrivalOrder: unknown) => mutate("/api/separations", "PATCH", { id, arrivalOrder })}
-        onSaveTeams={(id: string, blue: string[], yellow: string[]) => mutate("/api/separations", "PATCH", { action: "teams", id, blue, yellow })}
+        onSaveTeams={(id: string, blue: string[], yellow: string[], confirmed = false) => mutate("/api/separations", "PATCH", { action: confirmed ? "correct-confirmed-teams" : "teams", id, blue, yellow })}
         onBack={() => window.location.assign("/partidas")} onShareLink={share} onPlayer={setPlayer} onCopy={copy}/>
     }
     {player && <PlayerDetail player={player} config={{ ...resultConfig(item.snapshot), showContributions: cardConfig.showContributions, cardTiersEnabled: cardConfig.cardTiersEnabled, cardBronzeMax: cardConfig.cardBronzeMax, cardSilverMax: cardConfig.cardSilverMax, cardGoldMax: cardConfig.cardGoldMax }} onClose={() => setPlayer(null)}/>}
