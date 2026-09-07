@@ -24,6 +24,7 @@ test("administrador publica versão, feed e push apontam para a página estável
     await ensureDb();
     const now = new Date().toISOString(), expires = new Date(Date.now() + 60_000).toISOString();
     const administratorId = await db().prepare(`SELECT id FROM administrators LIMIT 1`).first("id");
+    await db().prepare(`UPDATE administrators SET must_change_password=0 WHERE id=?`).bind(administratorId).run();
     await db().prepare(`INSERT INTO sessions (id,administrator_id,expires_at,created_at) VALUES (?,?,?,?)`).bind("release-admin-session", administratorId, expires, now).run();
     await db().prepare(`INSERT INTO member_accounts (id,email,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,?,?)`).bind("release-member", "release@example.com", "hash", 1, now, now).run();
     await db().prepare(`INSERT INTO mobile_push_tokens (id,account_type,account_id,expo_push_token,platform,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)`).bind("release-push", "member", "release-member", "ExpoPushToken[release]", "android", now, now).run();

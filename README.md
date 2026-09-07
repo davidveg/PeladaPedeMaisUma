@@ -435,17 +435,20 @@ O contrato detalhado está em [docs/mobile-openapi.yaml](docs/mobile-openapi.yam
 ## Segurança
 
 - PBKDF2-SHA-256 com salt aleatório e 210 mil iterações para senhas.
-- Cookies HTTP-only/SameSite no site.
+- Cookies de sessão HTTP-only, Secure e SameSite=Strict no site; autenticação remota por HTTP é recusada.
+- Tokens de sessão web e mobile persistidos somente como hash; sessões web legadas são migradas no primeiro uso.
+- Limitação persistente de tentativas por conta e por IP nos logins administrativo, de jogador e mobile.
 - Access tokens mobile de curta duração e refresh tokens rotativos.
 - Refresh tokens e tokens de redefinição persistidos somente como hash.
 - Reutilização de refresh token revoga as sessões mobile da conta.
 - Autorização validada no servidor em todas as ações protegidas.
 - A votação deriva o jogador da conta autenticada e ignora identidades enviadas pelo cliente.
-- Fotos limitadas a JPEG, PNG e WebP de até 5 MB.
+- Fotos limitadas a ICO, JPEG, PNG e WebP de até 5 MB, com interrupção do stream assim que o limite é ultrapassado.
+- Uploads registram dono e estado; cada conta pode manter até cinco pendentes e criar até vinte por hora. Pendências expiram em uma hora e arquivos substituídos são removidos.
 - Logs não incluem senhas, cookies, tokens, corpos ou query strings.
 - Auditoria para logins, contas, jogadores, configurações, partidas, votos, placares e operações mobile.
 
-Em produção, use HTTPS, segredos fora do repositório, rate limiting no proxy e backups antes de mudanças estruturais.
+Em produção, termine TLS em um proxy confiável, force HTTPS/HSTS, mantenha rate limiting também no proxy, use segredos fora do repositório e faça backups antes de mudanças estruturais. O proxy deve substituir, e não apenas repassar, `X-Forwarded-Proto` e os cabeçalhos de IP do cliente.
 
 ## Logs e observabilidade
 
@@ -556,7 +559,7 @@ O modelo do OMV:
 - usa `seccomp:unconfined` para evitar o `SIGSYS` observado nesse ambiente;
 - persiste banco e fotos em `/data`.
 
-Acesse `http://IP_DO_RASPBERRY:3000`. Os logs devem registrar `application_starting` e `database_ready`.
+Publique a aplicação por um proxy HTTPS e acesse a URL configurada em `APP_BASE_URL`. O acesso HTTP direto por IP pode ser usado para o healthcheck, mas os endpoints que emitem cookies recusam autenticação remota sem HTTPS. Os logs devem registrar `application_starting` e `database_ready`.
 
 ## Múltiplas instâncias
 

@@ -137,7 +137,7 @@ export default function MyCard() {
     return <Screen><Header title="Meu card"/><ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/></Screen>;
   }
   if (query.data && !query.data.player) {
-    return <Screen><Header title="Meu card"/><EmptyState title="Conta sem jogador associado" message="A associação deve ser concluída na aplicação web ou por um administrador. O aplicativo não permite escolher outro jogador."/></Screen>;
+    return <Screen><Header title="Meu card"/><EmptyState title="Conta sem jogador associado" message="A associação deve ser aprovada por um administrador. O aplicativo não permite escolher um jogador."/></Screen>;
   }
 
   const player = query.data?.player;

@@ -1,6 +1,7 @@
 /* D1 and untrusted JSON payloads are narrowed explicitly at each use. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb, playerAccountRequired, verifyPassword } from "../../../../lib/database";
+import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../../lib/login-rate-limit";
 import { createMobileSession, revokeMobileSession, rotateMobileSession } from "../../../../lib/mobile-auth";
 
 const noStore = { "cache-control": "no-store", "content-type": "application/json" };
@@ -15,11 +16,14 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({})) as any;
   const email = String(payload.email || "").trim().toLowerCase(), password = String(payload.password || "");
   if (!email || !password || password.length > 256) return Response.json({ error: "Informe e-mail e senha." }, { status: 400, headers: noStore });
+  const rateLimit = await beginLoginAttempt(request, "mobile", email);
+  if (!rateLimit.allowed) return loginRateLimitResponse(rateLimit, noStore);
   const member: any = await db().prepare(`SELECT *,'member' account_type FROM member_accounts WHERE email=?`).bind(email).first();
   const admin: any = await db().prepare(`SELECT *,'administrator' account_type FROM administrators WHERE email=?`).bind(email).first();
   const candidate = member && await verifyPassword(password, member.password_hash) ? member : admin && await verifyPassword(password, admin.password_hash) ? admin : null;
-  if (!candidate) return Response.json({ error: "E-mail ou senha inválidos." }, { status: 401, headers: noStore });
-  if (!candidate.active) return Response.json({ error: "Esta conta está desativada. Procure o administrador." }, { status: 403, headers: noStore });
+  if (!candidate) { await recordLoginFailure(rateLimit); return Response.json({ error: "E-mail ou senha inválidos." }, { status: 401, headers: noStore }); }
+  if (!candidate.active) { await recordLoginFailure(rateLimit); return Response.json({ error: "Esta conta está desativada. Procure o administrador." }, { status: 403, headers: noStore }); }
+  await clearSuccessfulLogin(rateLimit);
   if (candidate.account_type === "administrator" && candidate.must_change_password) return Response.json({ error: "Conclua o primeiro acesso na aplicação web antes de entrar no aplicativo." }, { status: 403, headers: noStore });
   const accountType = candidate.account_type as "administrator" | "member", session = await createMobileSession({ id: candidate.id, accountType }, payload.deviceName);
   const now = new Date().toISOString(), table = accountType === "administrator" ? "administrators" : "member_accounts";

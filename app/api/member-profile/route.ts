@@ -4,6 +4,7 @@ import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
 import { loadPlayerEngagement } from "../../../lib/player-engagement-store";
+import { finalizeUploadAttachment, validateUploadAttachment } from "../../../lib/upload-lifecycle";
 
 const positions = new Set(["Defesa", "Meio-campo", "Ataque", "Goleiro"]);
 
@@ -31,14 +32,21 @@ export async function PUT(request: Request) {
   const fullName = String(payload.fullName || "").trim(), nickname = String(payload.nickname || "").trim(), primaryPosition = String(payload.primaryPosition || ""), notes = String(payload.notes || "").trim(), photoUrl = payload.photoUrl ? String(payload.photoUrl) : null;
   if (fullName.length < 2 || fullName.length > 120) return Response.json({ error: "Informe um nome completo válido." }, { status: 400 });
   if (nickname.length > 60 || notes.length > 1000 || !positions.has(primaryPosition)) return Response.json({ error: "Revise apelido, posição e observações." }, { status: 400 });
-  if (photoUrl && !/^\/api\/upload\?key=players(?:%2f|\/)/i.test(photoUrl)) return Response.json({ error: "A referência da foto é inválida." }, { status: 400 });
   const previous: any = await db().prepare(`SELECT full_name,nickname,type,primary_position,secondary_position,photo_url,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(member.playerId).first();
   if (!previous) return Response.json({ error: "Jogador não encontrado." }, { status: 404 });
+  const photoChanged = photoUrl !== (previous.photo_url || null);
+  let uploadReference;
+  if (photoChanged && photoUrl) {
+    const validation = await validateUploadAttachment(photoUrl, "players", { accountType: member.accountType === "administrator" ? "administrator" : "member", accountId: String(member.id) }, "player", String(member.playerId));
+    if (!validation.reference) return Response.json({ error: validation.error || "A referência da foto é inválida." }, { status: 400 });
+    uploadReference = validation.reference;
+  }
   const requestedSecondary = Object.prototype.hasOwnProperty.call(payload, "secondaryPosition") ? payload.secondaryPosition : previous.secondary_position;
   const positionError = secondaryPositionValidationError(primaryPosition, requestedSecondary, previous.type);
   if (positionError) return Response.json({ error: positionError }, { status: 400 });
   const secondaryPosition = normalizeSecondaryPosition(primaryPosition, requestedSecondary, previous.type);
   await db().prepare(`UPDATE players SET full_name=?,nickname=?,primary_position=?,secondary_position=?,photo_url=?,notes=?,updated_at=? WHERE id=?`).bind(fullName, nickname || null, primaryPosition, secondaryPosition, photoUrl, notes || null, new Date().toISOString(), member.playerId).run();
+  if (photoChanged) await finalizeUploadAttachment(uploadReference, previous.photo_url);
   await audit(member.accountType === "administrator" ? member.id : null, "MEMBER_PROFILE_UPDATE", "player", member.playerId, { fullName, nickname: nickname || null, primaryPosition, secondaryPosition, photoUrl, notes: notes || null, accountId: member.id, accountType: member.accountType }, previous);
   return Response.json({ ok: true, message: "Perfil atualizado com sucesso." });
 }

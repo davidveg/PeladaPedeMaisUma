@@ -23,6 +23,7 @@ test("hub unifica histórico e agenda sem alterar dados, vínculos ou permissõe
     const now = new Date().toISOString(), future = new Date(Date.now() + 86400000).toISOString();
     const admin = await db().prepare("SELECT id FROM administrators LIMIT 1").first();
     const player = await db().prepare("SELECT id FROM players LIMIT 1").first();
+    await db().prepare("UPDATE administrators SET must_change_password=0 WHERE id=?").bind(admin.id).run();
     await db().prepare("INSERT INTO sessions (id,administrator_id,expires_at,created_at) VALUES (?,?,?,?)").bind("hub-admin", admin.id, future, now).run();
     await db().prepare("INSERT INTO member_accounts (id,email,password_hash,active,role,created_at,updated_at) VALUES (?,?,?,?,?,?,?)").bind("hub-member", "hub@example.com", "hash", 1, "member", now, now).run();
     await db().prepare("INSERT INTO member_sessions (id,member_account_id,expires_at,created_at) VALUES (?,?,?,?)").bind("hub-member-session", "hub-member", future, now).run();

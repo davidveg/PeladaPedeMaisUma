@@ -1,4 +1,4 @@
-import { audit, currentAdmin, db, hashPassword, verifyPassword } from "../../../../lib/database";
+import { audit, currentAdmin, db, hashOpaqueToken, hashPassword, verifyPassword } from "../../../../lib/database";
 import { logEvent } from "../../../../lib/logger";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 
@@ -20,13 +20,14 @@ export async function PUT(request: Request) {
   }
 
   const now = new Date().toISOString();
-  const sessionId = (request.headers.get("cookie") || "").match(/ppm_session=([^;]+)/)?.[1] ?? "";
+  const sessionId = await hashOpaqueToken((request.headers.get("cookie") || "").match(/ppm_session=([^;]+)/)?.[1] ?? "");
   const database = db();
   await database.batch([
     database.prepare(`UPDATE administrators SET password_hash=?,must_change_password=0,updated_at=? WHERE id=?`).bind(await hashPassword(newPassword), now, admin.id),
     database.prepare(`DELETE FROM sessions WHERE administrator_id=? AND id<>?`).bind(admin.id, sessionId),
+    database.prepare(`UPDATE mobile_sessions SET revoked_at=COALESCE(revoked_at,?) WHERE account_type='administrator' AND account_id=?`).bind(now, admin.id),
   ]);
-  await audit(admin.id, "CHANGE_PASSWORD", "administrator", admin.id, { passwordChanged: true, otherSessionsRevoked: true, notification: "email" });
+  await audit(admin.id, "CHANGE_PASSWORD", "administrator", admin.id, { passwordChanged: true, otherSessionsRevoked: true, mobileSessionsRevoked: true, notification: "email" });
   logEvent("info", "profile_password_changed", { administratorId: admin.id });
 
   const mailer = getRuntimeBindings().MAILER;

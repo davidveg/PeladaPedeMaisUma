@@ -107,7 +107,7 @@ function MatchSiteCard({ item, busy, onAnswer, onShare }: { item: Match; busy: s
     {item.viewer.playerId ? <div className="match-site-answer"><span>{answerText}</span>{item.status === "OPEN" && <div>
       {!guestManaged && <button disabled={busy === item.id || !item.viewer.canConfirmPresence || goalkeeperLimitReached(item)} className={item.viewer.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAnswer(item, "PRESENT")}>✓ Vou jogar</button>}
       <button disabled={busy === item.id || !item.viewer.canRespond} className={item.viewer.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAnswer(item, "ABSENT")}>× Não vou</button>
-    </div>}</div> : <div className="alert">Sua conta ainda não está associada a um jogador. Faça a associação em “Minha conta” para responder.</div>}
+    </div>}</div> : <div className="alert">Sua conta ainda não está associada a um jogador. Solicite a aprovação de um administrador para responder.</div>}
     {item.status === "OPEN" && item.shareMessage ? <div className="match-site-share"><button type="button" className="ghost whatsapp-button" onClick={() => onShare(item)}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button></div> : null}
     {item.separationId && <a className="ghost match-separation-link" href={`/partidas?match=${encodeURIComponent(item.id)}&tab=teams`}>Ver times gerados ↗</a>}
   </article>;

@@ -5,6 +5,7 @@ import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 import { attachHistoricalPerformance } from "../../../lib/historical-performance-store";
 import { playerTypeValidationError } from "../../../lib/player-types";
 import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
+import { finalizeUploadAttachment, validateUploadAttachment } from "../../../lib/upload-lifecycle";
 
 const map = (row: any) => ({
   ...row,
@@ -55,8 +56,15 @@ export async function POST(request: Request) {
   if (positionError) return Response.json({ error: positionError }, { status: 400 });
   const secondaryPosition = normalizeSecondaryPosition(player.primaryPosition, player.secondaryPosition, player.type);
   const id = crypto.randomUUID(), now = new Date().toISOString();
+  let uploadReference;
+  if (String(player.photoUrl || "").startsWith("/api/upload")) {
+    const validation = await validateUploadAttachment(player.photoUrl, "players", { accountType: admin.accountType === "administrator" ? "administrator" : "member", accountId: String(admin.id) }, "player", id);
+    if (!validation.reference) return Response.json({ error: validation.error }, { status: 400 });
+    uploadReference = validation.reference;
+  }
   await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,secondary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, player.fullName || player.displayName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type || "guest", player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active === false ? 0 : 1, player.notes || null, now, now).run();
+  await finalizeUploadAttachment(uploadReference, null);
   await audit(admin.id, "CREATE", "player", id, { ...player, ...values });
   return Response.json({ id }, { status: 201 });
 }
@@ -76,8 +84,16 @@ export async function PUT(request: Request) {
   const previous: any = await db().prepare(`SELECT full_name,display_name,nickname,type,primary_position,secondary_position,speed,skill,marking,tactical_intelligence,competitiveness,goalkeeper_positioning,goal_exit,goalkeeper_safety,goalkeeper_leadership,photo_url,active,notes FROM players WHERE id=? AND deleted_at IS NULL`).bind(player.id).first();
   if (!previous) return Response.json({ error: "Jogador não encontrado." }, { status: 404 });
   const secondaryPosition = Object.prototype.hasOwnProperty.call(player, "secondaryPosition") ? normalizeSecondaryPosition(player.primaryPosition, player.secondaryPosition, player.type) : normalizeSecondaryPosition(player.primaryPosition, previous.secondary_position, player.type);
+  const nextPhotoUrl = player.photoUrl || null, photoChanged = nextPhotoUrl !== (previous.photo_url || null);
+  let uploadReference;
+  if (photoChanged && String(nextPhotoUrl || "").startsWith("/api/upload")) {
+    const validation = await validateUploadAttachment(nextPhotoUrl, "players", { accountType: admin.accountType === "administrator" ? "administrator" : "member", accountId: String(admin.id) }, "player", String(player.id));
+    if (!validation.reference) return Response.json({ error: validation.error }, { status: 400 });
+    uploadReference = validation.reference;
+  }
   await db().prepare(`UPDATE players SET full_name=?,display_name=?,nickname=?,aliases=?,type=?,primary_position=?,secondary_position=?,speed=?,skill=?,marking=?,tactical_intelligence=?,competitiveness=?,goalkeeper_positioning=?,goal_exit=?,goalkeeper_safety=?,goalkeeper_leadership=?,photo_url=?,active=?,notes=?,updated_at=? WHERE id=? AND deleted_at IS NULL`)
-    .bind(player.fullName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type, player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active ? 1 : 0, player.notes || null, new Date().toISOString(), player.id).run();
+    .bind(player.fullName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type, player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, nextPhotoUrl, player.active ? 1 : 0, player.notes || null, new Date().toISOString(), player.id).run();
+  if (photoChanged) await finalizeUploadAttachment(uploadReference, previous.photo_url);
   await audit(admin.id, "UPDATE", "player", player.id, { displayName: player.displayName, type: player.type, primaryPosition: player.primaryPosition, secondaryPosition, ...values, active: Boolean(player.active), photoUrl: player.photoUrl || null }, previous);
   return Response.json({ ok: true });
 }

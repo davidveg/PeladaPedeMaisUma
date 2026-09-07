@@ -1,4 +1,4 @@
-import { audit, currentAdmin, db, ensureDb, playerAccountRequired, staffRequired } from "../../../lib/database";
+import { adminRequired as fullAdminRequired, audit, db, ensureDb, playerAccountRequired, staffRequired } from "../../../lib/database";
 import { publicSeparation } from "../../../lib/public-separation";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { validateArrivalOrder } from "../../../lib/arrival-order";
@@ -13,7 +13,7 @@ export async function POST(request:Request){
   if(!(await adminRequired(request)))return Response.json({error:"Não autorizado."},{status:401,headers:readHeaders});
   return Response.json({error:"A criação de escalações avulsas foi encerrada. Abra uma partida e monte os times pelas presenças.",code:"STANDALONE_SEPARATION_REMOVED"},{status:410,headers:readHeaders});
 }
-export async function PATCH(request:Request){await ensureDb();const payload=await request.json().catch(()=>({})) as any;const admin:any=payload.action==="correct-confirmed-teams"?await currentAdmin(request):await adminRequired(request);if(!admin)return Response.json({error:"Não autorizado"},{status:401});const id=String(payload.id||"");
+export async function PATCH(request:Request){await ensureDb();const payload=await request.json().catch(()=>({})) as any;const admin:any=payload.action==="correct-confirmed-teams"?await fullAdminRequired(request):await adminRequired(request);if(!admin)return Response.json({error:"Não autorizado"},{status:401});const id=String(payload.id||"");
 if(payload.action==="correct-confirmed-teams"){
   try{const result=await correctConfirmedTeamAssignment({separationId:id,blue:payload.blue,yellow:payload.yellow,administratorId:String(admin.id)});return Response.json({ok:true,...result,manuallyAdjusted:true})}catch(error:any){return Response.json({error:error?.message||"Não foi possível corrigir a escalação."},{status:409})}
 }

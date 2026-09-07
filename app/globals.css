@@ -144,6 +144,8 @@
 .tr.member-association-tr{grid-template-columns:1.45fr 1.1fr 1.1fr .7fr 1fr 1.25fr}
 .association-account-actions{display:flex;flex-direction:column;align-items:stretch;gap:6px}
 .association-account-actions button{white-space:nowrap}
+.association-account-actions select{width:100%;min-width:0;border:1px solid #9ab9aa;border-radius:9px;background:#f7fbf8;color:var(--green);padding:9px 8px;font-size:10px;font-weight:750}
+.association-account-actions select:disabled{cursor:not-allowed;opacity:.65}
 .association-account-actions .promote-account{border:1px solid #9ab9aa;background:#edf6f1;color:var(--green);border-radius:9px;padding:9px 11px;font-size:10px;font-weight:850}
 .association-account-actions .promote-account:hover:not(:disabled){background:#dfeee6;border-color:#719c88}
 .association-account-actions .demote-account{border:1px solid #d7bd82;background:#fff8e8;color:#77551c;border-radius:9px;padding:9px 11px;font-size:10px;font-weight:850}

@@ -32,33 +32,21 @@ type PlayerAbsence = { id: string; startDate: string; endDate: string; reason: s
 
 export default function MemberApp() {
   const { config: instance } = useInstanceBranding();
-  const [member, setMember] = useState<any>(undefined), [player, setPlayer] = useState<Player | null>(null), [engagement, setEngagement] = useState<PlayerEngagement | null>(null), [config, setConfig] = useState<Config>(defaultConfig), [available, setAvailable] = useState<any[]>([]), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
+  const [member, setMember] = useState<any>(undefined), [player, setPlayer] = useState<Player | null>(null), [engagement, setEngagement] = useState<PlayerEngagement | null>(null), [config, setConfig] = useState<Config>(defaultConfig), [error, setError] = useState(""), [notice, setNotice] = useState(""), [editing, setEditing] = useState(false);
   async function load() {
     const auth = await api("/api/member-auth");
     setMember(auth.member);
-    if (!auth.member) { setPlayer(null); setEngagement(null); setAvailable([]); return { member: null, player: null }; }
+    if (!auth.member) { setPlayer(null); setEngagement(null); return { member: null, player: null }; }
     const profile = await api("/api/member-profile");
     setMember(profile.member); setPlayer(profile.player); setEngagement(profile.engagement || null); setConfig({ ...defaultConfig, ...(profile.config || {}) });
-    if (!profile.player) setAvailable((await api("/api/member-players")).players || []); else setAvailable([]);
     return { member: profile.member, player: profile.player };
   }
   useEffect(() => { load().catch((cause) => setError(cause.message)); }, []);
   async function logout() { await api("/api/member-auth", { method: "DELETE" }); setMember(null); setPlayer(null); setEngagement(null); }
-  async function associate(candidate: any) {
-    if (!confirm(`Confirmar a associação da sua conta com ${candidate.displayName}? Depois disso, somente um administrador poderá desfazer a associação.`)) return;
-    setError("");
-    try {
-      const result = await api("/api/member-players", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ playerId: candidate.id }) });
-      const returnTo = safeReturnTo();
-      if (returnTo) { window.location.assign(returnTo); return; }
-      setNotice(result.message);
-      await load();
-    } catch (cause: any) { setError(cause.message); }
-  }
   if (member === undefined) return <div className="member-loading">Carregando sua conta…</div>;
   if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
-  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associe seu jogador"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <AssociationPicker players={available} onSelect={associate} /> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && engagement && <PlayerEngagementPanels engagement={engagement}/>} {player && <PlayerAbsenceCard/>}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associação pendente"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <section className="association-picker"><div className="association-warning"><b>Aguardando aprovação</b><p>Por segurança, somente um administrador pode associar sua conta a um jogador. Solicite a aprovação e atualize esta página depois da confirmação.</p></div></section> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && engagement && <PlayerEngagementPanels engagement={engagement}/>} {player && <PlayerAbsenceCard/>}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
 }
 
 function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }) {
@@ -203,12 +191,6 @@ function sessionExpiredNotice() {
   return new URLSearchParams(window.location.search).get("reason") === "session-expired"
     ? "Sua sessão expirou. Entre novamente para continuar."
     : "";
-}
-
-function AssociationPicker({ players, onSelect }: { players: any[]; onSelect: (player: any) => void }) {
-  const [query, setQuery] = useState("");
-  const filtered = players.filter(player => [player.displayName, player.primaryPosition, playerTypeLabel(player.type)].some(value => value.toLowerCase().includes(query.toLowerCase())));
-  return <section className="association-picker"><div className="association-warning"><b>Escolha com atenção</b><p>A associação é exclusiva e não poderá ser alterada por você. Se selecionar o jogador errado, será necessário solicitar a correção a um administrador.</p></div><label>Buscar meu jogador<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Digite seu nome ou apelido…" /></label><div className="association-grid">{filtered.map(candidate => <button key={candidate.id} onClick={() => onSelect(candidate)}><PlayerPhoto photoUrl={candidate.photoUrl} name={candidate.displayName} /><span><b>{candidate.displayName}</b><small>{playerTypeLabel(candidate.type)} · {candidate.primaryPosition}</small></span><i>Associar →</i></button>)}</div>{filtered.length === 0 && <div className="member-empty">Nenhum jogador disponível com esse nome. Fale com um administrador caso seu cadastro ainda não exista.</div>}</section>;
 }
 
 function MemberProfile({ player, config, onEdit }: { player: Player; config: Config; onEdit: () => void }) {

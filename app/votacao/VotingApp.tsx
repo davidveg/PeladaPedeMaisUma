@@ -132,7 +132,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
             ) : !viewer.hasPlayerAssociation ? (
               <VoteAccessState
                 title="Associe sua conta a um jogador"
-                description="Somente contas vinculadas a um jogador podem participar da votação. Faça a associação na área Minha conta e depois retorne a este link."
+                description="Somente contas vinculadas a um jogador podem participar da votação. Solicite a associação a um administrador e depois retorne a este link."
                 actionHref={`/conta?returnTo=${encodeURIComponent(`/votacao?token=${token}`)}`}
                 actionLabel="Ir para Minha conta"
                 onLogout={logout}
