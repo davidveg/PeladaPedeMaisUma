@@ -28,6 +28,7 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(!matchId);
   const allowed=(permission:string)=>permissions.includes("*")||permissions.includes(permission),canManage=allowed("MATCHES_MANAGE"),canAttend=allowed("MATCH_ATTENDANCE_MANAGE"),canCancel=allowed("MATCHES_CANCEL"),canSeparate=allowed("SEPARATIONS_MANAGE");
   async function load() {
@@ -41,8 +42,17 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
   }
   useEffect(() => { void load(); }, [matchId]);
   const visibleMatches = useMemo(() => onlyActiveOrSeparated ? data.matches.filter(isActiveOrSeparated) : data.matches, [data.matches, onlyActiveOrSeparated]);
-  useEffect(() => { if (!visibleMatches.some(item => item.id === selected)) setSelected(visibleMatches[0]?.id || null); }, [visibleMatches, selected]);
+  const pageSize = 10, totalPages = Math.max(1, Math.ceil(visibleMatches.length / pageSize));
+  const pageStart = (page - 1) * pageSize, pageEnd = Math.min(pageStart + pageSize, visibleMatches.length);
+  const paginatedMatches = useMemo(() => visibleMatches.slice(pageStart, pageEnd), [visibleMatches, pageStart, pageEnd]);
+  useEffect(() => { setPage(currentPage => Math.min(currentPage, totalPages)); }, [totalPages]);
+  useEffect(() => { if (!matchId && !paginatedMatches.some(item => item.id === selected)) setSelected(paginatedMatches[0]?.id || null); }, [matchId, paginatedMatches, selected]);
   const current = visibleMatches.find(item => item.id === selected) || null;
+  function goToPage(nextPage: number) {
+    const safePage = Math.max(1, Math.min(nextPage, totalPages));
+    setPage(safePage);
+    setSelected(visibleMatches[(safePage - 1) * pageSize]?.id || null);
+  }
 
   async function attendance(playerId: string, status: "PRESENT" | "ABSENT") {
     setError("");
@@ -82,12 +92,12 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
   if (loading && !data.matches.length) return <div className="admin-card match-admin-empty">Carregando partidas…</div>;
   return <section className="admin-matches">
     {!matchId && <>{canConfigureDrafts&&instanceConfig&&<SeparationDraftSetting api={api} config={instanceConfig} setError={setError} setNotice={setNotice} onSaved={onInstanceConfigSaved}/>}<div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p>{canManage&&<button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button>}</div>
-    <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem escalação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => setOnlyActiveOrSeparated(event.target.checked)}/></label></>}
-    <div className={matchId ? "match-admin-single" : "match-admin-layout"}>{!matchId && <div className="match-admin-list">{visibleMatches.length ? visibleMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
+    <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem escalação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => { setOnlyActiveOrSeparated(event.target.checked); setPage(1); }}/></label></>}
+    <div className={matchId ? "match-admin-single" : "match-admin-layout"}>{!matchId && <div className="match-admin-list">{visibleMatches.length ? paginatedMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
       <span className={`match-state ${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
-    </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}</div>}
+    </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}{totalPages > 1 && <nav className="match-admin-pagination" aria-label="Paginação das partidas"><span>Exibindo <b>{pageStart + 1}–{pageEnd}</b> de <b>{visibleMatches.length}</b><small>Página {page} de {totalPages}</small></span><button type="button" className="ghost" disabled={page === 1} onClick={() => goToPage(page - 1)}>← Anterior</button><button type="button" className="ghost" disabled={page === totalPages} onClick={() => goToPage(page + 1)}>Próxima →</button></nav>}</div>}
     <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
     {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
