@@ -16,14 +16,14 @@
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "html-to-image": "^1.11.13",
-    "next": "16.3.0",
-    "nodemailer": "^9.0.3",
+    "next": "16.3.5",
+    "nodemailer": "^9.1.1",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.51.2",
+    "@cloudflare/vite-plugin": "1.54.9",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/qrcode": "^1.5.6",
@@ -37,9 +37,9 @@
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "vinext": "0.0.50",
+    "vinext": "1.0.0-beta.9",
     "vite": "8.2.0",
-    "wrangler": "4.120.1"
+    "wrangler": "4.131.2"
   },
   "type": "module"
 }
