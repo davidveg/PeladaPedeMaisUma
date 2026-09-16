@@ -13,8 +13,9 @@ test("recalcula uma divisão equivalente como excelente", () => {
   assert.equal(next.cost, 0);
   assert.deepEqual(next.delta, {
     players: 0, defenders: 0, midfielders: 0, attackers: 0, speed: 0, skill: 0, marking: 0,
+    defensiveMidfielders:0,centralMidfielders:0,offensiveMidfielders:0,
     tacticalIntelligence:0, competitiveness:0, momentum: 0, historicalLearning:0, score: 0, balancingScore:0,
-    advantage:{players:"EVEN",defenders:"EVEN",midfielders:"EVEN",attackers:"EVEN",speed:"EVEN",skill:"EVEN",marking:"EVEN",tacticalIntelligence:"EVEN",competitiveness:"EVEN",momentum:"EVEN",historicalLearning:"EVEN",score:"EVEN"},
+    advantage:{players:"EVEN",defenders:"EVEN",midfielders:"EVEN",attackers:"EVEN",defensiveMidfielders:"EVEN",centralMidfielders:"EVEN",offensiveMidfielders:"EVEN",speed:"EVEN",skill:"EVEN",marking:"EVEN",tacticalIntelligence:"EVEN",competitiveness:"EVEN",momentum:"EVEN",historicalLearning:"EVEN",score:"EVEN"},
   });
   assert.equal(next.blueMetrics.scoreAvg, 3);
   assert.equal(next.yellowMetrics.scoreAvg, 3);
@@ -53,6 +54,16 @@ test("usa a posição secundária quando ela reduz a diferença entre as faixas"
   assert.equal(next.delta.midfielders,0);
   assert.equal(next.delta.attackers,0);
   assert.equal(next.cost,0);
+});
+
+test("penaliza a concentração evitável de perfis de meio-campo",()=>{
+  const defensive=(id)=>({...player(id,"Meio-campo"),secondaryPosition:"Defesa"}),offensive=(id)=>({...player(id,"Meio-campo"),secondaryPosition:"Ataque"});
+  const unbalanced=recalculateTeamResult(result,[defensive("def-1"),defensive("def-2")],[offensive("off-1"),offensive("off-2")]);
+  const balanced=recalculateTeamResult(result,[defensive("def-1"),offensive("off-1")],[defensive("def-2"),offensive("off-2")]);
+  assert.equal(unbalanced.delta.defensiveMidfielders,2);
+  assert.equal(unbalanced.delta.offensiveMidfielders,2);
+  assert.ok(unbalanced.cost>balanced.cost);
+  assert.equal(balanced.cost,0);
 });
 
 test("usa as mesmas faixas de classificação do algoritmo", () => {

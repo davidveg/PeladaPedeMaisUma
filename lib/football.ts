@@ -4,7 +4,9 @@ export type Player = { id: string; fullName: string; displayName: string; nickna
 export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; tacticalIntelligenceWeight?: number; competitivenessWeight?: number; goalkeeperDefensesWeight?: number; goalkeeperPositioningWeight?: number; goalkeeperSafetyWeight?: number; goalkeeperFootworkWeight?: number; goalkeeperLeadershipWeight?: number; ratingSystemVersion?: number; resultMomentumMultiplier?: number; momentumMultiplier?: number; historicalLearningEnabled?: boolean; showContributions?: boolean; cardTiersEnabled?: boolean; cardBronzeMax?: number; cardSilverMax?: number; cardGoldMax?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
 export const defaultConfig: Config = { speedWeight: .35, skillWeight: .25, markingWeight: .15, tacticalIntelligenceWeight: .2, competitivenessWeight: .05, goalkeeperDefensesWeight: .4, goalkeeperPositioningWeight: .25, goalkeeperSafetyWeight: .2, goalkeeperFootworkWeight: .1, goalkeeperLeadershipWeight: .05, ratingSystemVersion: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, historicalLearningEnabled: false, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
-export const BALANCE_ALGORITHM_VERSION = 1;
+export const BALANCE_ALGORITHM_VERSION = 2;
+export type MidfieldProfileCounts = { defensive: number; central: number; offensive: number };
+const MIDFIELD_PROFILE_EXCESS_PENALTY = 400;
 const modernRatingSystem = (c: Config) => c.ratingSystemVersion === 2 || c.tacticalIntelligenceWeight != null;
 export const playerAttributes = (p: Player) => p.primaryPosition === "Goleiro" || p.type === "goalkeeper"
   ? { speed: p.goalkeeperPositioning ?? p.speed ?? 3, skill: p.skill, marking: p.goalExit ?? p.marking ?? 3, tacticalIntelligence: p.goalkeeperSafety ?? 3, competitiveness: p.goalkeeperLeadership ?? 3 }
@@ -34,6 +36,30 @@ export const normalizeName = (value: string) => value.normalize("NFD").replace(/
 type PositionCounts = Record<Position, number>;
 const emptyPositionCounts = (): PositionCounts => ({ Defesa: 0, "Meio-campo": 0, Ataque: 0, Goleiro: 0 });
 const linePositionNames: Position[] = ["Defesa", "Meio-campo", "Ataque"];
+const emptyMidfieldProfileCounts = (): MidfieldProfileCounts => ({ defensive: 0, central: 0, offensive: 0 });
+
+export function calculateMidfieldProfiles(team: Player[]) {
+  const profiles = emptyMidfieldProfileCounts();
+  for (const player of team) {
+    if (player.primaryPosition !== "Meio-campo") continue;
+    if (player.secondaryPosition === "Defesa") profiles.defensive++;
+    else if (player.secondaryPosition === "Ataque") profiles.offensive++;
+    else profiles.central++;
+  }
+  return profiles;
+}
+
+function midfieldProfileExcess(blue: MidfieldProfileCounts, yellow: MidfieldProfileCounts) {
+  return (["defensive", "central", "offensive"] as const).reduce((sum, profile) => {
+    const difference = Math.abs(blue[profile] - yellow[profile]);
+    const unavoidableDifference = (blue[profile] + yellow[profile]) % 2;
+    return sum + Math.max(0, difference - unavoidableDifference);
+  }, 0);
+}
+
+export function midfieldProfileBalancePenalty(blue: Player[], yellow: Player[]) {
+  return midfieldProfileExcess(calculateMidfieldProfiles(blue), calculateMidfieldProfiles(yellow)) * MIDFIELD_PROFILE_EXCESS_PENALTY;
+}
 
 export function resolveBalancedPositions(blue: Player[], yellow: Player[], maximumPositionDifference = 1) {
   const bluePositions = emptyPositionCounts(), yellowPositions = emptyPositionCounts();
@@ -72,9 +98,9 @@ export function resolveBalancedPositions(blue: Player[], yellow: Player[], maxim
 export function calculateTeamMetrics(team: Player[], c: Config = defaultConfig, resolvedPositions?: PositionCounts) {
   const positions = resolvedPositions ?? emptyPositionCounts();
   if (!resolvedPositions) team.forEach(p => positions[p.primaryPosition]++);
-  const guests = team.filter(isGuest).length;
+  const guests = team.filter(isGuest).length, midfieldProfiles = calculateMidfieldProfiles(team);
   const speed = team.reduce((s,p)=>s+playerAttributes(p).speed,0), skill = team.reduce((s,p)=>s+playerAttributes(p).skill,0), marking = team.reduce((s,p)=>s+playerAttributes(p).marking,0), tacticalIntelligence=team.reduce((s,p)=>s+playerAttributes(p).tacticalIntelligence,0), competitiveness=team.reduce((s,p)=>s+playerAttributes(p).competitiveness,0),momentum=team.reduce((s,p)=>s+momentumContribution(p,c),0),historicalLearning=team.reduce((s,p)=>s+historicalLearningContribution(p,c),0),total = team.reduce((s,p)=>s+score(p,c),0),balancingTotal=total+historicalLearning;
-  return { count: team.length, guests, positions, speed, skill, marking, tacticalIntelligence, competitiveness, momentum, historicalLearning, total, balancingTotal, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, tacticalIntelligenceAvg:tacticalIntelligence/team.length||0, competitivenessAvg:competitiveness/team.length||0, momentumAvg:momentum/team.length||0, historicalLearningAvg:historicalLearning/team.length||0, scoreAvg: total/team.length||0, balancingScoreAvg:balancingTotal/team.length||0 };
+  return { count: team.length, guests, positions, midfieldProfiles, speed, skill, marking, tacticalIntelligence, competitiveness, momentum, historicalLearning, total, balancingTotal, speedAvg: speed/team.length||0, skillAvg: skill/team.length||0, markingAvg: marking/team.length||0, tacticalIntelligenceAvg:tacticalIntelligence/team.length||0, competitivenessAvg:competitiveness/team.length||0, momentumAvg:momentum/team.length||0, historicalLearningAvg:historicalLearning/team.length||0, scoreAvg: total/team.length||0, balancingScoreAvg:balancingTotal/team.length||0 };
 }
 
 export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config = defaultConfig) {
@@ -87,6 +113,9 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
     defenders: Math.abs(blueMetrics.positions.Defesa-yellowMetrics.positions.Defesa),
     midfielders: Math.abs(blueMetrics.positions["Meio-campo"]-yellowMetrics.positions["Meio-campo"]),
     attackers: Math.abs(blueMetrics.positions.Ataque-yellowMetrics.positions.Ataque),
+    defensiveMidfielders: Math.abs(blueMetrics.midfieldProfiles.defensive-yellowMetrics.midfieldProfiles.defensive),
+    centralMidfielders: Math.abs(blueMetrics.midfieldProfiles.central-yellowMetrics.midfieldProfiles.central),
+    offensiveMidfielders: Math.abs(blueMetrics.midfieldProfiles.offensive-yellowMetrics.midfieldProfiles.offensive),
     speed: Math.abs(blueMetrics.speed-yellowMetrics.speed),
     skill: Math.abs(blueMetrics.skill-yellowMetrics.skill),
     marking: Math.abs(blueMetrics.marking-yellowMetrics.marking),
@@ -101,6 +130,9 @@ export function calculateTeamDelta(blue: Player[], yellow: Player[], c: Config =
       defenders: advantage(blueMetrics.positions.Defesa, yellowMetrics.positions.Defesa),
       midfielders: advantage(blueMetrics.positions["Meio-campo"], yellowMetrics.positions["Meio-campo"]),
       attackers: advantage(blueMetrics.positions.Ataque, yellowMetrics.positions.Ataque),
+      defensiveMidfielders: advantage(blueMetrics.midfieldProfiles.defensive, yellowMetrics.midfieldProfiles.defensive),
+      centralMidfielders: advantage(blueMetrics.midfieldProfiles.central, yellowMetrics.midfieldProfiles.central),
+      offensiveMidfielders: advantage(blueMetrics.midfieldProfiles.offensive, yellowMetrics.midfieldProfiles.offensive),
       speed: advantage(blueMetrics.speed, yellowMetrics.speed),
       skill: advantage(blueMetrics.skill, yellowMetrics.skill),
       marking: advantage(blueMetrics.marking, yellowMetrics.marking),
@@ -126,7 +158,7 @@ function teamBalanceCost(blue:Player[],yellow:Player[],config:Config,maximumPosi
   const resolved=resolveBalancedPositions(blue,yellow,maximumPositionDifference),bm=calculateTeamMetrics(blue,config,resolved.bluePositions),ym=calculateTeamMetrics(yellow,config,resolved.yellowPositions);
   const positionDiff=resolved.positionDifference,positionExcess=resolved.positionExcess;
   const attributeDifference=Math.abs(bm.total-bm.momentum-ym.total+ym.momentum);
-  return Math.abs(blue.length-yellow.length)*1000+positionExcess*2000+positionDiff*120+guestBalancePenalty(blue,yellow)+attributeDifference*14+Math.abs(bm.scoreAvg-ym.scoreAvg)*18+Math.abs(bm.historicalLearning-ym.historicalLearning)*30;
+  return Math.abs(blue.length-yellow.length)*1000+positionExcess*2000+positionDiff*120+guestBalancePenalty(blue,yellow)+midfieldProfileBalancePenalty(blue,yellow)+attributeDifference*14+Math.abs(bm.scoreAvg-ym.scoreAvg)*18+Math.abs(bm.historicalLearning-ym.historicalLearning)*30;
 }
 
 function additionalPlayerCandidates(players:Player[],protectedIds:Set<string>){

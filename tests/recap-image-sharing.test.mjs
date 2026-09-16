@@ -17,14 +17,18 @@ test("site renderiza o jornal em PNG e preserva texto e link no compartilhamento
   assert.match(pane, /buildWhatsAppRoundRecapMessage[\s\S]+shareRecapFile/);
 });
 
-test("aplicativo captura a área editorial e envia imagem, legenda e link", async () => {
+test("aplicativo captura a área editorial, copia legenda e link e compartilha a imagem", async () => {
   const [mobile, manifest] = await Promise.all([
     read("mobile/src/separation-detail.tsx"),
     read("mobile/package.json"),
   ]);
   assert.match(mobile, /captureRef\(newspaperRef/);
-  assert.match(mobile, /Share\.open\(\{[\s\S]+message:[\s\S]+url:uri[\s\S]+type:"image\/png"/);
+  assert.match(mobile, /Sharing\.isAvailableAsync\(\)/);
+  assert.match(mobile, /Clipboard\.setStringAsync\(`\$\{recap\.shareText\}\\n\\n\$\{link\}`\)/);
+  assert.match(mobile, /Sharing\.shareAsync\(uri,\{[\s\S]+mimeType:"image\/png"[\s\S]+UTI:"public\.png"/);
   assert.match(mobile, /releaseCapture\(uri\)/);
-  assert.match(manifest, /react-native-share/);
+  assert.match(manifest, /expo-sharing/);
+  assert.match(manifest, /expo-clipboard/);
+  assert.doesNotMatch(manifest, /react-native-share/);
   assert.match(manifest, /react-native-view-shot/);
 });

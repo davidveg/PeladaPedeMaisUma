@@ -4,7 +4,7 @@ import { colors } from "./theme";
 import { useMobileBranding } from "./branding";
 import type { TeamAdvantage, TeamDelta, TeamMetrics, TeamResult } from "./types";
 
-type MetricKey = "players"|"defenders"|"midfielders"|"attackers"|"speed"|"skill"|"marking"|"tacticalIntelligence"|"competitiveness"|"momentum"|"historicalLearning"|"score";
+type MetricKey = "players"|"defenders"|"midfielders"|"attackers"|"defensiveMidfielders"|"centralMidfielders"|"offensiveMidfielders"|"speed"|"skill"|"marking"|"tacticalIntelligence"|"competitiveness"|"momentum"|"historicalLearning"|"score";
 
 const explanations: Record<string, string> = {
   "Excelente equilíbrio": "Diferenças muito pequenas entre posições, atributos e pontuação.",
@@ -26,7 +26,13 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
   const delta = result.delta || emptyDelta,usesBaseTeams=Boolean(delta.baseTeams||result.extraId),blueAverageMetrics=result.blueBaseMetrics||result.blueMetrics,yellowAverageMetrics=result.yellowBaseMetrics||result.yellowMetrics;
   const metrics: { key:MetricKey; label:string; value:number; decimals:number }[] = [
     {key:"players",label:"Jogadores",value:delta.players,decimals:0},{key:"defenders",label:"Defensores",value:delta.defenders,decimals:0},{key:"midfielders",label:"Meio-campo",value:delta.midfielders,decimals:0},
-    {key:"attackers",label:"Atacantes",value:delta.attackers,decimals:0},{key:"speed",label:"Físico / Pos.",value:delta.speed,decimals:1},{key:"skill",label:"Técnica / Def.",value:delta.skill,decimals:1},
+    {key:"attackers",label:"Atacantes",value:delta.attackers,decimals:0},
+    ...(delta.defensiveMidfielders!=null||delta.centralMidfielders!=null||delta.offensiveMidfielders!=null?[
+      {key:"defensiveMidfielders" as const,label:"Meias defensivos",value:Number(delta.defensiveMidfielders??0),decimals:0},
+      {key:"centralMidfielders" as const,label:"Meias centrais",value:Number(delta.centralMidfielders??0),decimals:0},
+      {key:"offensiveMidfielders" as const,label:"Meias ofensivos",value:Number(delta.offensiveMidfielders??0),decimals:0},
+    ]:[]),
+    {key:"speed",label:"Físico / Pos.",value:delta.speed,decimals:1},{key:"skill",label:"Técnica / Def.",value:delta.skill,decimals:1},
     {key:"marking",label:"Marcação / Pés",value:delta.marking,decimals:1},{key:"tacticalIntelligence",label:"Tática / Segurança",value:delta.tacticalIntelligence,decimals:1},
     {key:"competitiveness",label:"Comp. / Liderança",value:delta.competitiveness,decimals:1},{key:"momentum",label:"Momentum",value:delta.momentum,decimals:1},
     ...(result.historicalLearningEnabled||Number(delta.historicalLearning??0)!==0?[{key:"historicalLearning" as const,label:"Histórico observado",value:Number(delta.historicalLearning??0),decimals:2}]:[]),
@@ -63,8 +69,10 @@ export function BalanceDetails({ result, fallbackRating }: { result: TeamResult;
 
 function advantageFromMetrics(key:MetricKey,blue?:TeamMetrics,yellow?:TeamMetrics):TeamAdvantage {
   if(!blue||!yellow)return "EVEN";
+  const blueProfiles=blue.midfieldProfiles??{defensive:0,central:0,offensive:0},yellowProfiles=yellow.midfieldProfiles??{defensive:0,central:0,offensive:0};
   const values:Record<MetricKey,[number,number]>={
     players:[blue.count,yellow.count],defenders:[blue.positions.Defesa,yellow.positions.Defesa],midfielders:[blue.positions["Meio-campo"],yellow.positions["Meio-campo"]],attackers:[blue.positions.Ataque,yellow.positions.Ataque],
+    defensiveMidfielders:[blueProfiles.defensive,yellowProfiles.defensive],centralMidfielders:[blueProfiles.central,yellowProfiles.central],offensiveMidfielders:[blueProfiles.offensive,yellowProfiles.offensive],
     speed:[blue.speed,yellow.speed],skill:[blue.skill,yellow.skill],marking:[blue.marking,yellow.marking],tacticalIntelligence:[blue.tacticalIntelligence,yellow.tacticalIntelligence],competitiveness:[blue.competitiveness,yellow.competitiveness],
     momentum:[blue.momentum,yellow.momentum],historicalLearning:[Number(blue.historicalLearning??0),Number(yellow.historicalLearning??0)],score:[blue.total,yellow.total],
   };
