@@ -33,7 +33,7 @@ export type ScheduledMatch = {
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
   weather?: MatchWeather | null;
-  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean };
+  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean; attendanceBlockedByDelinquency?: boolean; attendanceBlockMessage?: string | null };
   createdAt: string; updatedAt: string;
 };
 export type MatchPlayer = { id: string; displayName: string; photoUrl?: string | null; type: string; primaryPosition: string; secondaryPosition?: string | null };

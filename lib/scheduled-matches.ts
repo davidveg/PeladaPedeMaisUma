@@ -9,6 +9,7 @@ import { instanceConfigurationFromRow } from "./instance-config";
 import { refreshMatchWeather, weatherFromRow } from "./match-weather";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
+export const DELINQUENCY_ATTENDANCE_MESSAGE = "Identificamos um pagamento em atraso na sua conta. Procure a administração da pelada para regularizar ou combinar uma forma de pagamento. Se você já pagou, peça a confirmação do registro.";
 
 export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "", matchId = "") {
   await ensureDb();
@@ -28,6 +29,9 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
   const rows = matchResult.results as any[];
   const instance = instanceConfigurationFromRow(instanceRow as any);
   const playerRows = allPlayerResult.results as any[];
+  const viewerAttendanceBlocked = account?.playerId
+    ? await isAttendanceBlockedByDelinquency(String(account.playerId), instance)
+    : false;
   const matches = [];
   for (const row of rows) {
     if (row.status === "OPEN") {
@@ -50,7 +54,7 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
        ORDER BY waiting.created_at ASC,waiting.rowid ASC`,
     ).bind(row.id).all()).results as any[];
     matches.push(publicMatch(
-      row, attendance, guestPreconfirmations, account, Number(totalActive?.total || 0), playerRows, publicBaseUrl, instance,
+      row, attendance, guestPreconfirmations, account, Number(totalActive?.total || 0), playerRows, publicBaseUrl, instance, viewerAttendanceBlocked,
     ));
   }
   return {
@@ -90,6 +94,9 @@ export async function setAttendance(params: {
   ).bind(matchId, playerId).first();
   if (previous?.status === status) {
     return { changed: false, attendance: mapAttendance(previous, player.display_name, match.max_changes) };
+  }
+  if (!administratorOverride && status === "PRESENT" && await isAttendanceBlockedByDelinquency(playerId, instance)) {
+    throw statusError(DELINQUENCY_ATTENDANCE_MESSAGE, 403);
   }
   if (instance.guestPreconfirmationEnabled && player.type === "guest" && status === "PRESENT") {
     if (!administratorOverride) {
@@ -415,6 +422,7 @@ function publicMatch(
   players: any[],
   publicBaseUrl: string,
   instance: ReturnType<typeof instanceConfigurationFromRow>,
+  viewerAttendanceBlocked: boolean,
 ) {
   const own = attendance.find(item => String(item.player_id) === String(account?.playerId || ""));
   const viewerPlayer = players.find(item => String(item.id) === String(account?.playerId || ""));
@@ -475,13 +483,42 @@ function publicMatch(
       isGoalkeeper: Boolean(viewerPlayer && (viewerPlayer.type === "goalkeeper" || viewerPlayer.primary_position === "Goleiro")),
       isGuest: viewerPlayer?.type === "guest",
       preconfirmed: ownPreconfirmed,
+      attendanceBlockedByDelinquency: viewerAttendanceBlocked,
+      attendanceBlockMessage: viewerAttendanceBlocked ? DELINQUENCY_ATTENDANCE_MESSAGE : null,
       canRespond: Boolean(account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()),
       canConfirmPresence: Boolean(
         account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()
-        && !(instance.guestPreconfirmationEnabled && viewerPlayer?.type === "guest"),
+        && !(instance.guestPreconfirmationEnabled && viewerPlayer?.type === "guest")
+        && !viewerAttendanceBlocked,
       ),
     },
   };
+}
+
+export async function isAttendanceBlockedByDelinquency(playerId: string, instance?: ReturnType<typeof instanceConfigurationFromRow>) {
+  const configuration = instance || instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+  if (!configuration.financeEnabled || !configuration.delinquencyAttendanceBlockEnabled) return false;
+  const today = dateInTimeZone(new Date(), configuration.timezone);
+  const overdue = await db().prepare(
+    `SELECT c.id
+     FROM financial_charges c
+     WHERE c.scope_id='instance:1' AND c.player_id=?
+       AND c.status NOT IN ('CANCELLED','EXEMPT') AND c.due_date<?
+       AND c.amount_cents>COALESCE((
+         SELECT SUM(payment.amount_cents)
+         FROM financial_payments payment
+         WHERE payment.charge_id=c.id AND payment.status='COMPLETED'
+       ),0)
+     LIMIT 1`,
+  ).bind(playerId, today).first();
+  return Boolean(overdue);
+}
+
+function dateInTimeZone(value: Date, timeZone: string) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(value).filter(part => part.type !== "literal").map(part => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function publicPlayer(row: any) {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import { apiFetch, jsonMutation } from "@/api";
 import { useAuth } from "@/auth";
 import { Button, Card, ErrorState, Header, Screen } from "@/components";
@@ -8,6 +8,8 @@ import { colors } from "@/theme";
 import type { MatchListPayload, MatchPlayer, ScheduledMatch } from "@/types";
 import { shareText } from "@/sharing";
 import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
+
+type PlayerSection = { key: "goalkeepers" | "monthly" | "guests"; title: string; description: string; data: MatchPlayer[] };
 
 export default function MatchAttendance({ id }: { id: string }) {
   const { account } = useAuth(), router = useRouter(), client = useQueryClient();
@@ -31,8 +33,10 @@ export default function MatchAttendance({ id }: { id: string }) {
   if (!item) return <Screen><ErrorState message="Partida não encontrada." retry={() => query.refetch()}/></Screen>;
   const attendanceByPlayer = Object.fromEntries(item.attendance.map(answer => [answer.playerId, answer]));
   const players = canManageAttendance ? query.data?.players || [] : [];
+  const playerSections = canManageAttendance ? administrativePlayerSections(players) : [];
   const goalkeeperLimitReached = Boolean(item.viewer.isGoalkeeper && item.viewer.status !== "PRESENT" && (item.goalkeepers?.present || 0) >= (item.goalkeepers?.max || 2));
   const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest);
+  const financialBlocked = Boolean(item.viewer.attendanceBlockedByDelinquency);
   const waitingIds = new Set(item.preconfirmedGuestIds || []);
   function answer(status: "PRESENT" | "ABSENT") {
     const current = item!;
@@ -40,21 +44,23 @@ export default function MatchAttendance({ id }: { id: string }) {
     if (consumes) Alert.alert("Alterar resposta?", `Isso consumirá uma das ${current.maxChanges} remarcações permitidas.`, [{ text: "Cancelar", style: "cancel" }, { text: "Alterar", onPress: () => mutation.mutate({ status }) }]);
     else mutation.mutate({ status });
   }
-  return <Screen><FlatList
+  return <Screen><SectionList
     contentContainerStyle={styles.content}
-    data={players}
+    sections={playerSections}
     keyExtractor={(player: MatchPlayer) => player.id}
+    stickySectionHeadersEnabled={canManageAttendance}
     ListHeaderComponent={<><Header eyebrow={item.status === "OPEN" ? item.acceptingResponses ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : item.status === "CLOSED" ? "LISTA ENCERRADA" : "PARTIDA CANCELADA"} title={item.title}/>
       <Card style={styles.info}><Text style={styles.date}>{dateTime(item.matchAt)}</Text>{item.location ? <Text style={styles.location}>📍 {item.location}</Text> : null}<Text style={styles.deadline}>Responda até {dateTime(item.confirmationDeadline)}</Text><View style={styles.counts}><Count value={item.counts.present} label="Presentes" color={colors.success}/><Count value={item.counts.absent} label="Ausentes" color={colors.danger}/>{item.guestPreconfirmation?.enabled ? <Count value={item.counts.preconfirmed || 0} label="Na espera" color={colors.yellow}/> : null}<Count value={item.counts.pending} label="Pendentes" color={colors.muted}/></View></Card>
       <MobileWeather weather={item.weather}/>
       {!canManageAttendance ? <Card style={styles.answer}>
-        <Text style={styles.answerTitle}>{guestManaged ? item.viewer.preconfirmed ? "Você está na lista de espera" : item.viewer.status === "PRESENT" ? "Presença aprovada" : item.viewer.status === "ABSENT" ? "Sua resposta: Não vou" : "Presença gerenciada pela organização" : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Vou jogar" : "Não vou"}` : "Confirme sua presença"}</Text>
-        <Text style={styles.help}>{guestManaged ? item.viewer.preconfirmed ? "Aguarde a aprovação final de um administrador." : "Convidados entram na lista de espera e são aprovados pelos administradores da pelada." : goalkeeperLimitReached ? "Os dois lugares de goleiro já estão preenchidos." : `${item.viewer.changesRemaining} de ${item.maxChanges} remarcações restantes.`}</Text>
+        <Text style={styles.answerTitle}>{guestManaged ? item.viewer.preconfirmed ? "Você está na lista de espera" : item.viewer.status === "PRESENT" ? "Presença aprovada" : item.viewer.status === "ABSENT" ? "Sua resposta: Não vou" : "Presença gerenciada pela organização" : financialBlocked ? "Confirmação temporariamente indisponível" : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Vou jogar" : "Não vou"}` : "Confirme sua presença"}</Text>
+        <Text style={styles.help}>{guestManaged ? item.viewer.preconfirmed ? "Aguarde a aprovação final de um administrador." : "Convidados entram na lista de espera e são aprovados pelos administradores da pelada." : financialBlocked ? item.viewer.attendanceBlockMessage || "Procure a administração para regularizar ou negociar os pagamentos em atraso." : goalkeeperLimitReached ? "Os dois lugares de goleiro já estão preenchidos." : `${item.viewer.changesRemaining} de ${item.maxChanges} remarcações restantes.`}</Text>
         {item.viewer.playerId ? <View style={styles.buttons}>{!guestManaged && <Button title="✓ Vou jogar" busy={mutation.isPending} disabled={!item.viewer.canConfirmPresence || goalkeeperLimitReached} onPress={() => answer("PRESENT")}/>}<Button title="× Não vou" busy={mutation.isPending} disabled={!item.viewer.canRespond} variant="danger" onPress={() => answer("ABSENT")}/></View> : <Text style={styles.warning}>Associe sua conta a um jogador para responder.</Text>}
       </Card> : <Text style={styles.adminTitle}>Confirmação administrativa</Text>}
       {item.status === "OPEN" && (canReadAdminMatches || item.shareMessage) ? <View style={styles.matchActions}>{canManageMatches ? <Button title="Editar data e regras" variant="secondary" onPress={() => router.push(`/matches/manage?id=${item.id}` as never)}/> : null}{item.shareMessage ? <Button title="Compartilhar parcial no WhatsApp" icon="whatsapp" variant="secondary" onPress={() => shareText(item.shareMessage).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</View> : null}
       {!canManageAttendance && <Roster item={item}/>}
     </>}
+    renderSectionHeader={({ section }) => <View style={[styles.sectionHeader, section.key === "goalkeepers" && styles.goalkeeperHeader, section.key === "guests" && styles.guestHeader]}><View><Text style={[styles.sectionTitle, section.key === "goalkeepers" && styles.goalkeeperHeaderText, section.key === "guests" && styles.guestHeaderText]}>{section.title}</Text><Text style={styles.sectionDescription}>{section.description}</Text></View><Text style={[styles.sectionCount, section.key === "goalkeepers" && styles.goalkeeperCount, section.key === "guests" && styles.guestCount]}>{section.data.length}</Text></View>}
     renderItem={({ item: player }: { item: MatchPlayer }) => {
       const response = attendanceByPlayer[player.id], guest = player.type === "guest", preconfirmed = waitingIds.has(player.id);
       const goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
@@ -81,12 +87,26 @@ function MobileWeather({ weather }: { weather?: ScheduledMatch["weather"] }) {
   return <Card style={styles.weather}><Text style={styles.weatherTitle}>{weather.icon || "🌤️"} {weather.description} · {temperature}</Text><View style={styles.weatherMetrics}><Text>💧 {weather.precipitationProbability ?? 0}% chuva</Text><Text>💨 {weather.windSpeed ?? 0} km/h</Text><Text>🌧️ {weather.precipitation ?? 0} mm</Text></View>{weather.usedDefaultLocation ? <Text style={styles.weatherWarning}>Local não encontrado; previsão pelo endereço padrão.</Text> : null}<Text style={styles.weatherHelp}>Previsão para 2 horas · atualizada {new Date(weather.fetchedAt).toLocaleString("pt-BR")} · {weather.source || "Serviço meteorológico"}</Text></Card>;
 }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
+function compareAdministrativePlayerNames(left: MatchPlayer, right: MatchPlayer) {
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().trim();
+  return normalize(left.displayName).localeCompare(normalize(right.displayName), "pt-BR", { numeric: true, sensitivity: "base" });
+}
+function administrativePlayerSections(players: MatchPlayer[]): PlayerSection[] {
+  const isGoalkeeper = (player: MatchPlayer) => player.type === "goalkeeper" || player.type === "casual" || player.primaryPosition === "Goleiro";
+  return [
+    { key: "goalkeepers", title: "Goleiros", description: "Mensalistas e avulsos", data: players.filter(isGoalkeeper).sort(compareAdministrativePlayerNames) },
+    { key: "monthly", title: "Jogadores mensalistas", description: "Jogadores de linha", data: players.filter(player => !isGoalkeeper(player) && player.type !== "guest").sort(compareAdministrativePlayerNames) },
+    { key: "guests", title: "Jogadores convidados", description: "Jogadores de linha", data: players.filter(player => !isGoalkeeper(player) && player.type === "guest").sort(compareAdministrativePlayerNames) },
+  ].filter(section => section.data.length > 0) as PlayerSection[];
+}
 const styles = StyleSheet.create({
   content: { padding: 20, gap: 12 }, info: { gap: 8 }, date: { color: colors.text, fontSize: 17, fontWeight: "900" }, location: { color: colors.muted }, deadline: { color: colors.yellow, fontWeight: "800" },
   weather: { gap: 8, marginTop: 14, marginBottom: 14, backgroundColor: "#F2F7F4" }, weatherTitle: { color: colors.text, fontSize: 17, fontWeight: "900" }, weatherMetrics: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, weatherHelp: { color: colors.muted, fontSize: 11, lineHeight: 16 }, weatherWarning: { color: colors.yellow, fontSize: 11, fontWeight: "800" },
   counts: { flexDirection: "row", gap: 8, marginTop: 6 }, count: { flex: 1, padding: 10, borderRadius: 12, backgroundColor: "#F2F5F3", alignItems: "center" }, countValue: { fontSize: 24, fontWeight: "900" }, countLabel: { color: colors.muted, fontSize: 10 },
   answer: { gap: 10 }, answerTitle: { color: colors.text, fontSize: 18, fontWeight: "900" }, help: { color: colors.muted }, buttons: { gap: 8 }, warning: { color: colors.danger, fontWeight: "700" },
   roster: { marginTop: 12 }, rosterTitle: { color: colors.green, fontWeight: "900" }, waitingTitle: { color: colors.yellow, marginTop: 12 }, names: { color: colors.muted, lineHeight: 20, marginTop: 5 }, adminTitle: { color: colors.green, fontSize: 18, fontWeight: "900", marginTop: 10 },
+  sectionHeader: { minHeight: 54, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 11, backgroundColor: "#EEF5F1", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }, sectionTitle: { color: colors.green, fontSize: 12, fontWeight: "900" }, sectionDescription: { color: colors.muted, fontSize: 9, marginTop: 2 }, sectionCount: { minWidth: 28, height: 28, paddingHorizontal: 7, borderRadius: 99, backgroundColor: "#DCEBE3", color: colors.green, textAlign: "center", textAlignVertical: "center", fontSize: 11, fontWeight: "900" },
+  goalkeeperHeader: { backgroundColor: "#EDF4F7" }, goalkeeperHeaderText: { color: "#315D6F" }, goalkeeperCount: { backgroundColor: "#DCE9EF", color: "#315D6F" }, guestHeader: { backgroundColor: "#FFF7DC" }, guestHeaderText: { color: "#795B08" }, guestCount: { backgroundColor: "#F3E2A5", color: "#795B08" },
   player: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12 },
   playerName: { color: colors.text, fontWeight: "900" }, playerMeta: { color: colors.muted, fontSize: 11, marginTop: 3 }, smallButton: { width: 40, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 9, borderWidth: 1, borderColor: colors.border },
   smallPresent: { backgroundColor: colors.success, borderColor: colors.success }, smallAbsent: { backgroundColor: colors.danger, borderColor: colors.danger }, smallWaiting: { backgroundColor: "#FFF7D6", borderColor: colors.yellow }, smallOnText: { color: "#fff", fontSize: 18, fontWeight: "900" }, smallPresentText: { color: colors.success, fontSize: 18, fontWeight: "900" }, smallAbsentText: { color: colors.danger, fontSize: 18, fontWeight: "900" }, smallWaitingText: { color: colors.yellow, fontSize: 16, fontWeight: "900" },

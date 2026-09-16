@@ -155,6 +155,7 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   guestPreconfirmationEnabled: integer("guest_preconfirmation_enabled", { mode: "boolean" }).notNull().default(false),
   guestConfirmationThreshold: integer("guest_confirmation_threshold").notNull().default(16),
   financeEnabled: integer("finance_enabled", { mode: "boolean" }).notNull().default(true),
+  delinquencyAttendanceBlockEnabled: integer("delinquency_attendance_block_enabled", { mode: "boolean" }).notNull().default(false),
   timezone: text("timezone").notNull().default("America/Sao_Paulo"),
   updatedAt: text("updated_at").notNull(),
 });

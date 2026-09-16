@@ -2,7 +2,7 @@
 /* The administrative API and existing panel shell intentionally use schema-flexible payloads. */
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { brazilianDateInput, brazilianDateTimeIso, brazilianDateTimeParts, brazilianTimeInput } from "../../lib/brazilian-date-time";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -121,6 +121,7 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
     [match.attendance],
   );
   const waiting = useMemo(() => new Set<string>(match.preconfirmedGuestIds || []), [match.preconfirmedGuestIds]);
+  const playerGroups = useMemo(() => administrativePlayerGroups(players), [players]);
   const goalkeepersPresent = match.goalkeepers?.present ?? players.filter((player: Player) =>
     (player.type === "goalkeeper" || player.primaryPosition === "Goleiro") && byPlayer[player.id]?.status === "PRESENT"
   ).length;
@@ -134,7 +135,7 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
       <span><b>{match.counts.pending}</b>Pendentes</span><span><b>{goalkeepersPresent}/2</b>Goleiros</span>
     </div>
     {match.guestPreconfirmation?.enabled && <p className="match-preconfirmation-help">Convidados entram primeiro na lista de espera. A aprovação é liberada quando presentes + espera somarem <b>{match.guestPreconfirmation.threshold}</b>.</p>}
-    <div className="match-player-admin-list">{players.map((player: Player) => {
+    <div className="match-player-admin-list">{playerGroups.map(group => <Fragment key={group.key}><header className={`match-player-group-head ${group.key}`}><span><b>{group.label}</b><small>{group.description}</small></span><strong>{group.players.length}</strong></header>{group.players.map((player: Player) => {
       const answer = byPlayer[player.id], guest = player.type === "guest", preconfirmed = waiting.has(player.id);
       const goalkeeper = player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
       const goalkeeperBlocked = goalkeeper && answer?.status !== "PRESENT" && goalkeepersPresent >= 2;
@@ -149,7 +150,7 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
         </> : <button disabled={goalkeeperBlocked} title={goalkeeperBlocked ? "Os dois lugares de goleiro já estão preenchidos." : undefined} className={answer?.status === "PRESENT" ? "attendance-present on" : "attendance-present"} onClick={() => onAttendance(player.id, "PRESENT")}>✓ Presente</button>}
         <button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div>}
       </div>;
-    })}</div>
+    })}</Fragment>)}</div>
     {match.status === "OPEN" && match.separationDraft?.enabled && match.separationDraft?.exists && <p className={match.separationDraft.stale ? "match-draft-status stale" : "match-draft-status"}>{match.separationDraft.stale ? "O rascunho ficou desatualizado porque a lista de presentes mudou. Ao abri-lo, uma nova proposta será iniciada." : `Rascunho salvo${match.separationDraft.updatedAt ? ` em ${dateTime(match.separationDraft.updatedAt)}` : ""}.`}</p>}
     <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/partidas?match=${encodeURIComponent(match.id)}&tab=teams`}>Abrir times da partida ↗</a>}{match.status === "OPEN" && <>{canSeparate&&match.separationDraft?.enabled&&<a className="ghost" aria-disabled={match.counts.present<4} href={match.counts.present>=4?`/?matchId=${encodeURIComponent(match.id)}&draft=1`:undefined}>{match.separationDraft.exists&&!match.separationDraft.stale?'Editar rascunho de escalação':'Criar rascunho de escalação'}</a>}{canCancel&&<button className="danger" onClick={onCancel}>Cancelar partida</button>}{canSeparate&&<button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button>}</>}</div>
   </section>;
@@ -192,3 +193,15 @@ function nextMatchDefaults(config?: any) {
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
 function statusLabel(status: string) { return status === "OPEN" ? "Confirmações abertas" : status === "CLOSED" ? "Lista encerrada" : "Cancelada"; }
 function isActiveOrSeparated(item: Match) { return item.status !== "CANCELLED" && (item.status === "OPEN" || Boolean(item.separationId)); }
+function compareAdministrativePlayerNames(left: Player, right: Player) {
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f\u200B-\u200D\uFEFF]/g, "").toLowerCase().trim();
+  return normalize(left.displayName).localeCompare(normalize(right.displayName), "pt-BR", { numeric: true, sensitivity: "base" });
+}
+function administrativePlayerGroups(players: Player[]) {
+  const isGoalkeeper = (player: Player) => player.type === "goalkeeper" || player.type === "casual" || player.primaryPosition === "Goleiro";
+  return [
+    { key: "goalkeepers", label: "Goleiros", description: "Mensalistas e avulsos", players: players.filter(isGoalkeeper).sort(compareAdministrativePlayerNames) },
+    { key: "monthly", label: "Jogadores mensalistas", description: "Jogadores de linha", players: players.filter(player => !isGoalkeeper(player) && player.type !== "guest").sort(compareAdministrativePlayerNames) },
+    { key: "guests", label: "Jogadores convidados", description: "Jogadores de linha", players: players.filter(player => !isGoalkeeper(player) && player.type === "guest").sort(compareAdministrativePlayerNames) },
+  ].filter(group => group.players.length > 0);
+}

@@ -27,6 +27,7 @@ export type MobileInstanceConfiguration = {
   guestPreconfirmationEnabled: boolean;
   guestConfirmationThreshold: number;
   financeEnabled: boolean;
+  delinquencyAttendanceBlockEnabled: boolean;
   timezone: string;
 };
 
@@ -52,6 +53,7 @@ const defaultConfiguration: MobileInstanceConfiguration = {
   guestPreconfirmationEnabled: false,
   guestConfirmationThreshold: 16,
   financeEnabled: true,
+  delinquencyAttendanceBlockEnabled: false,
   timezone: "America/Sao_Paulo",
 };
 

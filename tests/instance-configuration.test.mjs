@@ -27,6 +27,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.guestPreconfirmationEnabled, false);
   assert.equal(config.guestConfirmationThreshold, 16);
   assert.equal(config.financeEnabled, true);
+  assert.equal(config.delinquencyAttendanceBlockEnabled, false);
   assert.equal(config.shareImageUrl, null);
   assert.equal(config.faviconUrl, null);
 });
@@ -55,6 +56,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     guestPreconfirmationEnabled: true,
     guestConfirmationThreshold: 18,
     financeEnabled: false,
+    delinquencyAttendanceBlockEnabled: true,
     shareImageUrl: "/api/upload?key=branding%2Fsocial.png",
     faviconUrl: "/api/upload?key=branding%2Ffavicon.ico",
   });
@@ -68,12 +70,13 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.guestPreconfirmationEnabled, true);
   assert.equal(result.config.guestConfirmationThreshold, 18);
   assert.equal(result.config.financeEnabled, false);
+  assert.equal(result.config.delinquencyAttendanceBlockEnabled, true);
   assert.equal(result.config.shareImageUrl, "/api/upload?key=branding%2Fsocial.png");
   assert.equal(result.config.faviconUrl, "/api/upload?key=branding%2Ffavicon.ico");
 });
 
 test("mantém colunas e valores alinhados ao salvar a configuração", () => {
-  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20, financeEnabled: false };
+  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20, financeEnabled: false, delinquencyAttendanceBlockEnabled: true };
   assert.equal(INSTANCE_CONFIGURATION_COLUMNS.length, instanceConfigurationValues(config).length);
   const index = INSTANCE_CONFIGURATION_COLUMNS.indexOf("manual_separation_enabled");
   assert.equal(instanceConfigurationValues(config)[index], 0);
@@ -81,6 +84,21 @@ test("mantém colunas e valores alinhados ao salvar a configuração", () => {
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_preconfirmation_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_confirmation_threshold")], 20);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("finance_enabled")], 0);
+  assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("delinquency_attendance_block_enabled")], 1);
+});
+
+test("migração cria o bloqueio por inadimplência desativado por padrão", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-delinquency-attendance-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0045_delinquency_attendance_block.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT delinquency_attendance_block_enabled FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { delinquency_attendance_block_enabled: 0 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("migração mantém o módulo financeiro ativo nas instalações existentes", async () => {

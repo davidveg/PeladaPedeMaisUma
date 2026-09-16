@@ -19,7 +19,7 @@ type Match = {
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
   weather?: any;
-  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean };
+  viewer: { playerId: string | null; status: "PRESENT" | "ABSENT" | null; changeCount: number; changesRemaining: number; canRespond: boolean; canConfirmPresence?: boolean; isGoalkeeper?: boolean; isGuest?: boolean; preconfirmed?: boolean; attendanceBlockedByDelinquency?: boolean; attendanceBlockMessage?: string | null };
 };
 
 async function api(url: string, options?: RequestInit) {
@@ -92,7 +92,8 @@ function MatchSiteCard({ item, busy, onAnswer, onShare }: { item: Match; busy: s
       : item.viewer.preconfirmed ? "Você está na lista de espera e aguarda aprovação do administrador."
       : item.viewer.status === "ABSENT" ? "Sua resposta: Ausente."
       : "A presença de convidados é gerenciada pelos administradores."
-    : goalkeeperLimitReached(item) ? "Os dois lugares de goleiro já estão preenchidos."
+    : item.viewer.attendanceBlockedByDelinquency ? item.viewer.attendanceBlockMessage || "Procure a administração para regularizar ou negociar os pagamentos em atraso."
+      : goalkeeperLimitReached(item) ? "Os dois lugares de goleiro já estão preenchidos."
       : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Presente" : "Ausente"} · ${item.viewer.changesRemaining} remarcações restantes`
       : "Você ainda não respondeu.";
   return <article id={item.id} className={`match-site-card ${item.status.toLowerCase()}`}>
