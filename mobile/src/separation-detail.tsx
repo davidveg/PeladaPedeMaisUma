@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Alert, Modal, Pressable, RefreshControl, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
@@ -24,7 +24,7 @@ import { hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
 
 type DraftPayload = { enabled: boolean; trackContributions: boolean; officialResultConfirmed: boolean; players: { blue: Player[]; yellow: Player[] }; participation: { reviewed: boolean; blueIds: string[]; yellowIds: string[] }; eligiblePlayers: Player[]; draft: { contributions: Contribution[]; blueScore: number; yellowScore: number; participation?: { blueIds: string[]; yellowIds: string[] }; updatedAt?: string } };
 
-export default function SeparationDetail({ id, section = "all" }: { id: string; section?: string }) {
+export default function SeparationDetail({ id, section = "all", topContent }: { id: string; section?: string; topContent?: ReactNode }) {
   const { config: brand, palette } = useMobileBranding();
   const { account } = useAuth(), client = useQueryClient();
   const canManageSeparation = hasPermission(account, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE);
@@ -47,10 +47,11 @@ export default function SeparationDetail({ id, section = "all" }: { id: string; 
     void listQuery.refetch();
   }, [listQuery.refetch]));
   const item = listQuery.data?.separations.find(value => value.id === id);
-  if (listQuery.isError && !listQuery.data) return <Screen><Header title="Detalhes"/><ErrorState message={(listQuery.error as Error).message} retry={() => listQuery.refetch()}/></Screen>;
-  if (listQuery.isPending) return <Screen><EmptyState title="Carregando partida…" message="Aguarde os detalhes."/></Screen>;
-  if (!item) return <Screen><Header title="Detalhes"/><EmptyState title="Escalação não encontrada" message="Atualize a lista e tente novamente."/></Screen>;
-  return <Screen><Header eyebrow={item.matchDate ? formatDate(item.matchDate) : "Data da partida não informada"} title={item.matchTitle}/><ScrollView refreshControl={<RefreshControl refreshing={listQuery.isRefetching} onRefresh={listQuery.refetch} tintColor={colors.green}/>} contentContainerStyle={{ padding: 20, paddingTop: 8, gap: 14 }}>
+  if (listQuery.isError && !listQuery.data) return <Screen>{topContent}<Header title="Detalhes"/><ErrorState message={(listQuery.error as Error).message} retry={() => listQuery.refetch()}/></Screen>;
+  if (listQuery.isPending) return <Screen>{topContent}<EmptyState title="Carregando partida…" message="Aguarde os detalhes."/></Screen>;
+  if (!item) return <Screen>{topContent}<Header title="Detalhes"/><EmptyState title="Escalação não encontrada" message="Atualize a lista e tente novamente."/></Screen>;
+  return <Screen><ScrollView refreshControl={<RefreshControl refreshing={listQuery.isRefetching} onRefresh={listQuery.refetch} tintColor={colors.green}/>} contentContainerStyle={{ paddingBottom: 20 }}>
+    {topContent}<Header eyebrow={item.matchDate ? formatDate(item.matchDate) : "Data da partida não informada"} title={item.matchTitle}/><View style={{ paddingHorizontal: 20, gap: 14 }}>
     {item.career ? <><Card style={{ alignItems: "center", gap: 4 }}><Text style={{ color: colors.muted }}>PLACAR CONFIRMADO</Text><Text style={{ fontSize: 39, fontWeight: "900", color: colors.text }}><Text style={{ color: palette.blue }}>{item.career.blueScore}</Text> × <Text style={{ color: palette.yellow }}>{item.career.yellowScore}</Text></Text><Text style={{ color: colors.muted }}>Votação {item.career.status === "OPEN" ? `aberta até ${formatDate(item.career.closesAt)}` : "encerrada"}</Text><ParticipationSummary item={item}/></Card>{item.career.config?<CareerRulesCard rules={item.career.config}/>:null}</> : <Card><Text style={{ color: colors.yellow, textAlign: "center", fontWeight: "800" }}>Resultado pendente</Text></Card>}
     {showResult&&item.career?.recap?<RoundRecap item={item} baseUrl={publicQuery.data?.baseUrl}/>:null}
     {showTeams && canManageSeparation && (!item.career || (account?.role === "admin" && item.canCorrectConfirmedTeams)) ? <TeamAssignmentEditor key={`${item.snapshot.blue.map(player=>player.id).join("-")}|${item.snapshot.yellow.map(player=>player.id).join("-")}`} item={item} confirmed={Boolean(item.career)} onSaved={refreshSeparations}/> : null}
@@ -62,7 +63,7 @@ export default function SeparationDetail({ id, section = "all" }: { id: string; 
     {showResult && item.career?.contributions?.length ? <Card style={{ gap: 8 }}><Text style={{ fontWeight: "800", color: colors.text }}>Gols e assistências</Text>{item.career.contributions.map((goal, index) => <GoalRow key={index} goal={goal}/>)}</Card> : null}
     {showTeams && canManageSeparation ? <><Button title="Compartilhar times no WhatsApp" icon="whatsapp" variant="secondary" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(separationMessage(item, publicQuery.data.baseUrl,{teamBlueName:brand.teamBlueName,teamYellowName:brand.teamYellowName,teamBlueColor:brand.teamBlueColor,teamYellowColor:brand.teamYellowColor})).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/><ArrivalEditor item={item} onSaved={refreshSeparations}/></> : null}
     {showResult && canManageResults ? <><MatchPanel item={item} onSaved={refreshSeparations}/>{item.career?.status === "CLOSED" ? <Button title="Compartilhar resultado no WhatsApp" icon="whatsapp" disabled={!publicQuery.data?.baseUrl} onPress={() => publicQuery.data?.baseUrl && shareText(careerResultsMessage(item, publicQuery.data.baseUrl, { siteName: brand.appName, teamBlueName: brand.teamBlueName, teamYellowName: brand.teamYellowName, teamBlueColor: brand.teamBlueColor, teamYellowColor: brand.teamYellowColor })).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : item.career?.votingUrl ? <Button title="Compartilhar votação no WhatsApp" icon="whatsapp" onPress={() => shareText(votingMessage(item, item.career!.votingUrl!,{teamBlueName:brand.teamBlueName,teamYellowName:brand.teamYellowName,teamBlueColor:brand.teamBlueColor,teamYellowColor:brand.teamYellowColor})).catch(error => Alert.alert("Compartilhamento indisponível", error.message))}/> : null}</> : null}
-  </ScrollView></Screen>;
+    </View></ScrollView></Screen>;
 }
 
 function RoundRecap({item,baseUrl}:{item:Separation;baseUrl?:string}){

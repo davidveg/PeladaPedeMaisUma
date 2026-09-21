@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { apiFetch } from "./api";
 import { EmptyState, ErrorState, Screen } from "./components";
 import { useMobileBranding } from "./branding";
@@ -22,18 +22,21 @@ export default function MatchHubDetail({ matchId, separationId, initialTab }: { 
   const panel = item ? matchDetailPanel(item, tab) : null;
   if (query.isPending) return <Screen><EmptyState title="Carregando partida…" message="Aguarde os detalhes."/></Screen>;
   if (query.isError) return <Screen><ErrorState message={(query.error as Error).message} retry={() => query.refetch()}/></Screen>;
-  return <View style={{ flex: 1, backgroundColor: palette.cream }}>
+  const chrome = <>
     <Pressable accessibilityRole="button" onPress={() => router.replace("/matches" as never)} style={styles.back}><Text style={{ color: palette.green, fontWeight: "800" }}>← Todas as partidas</Text></Pressable>
-    {!item ? <EmptyState title="Partida não encontrada" message="Este registro não está mais disponível."/> : <>
+    {item ? <>
       <RoundCenter item={item} onNavigate={setSelected}/>
       <View style={styles.tabs}>{tabs.map(value => <Pressable key={value.id} accessibilityRole="tab" accessibilityState={{ selected: tab === value.id }} onPress={() => setSelected(value.id)} style={[styles.tab, { backgroundColor: tab === value.id ? palette.green : palette.card }]}><Text style={[styles.tabText, { color: tab === value.id ? "#fff" : palette.green }]}>{value.label}</Text></Pressable>)}</View>
-      {panel === "attendance" && item.matchId ? <MatchAttendance key={item.matchId} id={item.matchId}/> : null}
-      {panel === "legacy-attendance" ? <EmptyState title="Escalação do histórico" message="Esta escalação antiga não tem partida agendada vinculada nem lista de presenças registrada."/> : null}
-      {panel === "separation" && item.separationId ? <SeparationDetail key={`${item.separationId}:${tab}`} id={item.separationId} section={tab}/> : null}
-      {panel === "awaiting-teams" ? <EmptyState title="Times ainda não publicados" message="Os times desta partida aparecerão aqui após a publicação da escalação."/> : null}
-      {panel === "unavailable" ? <EmptyState title="Ainda indisponível" message="A súmula e a votação ficam disponíveis após a publicação dos times."/> : null}
-    </>}
-  </View>;
+    </> : null}
+  </>;
+  if (!item) return <Screen><ScrollView contentContainerStyle={styles.fallback}>{chrome}<EmptyState title="Partida não encontrada" message="Este registro não está mais disponível."/></ScrollView></Screen>;
+  if (panel === "attendance" && item.matchId) return <MatchAttendance key={item.matchId} id={item.matchId} topContent={chrome}/>;
+  if (panel === "separation" && item.separationId) return <SeparationDetail key={`${item.separationId}:${tab}`} id={item.separationId} section={tab} topContent={chrome}/>;
+  return <Screen><ScrollView contentContainerStyle={styles.fallback}>{chrome}
+    {panel === "legacy-attendance" ? <EmptyState title="Escalação do histórico" message="Esta escalação antiga não tem partida agendada vinculada nem lista de presenças registrada."/> : null}
+    {panel === "awaiting-teams" ? <EmptyState title="Times ainda não publicados" message="Os times desta partida aparecerão aqui após a publicação da escalação."/> : null}
+    {panel === "unavailable" ? <EmptyState title="Ainda indisponível" message="A súmula e a votação ficam disponíveis após a publicação dos times."/> : null}
+  </ScrollView></Screen>;
 }
 function RoundCenter({ item, onNavigate }: { item: MatchHubItem; onNavigate(tab: string): void }) {
   const { palette } = useMobileBranding();
@@ -52,6 +55,7 @@ function shortDate(value?: string | null) {
   return Number.isFinite(date.getTime()) ? date.toLocaleString("pt-BR", value.length === 10 ? { dateStyle: "short" } : { dateStyle: "short", timeStyle: "short" }) : value;
 }
 const styles = StyleSheet.create({
+  fallback: { paddingBottom: 24 },
   back: { paddingHorizontal: 20, paddingVertical: 12, minHeight: 44 }, tabs: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
   tab: { width: "48%", flexGrow: 1, minHeight: 44, justifyContent: "center", alignItems: "center", padding: 9, borderWidth: 1, borderColor: colors.border, borderRadius: 10 }, tabText: { fontSize: 12, fontWeight: "800", textAlign: "center" },
   center: { marginHorizontal: 16, marginBottom: 12, padding: 13, borderRadius: 16, gap: 11 }, centerHead: { flexDirection: "row", alignItems: "center", gap: 10 }, centerEyebrow: { fontSize: 9, fontWeight: "900", letterSpacing: 1 }, centerTitle: { fontSize: 17, fontWeight: "900", marginTop: 2 }, centerAction: { maxWidth: "45%", minHeight: 40, justifyContent: "center", borderRadius: 10, paddingHorizontal: 10 }, centerActionText: { color: "#fff", fontSize: 11, fontWeight: "900", textAlign: "center" }, centerGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 }, centerTile: { width: "48%", flexGrow: 1, minHeight: 75, flexDirection: "row", gap: 7, borderWidth: 1, borderRadius: 10, padding: 9, backgroundColor: "#fff" }, centerLabel: { fontSize: 8, fontWeight: "900", textTransform: "uppercase", letterSpacing: .5 }, personal: { gap: 3, padding: 9, borderRadius: 9, backgroundColor: "#FFF8DC" },

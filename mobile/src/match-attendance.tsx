@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Alert, Pressable, SectionList, StyleSheet, Text, View } from "react-native";
@@ -11,7 +12,7 @@ import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/modera
 
 type PlayerSection = { key: "goalkeepers" | "monthly" | "guests"; title: string; description: string; data: MatchPlayer[] };
 
-export default function MatchAttendance({ id }: { id: string }) {
+export default function MatchAttendance({ id, topContent }: { id: string; topContent?: ReactNode }) {
   const { account } = useAuth(), router = useRouter(), client = useQueryClient();
   const canManageMatches = hasPermission(account, MODERATOR_PERMISSIONS.MATCHES_MANAGE);
   const canManageAttendance = hasPermission(account, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE);
@@ -49,7 +50,7 @@ export default function MatchAttendance({ id }: { id: string }) {
     sections={playerSections}
     keyExtractor={(player: MatchPlayer) => player.id}
     stickySectionHeadersEnabled={canManageAttendance}
-    ListHeaderComponent={<><Header eyebrow={item.status === "OPEN" ? item.acceptingResponses ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : item.status === "CLOSED" ? "LISTA ENCERRADA" : "PARTIDA CANCELADA"} title={item.title}/>
+    ListHeaderComponent={<>{topContent ? <View style={styles.hubHeader}>{topContent}</View> : null}<Header eyebrow={item.status === "OPEN" ? item.acceptingResponses ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : item.status === "CLOSED" ? "LISTA ENCERRADA" : "PARTIDA CANCELADA"} title={item.title}/>
       <Card style={styles.info}><Text style={styles.date}>{dateTime(item.matchAt)}</Text>{item.location ? <Text style={styles.location}>📍 {item.location}</Text> : null}<Text style={styles.deadline}>Responda até {dateTime(item.confirmationDeadline)}</Text><View style={styles.counts}><Count value={item.counts.present} label="Presentes" color={colors.success}/><Count value={item.counts.absent} label="Ausentes" color={colors.danger}/>{item.guestPreconfirmation?.enabled ? <Count value={item.counts.preconfirmed || 0} label="Na espera" color={colors.yellow}/> : null}<Count value={item.counts.pending} label="Pendentes" color={colors.muted}/></View></Card>
       <MobileWeather weather={item.weather}/>
       {!canManageAttendance ? <Card style={styles.answer}>
@@ -100,7 +101,7 @@ function administrativePlayerSections(players: MatchPlayer[]): PlayerSection[] {
   ].filter(section => section.data.length > 0) as PlayerSection[];
 }
 const styles = StyleSheet.create({
-  content: { padding: 20, gap: 12 }, info: { gap: 8 }, date: { color: colors.text, fontSize: 17, fontWeight: "900" }, location: { color: colors.muted }, deadline: { color: colors.yellow, fontWeight: "800" },
+  content: { padding: 20, gap: 12 }, hubHeader: { marginHorizontal: -20, marginTop: -20 }, info: { gap: 8 }, date: { color: colors.text, fontSize: 17, fontWeight: "900" }, location: { color: colors.muted }, deadline: { color: colors.yellow, fontWeight: "800" },
   weather: { gap: 8, marginTop: 14, marginBottom: 14, backgroundColor: "#F2F7F4" }, weatherTitle: { color: colors.text, fontSize: 17, fontWeight: "900" }, weatherMetrics: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, weatherHelp: { color: colors.muted, fontSize: 11, lineHeight: 16 }, weatherWarning: { color: colors.yellow, fontSize: 11, fontWeight: "800" },
   counts: { flexDirection: "row", gap: 8, marginTop: 6 }, count: { flex: 1, padding: 10, borderRadius: 12, backgroundColor: "#F2F5F3", alignItems: "center" }, countValue: { fontSize: 24, fontWeight: "900" }, countLabel: { color: colors.muted, fontSize: 10 },
   answer: { gap: 10 }, answerTitle: { color: colors.text, fontSize: 18, fontWeight: "900" }, help: { color: colors.muted }, buttons: { gap: 8 }, warning: { color: colors.danger, fontWeight: "700" },

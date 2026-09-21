@@ -39,5 +39,18 @@ test("tela usa a decisão de conteúdo e mostra mensagem específica para Times"
   assert.match(source, /matchDetailPanel\(item, tab\)/);
   assert.match(source, /panel === "awaiting-teams" \? <EmptyState title="Times ainda não publicados"/);
   assert.equal((source.match(/<MatchAttendance /g) || []).length, 1);
-  assert.match(source, /panel === "attendance" && item\.matchId \? <MatchAttendance/);
+  assert.match(source, /panel === "attendance" && item\.matchId\) return <MatchAttendance/);
+});
+
+test("central e abas acompanham a rolagem do conteúdo da partida", async () => {
+  const [hub, attendance, separation] = await Promise.all([
+    readFile(new URL("../src/match-hub-detail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/match-attendance.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/separation-detail.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(hub, /topContent=\{chrome\}/);
+  assert.equal((hub.match(/topContent=\{chrome\}/g) || []).length, 2);
+  assert.doesNotMatch(hub, /return <View style=\{\{ flex: 1/);
+  assert.match(attendance, /ListHeaderComponent=\{<>\{topContent/);
+  assert.match(separation, /<ScrollView[^>]+>[\s\S]*\{topContent\}<Header/);
 });
