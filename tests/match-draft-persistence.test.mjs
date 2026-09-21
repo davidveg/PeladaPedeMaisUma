@@ -25,3 +25,13 @@ test("placar pendente tem apresentação centralizada e destacada", () => {
   assert.match(styles, /career-match-card\.pending \.career-score-inputs\{display:grid/);
   assert.match(styles, /font:800 31px Georgia,serif;text-align:center/);
 });
+
+test("participação efetiva aparece depois dos lançamentos no fechamento", () => {
+  const pending = football.slice(football.indexOf("if(!career)return"), football.indexOf("if(editingResult)return"));
+  assert.ok(pending.indexOf('className="contribution-editor"') < pending.indexOf("<ParticipationEditor"));
+});
+
+test("quatro grupos de pontuação do Momentum cabem na mesma linha larga", () => {
+  assert.match(styles, /career-rule-points\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(styles, /@media\(max-width:980px\)\{\.career-rule-points\{grid-template-columns:repeat\(2/);
+});
