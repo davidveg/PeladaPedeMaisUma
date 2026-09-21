@@ -5,6 +5,7 @@ import { DEFAULT_INSTANCE_CONFIGURATION, instanceConfigurationFromRow } from "..
 import { instanceFaviconUrl, instanceShareImageUrl } from "../lib/instance-metadata";
 import { getRuntimeBindings } from "../lib/runtime-bindings";
 import { InstanceBrandingProvider } from "./InstanceBranding";
+import { SiteFooter } from "./components/SiteFooter";
 import "./globals.css";
 import "./branding.css";
 
@@ -66,7 +67,7 @@ export default async function RootLayout({
   }
   return (
     <html lang="pt-BR">
-      <body><InstanceBrandingProvider initialConfig={instance}>{children}</InstanceBrandingProvider></body>
+      <body><InstanceBrandingProvider initialConfig={instance}>{children}<SiteFooter/></InstanceBrandingProvider></body>
     </html>
   );
 }

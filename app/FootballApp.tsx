@@ -273,21 +273,6 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
       {stage === "history" && !historyDetail && <section className={`content ${isAdmin?"":"public-history"}`}><div className="section-head"><div><div className="eyebrow">{isAdmin?"MEMÓRIA DA PELADA":"RESULTADOS DA PELADA"}</div><h2>{isAdmin?"Escalações salvas":"Últimas escalações"}</h2><p>{isAdmin?"Clique em uma partida para rever todos os times e indicadores confirmados.":"Consulte os times confirmados, os dados dos jogadores e todas as regras aplicadas em cada escalação."}</p></div>{isAdmin&&<a className="primary" href="/partidas">Gerenciar partidas</a>}</div><div className="history-list">{history.length === 0 ? <div className="empty">Nenhuma escalação confirmada ainda.</div> : history.map((item) => <article key={item.id}><a className="history-open" href={`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`} onClick={event=>{event.preventDefault();openSavedSeparation(item)}}><div className="history-date"><b>{item.matchDate ? new Date(item.matchDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}</b><small>{new Date(item.confirmedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><div className="history-main"><h3>{item.matchTitle}</h3><p><span className="dot blue-dot"></span>{item.snapshot.blue.map((player: Player) => player.displayName).join(", ")}</p><p><span className="dot yellow-dot"></span>{item.snapshot.yellow.map((player: Player) => player.displayName).join(", ")}</p></div></a><div className="history-actions"><span>● {item.balanceClassification}</span><button onClick={() => copyTeams(item.snapshot, false, item.matchTitle)}>Copiar times</button><button onClick={()=>shareSavedSeparation(item)}>{item.career?.recap?"Compartilhar resenha":"Compartilhar link"}</button></div></article>)}</div></section>}
       {stage === "history" && historyDetail && <SavedSeparation key={`${historyDetail.id}:${historyDetail.updatedAt || historyDetail.confirmedAt}`} item={historyDetail} isAdmin={Boolean(isAdmin)} canManageResults={canManageResults} careerConfig={careerConfig} publicBaseUrl={publicBaseUrl} onConfirmCareer={confirmCareerMatch} onEditCareer={editCareerResult} onSaveArrivalOrder={saveArrivalOrder} onSaveTeams={saveSeparationTeams} onBack={closeSavedSeparation} onShareLink={()=>shareSavedSeparation(historyDetail)} onPlayer={(player:Player)=>showPlayer(player,{...resultConfig(historyDetail.snapshot),showContributions:publicPlayerConfig.showContributions,cardTiersEnabled:publicPlayerConfig.cardTiersEnabled,cardBronzeMax:publicPlayerConfig.cardBronzeMax,cardSilverMax:publicPlayerConfig.cardSilverMax,cardGoldMax:publicPlayerConfig.cardGoldMax})} onCopy={(withScores: boolean) => copyTeams(historyDetail.snapshot, withScores, historyDetail.matchTitle)} />}
     </main>
-    <footer className="site-footer">
-      <div className="footer-signature"><b>⚽ {instanceBrand.siteName}</b><span>{instanceBrand.footerText}</span></div>
-      <div className="app-downloads" aria-label={`Aplicativos ${instanceBrand.appName}`}>
-        <a className="app-download-badge android" href="/baixar-app?platform=android" aria-label={`Baixar aplicativo ${instanceBrand.appName} para Android`}>
-          <span className="app-platform-icon" aria-hidden="true">APK</span>
-          <span><small>BAIXE AGORA</small><b>Aplicativo Android</b></span>
-          <i aria-hidden="true">↓</i>
-        </a>
-        <a className="app-download-badge ios" href="/baixar-app?platform=ios" aria-label={`Baixar aplicativo ${instanceBrand.appName} para iOS`}>
-          <span className="app-platform-icon" aria-hidden="true">iOS</span>
-          <span><small>TESTFLIGHT / APP STORE</small><b>Aplicativo para iOS</b></span>
-          <i aria-hidden="true">ABRIR</i>
-        </a>
-      </div>
-    </footer>
     {toast && <div className="toast" onAnimationEnd={() => setToast("")}>{toast}</div>}
     {detail && <PlayerDetail player={detail} config={detailConfig} onClose={() => setDetail(null)} />}
   </div>;
