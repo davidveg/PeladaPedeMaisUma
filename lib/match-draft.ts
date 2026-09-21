@@ -17,5 +17,29 @@ export function validateMatchDraft(input: { contributions: unknown; blueIds: str
   }));
   const scores = scoresFromContributions(normalized);
   if (scores.blueScore > 99 || scores.yellowScore > 99) return { error: "O rascunho aceita no máximo 99 gols por equipe.", contributions: normalized, ...scores };
-  return { ...validateMatchContributions({ contributions: normalized, ...scores, blueIds: input.blueIds, yellowIds: input.yellowIds }), ...scores };
+  for (const goal of normalized) {
+    if (!goal.scorerPlayerId) {
+      if (goal.assistPlayerId) return { error: "Selecione o autor antes de informar a assistência.", contributions: normalized, ...scores };
+      continue;
+    }
+    const singleScore = goal.team === "BLUE" ? { blueScore: 1, yellowScore: 0 } : { blueScore: 0, yellowScore: 1 };
+    const validation = validateMatchContributions({ contributions: [goal], ...singleScore, blueIds: input.blueIds, yellowIds: input.yellowIds });
+    if (validation.error) return { error: validation.error, contributions: normalized, ...scores };
+  }
+  return { error: null, contributions: normalized, ...scores };
+}
+
+export function normalizeDraftScore(value: unknown) {
+  const score = Number(value);
+  return Number.isInteger(score) && score >= 0 && score <= 99 ? score : null;
+}
+
+export function normalizeDraftParticipation(input: unknown, eligibleIds: string[], fallback: { blueIds: string[]; yellowIds: string[] }) {
+  const payload = input && typeof input === "object" ? input as { blueIds?: unknown; yellowIds?: unknown } : null;
+  if (!Array.isArray(payload?.blueIds) || !Array.isArray(payload?.yellowIds)) return { ...fallback, reviewed: false };
+  const blueIds = payload.blueIds.map(String), yellowIds = payload.yellowIds.map(String), all = [...blueIds, ...yellowIds];
+  if (new Set(all).size !== all.length) return { error: "Um jogador não pode aparecer duas vezes na participação do rascunho.", blueIds, yellowIds, reviewed: true };
+  const eligible = new Set(eligibleIds);
+  if (all.some(id => !eligible.has(id))) return { error: "A participação do rascunho contém um jogador indisponível.", blueIds, yellowIds, reviewed: true };
+  return { blueIds, yellowIds, reviewed: true };
 }

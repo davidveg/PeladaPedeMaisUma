@@ -1,6 +1,6 @@
 import { getCareerConfig } from "../../../../lib/career-service";
 import { audit, db, ensureDb, staffRequired } from "../../../../lib/database";
-import { scoresFromContributions, validateMatchDraft } from "../../../../lib/match-draft";
+import { normalizeDraftParticipation, normalizeDraftScore, scoresFromContributions, validateMatchDraft } from "../../../../lib/match-draft";
 import { effectiveParticipation } from "../../../../lib/match-participation";
 const adminRequired=(request:Request)=>staffRequired(request,"MATCH_RESULTS_MANAGE");
 
@@ -18,7 +18,10 @@ async function draftContext(request: Request) {
 function publicDraft(row: any, snapshot: any, eligiblePlayers: any[]) {
   const stored = row.match_draft ? JSON.parse(row.match_draft) : { contributions: [], updatedAt: null };
   const contributions = Array.isArray(stored.contributions) ? stored.contributions : [];
-  const participation = effectiveParticipation({ ...row, snapshot });
+  const current = effectiveParticipation({ ...row, snapshot });
+  const fallback = { blueIds: current.blue.map((player: any) => String(player.id)), yellowIds: current.yellow.map((player: any) => String(player.id)) };
+  const participation = normalizeDraftParticipation(stored.participation, eligiblePlayers.map(player => String(player.id)), fallback);
+  const contributionScores = scoresFromContributions(contributions);
   return {
     separationId: row.id,
     matchTitle: row.match_title,
@@ -28,9 +31,9 @@ function publicDraft(row: any, snapshot: any, eligiblePlayers: any[]) {
       blue: (snapshot.blue || []).map((player: any) => ({ id: player.id, displayName: player.displayName, photoUrl: player.photoUrl, primaryPosition: player.primaryPosition })),
       yellow: (snapshot.yellow || []).map((player: any) => ({ id: player.id, displayName: player.displayName, photoUrl: player.photoUrl, primaryPosition: player.primaryPosition })),
     },
-    participation: { reviewed: Boolean(row.participation_snapshot), blueIds: participation.blue.map((player: any) => String(player.id)), yellowIds: participation.yellow.map((player: any) => String(player.id)) },
+    participation: { reviewed: Boolean(participation.reviewed || row.participation_snapshot), blueIds: participation.blueIds, yellowIds: participation.yellowIds },
     eligiblePlayers,
-    draft: { contributions, ...scoresFromContributions(contributions), updatedAt: stored.updatedAt || null },
+    draft: { contributions, blueScore: normalizeDraftScore(stored.blueScore) ?? contributionScores.blueScore, yellowScore: normalizeDraftScore(stored.yellowScore) ?? contributionScores.yellowScore, participation: { blueIds: participation.blueIds, yellowIds: participation.yellowIds }, updatedAt: stored.updatedAt || null },
   };
 }
 
@@ -50,16 +53,21 @@ export async function PUT(request: Request) {
   if (context.error) return context.error;
   if (context.row.career_id) return Response.json({ error: "O resultado desta partida já foi confirmado." }, { status: 409 });
   const config = await getCareerConfig();
-  if (!config.enabled || !config.trackContributions) return Response.json({ error: "O registro de gols e assistências está desativado no Modo Carreira." }, { status: 409 });
+  if (!config.enabled) return Response.json({ error: "O Modo Carreira está desativado." }, { status: 409 });
   const payload = await request.json().catch(() => ({})) as any;
-  const blueIds = (context.snapshot.blue || []).map((player: any) => String(player.id));
-  const yellowIds = (context.snapshot.yellow || []).map((player: any) => String(player.id));
-  const validation = validateMatchDraft({ contributions: payload.contributions, blueIds, yellowIds });
-  if (validation.error) return Response.json({ error: validation.error }, { status: 400 });
+  const playerRows=(await db().prepare(`SELECT id FROM players WHERE deleted_at IS NULL AND active=1`).all()).results as any[];
+  const lineupIds=[...(context.snapshot.blue||[]),...(context.snapshot.yellow||[])].map((player:any)=>String(player.id));
+  const eligibleIds=[...new Set([...playerRows.map(player=>String(player.id)),...lineupIds])];
+  const fallback={blueIds:(context.snapshot.blue||[]).map((player:any)=>String(player.id)),yellowIds:(context.snapshot.yellow||[]).map((player:any)=>String(player.id))};
+  const participation=normalizeDraftParticipation(payload.participation,eligibleIds,fallback);
+  if(participation.error)return Response.json({error:participation.error},{status:400});
+  let contributions:any[]=[],blueScore=normalizeDraftScore(payload.blueScore),yellowScore=normalizeDraftScore(payload.yellowScore);
+  if(config.trackContributions){const validation=validateMatchDraft({contributions:payload.contributions,blueIds:participation.blueIds,yellowIds:participation.yellowIds});if(validation.error)return Response.json({error:validation.error},{status:400});contributions=validation.contributions;blueScore=validation.blueScore;yellowScore=validation.yellowScore}
+  else if(blueScore===null||yellowScore===null)return Response.json({error:"Informe um placar entre 0 e 99 para cada equipe."},{status:400});
   const previous = context.row.match_draft ? JSON.parse(context.row.match_draft) : null;
   const now = new Date().toISOString();
-  const next = { contributions: validation.contributions, updatedAt: now, updatedByAdministratorId: context.admin.id };
+  const next = { contributions, blueScore, yellowScore, participation:{blueIds:participation.blueIds,yellowIds:participation.yellowIds}, updatedAt: now, updatedByAdministratorId: context.admin.id };
   await db().prepare(`UPDATE team_separations SET match_draft=?,updated_at=? WHERE id=?`).bind(JSON.stringify(next), now, context.separationId).run();
   await audit(context.admin.id, "UPDATE_MATCH_DRAFT", "separation", context.separationId, next, previous);
-  return Response.json({ ok: true, draft: { contributions: validation.contributions, blueScore: validation.blueScore, yellowScore: validation.yellowScore, updatedAt: now }, message: "Rascunho da partida salvo." });
+  return Response.json({ ok: true, draft: { contributions, blueScore, yellowScore, participation:next.participation, updatedAt: now }, message: "Rascunho da partida salvo." });
 }
