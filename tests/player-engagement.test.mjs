@@ -88,3 +88,49 @@ test("destaca recordes de gols e de diferença no placar no jornal da partida", 
   assert.ok(recaps[recordMatch.id].records.some(item => item.includes("Maior diferença")));
   assert.ok(recaps[recordMatch.id].stories.some(item => item.kind === "record"));
 });
+
+test("libera feitos especiais de atuação, placar e votação", () => {
+  const complete = {
+    ...match("complete", "2026-02-01", "BLUE", [
+      { scorerPlayerId: "ana" }, { scorerPlayerId: "ana" },
+      { scorerPlayerId: "bia", assistPlayerId: "ana" }, { scorerPlayerId: "bia", assistPlayerId: "ana" },
+    ]),
+    blueScore: 4, yellowScore: 3,
+  };
+  const defeat = {
+    ...match("defeat", "2026-02-08", "YELLOW", [{ scorerPlayerId: "ana" }, { scorerPlayerId: "ana" }], { motm: [{ playerId: "ana", place: 1 }] }),
+    blueScore: 2, yellowScore: 3,
+  };
+  const draw = { ...match("draw", "2026-02-15", "DRAW", [], { motm: [{ playerId: "ana", place: 1 }] }), blueScore: 2, yellowScore: 2 };
+  const fiveGoals = { ...match("five", "2026-02-22", "BLUE", Array.from({ length: 5 }, () => ({ scorerPlayerId: "ana" }))), blueScore: 5, yellowScore: 1 };
+  const sweep = match("sweep", "2026-03-01", "BLUE", [], {
+    motm: [{ playerId: "ana", place: 1 }], partner: [{ playerId: "ana" }], fairPlay: [{ playerId: "ana" }], defense: [{ playerId: "ana" }],
+  });
+  const result = buildPlayerEngagement({ player: players.ana, matches: [complete, defeat, draw, fiveGoals, sweep], currentSeasonNumber: 2 });
+  const ids = new Set(result.achievements.unlocked.map(item => item.id));
+  for (const id of ["complete_match", "complete_show", "owned_attack", "fine_margin", "perfect_connection", "fought_to_end", "motm_in_defeat", "motm_in_draw", "poker", "manita", "complete_highlight", "partner_first", "fair_play_first", "defense_first", "round_favorite", "social_sweep"]) assert.ok(ids.has(id), id);
+});
+
+test("libera sequências e coleções cumulativas", () => {
+  const losses = [1, 2, 3].map(index => match(`loss-${index}`, `2026-04-0${index}`, "YELLOW"));
+  const run = Array.from({ length: 10 }, (_, index) => match(`run-${index}`, `2026-04-${String(index + 4).padStart(2, "0")}`, index ? "DRAW" : "BLUE", [], {
+    motm: [{ playerId: "ana", place: 1 }], partner: [{ playerId: "ana" }], fairPlay: [{ playerId: "ana" }], defense: [{ playerId: "ana" }],
+  }));
+  const result = buildPlayerEngagement({ player: players.ana, matches: [...losses, ...run], currentSeasonNumber: 2 });
+  const ids = new Set(result.achievements.unlocked.map(item => item.id));
+  for (const id of ["turned_the_tide", "attendance_10", "unbeaten_5", "unbeaten_10", "motm_3", "motm_5", "social_5", "social_10"]) assert.ok(ids.has(id), id);
+});
+
+test("temporada perfeita exige pelo menos 95% de assiduidade e temporada encerrada", () => {
+  const season = Array.from({ length: 20 }, (_, index) => ({ ...match(`season-${index}`, `2026-05-${String(index + 1).padStart(2, "0")}`, "BLUE"), seasonNumber: 4 }));
+  season[19] = { ...season[19], blue: season[19].blue.filter(player => player.id !== "ana") };
+  const closed = [{ seasonNumber: 4, endedAt: "2026-06-01", annualMvp: [] }];
+  const qualified = buildPlayerEngagement({ player: players.ana, matches: season, currentSeasonNumber: 5, seasonAwards: closed });
+  assert.match(qualified.achievements.unlocked.find(item => item.id === "perfect_season_4")?.description || "", /19 das 20.*95%/);
+
+  season[18] = { ...season[18], blue: season[18].blue.filter(player => player.id !== "ana") };
+  const below = buildPlayerEngagement({ player: players.ana, matches: season, currentSeasonNumber: 5, seasonAwards: closed });
+  assert.equal(below.achievements.unlocked.some(item => item.id === "perfect_season_4"), false);
+  const open = buildPlayerEngagement({ player: players.ana, matches: season.slice(0, 19), currentSeasonNumber: 4, seasonAwards: [] });
+  assert.equal(open.achievements.unlocked.some(item => item.id === "perfect_season_4"), false);
+});
