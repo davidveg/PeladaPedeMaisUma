@@ -12,6 +12,11 @@ export type MatchHubItem = {
   confirmedAt: string | null; present: number | null;
   blueScore: number | null; yellowScore: number | null;
   votingStatus: string | null; votingClosesAt: string | null;
+  confirmationDeadline?: string | null;
+  viewerAttendanceStatus?: string | null;
+  viewerVoteStatus?: "AVAILABLE" | "DONE" | "NOT_PARTICIPANT" | "CLOSED" | null;
+  personalHighlights?: string[];
+  nextAction?: { tab: "attendance" | "teams" | "result" | "voting"; label: string; description: string } | null;
   weatherSummary?: MatchHubWeather | null;
 };
 export type MatchHubPayload = {

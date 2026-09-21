@@ -15,7 +15,7 @@ export type EngagementMatch = {
   blue: EngagementPlayer[];
   yellow: EngagementPlayer[];
   contributions: EngagementContribution[];
-  results?: { motm?: Array<{ playerId: string; place?: number }> } | null;
+  results?: { motm?: Array<{ playerId: string; place?: number }>; partner?: Array<{ playerId: string }>; fairPlay?: Array<{ playerId: string }>; defense?: Array<{ playerId: string }> } | null;
 };
 
 export type CareerAchievement = {
@@ -68,6 +68,9 @@ export type PlayerEngagement = {
     bestGoalsInMatch: number;
     bestAssistsInMatch: number;
     motmAwards: number;
+    partnerAwards: number;
+    fairPlayAwards: number;
+    defenseAwards: number;
     playerOfMonthAwards: number;
     monthlySelections: number;
     topPartner: { id: string; displayName: string; games: number } | null;
@@ -82,7 +85,7 @@ export type RoundRecap = {
   headline: string;
   deck: string;
   highlights: string[];
-  stories: Array<{ kind: "goals" | "assists" | "motm" | "record" | "achievement"; label: string; text: string; icon: string }>;
+  stories: Array<{ kind: "goals" | "assists" | "motm" | "recognition" | "record" | "achievement"; label: string; text: string; icon: string }>;
   records: string[];
   result: { blueScore: number; yellowScore: number; winnerTeam: "BLUE" | "YELLOW" | "DRAW"; winnerLabel: string; totalGoals: number; goalDifference: number };
   milestones: CareerAchievement[];
@@ -139,6 +142,17 @@ export function buildRoundRecaps(params: {
     if (assistLeaders.value > 0) { const text = `${joinNames(assistLeaders.ids, names)} ${assistLeaders.ids.length === 1 ? "deu" : "deram"} ${assistLeaders.value} ${assistLeaders.value === 1 ? "assistência" : "assistências"}.`; highlights.push(text); stories.push({ kind: "assists", label: "Garçom da rodada", text, icon: "🎯" }); }
     const motm = match.status === "CLOSED" ? match.results?.motm?.find(entry => Number(entry.place || 1) === 1) || match.results?.motm?.[0] : null;
     if (motm?.playerId && names[motm.playerId]) { const text = `${names[motm.playerId]} foi o Man of the Match.`; highlights.push(text); stories.push({ kind: "motm", label: "Craque da partida", text, icon: "⭐" }); }
+    if (match.status === "CLOSED") {
+      const recognitions = [
+        { entry: match.results?.partner?.[0], label: "Parceiro da rodada", icon: "🤝" },
+        { entry: match.results?.fairPlay?.[0], label: "Fair Play", icon: "🟢" },
+        { entry: match.results?.defense?.[0], label: "Defesa da rodada", icon: "🧤" },
+      ];
+      for (const recognition of recognitions) if (recognition.entry?.playerId && names[recognition.entry.playerId]) {
+        const text = `${names[recognition.entry.playerId]} recebeu o reconhecimento de ${recognition.label}.`;
+        highlights.push(text); stories.push({ kind: "recognition", label: recognition.label, text, icon: recognition.icon });
+      }
+    }
     const totalGoals = match.blueScore + match.yellowScore;
     const goalDifference = Math.abs(match.blueScore - match.yellowScore);
     if (recordGoals >= 0 && totalGoals > recordGoals) records.push(`Novo recorde de gols: ${totalGoals} em uma única partida.`);
@@ -164,7 +178,7 @@ export function buildRoundRecaps(params: {
 }
 
 function summarizeSeason(player: EngagementPlayer, matches: EngagementMatch[], awards: MonthlyAwardSnapshot[], unlocked: CareerAchievement[], seasonNumber: number, startedAt?: string | null, nextResetAt?: string | null): PlayerEngagement["retrospective"] {
-  let wins = 0, losses = 0, goals = 0, assists = 0, streak = 0, bestWinningStreak = 0, bestGoalsInMatch = 0, bestAssistsInMatch = 0, motmAwards = 0;
+  let wins = 0, losses = 0, goals = 0, assists = 0, streak = 0, bestWinningStreak = 0, bestGoalsInMatch = 0, bestAssistsInMatch = 0, motmAwards = 0, partnerAwards = 0, fairPlayAwards = 0, defenseAwards = 0;
   const partners = new Map<string, { id: string; displayName: string; games: number }>();
   for (const match of matches) {
     const team = participantTeam(match, player.id)!;
@@ -174,6 +188,9 @@ function summarizeSeason(player: EngagementPlayer, matches: EngagementMatch[], a
     const matchAssists = match.contributions.filter(item => !item.ownGoal && item.assistPlayerId === player.id).length;
     goals += matchGoals; assists += matchAssists; bestGoalsInMatch = Math.max(bestGoalsInMatch, matchGoals); bestAssistsInMatch = Math.max(bestAssistsInMatch, matchAssists);
     if (match.status === "CLOSED" && (match.results?.motm?.find(entry => Number(entry.place || 1) === 1) || match.results?.motm?.[0])?.playerId === player.id) motmAwards += 1;
+    if (match.status === "CLOSED" && match.results?.partner?.[0]?.playerId === player.id) partnerAwards += 1;
+    if (match.status === "CLOSED" && match.results?.fairPlay?.[0]?.playerId === player.id) fairPlayAwards += 1;
+    if (match.status === "CLOSED" && match.results?.defense?.[0]?.playerId === player.id) defenseAwards += 1;
     const teammates = team === "BLUE" ? match.blue : match.yellow;
     for (const teammate of teammates) if (teammate.id !== player.id) { const current = partners.get(teammate.id) || { ...teammate, games: 0 }; current.games += 1; partners.set(teammate.id, current); }
   }
@@ -188,8 +205,9 @@ function summarizeSeason(player: EngagementPlayer, matches: EngagementMatch[], a
   const summary = matches.length
     ? `${player.displayName} disputou ${matches.length} ${matches.length === 1 ? "jogo" : "jogos"} na temporada ${seasonNumber}, com ${wins} ${wins === 1 ? "vitória" : "vitórias"} e ${goals} ${goals === 1 ? "gol" : "gols"}.`
     : `A temporada ${seasonNumber} ainda não possui partidas registradas para ${player.displayName}.`;
-  const shareText = [`⚽ *Retrospectiva de ${player.displayName}*`, `Temporada ${seasonNumber}`, "", summary, `📊 ${wins}V · ${draws}E · ${losses}D · ${winRate}% de aproveitamento`, `⚽ ${goals} gols · 🎯 ${assists} assistências`, topPartner ? `🤝 Parceria mais frequente: ${topPartner.displayName} (${topPartner.games} jogos)` : "", playerOfMonthAwards ? `⭐ ${playerOfMonthAwards}× jogador do mês` : "", monthlySelections ? `🏅 ${monthlySelections}× na seleção do mês` : ""].filter(Boolean).join("\n");
-  return { seasonNumber, title: `Minha temporada ${seasonNumber}`, summary, games: matches.length, wins, draws, losses, goals, assists, winRate, bestWinningStreak, bestGoalsInMatch, bestAssistsInMatch, motmAwards, playerOfMonthAwards, monthlySelections, topPartner, highlights, shareText };
+  const roundAwards = [partnerAwards ? `🤝 ${partnerAwards}× parceiro da rodada` : "", fairPlayAwards ? `🟢 ${fairPlayAwards}× Fair Play` : "", defenseAwards ? `🧤 ${defenseAwards}× defesa da rodada` : ""].filter(Boolean).join(" · ");
+  const shareText = [`⚽ *Retrospectiva de ${player.displayName}*`, `Temporada ${seasonNumber}`, "", summary, `📊 ${wins}V · ${draws}E · ${losses}D · ${winRate}% de aproveitamento`, `⚽ ${goals} gols · 🎯 ${assists} assistências`, topPartner ? `🤝 Parceria mais frequente: ${topPartner.displayName} (${topPartner.games} jogos)` : "", roundAwards, playerOfMonthAwards ? `⭐ ${playerOfMonthAwards}× jogador do mês` : "", monthlySelections ? `🏅 ${monthlySelections}× na seleção do mês` : ""].filter(Boolean).join("\n");
+  return { seasonNumber, title: `Minha temporada ${seasonNumber}`, summary, games: matches.length, wins, draws, losses, goals, assists, winRate, bestWinningStreak, bestGoalsInMatch, bestAssistsInMatch, motmAwards, partnerAwards, fairPlayAwards, defenseAwards, playerOfMonthAwards, monthlySelections, topPartner, highlights, shareText };
 }
 
 function scanCareer(matches: EngagementMatch[]) {

@@ -49,11 +49,13 @@ test("envia o texto integral da resenha junto com o link da partida", () => {
 });
 
 test("monta uma mensagem legível com o resultado final da votação",()=>{
-  const message=buildWhatsAppCareerResultsMessage({matchTitle:"*PELADA - 19/07 Batista*",blueScore:4,yellowScore:3,results:{voteCount:8,motm:[{playerId:"p1",place:1,momentum:.3},{playerId:"p2",place:2,momentum:.2}],dotm:[{playerId:"p3",place:1,momentum:-.3}]},names:{p1:"David",p2:"Marcio",p3:"João"},separationUrl:"https://pelada.example.com/?separation=abc"});
+  const message=buildWhatsAppCareerResultsMessage({matchTitle:"*PELADA - 19/07 Batista*",blueScore:4,yellowScore:3,results:{voteCount:8,motm:[{playerId:"p1",place:1,momentum:.3},{playerId:"p2",place:2,momentum:.2}],dotm:[{playerId:"p3",place:1,momentum:-.3}],partner:[{playerId:"p2",momentum:.1}],fairPlay:[{playerId:"p1",momentum:.1}],defense:[{playerId:"p3",momentum:.2}]},names:{p1:"David",p2:"Marcio",p3:"João"},separationUrl:"https://pelada.example.com/?separation=abc"});
   assert.match(message,/Resultado da votação/);
   assert.match(message,/Azul 4 × 3 Amarelo/);
   assert.match(message,/🥇 David \(\+0\.3\)/);
   assert.match(message,/João \(-0\.3\)/);
+  assert.match(message,/Parceiro da rodada[\s\S]*Marcio \(\+0\.1\)/);
+  assert.match(message,/Defesa da rodada[\s\S]*João \(\+0\.2\)/);
   assert.ok(message.endsWith("https://pelada.example.com/?separation=abc"));
   assert.equal(message.includes("�"),false);
 });

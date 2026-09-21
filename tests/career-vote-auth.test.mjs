@@ -42,7 +42,7 @@ test("voto exige conta autenticada, usa o jogador associado e é único entre si
       assert.deepEqual(Object.keys(await response.json()), ["error"]);
     }
 
-    const body = { token: "token-vote", voterPlayerId: "p2", motmThirdId: "p2", motmSecondId: "p3", motmFirstId: "p4", dotmThirdId: "p5", dotmSecondId: "p6", dotmFirstId: "p7" };
+    const body = { token: "token-vote", voterPlayerId: "p2", motmThirdId: "p2", motmSecondId: "p3", motmFirstId: "p4", dotmThirdId: "p5", dotmSecondId: "p6", dotmFirstId: "p7", partnerId: "p2", fairPlayId: "p3", defenseId: "p4" };
     const unauthenticated = await careerVote.POST(jsonRequest("https://pelada.example/api/career/vote", body));
     assert.equal(unauthenticated.status, 401);
 
@@ -50,8 +50,8 @@ test("voto exige conta autenticada, usa o jogador associado e é único entre si
     const session = await login.json();
     const created = await careerVote.POST(authorizedJson("https://pelada.example/api/career/vote", session.accessToken, body));
     assert.equal(created.status, 201);
-    const stored = await db().prepare(`SELECT voter_player_id,voter_account_type,voter_account_id FROM career_votes WHERE career_match_id='m1'`).first();
-    assert.deepEqual({ ...stored }, { voter_player_id: "p1", voter_account_type: "member", voter_account_id: accountId });
+    const stored = await db().prepare(`SELECT voter_player_id,voter_account_type,voter_account_id,partner_id,fair_play_id,defense_id FROM career_votes WHERE career_match_id='m1'`).first();
+    assert.deepEqual({ ...stored }, { voter_player_id: "p1", voter_account_type: "member", voter_account_id: accountId, partner_id: "p2", fair_play_id: "p3", defense_id: "p4" });
 
     const state = await careerVote.GET(authorized("https://pelada.example/api/career/vote?token=token-vote", session.accessToken));
     const payload = await state.json();

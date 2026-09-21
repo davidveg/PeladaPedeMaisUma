@@ -14,7 +14,7 @@ export type StatisticsMatch = {
   blueIds: string[];
   yellowIds: string[];
   config?: { winnerBonus?: number; loserPenalty?: number } | null;
-  results?: { motm?: StatisticsVoteResult[]; dotm?: StatisticsVoteResult[] } | null;
+  results?: { motm?: StatisticsVoteResult[]; dotm?: StatisticsVoteResult[]; partner?: StatisticsVoteResult[]; fairPlay?: StatisticsVoteResult[]; defense?: StatisticsVoteResult[] } | null;
 };
 
 export function buildPublicStatistics(players: StatisticsPlayer[], matches: StatisticsMatch[], contributions: StatisticsContribution[], playerA?: string, playerB?: string) {
@@ -156,7 +156,7 @@ export function buildMonthAward(month: string, matches: StatisticsMatch[], playe
         standing.resultMomentum += drew ? 0 : won ? winnerBonus : loserPenalty;
       }
     }
-    for (const result of [...(match.results?.motm || []), ...(match.results?.dotm || [])]) {
+    for (const result of [...(match.results?.motm || []), ...(match.results?.dotm || []), ...(match.results?.partner || []), ...(match.results?.fairPlay || []), ...(match.results?.defense || [])]) {
       const standing = get(result.playerId); if (standing) standing.votingMomentum += finite(result.momentum, 0);
     }
   }

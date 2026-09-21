@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useInstanceBranding } from "../InstanceBranding";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 
-const fields = ["motmThirdId", "motmSecondId", "motmFirstId", "dotmThirdId", "dotmSecondId", "dotmFirstId"] as const;
+const podiumFields = ["motmThirdId", "motmSecondId", "motmFirstId", "dotmThirdId", "dotmSecondId", "dotmFirstId"] as const;
+const recognitionFields = ["partnerId", "fairPlayId", "defenseId"] as const;
+const fields = [...podiumFields, ...recognitionFields] as const;
 type Field = typeof fields[number];
 type VotePlayer = { id: string; displayName: string; photoUrl?: string | null; team: "BLUE" | "YELLOW" };
 
@@ -58,10 +60,11 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
   }, [token]);
 
   const names = useMemo(() => Object.fromEntries((data?.players || []).map((player: any) => [player.id, player.displayName])), [data]);
-  const selected = new Set(Object.values(votes).filter(Boolean));
+  const selected = new Set(podiumFields.map(field => votes[field]).filter(Boolean));
   const voterPlayerId = data?.viewer?.player?.id || "";
   function options(field: Field) {
-    return (data?.players || []).filter((player: any) => player.id !== voterPlayerId && (!selected.has(player.id) || votes[field] === player.id));
+    const restrictToUniquePodium = podiumFields.includes(field as typeof podiumFields[number]);
+    return (data?.players || []).filter((player: any) => player.id !== voterPlayerId && (!restrictToUniquePodium || !selected.has(player.id) || votes[field] === player.id));
   }
 
   async function submit(event: React.FormEvent) {
@@ -69,7 +72,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
     setError("");
     setMessage("");
     if (fields.some(field => !votes[field])) {
-      setError("Preencha os seis lugares do pódio.");
+      setError("Preencha os seis lugares do pódio e os três reconhecimentos da rodada.");
       return;
     }
     setBusy(true);
@@ -156,7 +159,8 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
               <form className="career-vote-form" onSubmit={submit}>
                 <VoteIdentity player={viewer.player} onLogout={logout} busy={busy} />
                 <Podium title="Man of the Match" subtitle="Os três melhores da partida" tone="best" fields={fields.slice(0, 3) as Field[]} votes={votes} setVotes={setVotes} options={options} />
-                <Podium title="Deception of the Match" subtitle="Os três desempenhos abaixo do esperado" tone="worst" fields={fields.slice(3) as Field[]} votes={votes} setVotes={setVotes} options={options} />
+                <Podium title="Deception of the Match" subtitle="Os três desempenhos abaixo do esperado" tone="worst" fields={fields.slice(3, 6) as Field[]} votes={votes} setVotes={setVotes} options={options} />
+                <RecognitionVotes votes={votes} setVotes={setVotes} options={options}/>
                 <button className="primary vote-submit" disabled={busy || !viewer.canVote}>{busy ? "Enviando…" : "Confirmar meus votos"}</button>
               </form>
             )}
@@ -239,6 +243,15 @@ function Podium({ title, subtitle, tone, fields: podiumFields, votes, setVotes, 
   return <fieldset className={`vote-podium ${tone}`}><legend>{title}<small>{subtitle} · escolha do 3º ao 1º lugar</small></legend><div>{podiumFields.map((field: Field, index: number) => <div className="vote-podium-field" key={field}><span>{places[index]}</span><VotePlayerSelect field={field} label={`${places[index]} de ${title}`} value={votes[field]} players={options(field)} onChange={(playerId:string)=>setVotes((current:any)=>({...current,[field]:playerId}))}/></div>)}</div></fieldset>;
 }
 
+function RecognitionVotes({ votes, setVotes, options }: any) {
+  const categories: { field: Field; icon: string; title: string; description: string }[] = [
+    { field: "partnerId", icon: "🤝", title: "Parceiro da rodada", description: "Quem mais ajudou a organizar, apoiou o grupo ou contribuiu dentro e fora de campo." },
+    { field: "fairPlayId", icon: "🟢", title: "Fair Play", description: "Quem se destacou pelo respeito, honestidade nos lances e espírito esportivo." },
+    { field: "defenseId", icon: "🧤", title: "Defesa da rodada", description: "Quem fez a defesa ou salvada mais marcante, seja goleiro ou jogador de linha." },
+  ];
+  return <fieldset className="vote-podium vote-recognitions"><legend>Reconhecimentos da rodada<small>Uma escolha por categoria · todos os votos têm o mesmo peso</small></legend><div>{categories.map(category=><div className="vote-recognition-field" key={category.field}><span aria-hidden="true">{category.icon}</span><div><b>{category.title}</b><small>{category.description}</small><VotePlayerSelect field={category.field} label={category.title} value={votes[category.field]} players={options(category.field)} onChange={(playerId:string)=>setVotes((current:any)=>({...current,[category.field]:playerId}))}/></div></div>)}</div></fieldset>;
+}
+
 function VotePlayerSelect({ field, label, value, players, onChange }: { field: Field; label: string; value: string; players: VotePlayer[]; onChange: (playerId: string) => void }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -273,9 +286,15 @@ function VotePlayerSelect({ field, label, value, players, onChange }: { field: F
 
 function ClosedResults({ match, names }: any) {
   const results = match.results;
-  return <div className="vote-closed"><span>✓ VOTAÇÃO ENCERRADA</span><h2>Resultado final</h2><p>Os votos são finais e o momentum já foi aplicado aos jogadores.</p>{!results?.voteCount ? <div className="empty">A votação foi encerrada sem votos válidos.</div> : <div className="career-results"><ResultPodium title="Man of the Match" entries={results.motm} names={names} /><ResultPodium title="Deception of the Match" entries={results.dotm} names={names} /></div>}</div>;
+  return <div className="vote-closed"><span>✓ VOTAÇÃO ENCERRADA</span><h2>Resultado final</h2><p>Os votos são finais e o momentum já foi aplicado aos jogadores.</p>{!results?.voteCount ? <div className="empty">A votação foi encerrada sem votos válidos.</div> : <><div className="career-results"><ResultPodium title="Man of the Match" entries={results.motm} names={names} /><ResultPodium title="Deception of the Match" entries={results.dotm} names={names} /></div><div className="recognition-results"><RecognitionResult icon="🤝" title="Parceiro da rodada" entries={results.partner} names={names}/><RecognitionResult icon="🟢" title="Fair Play" entries={results.fairPlay} names={names}/><RecognitionResult icon="🧤" title="Defesa da rodada" entries={results.defense} names={names}/></div></>}</div>;
 }
 
 function ResultPodium({ title, entries, names }: any) {
   return <div><h3>{title}</h3>{(entries || []).map((entry: any) => <span key={entry.playerId}><b>{entry.place}º</b><em>{names[entry.playerId] || "Jogador"}</em><strong>{entry.momentum > 0 ? "+" : ""}{Number(entry.momentum).toFixed(1)}</strong></span>)}</div>;
+}
+
+function RecognitionResult({ icon, title, entries, names }: any) {
+  const winner = entries?.[0];
+  if (!winner) return null;
+  return <div><span aria-hidden="true">{icon}</span><small>{title}</small><b>{names[winner.playerId] || "Jogador"}</b><strong>+{Number(winner.momentum).toFixed(1)}</strong></div>;
 }

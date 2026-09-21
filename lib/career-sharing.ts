@@ -25,7 +25,7 @@ export function buildWhatsAppVotingMessage({
     ? `\n\n${hourglass} Votação disponível até ${new Date(closesAt).toLocaleString("pt-BR")}.`
     : "";
 
-  return `${ball} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${trophy} *Votação dos destaques*\n${title}\n\nEscolha os 3 melhores e os 3 que ficaram devendo na partida.\n\n${pointing} *Acesse e vote:*\n${votingUrl}${deadline}`;
+  return `${ball} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${trophy} *Votação dos destaques*\n${title}\n\nEscolha os pódios da partida e vote também em Parceiro, Fair Play e Defesa da Rodada.\n\n${pointing} *Acesse e vote:*\n${votingUrl}${deadline}`;
 }
 
 export function buildWhatsAppShareUrl(message: string): string {
@@ -42,7 +42,8 @@ export function buildWhatsAppCareerResultsMessage({matchTitle,blueScore,yellowSc
   const ball=String.fromCodePoint(0x26bd,0xfe0f),trophy=String.fromCodePoint(0x1f3c6),chart=String.fromCodePoint(0x1f4ca),warning=String.fromCodePoint(0x26a0,0xfe0f),medals=[0x1f947,0x1f948,0x1f949].map(code=>String.fromCodePoint(code));
   const title=matchTitle.replace(/\*/g,"").trim(),signed=(value:number)=>`${value>0?"+":""}${Number(value).toFixed(1)}`;
   const podium=(entries:any[])=>(entries||[]).map((entry:any,index:number)=>`${medals[index]||`${entry.place}º`} ${names[entry.playerId]||"Jogador"} (${signed(entry.momentum)})`).join("\n");
-  const voteCount=Number(results?.voteCount||0),details=voteCount?`${trophy} *Man of the Match*\n${podium(results.motm)}\n\n${warning} *Deception of the Match*\n${podium(results.dotm)}`:"Votação encerrada sem votos válidos.";
+  const recognition=(icon:string,label:string,entries:any[])=>entries?.[0]?`\n\n${icon} *${label}*\n${names[entries[0].playerId]||"Jogador"} (${signed(entries[0].momentum)})`:"";
+  const voteCount=Number(results?.voteCount||0),details=voteCount?`${trophy} *Man of the Match*\n${podium(results.motm)}\n\n${warning} *Deception of the Match*\n${podium(results.dotm)}${recognition("🤝","Parceiro da rodada",results.partner)}${recognition("🟢","Fair Play",results.fairPlay)}${recognition("🧤","Defesa da rodada",results.defense)}`:"Votação encerrada sem votos válidos.";
   const link=separationUrl?`\n\n${chart} *Veja os detalhes da partida:*\n${separationUrl}`:"";
   return `${ball} *${siteName.toLocaleUpperCase("pt-BR")}*\n\n${trophy} *Resultado da votação*\n${title}\n\n*Placar:* ${teamBlueName} ${blueScore} × ${yellowScore} ${teamYellowName}\n*Votos registrados:* ${voteCount}\n\n${details}${link}`;
 }

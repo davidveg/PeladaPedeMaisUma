@@ -9,6 +9,7 @@ Cada resultado do Modo Carreira recebe uma resenha com:
 - placar e equipe vencedora;
 - líderes de gols e assistências, quando a súmula detalhada estiver ativa;
 - Man of the Match, após o encerramento da votação;
+- Parceiro da rodada, Fair Play e Defesa da rodada, após o encerramento da votação;
 - recorde de gols em uma partida;
 - conquistas liberadas naquela rodada.
 
@@ -33,6 +34,16 @@ Os próximos objetivos de jogos, vitórias, gols e assistências mostram o progr
 
 A retrospectiva considera somente a temporada corrente armazenada no snapshot das partidas. Ela apresenta jogos, vitórias, empates, derrotas, aproveitamento, gols, assistências, melhor sequência de vitórias, reconhecimentos e parceria mais frequente. O resumo pode ser compartilhado pelo site ou pelo aplicativo.
 
+## Central da rodada
+
+Os detalhes de cada partida no site e no aplicativo começam com uma central compacta. Ela reúne o prazo e o estado da presença, local e previsão disponível, publicação dos times, situação da votação e o próximo passo recomendado. Depois da partida, a central aponta o resultado, a resenha e os reconhecimentos recebidos pelo jogador.
+
+## Reconhecimentos da rodada
+
+Cada participante escolhe um jogador para Parceiro da rodada, Fair Play e Defesa da rodada, sem poder votar em si mesmo. Todos os votos de cada categoria têm o mesmo peso. O painel do Modo Carreira permite definir separadamente o Momentum entregue ao vencedor de cada reconhecimento; os três valores usam o multiplicador normal do Momentum das votações.
+
+Clientes atualizados exigem as três escolhas. Votos enviados por versões antigas do aplicativo, que ainda não possuem essas categorias, continuam aceitos e participam normalmente dos pódios de Man of the Match e Deception of the Match.
+
 Jogadores sem partidas na temporada recebem um estado vazio informativo. Métricas dependentes da súmula ou das votações permanecem zeradas quando esses módulos não produziram dados oficiais.
 
 ## Implementação
@@ -41,4 +52,3 @@ Jogadores sem partidas na temporada recebem um estado vazio informativo. Métric
 - `lib/player-engagement-store.ts`: leitura batelada do histórico e das premiações;
 - `GET /api/member-profile`: inclui `engagement` para o jogador associado;
 - `GET /api/separations` e `GET /api/mobile/separations`: incluem `career.recap` nas partidas com resultado.
-

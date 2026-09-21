@@ -8,6 +8,7 @@
 .match-hub-tabs button{padding:12px 16px;border:1px solid var(--line);background:var(--white);color:var(--green);min-height:44px}
 .match-hub-tabs button.on{background:var(--green);color:white;border-color:var(--green)}
 .match-hub-tabs button:focus-visible,.match-hub-card:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+.round-center{margin:0 0 22px;padding:20px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,#f8fbf8,#edf5ef)}.round-center>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:15px}.round-center>header small,.round-center-grid small{color:#56806e;font-size:8px;font-weight:900;letter-spacing:1.2px}.round-center>header h3{margin:4px 0 0;font:700 22px Georgia,serif}.round-center-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.round-center-grid>article{display:flex;gap:9px;min-width:0;padding:12px;border:1px solid #d9e4dd;border-radius:12px;background:#fff}.round-center-grid>article>span{font-size:20px}.round-center-grid>article>div{display:grid;align-content:start;gap:3px;min-width:0}.round-center-grid b,.round-center-grid p{overflow-wrap:anywhere}.round-center-grid p{margin:0;color:var(--muted);font-size:10px;line-height:1.45}.round-center-grid .match-hub-weather{margin:0}.round-center-personal{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;padding:11px 13px;border-radius:10px;background:#fff8dc}.round-center-personal span{font-size:12px}
 .match-hub-list{display:grid;gap:14px}
 .match-hub-card{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:0;padding:22px;background:var(--white);border:1px solid var(--line);border-radius:18px;text-decoration:none;color:var(--ink)}
 .match-hub-card:hover{border-color:var(--green)}
@@ -67,6 +68,7 @@
   .match-hub-final-score{width:100%}
   .match-hub-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .match-hub-tabs button{white-space:normal;padding:11px 8px;font-size:13px}
+  .round-center>header{align-items:stretch;flex-direction:column}.round-center>header button{width:100%}.round-center-grid{grid-template-columns:1fr 1fr}
   .match-hub-main .match-admin-detail{padding:16px;min-width:0}
   .match-hub-main .match-detail-head,.match-hub-main .match-admin-actions{flex-wrap:wrap}
   .match-hub-main .match-player-admin-list>div{flex-wrap:wrap;gap:8px}
@@ -74,3 +76,4 @@
   .match-separation-pane .result-actions{flex-wrap:wrap}
   .match-separation-pane .result-actions>button{white-space:normal;flex:1 1 160px}
 }
+@media(max-width:480px){.round-center-grid{grid-template-columns:1fr}}

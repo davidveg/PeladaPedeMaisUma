@@ -121,8 +121,8 @@ export async function POST(request: Request) {
   try {
     await db().prepare(
       `INSERT INTO career_votes
-       (id,career_match_id,voter_player_id,motm_third_id,motm_second_id,motm_first_id,dotm_third_id,dotm_second_id,dotm_first_id,created_at,voter_account_type,voter_account_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+       (id,career_match_id,voter_player_id,motm_third_id,motm_second_id,motm_first_id,dotm_third_id,dotm_second_id,dotm_first_id,partner_id,fair_play_id,defense_id,created_at,voter_account_type,voter_account_id)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     ).bind(
       id,
       data.row.id,
@@ -133,6 +133,9 @@ export async function POST(request: Request) {
       vote.dotmThirdId,
       vote.dotmSecondId,
       vote.dotmFirstId,
+      vote.partnerId || null,
+      vote.fairPlayId || null,
+      vote.defenseId || null,
       now,
       accountType,
       account.id,

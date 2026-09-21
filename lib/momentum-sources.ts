@@ -6,7 +6,7 @@ export function splitLegacyMomentumSources(players: LegacyMomentumPlayer[], resu
   for (const snapshot of resultSnapshots) {
     try {
       const results = typeof snapshot === "string" ? JSON.parse(snapshot) : snapshot as any;
-      for (const entry of [...(results?.motm || []), ...(results?.dotm || [])]) {
+      for (const entry of [...(results?.motm || []), ...(results?.dotm || []), ...(results?.partner || []), ...(results?.fairPlay || []), ...(results?.defense || [])]) {
         const playerId = String(entry.playerId || "");
         if (playerId) votingByPlayer.set(playerId, (votingByPlayer.get(playerId) || 0) + Number(entry.momentum || 0));
       }

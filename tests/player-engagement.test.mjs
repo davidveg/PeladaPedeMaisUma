@@ -23,7 +23,7 @@ const history = [
     { scorerPlayerId: "ana", assistPlayerId: "bia" },
     { scorerPlayerId: "ana", assistPlayerId: "bia" },
     { scorerPlayerId: "ana", assistPlayerId: "bia" },
-  ], { motm: [{ playerId: "ana", place: 1 }] }),
+  ], { motm: [{ playerId: "ana", place: 1 }], partner: [{ playerId: "bia" }], fairPlay: [{ playerId: "caio" }], defense: [{ playerId: "dani" }] }),
   match("two", "2026-01-17", "BLUE", [{ scorerPlayerId: "ana", assistPlayerId: "bia" }]),
   match("three", "2026-01-24", "BLUE", [{ scorerPlayerId: "ana" }]),
 ];
@@ -56,6 +56,9 @@ test("resume a temporada pessoal com parceria, votação e números esportivos",
   assert.equal(season.bestGoalsInMatch, 3);
   assert.equal(season.bestWinningStreak, 3);
   assert.equal(season.motmAwards, 1);
+  assert.equal(season.partnerAwards, 0);
+  assert.equal(season.fairPlayAwards, 0);
+  assert.equal(season.defenseAwards, 0);
   assert.deepEqual(season.topPartner, { id: "bia", displayName: "Bia", games: 3 });
   assert.match(season.shareText, /Retrospectiva de Ana/);
 });
@@ -70,6 +73,8 @@ test("monta a resenha automática com placar, destaques e marcos da rodada", () 
   assert.ok(recap.stories.some(item => item.kind === "goals"));
   assert.ok(recap.highlights.some(item => item.includes("Ana liderou com 3 gols")));
   assert.ok(recap.highlights.some(item => item.includes("Man of the Match")));
+  assert.ok(recap.highlights.some(item => item.includes("Parceiro da rodada")));
+  assert.ok(recap.stories.some(item => item.kind === "recognition" && item.label === "Defesa da rodada"));
   assert.ok(recap.milestones.some(item => item.title === "Hat-trick"));
   assert.equal(recap.milestones.find(item => item.title === "Hat-trick")?.playerName, "Ana");
   assert.equal(recap.milestones.find(item => item.title === "Hat-trick")?.playerId, "ana");

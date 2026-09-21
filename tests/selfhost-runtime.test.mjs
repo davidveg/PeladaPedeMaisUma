@@ -94,6 +94,24 @@ test("migração adiciona participação efetiva sem alterar resultados existent
   }
 });
 
+test("migração adiciona reconhecimentos sociais e seus pontos de momentum", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-social-awards-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("CREATE TABLE career_votes (id TEXT PRIMARY KEY)").run();
+    const migration = await readFile(new URL("../drizzle/0046_career_social_awards.sql", import.meta.url), "utf8");
+    for (const statement of migration.split(";").map(value => value.trim()).filter(Boolean)) await bindings.DB.prepare(statement).run();
+    const config = await bindings.DB.prepare("PRAGMA table_info(career_configuration)").all();
+    const votes = await bindings.DB.prepare("PRAGMA table_info(career_votes)").all();
+    for (const name of ["partner_award", "fair_play_award", "defense_award"]) assert.ok(config.results.some(column => column.name === name));
+    for (const name of ["partner_id", "fair_play_id", "defense_id"]) assert.ok(votes.results.some(column => column.name === name));
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("adaptador de uploads persiste bytes e metadados", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-selfhost-upload-"));
   const bindings = await createSelfhostBindings(directory);

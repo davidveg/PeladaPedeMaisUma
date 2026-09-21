@@ -12,7 +12,10 @@ type VoteField =
   | "motmFirstId"
   | "dotmThirdId"
   | "dotmSecondId"
-  | "dotmFirstId";
+  | "dotmFirstId"
+  | "partnerId"
+  | "fairPlayId"
+  | "defenseId";
 type VotePlayer = { id: string; displayName: string; photoUrl?: string | null; primaryPosition?: string; team: "BLUE" | "YELLOW" };
 type VoteState = Record<VoteField, string>;
 type VoteContext = {
@@ -32,7 +35,15 @@ type VoteContext = {
 const emptyVote: VoteState = {
   motmThirdId: "", motmSecondId: "", motmFirstId: "",
   dotmThirdId: "", dotmSecondId: "", dotmFirstId: "",
+  partnerId: "", fairPlayId: "", defenseId: "",
 };
+const podiumFields: VoteField[] = ["motmThirdId", "motmSecondId", "motmFirstId", "dotmThirdId", "dotmSecondId", "dotmFirstId"];
+const recognitionFields: VoteField[] = ["partnerId", "fairPlayId", "defenseId"];
+const recognitions = [
+  { field: "partnerId" as VoteField, icon: "🤝", title: "Parceiro da rodada", description: "Quem mais ajudou a organizar, apoiou o grupo ou contribuiu dentro e fora de campo." },
+  { field: "fairPlayId" as VoteField, icon: "🟢", title: "Fair Play", description: "Quem se destacou pelo respeito, honestidade nos lances e espírito esportivo." },
+  { field: "defenseId" as VoteField, icon: "🧤", title: "Defesa da rodada", description: "Quem fez a defesa ou salvada mais marcante, seja goleiro ou jogador de linha." },
+];
 const podiums: { title: string; description: string; tone: string; fields: { field: VoteField; place: string }[] }[] = [
   {
     title: "Man of the Match", description: "Escolha quem mais se destacou.", tone: colors.success,
@@ -83,10 +94,11 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
   if (data.viewer.hasVoted) return <VotingNotice title="Seu voto já foi registrado" message="O voto é único por partida. Se você votou pelo site, ele também vale no aplicativo — e vice-versa."/>;
   if (!data.viewer.canVote) return <VotingNotice title="Votação indisponível" message="Não é possível registrar um voto nesta partida."/>;
 
-  const usedIds = Object.values(vote);
-  const complete = usedIds.every(Boolean) && new Set(usedIds).size === 6;
+  const usedIds = podiumFields.map(field => vote[field]);
+  const complete = [...podiumFields, ...recognitionFields].every(field => Boolean(vote[field])) && new Set(usedIds).size === 6;
   const currentPickerValue = picker ? vote[picker.field] : "";
-  const available = data.players.filter(player => player.id !== data.viewer.player?.id && (!usedIds.includes(player.id) || currentPickerValue === player.id));
+  const restrictToUniquePodium = picker ? podiumFields.includes(picker.field) : false;
+  const available = data.players.filter(player => player.id !== data.viewer.player?.id && (!restrictToUniquePodium || !usedIds.includes(player.id) || currentPickerValue === player.id));
   const names = Object.fromEntries(data.players.map(player => [player.id, player.displayName]));
 
   return <>
@@ -99,7 +111,7 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
           <Text style={{ color: colors.muted }}>Você vota como <Text style={{ color: colors.text, fontWeight: "800" }}>{data.viewer.player?.displayName}</Text>.</Text>
         </View>
       </View>
-      <Text style={{ color: colors.muted }}>Toque em cada posição para ver a foto e escolher o jogador. Cada pessoa pode aparecer apenas uma vez.</Text>
+      <Text style={{ color: colors.muted }}>Toque em cada posição para ver a foto e escolher o jogador. Nos dois pódios, cada pessoa pode aparecer apenas uma vez.</Text>
       {podiums.map(podium => <View key={podium.title} style={{ gap: 8 }}>
         <View>
           <Text style={{ color: podium.tone, fontSize: 17, fontWeight: "900" }}>{podium.title}</Text>
@@ -122,6 +134,15 @@ export function CareerVoting({ token, onChanged }: { token: string; onChanged: (
           <Text style={{ color: colors.muted }}>›</Text>
         </Pressable>)}
       </View>)}
+      <View style={{ gap: 9 }}>
+        <View><Text style={{ color: colors.text, fontSize: 17, fontWeight: "900" }}>Reconhecimentos da rodada</Text><Text style={{ color: colors.muted }}>Uma escolha por categoria. Todos os votos têm o mesmo peso.</Text></View>
+        {recognitions.map(category => <View key={category.field} style={{ borderWidth: 1, borderColor: "#DED7B8", borderRadius: 13, backgroundColor: "#FBF8EA", padding: 12, gap: 7 }}>
+          <View style={{ flexDirection: "row", gap: 9, alignItems: "flex-start" }}><Text style={{ fontSize: 23 }}>{category.icon}</Text><View style={{ flex: 1, gap: 2 }}><Text style={{ color: colors.text, fontWeight: "900" }}>{category.title}</Text><Text style={{ color: colors.muted, lineHeight: 19 }}>{category.description}</Text></View></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={category.title} onPress={() => setPicker({ field: category.field, title: category.title })} style={({ pressed }) => ({ minHeight: 54, padding: 10, borderRadius: 11, borderWidth: 1, borderColor: vote[category.field] ? colors.success : colors.border, backgroundColor: "#fff", flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? .75 : 1 })}>
+            {vote[category.field] ? <VotePlayerPhoto player={data.players.find(player => player.id === vote[category.field])} size={46}/> : null}<Text style={{ flex: 1, color: vote[category.field] ? colors.text : colors.muted, fontWeight: vote[category.field] ? "800" : "600" }}>{names[vote[category.field]] || "Selecionar jogador"}</Text><Text style={{ color: colors.muted }}>›</Text>
+          </Pressable>
+        </View>)}
+      </View>
       <Button
         title="Confirmar meu voto" busy={submit.isPending} disabled={!complete}
         onPress={() => Alert.alert("Confirmar voto?", "O voto será definitivo e ficará registrado tanto no site quanto no aplicativo.", [

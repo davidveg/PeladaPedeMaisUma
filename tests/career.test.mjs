@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addSeasonMonths, careerVoteForAuthenticatedPlayer, defaultCareerConfig, defaultSeasonResetAt, matchWinner, nextSeasonResetAt, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
+import { addSeasonMonths, careerVoteForAuthenticatedPlayer, defaultCareerConfig, defaultSeasonResetAt, matchWinner, nextSeasonResetAt, rankCareerRecognition, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
 
 const participantIds=["a","b","c","d","e","f","g"];
-const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",dotmThirdId:"e",dotmSecondId:"f",dotmFirstId:"g"};
+const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",dotmThirdId:"e",dotmSecondId:"f",dotmFirstId:"g",partnerId:"b",fairPlayId:"c",defenseId:"d"};
 
 test("determina vencedor e empate pelo placar",()=>{assert.equal(matchWinner(3,1),"BLUE");assert.equal(matchWinner(0,2),"YELLOW");assert.equal(matchWinner(2,2),"DRAW")});
 test("calcula o momentum da equipe e a diferença necessária ao corrigir o resultado",()=>{
@@ -24,8 +24,18 @@ test("valida os limites crescentes dos níveis de card",()=>{assert.equal(valida
 test("impede auto voto, repetição entre categorias e não participantes",()=>{
  assert.match(validateCareerVote({...valid,motmFirstId:"a"},participantIds),/si mesmo/);
  assert.match(validateCareerVote({...valid,dotmFirstId:"b"},participantIds),/somente uma vez/);
+ assert.match(validateCareerVote({...valid,partnerId:"a"},participantIds),/si mesmo/);
  assert.match(validateCareerVote({...valid,voterPlayerId:"x"},participantIds),/não participou/);
  assert.equal(validateCareerVote(valid,participantIds),null);
+});
+test("reconhecimentos contam todos os votos com o mesmo peso",()=>{
+ const ranking=rankCareerRecognition([{partner_id:"b"},{partner_id:"c"},{partner_id:"b"}],"partner_id");
+ assert.deepEqual(ranking,[{playerId:"b",votes:2,place:1}]);
+});
+test("mantém compatibilidade com votos enviados por versões antigas do aplicativo",()=>{
+ const legacyVote={...valid}; delete legacyVote.partnerId; delete legacyVote.fairPlayId; delete legacyVote.defenseId;
+ assert.equal(validateCareerVote(legacyVote,participantIds),null);
+ assert.equal(validateCareerVote({...legacyVote,partnerId:"b"},participantIds),"Preencha os três reconhecimentos da rodada.");
 });
 test("usa o jogador associado à conta e ignora identidade enviada pelo cliente",()=>{
  const vote=careerVoteForAuthenticatedPlayer({...valid,voterPlayerId:"fraudador"},"a");

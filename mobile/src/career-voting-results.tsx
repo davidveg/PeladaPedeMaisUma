@@ -16,8 +16,16 @@ export function CareerVotingResults({ item }: { item: Separation }) {
     {voteCount ? <>
       <ResultPodium title="Man of the Match" entries={results?.motm || []} names={names} positive/>
       <ResultPodium title="Deception of the Match" entries={results?.dotm || []} names={names}/>
+      <RecognitionResult icon="🤝" title="Parceiro da rodada" entry={results?.partner?.[0]} names={names}/>
+      <RecognitionResult icon="🟢" title="Fair Play" entry={results?.fairPlay?.[0]} names={names}/>
+      <RecognitionResult icon="🧤" title="Defesa da rodada" entry={results?.defense?.[0]} names={names}/>
     </> : null}
   </Card>;
+}
+
+function RecognitionResult({ icon, title, entry, names }: { icon: string; title: string; entry?: { playerId: string; momentum: number }; names: Record<string, string> }) {
+  if (!entry) return null;
+  return <View style={{ minHeight: 58, borderRadius: 11, padding: 11, backgroundColor: "#FBF8EA", borderWidth: 1, borderColor: "#DED7B8", flexDirection: "row", alignItems: "center", gap: 10 }}><Text style={{ fontSize: 23 }}>{icon}</Text><View style={{ flex: 1 }}><Text style={{ color: colors.muted, fontSize: 10, fontWeight: "900", textTransform: "uppercase" }}>{title}</Text><Text style={{ color: colors.text, fontWeight: "900" }}>{names[entry.playerId] || "Jogador"}</Text></View><Text style={{ color: colors.success, fontWeight: "900" }}>+{Number(entry.momentum).toFixed(1)}</Text></View>;
 }
 
 function ResultPodium({ title, entries, names, positive = false }: { title: string; entries: CareerResultEntry[]; names: Record<string, string>; positive?: boolean }) {

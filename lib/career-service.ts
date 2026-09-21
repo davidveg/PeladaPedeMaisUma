@@ -1,5 +1,5 @@
 import { audit, db, ensureDb } from "./database";
-import { careerConfigFromRow, matchWinner, rankCareerVotes, teamMomentumForResult, type CareerConfig } from "./career";
+import { careerConfigFromRow, matchWinner, rankCareerRecognition, rankCareerVotes, teamMomentumForResult, type CareerConfig } from "./career";
 import { logEvent } from "./logger";
 import { validateMatchContributions, type MatchContributionInput } from "./match-contributions";
 import { notifyOpenCareerVote } from "./push-notifications";
@@ -65,9 +65,9 @@ export async function editCareerMatch(matchId:string,blueScore:number,yellowScor
   let resultsSnapshot=row.results_snapshot;
   if(row.status==="CLOSED"&&participationChanged){
     const previousResults=row.results_snapshot?JSON.parse(row.results_snapshot):null;
-    if(belongsToCurrentSeason)for(const entry of [...(previousResults?.motm||[]),...(previousResults?.dotm||[])]){const momentum=Number(entry.momentum||0);if(momentum)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum-?,3),voting_momentum=ROUND(voting_momentum-?,3),updated_at=? WHERE id=?`).bind(momentum,momentum,now,String(entry.playerId)))}
+    if(belongsToCurrentSeason)for(const entry of resultEntries(previousResults)){const momentum=Number(entry.momentum||0);if(momentum)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum-?,3),voting_momentum=ROUND(voting_momentum-?,3),updated_at=? WHERE id=?`).bind(momentum,momentum,now,String(entry.playerId)))}
     const recalculated=votingResults(validVotes,rules);
-    if(belongsToCurrentSeason)for(const entry of [...recalculated.motm,...recalculated.dotm])if(entry.momentum)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(entry.momentum,entry.momentum,now,entry.playerId));
+    if(belongsToCurrentSeason)for(const entry of resultEntries(recalculated))if(entry.momentum)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(entry.momentum,entry.momentum,now,entry.playerId));
     resultsSnapshot=JSON.stringify(recalculated);
   }
   statements.push(db().prepare(`UPDATE career_matches SET blue_score=?,yellow_score=?,winner_team=?,participation_snapshot=?,results_snapshot=?,updated_at=? WHERE id=?`).bind(blueScore,yellowScore,newWinner,JSON.stringify(participation),resultsSnapshot,now,matchId));
@@ -81,8 +81,13 @@ export async function editCareerMatch(matchId:string,blueScore:number,yellowScor
 
 function teamKey(blueIds:string[],yellowIds:string[]){return `${[...blueIds].sort().join(",")}|${[...yellowIds].sort().join(",")}`}
 function resultMomentumByPlayer(blueIds:string[],yellowIds:string[],winner:"BLUE"|"YELLOW"|"DRAW",rules:any){const values=new Map<string,number>();for(const [team,ids] of [["BLUE",blueIds],["YELLOW",yellowIds]] as const){const value=teamMomentumForResult(winner,team,Number(rules.winnerBonus),Number(rules.loserPenalty));for(const id of ids)values.set(id,value)}return values}
-function voteIsValid(vote:any,participants:Set<string>){return [vote.voter_player_id,vote.motm_third_id,vote.motm_second_id,vote.motm_first_id,vote.dotm_third_id,vote.dotm_second_id,vote.dotm_first_id].every(id=>participants.has(String(id)))}
-function votingResults(votes:any[],config:any){const motm=rankCareerVotes(votes,"motm"),dotm=rankCareerVotes(votes,"dotm"),motmPoints=[config.motmFirst,config.motmSecond,config.motmThird],dotmPoints=[config.dotmFirst,config.dotmSecond,config.dotmThird];return{voteCount:votes.length,motm:motm.map((entry,index)=>({...entry,momentum:motmPoints[index]})),dotm:dotm.map((entry,index)=>({...entry,momentum:dotmPoints[index]}))}}
+function voteIsValid(vote:any,participants:Set<string>){return [vote.voter_player_id,vote.motm_third_id,vote.motm_second_id,vote.motm_first_id,vote.dotm_third_id,vote.dotm_second_id,vote.dotm_first_id].every(id=>participants.has(String(id)))&&[vote.partner_id,vote.fair_play_id,vote.defense_id].every(id=>!id||participants.has(String(id)))}
+function votingResults(votes:any[],config:any){
+  const motm=rankCareerVotes(votes,"motm"),dotm=rankCareerVotes(votes,"dotm"),motmPoints=[config.motmFirst,config.motmSecond,config.motmThird],dotmPoints=[config.dotmFirst,config.dotmSecond,config.dotmThird];
+  const recognition=(field:"partner_id"|"fair_play_id"|"defense_id",momentum:number)=>rankCareerRecognition(votes,field).map(entry=>({...entry,momentum:Number(momentum??.1)}));
+  return{voteCount:votes.length,motm:motm.map((entry,index)=>({...entry,momentum:motmPoints[index]})),dotm:dotm.map((entry,index)=>({...entry,momentum:dotmPoints[index]})),partner:recognition("partner_id",config.partnerAward),fairPlay:recognition("fair_play_id",config.fairPlayAward),defense:recognition("defense_id",config.defenseAward)};
+}
+function resultEntries(results:any){return [...(results?.motm||[]),...(results?.dotm||[]),...(results?.partner||[]),...(results?.fairPlay||[]),...(results?.defense||[])]}
 
 export async function finalizeCareerMatch(matchId: string, administratorId: string | null = null) {
   await ensureDb();
@@ -94,11 +99,11 @@ export async function finalizeCareerMatch(matchId: string, administratorId: stri
   if(Number(claimed.meta?.changes??0)!==1) throw new Error("A votação já está sendo encerrada.");
   try {
     const votes=(await db().prepare(`SELECT * FROM career_votes WHERE career_match_id=?`).bind(matchId).all()).results;
-    const motm=rankCareerVotes(votes,"motm"),dotm=rankCareerVotes(votes,"dotm"),config=JSON.parse(row.config_snapshot) as CareerConfig;
-    const currentConfig=await getCareerConfig(),belongsToCurrentSeason=Number(config.seasonNumber??1)===Number(currentConfig.seasonNumber??1),motmPoints=[config.motmFirst,config.motmSecond,config.motmThird],dotmPoints=[config.dotmFirst,config.dotmSecond,config.dotmThird],now=new Date().toISOString();
+    const config=JSON.parse(row.config_snapshot) as CareerConfig;
+    const currentConfig=await getCareerConfig(),belongsToCurrentSeason=Number(config.seasonNumber??1)===Number(currentConfig.seasonNumber??1),now=new Date().toISOString();
+    const results=votingResults(votes,config);
     const statements:any[]=[];
-    if(belongsToCurrentSeason){motm.forEach((entry,index)=>statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(motmPoints[index],motmPoints[index],now,entry.playerId)));dotm.forEach((entry,index)=>statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(dotmPoints[index],dotmPoints[index],now,entry.playerId)));}
-    const results={voteCount:votes.length,motm:motm.map((entry,index)=>({...entry,momentum:motmPoints[index]})),dotm:dotm.map((entry,index)=>({...entry,momentum:dotmPoints[index]}))};
+    if(belongsToCurrentSeason)for(const entry of resultEntries(results))if(entry.momentum)statements.push(db().prepare(`UPDATE players SET momentum=ROUND(momentum+?,3),voting_momentum=ROUND(voting_momentum+?,3),updated_at=? WHERE id=?`).bind(entry.momentum,entry.momentum,now,entry.playerId));
     statements.push(db().prepare(`UPDATE career_matches SET status='CLOSED',closed_at=?,results_snapshot=?,votes_momentum_applied=1,updated_at=? WHERE id=? AND status='FINALIZING'`).bind(now,JSON.stringify(results),now,matchId));
     await db().batch(statements);
     await audit(administratorId,"CAREER_VOTING_CLOSED","career_match",matchId,{voteCount:votes.length,automatic:!administratorId,momentumApplied:belongsToCurrentSeason,results});

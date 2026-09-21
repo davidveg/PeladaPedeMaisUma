@@ -247,6 +247,7 @@ export const careerConfiguration = sqliteTable("career_configuration", {
   winnerBonus: real("winner_bonus").notNull().default(.1), loserPenalty: real("loser_penalty").notNull().default(-.1),
   motmThird: real("motm_third").notNull().default(.1), motmSecond: real("motm_second").notNull().default(.2), motmFirst: real("motm_first").notNull().default(.3),
   dotmThird: real("dotm_third").notNull().default(-.1), dotmSecond: real("dotm_second").notNull().default(-.2), dotmFirst: real("dotm_first").notNull().default(-.3),
+  partnerAward: real("partner_award").notNull().default(.1), fairPlayAward: real("fair_play_award").notNull().default(.1), defenseAward: real("defense_award").notNull().default(.1),
   votingDays: integer("voting_days").notNull().default(5), updatedAt: text("updated_at").notNull(),
 });
 
@@ -261,6 +262,7 @@ export const careerVotes = sqliteTable("career_votes", {
   id: text("id").primaryKey(), careerMatchId: text("career_match_id").notNull(), voterPlayerId: text("voter_player_id").notNull(),
   motmThirdId: text("motm_third_id").notNull(), motmSecondId: text("motm_second_id").notNull(), motmFirstId: text("motm_first_id").notNull(),
   dotmThirdId: text("dotm_third_id").notNull(), dotmSecondId: text("dotm_second_id").notNull(), dotmFirstId: text("dotm_first_id").notNull(), createdAt: text("created_at").notNull(),
+  partnerId: text("partner_id"), fairPlayId: text("fair_play_id"), defenseId: text("defense_id"),
 }, table => [uniqueIndex("career_votes_match_voter_unique").on(table.careerMatchId, table.voterPlayerId)]);
 
 export const careerMatchContributions = sqliteTable("career_match_contributions", {
