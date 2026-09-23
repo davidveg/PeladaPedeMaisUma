@@ -27,7 +27,7 @@ Se o domínio, a porta ou os identificadores nativos forem diferentes, altere os
 1. Copiar `examples/peladix.omv.env.example` para o diretório do novo projeto Compose no OMV e renomear a cópia para `.env`.
 2. Preencher `INSTANCE_DATA_PATH`, `WEATHER_CONTACT_EMAIL` e as credenciais SMTP. Nunca reutilizar o diretório de dados de outra pelada.
 3. Reutilizar a imagem atual e subir `docker-compose.omv.yml` como um projeto Compose separado.
-4. Publicar a porta `3020` no proxy reverso com HTTPS para `peladix.vegaalameda.com` e configurar DNS/certificado.
+4. Publicar a porta `3020` no proxy reverso com HTTPS para `peladix.vegaalameda.com` e configurar DNS/certificado. O proxy deve aceitar corpos de pelo menos 6 MB; no Nginx/Nginx Proxy Manager, use `client_max_body_size 6m;` na configuração avançada do host.
 5. Conferir `GET /api/health` e os logs `application_starting` e `database_ready`.
 6. Entrar em `/admin` com `admin` / `admin`, trocar imediatamente e-mail e senha e abrir **Identidade e agenda**.
 7. Configurar nome `Peladix`, textos, agenda, local, cores, nomes dos times, logotipo, favicon, imagem de compartilhamento e módulos opcionais.
