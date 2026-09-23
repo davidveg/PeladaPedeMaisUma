@@ -7,6 +7,7 @@ function number(value: string | undefined, fallback: number) {
 
 const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => {
   const primaryColor = process.env.EXPO_PRIMARY_COLOR || "#0B3D2E";
+  const adaptiveIconBackgroundColor = process.env.EXPO_ADAPTIVE_BACKGROUND_COLOR || primaryColor;
   const appName = process.env.EXPO_APP_NAME || config.name || "Pelada Pede Mais Uma";
   const projectId = process.env.EXPO_EAS_PROJECT_ID || config.extra?.eas?.projectId;
   const googleServicesFile = process.env.EXPO_GOOGLE_SERVICES_FILE || config.android?.googleServicesFile;
@@ -35,7 +36,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => {
       adaptiveIcon: {
         ...config.android?.adaptiveIcon,
         foregroundImage: process.env.EXPO_ADAPTIVE_ICON || config.android?.adaptiveIcon?.foregroundImage || "./assets/adaptive-icon-football-beer.png",
-        backgroundColor: primaryColor,
+        backgroundColor: adaptiveIconBackgroundColor,
       },
     },
     plugins: (config.plugins || []).map((plugin) => {

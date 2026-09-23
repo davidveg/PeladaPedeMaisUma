@@ -40,6 +40,10 @@ outro contrato     HOST_PORT=3020  INSTANCE_DATA_PATH=.../pelada-outro-grupo
 
 Nunca reutilize `INSTANCE_DATA_PATH` entre grupos. É esse diretório que contém `pelada.sqlite` e os uploads da instância.
 
+Para a nova Peladix, há um arquivo de ambiente e um checklist dedicados em
+[`examples/peladix.omv.env.example`](../examples/peladix.omv.env.example) e
+[`docs/PELADIX.md`](PELADIX.md).
+
 ## Gerar um APK ou TestFlight personalizado
 
 O conteúdo e as cores do aplicativo são sincronizados com o painel. Os itens controlados pelo sistema operacional precisam ser definidos na geração do binário:
@@ -66,6 +70,7 @@ EXPO_UPDATES_URL=https://u.expo.dev/UUID_DO_PROJETO_EAS
 EXPO_APP_ICON=./assets/icone-da-nova-pelada.png
 EXPO_ADAPTIVE_ICON=./assets/adaptive-icon-da-nova-pelada.png
 EXPO_PRIMARY_COLOR="#123456"
+EXPO_ADAPTIVE_BACKGROUND_COLOR="#FFFFFF"
 ```
 
 Cada aplicativo publicado deve ter package, bundle identifier e projeto EAS próprios. Isso evita que atualizações, push notifications ou lojas de um contrato atinjam outro.
