@@ -60,6 +60,8 @@ Os perfis em `eas.json` são:
 - `production`: binário de loja com versão incrementada.
 - `agriao-preview`: APK interno da Pelada do Agrião, ligado exclusivamente ao backend e ao projeto EAS do Agrião;
 - `agriao-production`: binário de loja/TestFlight da Pelada do Agrião.
+- `peladix-preview`: APK interno da Peladix, ligado exclusivamente ao backend e ao projeto EAS da Peladix;
+- `peladix-production`: binário de loja/TestFlight da Peladix.
 
 Cadastre `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_WEB_BASE_URL` e `EXPO_PUBLIC_APP_ENV` nos ambientes EAS correspondentes e execute:
 
@@ -104,6 +106,18 @@ npx eas-cli@latest update `
   --environment preview `
   --platform android `
   --message "Atualização Pelada do Agrião"
+```
+
+### Peladix
+
+Os perfis da Peladix usam o package/bundle `br.com.peladix.app`, o projeto EAS
+`4a4cf359-9c40-43b8-93bd-57a2ab53aa43`, o Firebase de
+`google-services-peladix.json` e a API `https://peladix.vegaalameda.com`.
+
+```bash
+eas build --profile peladix-preview --platform android
+eas build --profile peladix-production --platform android
+eas build --profile peladix-production --platform ios
 ```
 
 Troque os identificadores `br.com.peladapedemaisuma.app` antes da primeira publicação caso esse domínio não pertença ao projeto.

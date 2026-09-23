@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "799835341022",
+    "project_id": "peladix-361e7",
+    "storage_bucket": "peladix-361e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:799835341022:android:92348f5f5dcc861e12824f",
+        "android_client_info": {
+          "package_name": "br.com.peladix.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyEQ2OC0J3HfTzSgJiugXoKOBxvJ82SV8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

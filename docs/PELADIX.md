@@ -11,9 +11,12 @@ A Peladix deve ser uma instância independente do mesmo codebase. Ela compartilh
 | URL pública | `https://peladix.vegaalameda.com` |
 | Diretório de dados | `.../containers/peladix` (o UUID do disco deve ser preenchido) |
 | Nome do aplicativo | `Peladix` |
-| Slug e scheme | `peladix` |
+| Slug EAS | `pelada-peladix` |
+| Scheme | `peladix` |
 | Package Android | `br.com.peladix.app` |
 | Bundle identifier iOS | `br.com.peladix.app` |
+| Projeto EAS | `4a4cf359-9c40-43b8-93bd-57a2ab53aa43` |
+| Projeto Firebase | `peladix-361e7` |
 | Cor nativa principal | `#440052` |
 | Fundo do adaptive icon | `#FFFFFF` |
 
@@ -36,15 +39,16 @@ O aplicativo já existe em Expo/React Native e usa a mesma API do site. Não é 
 
 Itens obrigatorios antes do primeiro APK/TestFlight:
 
-- projeto EAS exclusivo da Peladix e seu UUID;
-- aplicativo Android no Firebase com package `br.com.peladix.app` e arquivo `mobile/google-services-peladix.json`;
+- projeto EAS exclusivo da Peladix e seu UUID (configurado);
+- aplicativo Android no Firebase com package `br.com.peladix.app` e arquivo `mobile/google-services-peladix.json` (configurado);
 - configuração equivalente de push para iOS quando o build iOS for publicado;
 - ícone principal quadrado, adaptive icon Android e ícone monocromático de notificação já adicionados em `mobile/assets`;
 - definição final da paleta e textos do aplicativo no painel da instância;
 - HTTPS e API da Peladix publicados e testados;
 - contas Google Play Console e Apple Developer, política de privacidade, URL de suporte, capturas de tela e dados das lojas.
 
-Depois de preencher `mobile/peladix.env.example`, os mesmos valores devem formar perfis `peladix-preview` e `peladix-production` em `mobile/eas.json`. Esses perfis só devem ser adicionados quando o UUID EAS e o Firebase exclusivos existirem; usar os valores de outra pelada faria builds e atualizações atingirem o aplicativo errado.
+Os perfis `peladix-preview` e `peladix-production` em `mobile/eas.json` estão
+associados exclusivamente ao UUID EAS e ao Firebase da Peladix.
 
 ## Validação antes da abertura
 
@@ -60,5 +64,5 @@ Depois de preencher `mobile/peladix.env.example`, os mesmos valores devem formar
 - informar caminho real do disco no OMV;
 - definir e-mail remetente e contato dos provedores de clima;
 - confirmar se a paleta roxa, verde-limão e branca extraída do logo será a paleta final do site e do aplicativo;
-- criar os projetos EAS/Firebase;
+- gerar o primeiro build para o EAS criar o keystore Android e depois cadastrar a chave privada FCM V1;
 - decidir se haverá importação de jogadores/histórico e quais módulos opcionais serão ativados.

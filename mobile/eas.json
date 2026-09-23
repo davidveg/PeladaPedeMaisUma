@@ -47,7 +47,53 @@
         "EXPO_GOOGLE_SERVICES_FILE": "./google-services-agriao.json",
         "EXPO_PRIMARY_COLOR": "#0B3D2E"
       }
+    },
+    "peladix-preview": {
+      "extends": "preview",
+      "env": {
+        "EXPO_APP_VARIANT": "peladix",
+        "EXPO_APP_NAME": "Peladix",
+        "EXPO_APP_SLUG": "pelada-peladix",
+        "EXPO_APP_SCHEME": "peladix",
+        "EXPO_ANDROID_PACKAGE": "br.com.peladix.app",
+        "EXPO_IOS_BUNDLE_IDENTIFIER": "br.com.peladix.app",
+        "EXPO_EAS_PROJECT_ID": "4a4cf359-9c40-43b8-93bd-57a2ab53aa43",
+        "EXPO_UPDATES_URL": "https://u.expo.dev/4a4cf359-9c40-43b8-93bd-57a2ab53aa43",
+        "EXPO_OWNER": "davidvegabr",
+        "EXPO_PUBLIC_API_BASE_URL": "https://peladix.vegaalameda.com",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://peladix.vegaalameda.com",
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_APP_ICON": "./assets/icon-peladix.png",
+        "EXPO_ADAPTIVE_ICON": "./assets/adaptive-icon-peladix.png",
+        "EXPO_NOTIFICATION_ICON": "./assets/notification-icon-peladix.png",
+        "EXPO_GOOGLE_SERVICES_FILE": "./google-services-peladix.json",
+        "EXPO_PRIMARY_COLOR": "#440052",
+        "EXPO_ADAPTIVE_BACKGROUND_COLOR": "#FFFFFF"
+      }
+    },
+    "peladix-production": {
+      "extends": "production",
+      "env": {
+        "EXPO_APP_VARIANT": "peladix",
+        "EXPO_APP_NAME": "Peladix",
+        "EXPO_APP_SLUG": "pelada-peladix",
+        "EXPO_APP_SCHEME": "peladix",
+        "EXPO_ANDROID_PACKAGE": "br.com.peladix.app",
+        "EXPO_IOS_BUNDLE_IDENTIFIER": "br.com.peladix.app",
+        "EXPO_EAS_PROJECT_ID": "4a4cf359-9c40-43b8-93bd-57a2ab53aa43",
+        "EXPO_UPDATES_URL": "https://u.expo.dev/4a4cf359-9c40-43b8-93bd-57a2ab53aa43",
+        "EXPO_OWNER": "davidvegabr",
+        "EXPO_PUBLIC_API_BASE_URL": "https://peladix.vegaalameda.com",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://peladix.vegaalameda.com",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_APP_ICON": "./assets/icon-peladix.png",
+        "EXPO_ADAPTIVE_ICON": "./assets/adaptive-icon-peladix.png",
+        "EXPO_NOTIFICATION_ICON": "./assets/notification-icon-peladix.png",
+        "EXPO_GOOGLE_SERVICES_FILE": "./google-services-peladix.json",
+        "EXPO_PRIMARY_COLOR": "#440052",
+        "EXPO_ADAPTIVE_BACKGROUND_COLOR": "#FFFFFF"
+      }
     }
   },
-  "submit": { "production": {}, "agriao-production": {} }
+  "submit": { "production": {}, "agriao-production": {}, "peladix-production": {} }
 }
