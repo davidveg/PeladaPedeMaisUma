@@ -6,7 +6,12 @@ export type InstanceConfiguration = {
   logoUrl: string | null;
   faviconUrl: string | null;
   shareImageUrl: string | null;
+  publicLogoSize: number;
+  adminLogoSize: number;
+  showPublicBrandText: boolean;
+  showAdminBrandText: boolean;
   primaryColor: string;
+  adminSidebarColor: string;
   secondaryColor: string;
   backgroundColor: string;
   surfaceColor: string;
@@ -46,7 +51,12 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   logoUrl: null,
   faviconUrl: null,
   shareImageUrl: null,
+  publicLogoSize: 44,
+  adminLogoSize: 54,
+  showPublicBrandText: true,
+  showAdminBrandText: true,
   primaryColor: "#174D3B",
+  adminSidebarColor: "#133F31",
   secondaryColor: "#D9F36B",
   backgroundColor: "#F5F7F3",
   surfaceColor: "#FFFFFF",
@@ -81,6 +91,10 @@ type InstanceConfigurationRow = Record<string, unknown> | null | undefined;
 export function instanceConfigurationFromRow(row: InstanceConfigurationRow): InstanceConfiguration {
   if (!row) return { ...DEFAULT_INSTANCE_CONFIGURATION };
   const value = (key: string, fallback: string) => String(row[key] ?? fallback);
+  const boundedInteger = (key: string, fallback: number, minimum: number, maximum: number) => {
+    const parsed = Number(row[key] ?? fallback);
+    return Number.isFinite(parsed) ? Math.min(maximum, Math.max(minimum, Math.round(parsed))) : fallback;
+  };
   return {
     siteName: value("site_name", DEFAULT_INSTANCE_CONFIGURATION.siteName),
     siteShortName: value("site_short_name", DEFAULT_INSTANCE_CONFIGURATION.siteShortName),
@@ -89,7 +103,12 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     logoUrl: row.logo_url ? String(row.logo_url) : null,
     faviconUrl: row.favicon_url ? String(row.favicon_url) : null,
     shareImageUrl: row.share_image_url ? String(row.share_image_url) : null,
+    publicLogoSize: boundedInteger("public_logo_size", DEFAULT_INSTANCE_CONFIGURATION.publicLogoSize, 32, 64),
+    adminLogoSize: boundedInteger("admin_logo_size", DEFAULT_INSTANCE_CONFIGURATION.adminLogoSize, 36, 88),
+    showPublicBrandText: Boolean(row.show_public_brand_text ?? DEFAULT_INSTANCE_CONFIGURATION.showPublicBrandText),
+    showAdminBrandText: Boolean(row.show_admin_brand_text ?? DEFAULT_INSTANCE_CONFIGURATION.showAdminBrandText),
     primaryColor: value("primary_color", DEFAULT_INSTANCE_CONFIGURATION.primaryColor),
+    adminSidebarColor: value("admin_sidebar_color", DEFAULT_INSTANCE_CONFIGURATION.adminSidebarColor),
     secondaryColor: value("secondary_color", DEFAULT_INSTANCE_CONFIGURATION.secondaryColor),
     backgroundColor: value("background_color", DEFAULT_INSTANCE_CONFIGURATION.backgroundColor),
     surfaceColor: value("surface_color", DEFAULT_INSTANCE_CONFIGURATION.surfaceColor),
@@ -139,7 +158,12 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     logoUrl: String(source.logoUrl ?? "").trim().slice(0, 500) || null,
     faviconUrl: String(source.faviconUrl ?? "").trim().slice(0, 500) || null,
     shareImageUrl: String(source.shareImageUrl ?? "").trim().slice(0, 500) || null,
+    publicLogoSize: Number(source.publicLogoSize ?? DEFAULT_INSTANCE_CONFIGURATION.publicLogoSize),
+    adminLogoSize: Number(source.adminLogoSize ?? DEFAULT_INSTANCE_CONFIGURATION.adminLogoSize),
+    showPublicBrandText: source.showPublicBrandText !== false,
+    showAdminBrandText: source.showAdminBrandText !== false,
     primaryColor: color("primaryColor", DEFAULT_INSTANCE_CONFIGURATION.primaryColor),
+    adminSidebarColor: color("adminSidebarColor", DEFAULT_INSTANCE_CONFIGURATION.adminSidebarColor),
     secondaryColor: color("secondaryColor", DEFAULT_INSTANCE_CONFIGURATION.secondaryColor),
     backgroundColor: color("backgroundColor", DEFAULT_INSTANCE_CONFIGURATION.backgroundColor),
     surfaceColor: color("surfaceColor", DEFAULT_INSTANCE_CONFIGURATION.surfaceColor),
@@ -172,9 +196,15 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   if (!config.siteName || !config.siteShortName || !config.appName || !config.defaultMatchTitle || !config.defaultMatchLocation || !config.teamBlueName || !config.teamYellowName) {
     return { error: "Os nomes do site, aplicativo, partida e das duas equipes são obrigatórios." };
   }
+  if (!Number.isInteger(config.publicLogoSize) || config.publicLogoSize < 32 || config.publicLogoSize > 64) {
+    return { error: "O logotipo público deve ter entre 32 e 64 pixels." };
+  }
+  if (!Number.isInteger(config.adminLogoSize) || config.adminLogoSize < 36 || config.adminLogoSize > 88) {
+    return { error: "O logotipo administrativo deve ter entre 36 e 88 pixels." };
+  }
   if (config.teamBlueName.toLocaleLowerCase("pt-BR") === config.teamYellowName.toLocaleLowerCase("pt-BR")) return { error: "As duas equipes precisam ter nomes diferentes." };
   const colorKeys = [
-    "primaryColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
+    "primaryColor", "adminSidebarColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
     "teamBlueColor", "teamYellowColor", "appPrimaryColor", "appSecondaryColor", "appBackgroundColor", "appTextColor",
   ] as const;
   if (colorKeys.some((key) => !colorPattern.test(config[key]))) return { error: "As cores devem usar o formato hexadecimal #RRGGBB." };
@@ -207,7 +237,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
 
 export const INSTANCE_CONFIGURATION_COLUMNS = [
   "site_name", "site_short_name", "site_tagline", "footer_text", "logo_url", "favicon_url", "share_image_url",
-  "primary_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
+  "public_logo_size", "admin_logo_size", "show_public_brand_text", "show_admin_brand_text",
+  "primary_color", "admin_sidebar_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
   "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
@@ -218,7 +249,8 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
 export function instanceConfigurationValues(config: InstanceConfiguration) {
   return [
     config.siteName, config.siteShortName, config.siteTagline, config.footerText, config.logoUrl, config.faviconUrl, config.shareImageUrl,
-    config.primaryColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
+    config.publicLogoSize, config.adminLogoSize, Number(config.showPublicBrandText), Number(config.showAdminBrandText),
+    config.primaryColor, config.adminSidebarColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
     config.mutedColor, config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,

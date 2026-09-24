@@ -5,8 +5,10 @@ export type UploadOwner = { accountType: "administrator" | "member"; accountId: 
 export type UploadPurpose = "players" | "branding";
 type UploadReference = { key: string; purpose: UploadPurpose; owner: UploadOwner; entityType: string; entityId: string };
 
-const PENDING_LIMIT = 5;
-const HOURLY_LIMIT = 20;
+const MEMBER_PENDING_LIMIT = 5;
+const MEMBER_HOURLY_LIMIT = 20;
+const ADMIN_PENDING_LIMIT = 15;
+const ADMIN_HOURLY_LIMIT = 60;
 const PENDING_TTL_MS = 60 * 60_000;
 const METADATA_TTL_MS = 24 * 60 * 60_000;
 const keyPattern = /^(players|branding)\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:ico|png|jpg|webp)$/i;
@@ -43,14 +45,31 @@ export async function cleanupExpiredUploads(limit = 20) {
   await db().prepare(`DELETE FROM upload_objects WHERE status IN ('rejected','deleted') AND updated_at<?`).bind(new Date(now.getTime() - METADATA_TTL_MS).toISOString()).run();
 }
 
-export async function reserveUpload(key: string, purpose: UploadPurpose, owner: UploadOwner) {
+export function uploadLimitsFor(owner: UploadOwner) {
+  return owner.accountType === "administrator"
+    ? { pending: ADMIN_PENDING_LIMIT, hourly: ADMIN_HOURLY_LIMIT }
+    : { pending: MEMBER_PENDING_LIMIT, hourly: MEMBER_HOURLY_LIMIT };
+}
+
+export async function reserveUpload(key: string, purpose: UploadPurpose, owner: UploadOwner): Promise<
+  { ok: true } | { ok: false; reason: "pending" | "hourly"; limit: number }
+> {
   const now = new Date(), nowIso = now.toISOString(), hourAgo = new Date(now.getTime() - 60 * 60_000).toISOString();
+  const limits = uploadLimitsFor(owner);
   const result = await db().prepare(`INSERT INTO upload_objects (object_key,purpose,owner_account_type,owner_account_id,status,created_at,updated_at)
     SELECT ?,?,?,?,'uploading',?,?
     WHERE (SELECT COUNT(*) FROM upload_objects WHERE owner_account_type=? AND owner_account_id=? AND status IN ('uploading','pending'))<?
       AND (SELECT COUNT(*) FROM upload_objects WHERE owner_account_type=? AND owner_account_id=? AND created_at>?)<?`)
-    .bind(key, purpose, owner.accountType, owner.accountId, nowIso, nowIso, owner.accountType, owner.accountId, PENDING_LIMIT, owner.accountType, owner.accountId, hourAgo, HOURLY_LIMIT).run();
-  return Number(result.meta?.changes ?? 0) === 1;
+    .bind(key, purpose, owner.accountType, owner.accountId, nowIso, nowIso, owner.accountType, owner.accountId, limits.pending, owner.accountType, owner.accountId, hourAgo, limits.hourly).run();
+  if (Number(result.meta?.changes ?? 0) === 1) return { ok: true };
+
+  const usage = await db().prepare(`SELECT
+      SUM(CASE WHEN status IN ('uploading','pending') THEN 1 ELSE 0 END) pending,
+      SUM(CASE WHEN created_at>? THEN 1 ELSE 0 END) hourly
+    FROM upload_objects WHERE owner_account_type=? AND owner_account_id=?`)
+    .bind(hourAgo, owner.accountType, owner.accountId).first<{ pending: number | null; hourly: number | null }>();
+  if (Number(usage?.pending ?? 0) >= limits.pending) return { ok: false, reason: "pending", limit: limits.pending };
+  return { ok: false, reason: "hourly", limit: limits.hourly };
 }
 
 export async function rejectUpload(key: string) {

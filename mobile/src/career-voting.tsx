@@ -56,7 +56,6 @@ const podiums: { title: string; description: string; tone: string; fields: { fie
 ];
 
 export function CareerVoting({ token, onChanged }: { token: string; onChanged: () => void }) {
-  const { config: brand } = useMobileBranding();
   const client = useQueryClient();
   const [vote, setVote] = useState<VoteState>(emptyVote);
   const [picker, setPicker] = useState<{ field: VoteField; title: string } | null>(null);
@@ -203,16 +202,14 @@ function PlayerPicker({ visible, title, players, selectedId, onClose, onSelect }
 
 function VotePlayerPhoto({ player, size = 46 }: { player?: VotePlayer; size?: number }) {
   const photoUrl = player?.photoUrl;
-  const [failed, setFailed] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const style = { width: size, height: size, borderRadius: Math.round(size * .27), backgroundColor: "#E4EEE8", borderWidth: 1, borderColor: colors.border };
 
-  useEffect(() => setFailed(false), [photoUrl]);
-
-  if (photoUrl && !failed) {
+  if (photoUrl && failedUrl !== photoUrl) {
     const uri = /^https?:\/\//i.test(photoUrl)
       ? photoUrl
       : `${API_BASE_URL.replace(/\/$/, "")}/${photoUrl.replace(/^\//, "")}`;
-    return <Image accessibilityLabel={`Foto de ${player?.displayName || "jogador"}`} source={{ uri }} resizeMode="cover" onError={() => setFailed(true)} style={style}/>;
+    return <Image alt={`Foto de ${player?.displayName || "jogador"}`} accessibilityLabel={`Foto de ${player?.displayName || "jogador"}`} source={{ uri }} resizeMode="cover" onError={() => setFailedUrl(photoUrl)} style={style}/>;
   }
   return <View accessibilityLabel={`Foto padrão de ${player?.displayName || "jogador"}`} style={[style, { alignItems: "center", justifyContent: "center" }]}><Text style={{ fontSize: Math.round(size * .43) }}>👤</Text></View>;
 }

@@ -182,7 +182,6 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   }
 
   function move(id: string, from: "blue" | "yellow") {
-    const other = from === "blue" ? "yellow" : "blue";
     setResult((current: any) => {
       const moved = current[from].find((player: Player) => player.id === id);
       const blue = from === "blue" ? current.blue.filter((player: Player) => player.id !== id) : [...current.blue, moved];

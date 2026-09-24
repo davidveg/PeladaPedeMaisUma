@@ -30,6 +30,11 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.delinquencyAttendanceBlockEnabled, false);
   assert.equal(config.shareImageUrl, null);
   assert.equal(config.faviconUrl, null);
+  assert.equal(config.adminSidebarColor, "#133F31");
+  assert.equal(config.publicLogoSize, 44);
+  assert.equal(config.adminLogoSize, 54);
+  assert.equal(config.showPublicBrandText, true);
+  assert.equal(config.showAdminBrandText, true);
 });
 
 test("ignora a ativação legada sem afetar rascunhos ou outras configurações", () => {
@@ -39,6 +44,12 @@ test("ignora a ativação legada sem afetar rascunhos ou outras configurações"
   assert.equal(config.teamBlueName, "Vermelho");
 });
 
+test("normaliza tamanhos antigos para não quebrar os cabeçalhos", () => {
+  const config = instanceConfigurationFromRow({ public_logo_size: 96, admin_logo_size: 120 });
+  assert.equal(config.publicLogoSize, 64);
+  assert.equal(config.adminLogoSize, 88);
+});
+
 test("aceita identidade, cores e dia da semana personalizados", () => {
   const result = validateInstanceConfiguration({
     ...DEFAULT_INSTANCE_CONFIGURATION,
@@ -46,6 +57,11 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     siteShortName: "FDQ",
     appName: "FDQ",
     primaryColor: "#123ABC",
+    adminSidebarColor: "#440052",
+    publicLogoSize: 58,
+    adminLogoSize: 72,
+    showPublicBrandText: false,
+    showAdminBrandText: false,
     defaultMatchWeekday: 3,
     defaultMatchTime: "20:30",
     confirmationLeadMinutes: 180,
@@ -65,6 +81,11 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.defaultMatchWeekday, 3);
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
+  assert.equal(result.config.adminSidebarColor, "#440052");
+  assert.equal(result.config.publicLogoSize, 58);
+  assert.equal(result.config.adminLogoSize, 72);
+  assert.equal(result.config.showPublicBrandText, false);
+  assert.equal(result.config.showAdminBrandText, false);
   assert.equal(result.config.manualSeparationEnabled, false);
   assert.equal(result.config.separationDraftsEnabled, true);
   assert.equal(result.config.guestPreconfirmationEnabled, true);
@@ -117,12 +138,15 @@ test("migração mantém o módulo financeiro ativo nas instalações existentes
 
 test("rejeita cores, horários e logotipos externos inseguros", () => {
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, primaryColor: "verde" }).error, /hexadecimal/);
+  assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, adminSidebarColor: "roxo" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, defaultMatchTime: "25:00" }).error, /HH:MM/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, logoUrl: "http://inseguro.example/logo.png" }).error, /logotipo/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, shareImageUrl: "http://inseguro.example/social.png" }).error, /compartilhamento/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, faviconUrl: "http://inseguro.example/favicon.ico" }).error, /favicon/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, teamYellowName: "Azul" }).error, /diferentes/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, guestConfirmationThreshold: 0 }).error, /mínimo/);
+  assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, publicLogoSize: 20 }).error, /público/);
+  assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, adminLogoSize: 140 }).error, /administrativo/);
 });
 
 test("migração cria rascunhos de separação desativados por padrão", async () => {
@@ -244,4 +268,64 @@ test("migração cria configuração isolada com os padrões atuais", async () =
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("migração adiciona a cor do menu administrativo sem alterar a identidade existente", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-admin-sidebar-color-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE instance_configuration SET site_name='Peladix'").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0047_admin_sidebar_color.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT site_name,admin_sidebar_color FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { site_name: "Peladix", admin_sidebar_color: "#133F31" });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("menu administrativo aplica a cor configurada com contraste derivado", async () => {
+  const [branding, styles, admin] = await Promise.all([
+    readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/branding.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(branding, /--admin-sidebar.*adminSidebarColor/);
+  assert.match(branding, /--admin-sidebar-contrast.*contrastTextColor/);
+  assert.match(styles, /background:\s*var\(--admin-sidebar/);
+  assert.match(admin, /Menu lateral administrativo/);
+});
+
+test("migração adiciona a apresentação dos logotipos sem ocultar a identidade existente", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-brand-presentation-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE instance_configuration SET site_name='Peladix'").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0048_brand_presentation.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT site_name,public_logo_size,admin_logo_size,show_public_brand_text,show_admin_brand_text FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { site_name: "Peladix", public_logo_size: 44, admin_logo_size: 54, show_public_brand_text: 1, show_admin_brand_text: 1 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("cabeçalhos público e administrativo usam tamanhos e textos independentes", async () => {
+  const [branding, styles, admin] = await Promise.all([
+    readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/branding.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(branding, /--brand-public-logo-height/);
+  assert.match(branding, /--brand-admin-logo-height/);
+  assert.match(branding, /naturalWidth/);
+  assert.match(branding, /fitBrandLogo/);
+  assert.match(branding, /showPublicBrandText/);
+  assert.match(styles, /\.brand \.brand-mark/);
+  assert.match(styles, /\.admin-brand \.brand-mark/);
+  assert.match(admin, /Apresentação dos logotipos/);
+  assert.match(admin, /BrandIdentity previewConfig/);
+  assert.match(admin, /Arquivo carregado/);
 });

@@ -21,8 +21,12 @@ export async function POST(request: Request) {
   await cleanupExpiredUploads();
   const owner = { accountType: administrator ? "administrator" as const : "member" as const, accountId: String(account.id) };
   const uploadId = crypto.randomUUID(), reservationKey = `${purpose}/${uploadId}.pending`;
-  if (!(await reserveUpload(reservationKey, purpose, owner))) {
-    return Response.json({ error: "Limite de uploads pendentes ou por hora atingido. Associe um upload existente ou aguarde antes de tentar novamente." }, { status: 429, headers: { "cache-control": "no-store", "retry-after": "3600" } });
+  const reservation = await reserveUpload(reservationKey, purpose, owner);
+  if (!reservation.ok) {
+    const error = reservation.reason === "pending"
+      ? `Você atingiu o limite de ${reservation.limit} imagens ainda não salvas. Salve a configuração atual ou aguarde a limpeza automática antes de tentar novamente.`
+      : `Você atingiu o limite de ${reservation.limit} uploads por hora. Aguarde antes de tentar novamente.`;
+    return Response.json({ error, reason: reservation.reason, limit: reservation.limit }, { status: 429, headers: { "cache-control": "no-store", "retry-after": "3600" } });
   }
 
   let storedKey = reservationKey;

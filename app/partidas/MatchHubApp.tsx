@@ -1,6 +1,4 @@
 "use client";
-// Document navigation is intentional for the existing Vinext routing setup.
-/* eslint-disable @next/next/no-html-link-for-pages */
 import "./match-hub.css";
 import { useCallback, useEffect, useState } from "react";
 import { matchHubFilters, matchHubHref, matchHubStatusLabel, type MatchHubItem, type MatchHubPayload } from "../../lib/match-hub";

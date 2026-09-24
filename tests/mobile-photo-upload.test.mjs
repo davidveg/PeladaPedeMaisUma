@@ -8,13 +8,19 @@ import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
 
-const [{ setRuntimeBindings }, { db, ensureDb, hashPassword }, mobileAuth, upload, memberProfile] = await Promise.all([
+const [{ setRuntimeBindings }, { db, ensureDb, hashPassword }, mobileAuth, upload, memberProfile, uploadLifecycle] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
   import("../app/api/mobile/auth/route.ts"),
   import("../app/api/upload/route.ts"),
   import("../app/api/member-profile/route.ts"),
+  import("../lib/upload-lifecycle.ts"),
 ]);
+
+test("administradores recebem uma cota maior sem ampliar a cota dos jogadores", () => {
+  assert.deepEqual(uploadLifecycle.uploadLimitsFor({ accountType: "member", accountId: "member" }), { pending: 5, hourly: 20 });
+  assert.deepEqual(uploadLifecycle.uploadLimitsFor({ accountType: "administrator", accountId: "admin" }), { pending: 15, hourly: 60 });
+});
 
 test("jogador autenticado no mobile envia e associa sua foto", async () => {
   const directory = await mkdtemp(join(tmpdir(), "ppm-mobile-photo-"));
@@ -98,6 +104,7 @@ test("jogador autenticado no mobile envia e associa sua foto", async () => {
     for (let pending = 0; pending < 5; pending += 1) assert.equal((await upload.POST(uploadRequest(session.accessToken, jpeg))).status, 200);
     const quota = await upload.POST(uploadRequest(session.accessToken, jpeg));
     assert.equal(quota.status, 429);
+    assert.deepEqual(await quota.clone().json(), { error: "Você atingiu o limite de 5 imagens ainda não salvas. Salve a configuração atual ou aguarde a limpeza automática antes de tentar novamente.", reason: "pending", limit: 5 });
     assert.equal(quota.headers.get("retry-after"), "3600");
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM upload_objects WHERE owner_account_id=? AND status='pending'`).bind(memberId).first("total"), 5);
     const orphanKey = await db().prepare(`SELECT object_key FROM upload_objects WHERE owner_account_id=? AND status='pending' LIMIT 1`).bind(memberId).first("object_key");
