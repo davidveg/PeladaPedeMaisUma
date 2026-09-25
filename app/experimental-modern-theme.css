@@ -1850,6 +1850,18 @@ body {
   filter: brightness(.96);
 }
 
+/* Statistics empty states share the auxiliary-container palette configured
+   in Identidade e agenda instead of falling back to the legacy white slab. */
+.statistics-page :is(.empty, .statistics-loading, .versus-empty) {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 72%, transparent);
+}
+
+.statistics-page :is(.empty, .statistics-loading, .versus-empty) a {
+  color: var(--management-button, #d3eb7a);
+}
+
 /* The round center uses a semantic header, but it is not an application
    header. Reset the legacy global header rule so the card palette can flow. */
 .member-page .round-center > header {

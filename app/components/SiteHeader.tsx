@@ -80,7 +80,7 @@ export function SiteHeader({
     const name = viewerEmail.split("@")[0].split(/[._-]+/).filter(Boolean);
     return (name.length > 1 ? `${name[0][0]}${name.at(-1)?.[0] || ""}` : name[0]?.slice(0, 2) || "P+").toUpperCase();
   }, [viewerEmail]);
-  const navigationIcons: Partial<Record<SiteSection, string>> = { matches: "▦", players: "♙", statistics: "⌁", finance: "▤", notifications: "◌", account: "◎", admin: "⚙" };
+  const navigationIcons: Partial<Record<SiteSection, string>> = { matches: "▦", players: "♙", statistics: "⌁", finance: "▤", account: "◎", admin: "⚙" };
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       <span className="site-nav-icon" aria-hidden="true">{navigationIcons[section] || "•"}</span><span>{label}</span>
@@ -100,7 +100,6 @@ export function SiteHeader({
           {link("statistics", "/estatisticas", "Estatísticas")}
           <span className="site-nav-group">OPERAÇÃO</span>
           {config.financeEnabled && link("finance", "/financeiro", "Financeiro")}
-          {link("notifications", "/notificacoes", "Notificações")}
           {link("account", "/conta", "Minha conta")}
           {link("admin", "/admin", "Painel Administrativo")}
         </nav>

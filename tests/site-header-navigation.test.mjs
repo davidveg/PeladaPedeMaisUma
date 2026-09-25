@@ -44,13 +44,14 @@ test("a saída da sessão fica dentro de Minha conta e não no menu superior", a
   assert.match(account, /className="ghost member-logout"[^>]*onClick=\{logout\}>Sair da conta</);
 });
 
-test("notificações ficam somente no menu compartilhado e não se repetem no cabeçalho de Partidas", async () => {
+test("notificações ficam no sino superior e não se repetem no menu lateral ou em Partidas", async () => {
   const [header, matches] = await Promise.all([
     readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/partidas/MatchesApp.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(header, /link\("notifications", "\/notificacoes", "Notificações"\)/);
+  assert.doesNotMatch(header, /link\("notifications", "\/notificacoes", "Notificações"\)/);
+  assert.match(header, /<NotificationBell unread=\{unreadNotifications\}/);
   assert.doesNotMatch(matches, /href="\/notificacoes"/);
 });
 
