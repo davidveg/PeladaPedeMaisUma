@@ -1,0 +1,305 @@
+/*
+ * Experimental visual layer for the codex/modern-football-layout branch.
+ * It intentionally keeps the existing components and behaviour intact so the
+ * new football-management identity can be validated incrementally.
+ */
+
+:root {
+  --ink: #17201c;
+  --muted: #68736d;
+  --line: #d7ddd8;
+  --cream: #eef1ed;
+  --green: #153f33;
+  --lime: #cde85d;
+  --white: #fff;
+  --modern-canvas: #eef1ed;
+  --modern-panel: rgba(255, 255, 255, .9);
+  --modern-panel-strong: #fff;
+  --modern-dark: #101713;
+  --modern-dark-soft: #18231e;
+  --modern-shadow: 0 18px 55px rgba(16, 32, 25, .09);
+}
+
+html {
+  background: var(--modern-canvas);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 92% 3%, rgba(203, 232, 93, .12), transparent 25rem),
+    linear-gradient(135deg, rgba(255, 255, 255, .62), transparent 42rem),
+    var(--modern-canvas);
+}
+
+/* Public navigation: sober club-management shell. */
+.site-header {
+  min-height: 78px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(circle at 12% -120%, rgba(112, 157, 135, .32), transparent 52%),
+    rgba(15, 23, 19, .96);
+  box-shadow: 0 14px 36px rgba(10, 20, 15, .14);
+  color: #f5f7f5;
+}
+
+.site-header .brand,
+.site-header .brand > span.brand-identity:last-child {
+  color: #f5f7f5;
+}
+
+.site-header .brand small,
+.site-header nav a,
+.site-header nav button {
+  color: #aebbb4;
+}
+
+.site-header nav a,
+.site-header nav button {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.site-header nav a:hover,
+.site-header nav button:hover {
+  border-color: rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .05);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.site-header nav .active {
+  border-color: rgba(206, 232, 102, .18);
+  background: rgba(205, 232, 93, .12);
+  box-shadow: inset 0 0 0 1px rgba(205, 232, 93, .04);
+  color: #e2f57f;
+}
+
+.content,
+.member-main,
+.matches-page,
+.statistics-page,
+.advanced-statistics-page {
+  position: relative;
+}
+
+.panel,
+.team,
+.metrics,
+.history-list article,
+.public-player-table,
+.member-profile-actions,
+.admin-card,
+.match-card,
+.statistics-card {
+  border-color: rgba(20, 50, 38, .11);
+  background: var(--modern-panel);
+  box-shadow: var(--modern-shadow);
+}
+
+.primary {
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1a5140, #12362c);
+  box-shadow: 0 10px 24px rgba(21, 63, 51, .2);
+}
+
+.primary:hover {
+  background: linear-gradient(135deg, #206049, #153f33);
+  transform: translateY(-1px);
+}
+
+.ghost {
+  border-color: rgba(21, 63, 51, .16);
+  background: rgba(255, 255, 255, .82);
+}
+
+/*
+ * Player cards: rounded top, shield-like base and layered brushed-metal grain.
+ * The textures are pure CSS and therefore keep working offline and in exports.
+ */
+.player-card-modal {
+  border-radius: 38px;
+  padding: 5px;
+  background: linear-gradient(145deg, #f0d679, #8f6a20 66%, #513b10);
+  box-shadow: 0 30px 85px rgba(11, 20, 15, .45);
+}
+
+.player-card-modal::before {
+  inset: 5px;
+  border-radius: 33px;
+}
+
+.player-card-modal .player-card,
+.member-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 34px 34px 22px 22px;
+  clip-path: polygon(0 0, 100% 0, 100% 92%, 96% 97%, 50% 100%, 4% 97%, 0 92%);
+}
+
+.player-card-modal .player-card {
+  padding-bottom: 46px;
+}
+
+.member-card {
+  padding-bottom: 48px;
+  border-width: 5px;
+}
+
+.player-card-modal .player-card::before,
+.member-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .58;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .055) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(103deg, transparent 0 14px, rgba(255, 255, 255, .08) 15px 16px, transparent 17px 31px),
+    linear-gradient(112deg, transparent 9%, rgba(255, 255, 255, .34) 25%, transparent 42%, rgba(0, 0, 0, .12) 68%, transparent 83%);
+  background-blend-mode: soft-light, overlay, screen;
+  pointer-events: none;
+}
+
+.player-card-modal .player-card::after,
+.member-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 76% 8%, rgba(255, 255, 255, .3), transparent 24%),
+    linear-gradient(135deg, transparent 0 31%, rgba(255, 255, 255, .16) 36%, transparent 43% 100%);
+  pointer-events: none;
+}
+
+.player-card-modal.tier-bronze,
+.member-card.tier-bronze {
+  border-color: #a8633e;
+  background:
+    radial-gradient(circle at 78% 8%, rgba(255, 220, 180, .48), transparent 28%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .045) 0 1px, rgba(91, 42, 21, .035) 1px 3px),
+    linear-gradient(145deg, #e9ad7d 0%, #bd7146 50%, #71381f 100%);
+  box-shadow: inset 0 0 36px rgba(82, 37, 19, .18), 0 26px 62px rgba(71, 38, 23, .25);
+}
+
+.player-card-modal.tier-bronze .player-card {
+  background:
+    radial-gradient(circle at 78% 8%, rgba(255, 221, 183, .45), transparent 30%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .045) 0 1px, rgba(91, 42, 21, .035) 1px 3px),
+    linear-gradient(145deg, #e9ad7d 0%, #bd7146 50%, #71381f 100%);
+}
+
+.player-card-modal.tier-silver,
+.member-card.tier-silver {
+  border-color: #9da8ad;
+  background:
+    radial-gradient(circle at 78% 8%, rgba(255, 255, 255, .78), transparent 28%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .12) 0 1px, rgba(67, 79, 86, .04) 1px 3px),
+    linear-gradient(145deg, #f6f8f8 0%, #c8d0d3 48%, #8d989e 100%);
+  box-shadow: inset 0 0 34px rgba(59, 72, 79, .13), 0 26px 62px rgba(49, 60, 65, .2);
+}
+
+.player-card-modal.tier-silver .player-card {
+  background:
+    radial-gradient(circle at 78% 8%, rgba(255, 255, 255, .72), transparent 30%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .12) 0 1px, rgba(67, 79, 86, .04) 1px 3px),
+    linear-gradient(145deg, #f6f8f8 0%, #c8d0d3 48%, #8d989e 100%);
+}
+
+.player-card-modal.tier-gold,
+.member-card.tier-gold {
+  border-color: #b89437;
+  background:
+    radial-gradient(circle at 78% 8%, rgba(255, 248, 188, .78), transparent 29%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .085) 0 1px, rgba(95, 70, 13, .04) 1px 3px),
+    linear-gradient(145deg, #f8e69b 0%, #d2b34f 52%, #856717 100%);
+  box-shadow: inset 0 0 38px rgba(93, 67, 12, .16), 0 28px 68px rgba(93, 70, 20, .25);
+}
+
+.player-card-modal.tier-gold .player-card {
+  background:
+    radial-gradient(circle at 78% 8%, rgba(255, 248, 188, .75), transparent 30%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .085) 0 1px, rgba(95, 70, 13, .04) 1px 3px),
+    linear-gradient(145deg, #f8e69b 0%, #d2b34f 52%, #856717 100%);
+}
+
+.player-card-modal.tier-legendary,
+.member-card.tier-legendary {
+  border-color: #53cbe2;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(59, 211, 235, .35), transparent 30%),
+    radial-gradient(circle at 10% 22%, rgba(120, 88, 255, .32), transparent 36%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .045) 0 1px, rgba(8, 12, 35, .08) 1px 3px),
+    linear-gradient(145deg, #243c85 0%, #4a2e7e 42%, #171735 76%, #0d1128 100%);
+  box-shadow: inset 0 0 42px rgba(20, 12, 53, .42), 0 0 0 2px rgba(238, 205, 104, .72), 0 28px 82px rgba(28, 20, 73, .42), 0 0 34px rgba(54, 205, 228, .28);
+}
+
+.player-card-modal.tier-legendary .player-card {
+  background:
+    radial-gradient(circle at 82% 8%, rgba(59, 211, 235, .35), transparent 30%),
+    radial-gradient(circle at 10% 22%, rgba(120, 88, 255, .32), transparent 36%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .045) 0 1px, rgba(8, 12, 35, .08) 1px 3px),
+    linear-gradient(145deg, #243c85 0%, #4a2e7e 42%, #171735 76%, #0d1128 100%);
+}
+
+.player-card-modal .card-photo .large-player-photo,
+.member-card-top .large-player-photo {
+  border-radius: 72px 24px 12px 12px;
+  filter: saturate(.96) contrast(1.03);
+}
+
+.player-card-modal .card-identity h2,
+.member-card > h2 {
+  letter-spacing: -.02em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .2);
+}
+
+.tier-legendary .card-identity h2,
+.member-card.tier-legendary > h2 {
+  text-shadow: 0 2px 16px rgba(45, 215, 236, .25);
+}
+
+.player-tier-badge,
+.member-tier-badge {
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    padding-block: 10px;
+  }
+
+  .site-header nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    width: 100%;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .site-header nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .player-card-modal {
+    border-radius: 30px;
+  }
+
+  .player-card-modal .player-card,
+  .member-card {
+    border-radius: 27px 27px 18px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header nav a,
+  .site-header nav button,
+  .primary {
+    transition: none;
+  }
+}

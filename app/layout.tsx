@@ -8,6 +8,7 @@ import { InstanceBrandingProvider } from "./InstanceBranding";
 import { SiteFooter } from "./components/SiteFooter";
 import "./globals.css";
 import "./branding.css";
+import "./experimental-modern-theme.css";
 
 const siteIcons: Metadata["icons"] = {
   icon: [
