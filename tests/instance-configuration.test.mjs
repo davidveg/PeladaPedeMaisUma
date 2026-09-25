@@ -413,6 +413,8 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.app-shell :is\(\.public-player-empty, \.public-player-list-title > b\) \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.advanced-statistics-page :is\([\s\S]*\.advanced-section[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.advanced-statistics-page :is\([\s\S]*\.advanced-highlight-grid article[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell :is\(\.audit-toolbar > div, \.audit-list article\) \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.admin-shell :is\([\s\S]*\.career-season-status[\s\S]*\.card-tier-settings[\s\S]*var\(--control-surface/);
   assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);
   assert.match(statistics, /\.monthly-awards-pending\{[^}]*var\(--control-surface/);
 });

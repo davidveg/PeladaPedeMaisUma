@@ -1818,6 +1818,97 @@ body {
   color: inherit;
 }
 
+/* Audit trail: rows use the configurable card surface; filters, badges and
+   expanded payloads use the configurable auxiliary-container surface. */
+.admin-shell :is(.audit-toolbar > div, .audit-list article) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell :is(.audit-icon, .audit-entity, .audit-details > div) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .audit-copy :is(p, pre, small),
+.admin-shell .audit-details > div > b,
+.admin-shell .audit-toolbar > div span {
+  color: var(--management-muted, #98a69f);
+}
+
+.admin-shell .audit-copy summary,
+.admin-shell .audit-toolbar > div b {
+  color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .audit-pagination {
+  border-color: var(--management-line, #34433b);
+}
+
+/* Career configuration reuses the same palette. Tier swatches intentionally
+   retain their bronze/silver/gold/legendary identity inside this hierarchy. */
+.admin-shell :is(
+  .career-season-status,
+  .monthly-team-settings,
+  .card-tier-settings,
+  .career-prizes section,
+  .career-match-card,
+  .career-match-summary
+) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell :is(
+  .monthly-team-grid .career-number,
+  .card-tier-settings-head > span,
+  .monthly-team-settings-head > span,
+  .career-match-body .empty
+) {
+  border-color: var(--control-line, #4a5851);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, #000 24%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell :is(
+  .career-season-status,
+  .monthly-team-settings,
+  .card-tier-settings,
+  .career-prizes section,
+  .career-match-card,
+  .career-match-summary
+) :is(h2, h3, b, label, span) {
+  color: inherit;
+}
+
+.admin-shell :is(
+  .career-season-status,
+  .monthly-team-settings,
+  .card-tier-settings,
+  .career-prizes section,
+  .career-match-card
+) :is(p, small) {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
+}
+
+.admin-shell :is(.career-config, .career-award-closing, .monthly-team-settings, .card-tier-settings) .help-tip > button {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .card-tier-settings.disabled .card-tier-settings-head > span {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, #000 24%);
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
+}
+
+.admin-shell .career-match-body {
+  border-color: var(--management-line, #34433b);
+}
+
 /* Finance: use the product work-area hierarchy instead of the former light slabs. */
 .finance-page .finance-main {
   display: grid;
