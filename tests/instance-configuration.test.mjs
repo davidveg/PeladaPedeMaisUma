@@ -37,6 +37,8 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.managementMutedColor, "#98A69F");
   assert.equal(config.managementButtonColor, "#D3EB7A");
   assert.equal(config.managementButtonTextColor, "#172018");
+  assert.equal(config.controlSurfaceColor, "#202B26");
+  assert.equal(config.controlTextColor, "#F2F5F3");
   assert.equal(config.publicLogoSize, 44);
   assert.equal(config.adminLogoSize, 54);
   assert.equal(config.showPublicBrandText, true);
@@ -70,6 +72,8 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     managementMutedColor: "#9CA3AF",
     managementButtonColor: "#38BDF8",
     managementButtonTextColor: "#082F49",
+    controlSurfaceColor: "#253147",
+    controlTextColor: "#F8FAFC",
     publicLogoSize: 58,
     adminLogoSize: 72,
     showPublicBrandText: false,
@@ -100,6 +104,8 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.managementMutedColor, "#9CA3AF");
   assert.equal(result.config.managementButtonColor, "#38BDF8");
   assert.equal(result.config.managementButtonTextColor, "#082F49");
+  assert.equal(result.config.controlSurfaceColor, "#253147");
+  assert.equal(result.config.controlTextColor, "#F8FAFC");
   assert.equal(result.config.publicLogoSize, 58);
   assert.equal(result.config.adminLogoSize, 72);
   assert.equal(result.config.showPublicBrandText, false);
@@ -159,6 +165,7 @@ test("rejeita cores, horários e logotipos externos inseguros", () => {
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, adminSidebarColor: "roxo" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, managementBackgroundColor: "escuro" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, managementButtonColor: "azul" }).error, /hexadecimal/);
+  assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, controlSurfaceColor: "cinza" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, defaultMatchTime: "25:00" }).error, /HH:MM/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, logoUrl: "http://inseguro.example/logo.png" }).error, /logotipo/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, shareImageUrl: "http://inseguro.example/social.png" }).error, /compartilhamento/);
@@ -343,6 +350,23 @@ test("migração adiciona cores independentes para os botões da gestão", async
   }
 });
 
+test("migração adiciona a paleta dos blocos e controles", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-control-surfaces-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0051_control_surface_palette.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT control_surface_color,control_text_color FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, {
+      control_surface_color: "#202B26",
+      control_text_color: "#F2F5F3",
+    });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("menu administrativo aplica a cor configurada com contraste derivado", async () => {
   const [branding, styles, admin] = await Promise.all([
     readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
@@ -355,10 +379,26 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(branding, /--management-surface.*managementSurfaceColor/);
   assert.match(branding, /--management-button.*managementButtonColor/);
   assert.match(branding, /--management-button-text.*managementButtonTextColor/);
+  assert.match(branding, /--control-surface.*controlSurfaceColor/);
+  assert.match(branding, /--control-text.*controlTextColor/);
   assert.match(styles, /background:\s*var\(--admin-sidebar/);
   assert.match(admin, /Menu lateral administrativo/);
   assert.match(admin, /Fundo da área de gestão/);
   assert.match(admin, /Botões principais da gestão/);
+  assert.match(admin, /Blocos e controles/);
+  assert.match(admin, /Texto dos blocos e controles/);
+});
+
+test("tema moderno usa a paleta configurável nos blocos e no financeiro", async () => {
+  const [theme, statistics] = await Promise.all([
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/estatisticas/statistics.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(theme, /\.admin-shell :is\([\s\S]*\.rating-slider[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.finance-page \.finance-head[\s\S]*background:\s*transparent/);
+  assert.match(theme, /\.finance-page :is\([\s\S]*\.finance-dashboard-actions[\s\S]*var\(--control-surface/);
+  assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);
+  assert.match(statistics, /\.monthly-awards-pending\{[^}]*var\(--control-surface/);
 });
 
 test("migração adiciona a apresentação dos logotipos sem ocultar a identidade existente", async () => {

@@ -1438,3 +1438,183 @@ body {
   background: color-mix(in srgb, var(--management-button, #d3eb7a) 84%, white);
   color: var(--management-button-text, #172018);
 }
+
+/* Configurable functional surfaces: editors, switches, filters and empty states. */
+.admin-shell :is(
+  .rating-slider,
+  .photo-editor,
+  .weight-total,
+  .historical-learning-setting,
+  .instance-feature-toggle
+) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell :is(
+  .rating-slider,
+  .photo-editor,
+  .weight-total,
+  .historical-learning-setting,
+  .instance-feature-toggle
+) :is(b, h2, label, output, span) {
+  color: inherit;
+}
+
+.admin-shell .historical-learning-setting.enabled {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, #2b8a58 12%);
+}
+
+.admin-shell .rating-slider > small,
+.admin-shell .photo-editor small,
+.admin-shell .historical-learning-setting :is(p, small),
+.admin-shell .instance-feature-toggle small {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.admin-shell .weight-number {
+  border-color: var(--control-line, #4a5851);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, #000 22%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .weight-number input {
+  color: inherit;
+}
+
+/* Finance: use the product work-area hierarchy instead of the former light slabs. */
+.finance-page .finance-main {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+}
+
+.finance-page .finance-head {
+  align-items: center;
+  margin: 0;
+  padding: 6px 0 2px;
+  border: 0;
+  background: transparent;
+}
+
+.finance-page .finance-head h1 {
+  max-width: 780px;
+  margin: 8px 0 9px;
+  color: var(--ink, #f2f5f3);
+  font-size: clamp(2.5rem, 4vw, 3.75rem);
+  line-height: .93;
+  letter-spacing: -.045em;
+}
+
+.finance-page .finance-head p,
+.finance-page .finance-card-head p {
+  color: var(--muted, #98a69f);
+}
+
+.finance-page :is(
+  .competence-picker,
+  .finance-dashboard-actions,
+  .finance-player-status span,
+  .finance-empty,
+  .finance-loading,
+  .finance-monthly-generation,
+  .finance-player-setting.heading
+) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.finance-page .finance-tabs {
+  gap: 7px;
+  margin: 0;
+  padding: 7px;
+  border: 1px solid var(--control-line, #4a5851);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 82%, transparent);
+}
+
+.finance-page .finance-tabs button {
+  color: var(--muted, #98a69f);
+}
+
+.finance-page .finance-tabs button.active {
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: inset 0 0 0 1px var(--control-line, #4a5851), 0 8px 18px rgba(0, 0, 0, .16);
+}
+
+.finance-page .finance-stack {
+  gap: 22px;
+}
+
+.finance-page .finance-dashboard-actions {
+  margin: 0;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--control-text, #f2f5f3) 4%, transparent);
+}
+
+.finance-page :is(
+  .finance-form-grid input,
+  .finance-form-grid select,
+  .finance-form-grid textarea,
+  .finance-dialog input,
+  .finance-dialog select,
+  .finance-dialog textarea,
+  .finance-filters input,
+  .finance-filters select,
+  .finance-player-setting > input,
+  .finance-form-grid .localized-month-input,
+  .finance-form-grid .localized-date-input,
+  .finance-dialog .localized-date-input
+) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.finance-page .finance-form-grid label,
+.finance-page .finance-dialog label,
+.finance-page .competence-picker label {
+  color: var(--muted, #98a69f);
+}
+
+.finance-page :is(.finance-table th, .finance-table td, .finance-player-setting, .finance-compact-list li) {
+  border-color: var(--line, #34433b);
+}
+
+.finance-page :is(.finance-row-actions button, .finance-reverse) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.finance-page .finance-row-actions button.danger,
+.finance-page .finance-reverse {
+  border-color: rgba(226, 107, 87, .32);
+  color: #f19b8c;
+}
+
+.finance-page .primary {
+  border-color: var(--lime, #d3eb7a);
+  background: var(--lime, #d3eb7a);
+  color: #172018;
+}
+
+@media (max-width: 760px) {
+  .finance-page .finance-main {
+    gap: 17px;
+  }
+
+  .finance-page .finance-head {
+    align-items: stretch;
+  }
+
+  .finance-page .finance-head h1 {
+    font-size: clamp(2.35rem, 12vw, 3.5rem);
+  }
+
+  .finance-page .finance-tabs {
+    margin-inline: 0;
+    border-radius: 14px;
+  }
+}

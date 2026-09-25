@@ -23,6 +23,8 @@ export type InstanceConfiguration = {
   managementMutedColor: string;
   managementButtonColor: string;
   managementButtonTextColor: string;
+  controlSurfaceColor: string;
+  controlTextColor: string;
   teamBlueColor: string;
   teamYellowColor: string;
   teamBlueName: string;
@@ -74,6 +76,8 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   managementMutedColor: "#98A69F",
   managementButtonColor: "#D3EB7A",
   managementButtonTextColor: "#172018",
+  controlSurfaceColor: "#202B26",
+  controlTextColor: "#F2F5F3",
   teamBlueColor: "#1768E5",
   teamYellowColor: "#F4BF20",
   teamBlueName: "Azul",
@@ -132,6 +136,8 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     managementMutedColor: value("management_muted_color", DEFAULT_INSTANCE_CONFIGURATION.managementMutedColor),
     managementButtonColor: value("management_button_color", DEFAULT_INSTANCE_CONFIGURATION.managementButtonColor),
     managementButtonTextColor: value("management_button_text_color", DEFAULT_INSTANCE_CONFIGURATION.managementButtonTextColor),
+    controlSurfaceColor: value("control_surface_color", DEFAULT_INSTANCE_CONFIGURATION.controlSurfaceColor),
+    controlTextColor: value("control_text_color", DEFAULT_INSTANCE_CONFIGURATION.controlTextColor),
     teamBlueColor: value("team_blue_color", DEFAULT_INSTANCE_CONFIGURATION.teamBlueColor),
     teamYellowColor: value("team_yellow_color", DEFAULT_INSTANCE_CONFIGURATION.teamYellowColor),
     teamBlueName: value("team_blue_name", DEFAULT_INSTANCE_CONFIGURATION.teamBlueName),
@@ -193,6 +199,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     managementMutedColor: color("managementMutedColor", DEFAULT_INSTANCE_CONFIGURATION.managementMutedColor),
     managementButtonColor: color("managementButtonColor", DEFAULT_INSTANCE_CONFIGURATION.managementButtonColor),
     managementButtonTextColor: color("managementButtonTextColor", DEFAULT_INSTANCE_CONFIGURATION.managementButtonTextColor),
+    controlSurfaceColor: color("controlSurfaceColor", DEFAULT_INSTANCE_CONFIGURATION.controlSurfaceColor),
+    controlTextColor: color("controlTextColor", DEFAULT_INSTANCE_CONFIGURATION.controlTextColor),
     teamBlueColor: color("teamBlueColor", DEFAULT_INSTANCE_CONFIGURATION.teamBlueColor),
     teamYellowColor: color("teamYellowColor", DEFAULT_INSTANCE_CONFIGURATION.teamYellowColor),
     teamBlueName: text("teamBlueName", 40, DEFAULT_INSTANCE_CONFIGURATION.teamBlueName),
@@ -230,6 +238,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   const colorKeys = [
     "primaryColor", "adminSidebarColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
     "managementBackgroundColor", "managementSurfaceColor", "managementTextColor", "managementMutedColor", "managementButtonColor", "managementButtonTextColor",
+    "controlSurfaceColor", "controlTextColor",
     "teamBlueColor", "teamYellowColor", "appPrimaryColor", "appSecondaryColor", "appBackgroundColor", "appTextColor",
   ] as const;
   if (colorKeys.some((key) => !colorPattern.test(config[key]))) return { error: "As cores devem usar o formato hexadecimal #RRGGBB." };
@@ -265,6 +274,7 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "public_logo_size", "admin_logo_size", "show_public_brand_text", "show_admin_brand_text",
   "primary_color", "admin_sidebar_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
   "management_background_color", "management_surface_color", "management_text_color", "management_muted_color", "management_button_color", "management_button_text_color",
+  "control_surface_color", "control_text_color",
   "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
@@ -278,7 +288,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.publicLogoSize, config.adminLogoSize, Number(config.showPublicBrandText), Number(config.showAdminBrandText),
     config.primaryColor, config.adminSidebarColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
     config.mutedColor, config.managementBackgroundColor, config.managementSurfaceColor, config.managementTextColor, config.managementMutedColor,
-    config.managementButtonColor, config.managementButtonTextColor,
+    config.managementButtonColor, config.managementButtonTextColor, config.controlSurfaceColor, config.controlTextColor,
     config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
