@@ -793,3 +793,597 @@ body {
     transition: none;
   }
 }
+
+/* Administrative workspace: the same football-management language, with all
+   instance branding and existing administration flows preserved. */
+.admin-loading {
+  background: #0f1612;
+  color: #98a69f;
+}
+
+.login-page {
+  background: #0f1612;
+  color: #eef2ef;
+}
+
+.login-copy {
+  border-right: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(circle at 78% 90%, rgba(207, 232, 115, .1), transparent 25rem),
+    linear-gradient(145deg, #20392f, #12271f);
+}
+
+.login-card {
+  padding: 34px;
+  border: 1px solid #34433b;
+  border-radius: 22px;
+  background: #18211d;
+  box-shadow: 0 22px 65px rgba(0, 0, 0, .24);
+}
+
+.login-card h2 {
+  color: #f6f8f6;
+}
+
+.login-card > p,
+.login-card > a,
+.login-card label small {
+  color: #98a69f;
+}
+
+.login-card .ball {
+  background: #26362e;
+}
+
+.login-card input {
+  border-color: #3b4a42;
+  background: #111a15;
+  color: #eef2ef;
+  color-scheme: dark;
+}
+
+.login-card .forgot {
+  color: #cfe873;
+}
+
+.admin-shell {
+  --ink: #f2f5f3;
+  --muted: #98a69f;
+  --line: #34433b;
+  --cream: #0f1612;
+  --white: #18211d;
+  --green: #cfe873;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(116, 151, 132, .09), transparent 32rem),
+    #0f1612;
+  color: var(--ink);
+}
+
+.admin-shell aside {
+  position: fixed;
+  z-index: 45;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  width: 232px;
+  height: 100vh;
+  padding: 24px 16px 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 9%, transparent);
+  background:
+    radial-gradient(circle at 18% 0, color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 14%, transparent), transparent 32%),
+    color-mix(in srgb, var(--admin-sidebar, #133f31) 84%, #101813);
+  box-shadow: 14px 0 36px rgba(0, 0, 0, .16);
+}
+
+.admin-shell .admin-brand {
+  min-height: 66px;
+  padding: 0 8px 20px;
+}
+
+.admin-shell aside > p {
+  flex: 0 0 auto;
+  margin: 16px 10px 6px;
+  padding: 0;
+  color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 58%, transparent);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.65px;
+}
+
+.admin-shell aside > button {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  margin: 2px 0;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 76%, transparent);
+  font-size: 11px;
+  transition: transform .18s ease, color .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.admin-shell aside > button:hover {
+  border-color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 10%, transparent);
+  background: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 6%, transparent);
+  color: var(--admin-sidebar-contrast, #fff);
+  transform: translateX(2px);
+}
+
+.admin-shell aside > button.on {
+  border-color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 78%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 20%, transparent), color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 8%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 15%, transparent), 0 9px 22px rgba(3, 13, 8, .16);
+  color: var(--admin-sidebar-contrast, #fff);
+}
+
+.admin-nav-icon {
+  display: grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 68%, transparent);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.admin-shell aside > button.on .admin-nav-icon {
+  color: #e5f58f;
+}
+
+.admin-shell .admin-user {
+  margin-top: auto;
+  padding: 16px 4px 0;
+  border-top-color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 14%, transparent);
+}
+
+.admin-shell .admin-user > span,
+.admin-shell .admin-user-avatar,
+.admin-shell .mobile-profile {
+  background: color-mix(in srgb, var(--admin-sidebar, #133f31) 45%, #e2efbd);
+  color: #fff;
+}
+
+.admin-topbar {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  right: 0;
+  left: 232px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76px;
+  padding: 0 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(16, 23, 19, .94);
+  backdrop-filter: blur(16px);
+}
+
+.admin-topbar > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-topbar small {
+  color: #8c9b94;
+  font-size: 9px;
+}
+
+.admin-topbar strong {
+  color: #f7f9f7;
+  font-size: 13px;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.admin-topbar-actions > a,
+.admin-topbar-actions > button {
+  display: grid;
+  min-width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .035);
+  color: #e7ece9;
+  font-size: 10px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.admin-topbar-actions > a:hover,
+.admin-topbar-actions > button:hover {
+  border-color: rgba(207, 232, 115, .3);
+  background: rgba(207, 232, 115, .08);
+}
+
+.admin-topbar-actions > .mobile-profile {
+  display: grid;
+  width: 40px;
+  padding: 0;
+  border-color: transparent;
+  background: #31483e;
+}
+
+.admin-main,
+.admin-main:has(.player-list-stack) {
+  width: auto;
+  max-width: 1560px;
+  min-height: 100vh;
+  margin: 0 0 0 232px;
+  padding: 110px clamp(22px, 3.2vw, 46px) 72px;
+  overflow-x: hidden;
+}
+
+.admin-top {
+  align-items: flex-end;
+  margin-bottom: 28px;
+}
+
+.admin-top small {
+  color: #91a69a;
+}
+
+.admin-top h1 {
+  margin: 7px 0 0;
+  color: #f6f8f6;
+  font-size: clamp(32px, 3vw, 46px);
+  line-height: 1;
+}
+
+.admin-shell :is(.admin-card, .stat, .match-admin-toolbar, .match-admin-card, .editor, .profile-modal, .career-award-closing, .moderator-permission-grid article, .release-admin-help) {
+  border-color: #34433b;
+  background: #18211d;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .13);
+  color: #eef2ef;
+}
+
+.admin-shell :is(.admin-card, .stat, .match-admin-toolbar, .match-admin-card, .editor, .profile-modal) h2,
+.admin-shell :is(.admin-card, .stat, .match-admin-toolbar, .match-admin-card, .editor, .profile-modal) h3 {
+  color: #f5f7f5;
+}
+
+.admin-shell .stat small,
+.admin-shell .stat span,
+.admin-shell p,
+.admin-shell small {
+  color: #98a69f;
+}
+
+.admin-shell .stat b,
+.admin-shell .overview-metric b,
+.admin-shell .match-admin-toolbar > div b {
+  color: #d7ed7c;
+}
+
+.admin-shell :is(.overview-metric, .profile-info > span, .match-attendance-summary span, .release-admin-help, .moderator-permission-grid article) {
+  border-color: #34433b;
+  background: #202b26;
+  color: #eef2ef;
+}
+
+.admin-shell .activity {
+  border-color: #2d3a34;
+}
+
+.admin-shell .activity > span {
+  background: #202b26;
+}
+
+.admin-shell :is(input:not([type="range"]), select, textarea) {
+  border-color: #3b4a42;
+  background: #111a15;
+  color: #eef2ef;
+  color-scheme: dark;
+}
+
+.admin-shell :is(input, select, textarea)::placeholder {
+  color: #74827b;
+}
+
+.admin-shell :is(input, select, textarea):focus {
+  border-color: #819b8d;
+  box-shadow: 0 0 0 3px rgba(207, 232, 115, .09);
+}
+
+.admin-shell .tr,
+.admin-shell .tr.th {
+  border-color: #2c3933;
+  background: #18211d;
+  color: #e9eeeb;
+}
+
+.admin-shell .tr.th {
+  background: #141c18;
+  color: #91a098;
+}
+
+.admin-shell button.tr:hover,
+.admin-shell button.tr:focus-visible,
+.admin-shell .match-admin-card:hover {
+  background: #202d27;
+}
+
+.admin-shell .match-admin-card.selected {
+  border-color: #bdd46c;
+  box-shadow: 0 0 0 3px rgba(207, 232, 115, .09);
+}
+
+.admin-shell :is(.match-list-filter, .finance-player-setting.heading, .participation-editor, .saved-team-editor, .participation-summary.legacy) {
+  border-color: #34433b;
+  background: #17221d;
+  color: #eef2ef;
+}
+
+.admin-shell :is(.ghost, .attendance-present, .attendance-absent, .manual-participant button) {
+  border-color: #415148;
+  background: #202b26;
+  color: #e7ede9;
+}
+
+.admin-shell .primary {
+  border-color: #d3eb7a;
+  background: #d3eb7a;
+  color: #172018;
+}
+
+.admin-shell .danger {
+  border: 1px solid rgba(226, 107, 87, .18);
+  background: rgba(226, 107, 87, .1);
+  color: #f19b8c;
+}
+
+.admin-shell .status {
+  background: #242e29;
+  color: #a8b3ad;
+}
+
+.admin-shell .status.active,
+.admin-shell .match-state {
+  background: rgba(93, 190, 128, .13);
+  color: #87d7a5;
+}
+
+.admin-shell .modal-back {
+  background: rgba(5, 12, 8, .78);
+  backdrop-filter: blur(9px);
+}
+
+.admin-shell + footer {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .admin-shell aside {
+    position: fixed;
+    inset: 58px 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    max-width: 100vw;
+    height: 68px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    background: color-mix(in srgb, var(--admin-sidebar, #133f31) 84%, #101813);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
+    scrollbar-width: none;
+  }
+
+  .admin-shell aside::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-shell .admin-brand {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: 0 10px 0 0;
+  }
+
+  .admin-shell .admin-brand .brand-copy,
+  .admin-shell aside > p,
+  .admin-shell .admin-user {
+    display: none;
+  }
+
+  .admin-shell .admin-brand .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .admin-shell aside > button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 8px 11px;
+    white-space: nowrap;
+  }
+
+  .admin-topbar {
+    right: 0;
+    left: 0;
+    height: 58px;
+    padding: 0 14px;
+  }
+
+  .admin-topbar-actions > a,
+  .admin-topbar-actions > button {
+    min-width: 36px;
+    height: 36px;
+    padding-inline: 9px;
+  }
+
+  .admin-main,
+  .admin-main:has(.player-list-stack) {
+    width: 100%;
+    max-width: 100vw;
+    margin-left: 0;
+    padding: 158px 14px 60px;
+  }
+
+  .admin-top {
+    margin-bottom: 22px;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-topbar .admin-public-link {
+    width: 36px;
+    overflow: hidden;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .admin-topbar .admin-public-link::after {
+    content: "↗";
+    font-size: 14px;
+  }
+
+  .admin-shell aside > button {
+    flex-direction: column;
+    gap: 2px;
+    min-width: 64px;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+
+  .admin-nav-icon {
+    height: 19px;
+    font-size: 14px;
+  }
+
+  .admin-topbar > div:first-child strong {
+    display: block;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Final palette layer: deliberately follows every structural admin rule. */
+.admin-loading,
+.login-page {
+  background: var(--management-background, #0f1612);
+  color: var(--management-text, #f2f5f3);
+}
+
+.login-card,
+.admin-shell :is(.admin-card, .stat, .match-admin-toolbar, .match-admin-card, .editor, .profile-modal, .career-award-closing, .moderator-permission-grid article, .release-admin-help) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell {
+  --ink: var(--management-text, #f2f5f3);
+  --muted: var(--management-muted, #98a69f);
+  --line: var(--management-line, #34433b);
+  --cream: var(--management-background, #0f1612);
+  --white: var(--management-surface, #18211d);
+  --green: var(--lime, #d9f36b);
+  background:
+    radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--management-text, #f2f5f3) 5%, transparent), transparent 32rem),
+    var(--management-background, #0f1612);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-topbar {
+  border-color: var(--management-line, #34433b);
+  background: color-mix(in srgb, var(--management-background, #0f1612) 94%, transparent);
+}
+
+.admin-topbar small,
+.admin-top small,
+.admin-shell .stat small,
+.admin-shell .stat span,
+.admin-shell p,
+.admin-shell small {
+  color: var(--management-muted, #98a69f);
+}
+
+.admin-topbar strong,
+.admin-top h1,
+.admin-shell :is(.admin-card, .stat, .match-admin-toolbar, .match-admin-card, .editor, .profile-modal) :is(h2, h3) {
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell :is(.overview-metric, .profile-info > span, .match-attendance-summary span, .release-admin-help, .moderator-permission-grid article, .match-list-filter, .finance-player-setting.heading, .participation-editor, .saved-team-editor, .participation-summary.legacy) {
+  border-color: var(--management-line, #34433b);
+  background: color-mix(in srgb, var(--management-surface, #18211d) 86%, var(--management-text, #f2f5f3) 4%);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell :is(input:not([type="range"]), select, textarea) {
+  border-color: var(--management-line, #34433b);
+  background: color-mix(in srgb, var(--management-background, #0f1612) 86%, #000 14%);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .tr,
+.admin-shell .tr.th {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .tr.th {
+  background: color-mix(in srgb, var(--management-background, #0f1612) 72%, var(--management-surface, #18211d));
+  color: var(--management-muted, #98a69f);
+}
+
+.admin-shell .brand-presentation-grid > section,
+.admin-shell .instance-settings fieldset {
+  border-color: var(--management-line, #34433b);
+  background: color-mix(in srgb, var(--management-surface, #18211d) 88%, var(--management-text, #f2f5f3) 2%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--management-text, #f2f5f3) 4%, transparent);
+}
+
+.admin-shell .brand-presentation-section-title b,
+.admin-shell .brand-size-control b,
+.admin-shell .instance-settings :is(legend, label) {
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .brand-presentation-section-title small,
+.admin-shell .brand-text-toggle,
+.admin-shell .brand-size-control,
+.admin-shell .brand-size-control small,
+.admin-shell .instance-settings fieldset > p {
+  color: var(--management-muted, #98a69f);
+}
+
+.admin-shell .brand-header-preview {
+  border-color: color-mix(in srgb, var(--management-text, #f2f5f3) 14%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--management-text, #f2f5f3) 4%, transparent),
+    0 14px 30px color-mix(in srgb, var(--management-background, #0f1612) 35%, transparent);
+}
+
+.admin-shell :is(.brand-presentation-panel, .instance-settings) {
+  overflow: hidden;
+}
+
+.admin-shell .instance-color-grid label {
+  padding: 12px;
+  border: 1px solid var(--management-line, #34433b);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--management-background, #0f1612) 40%, transparent);
+}

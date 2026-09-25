@@ -31,6 +31,10 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.shareImageUrl, null);
   assert.equal(config.faviconUrl, null);
   assert.equal(config.adminSidebarColor, "#133F31");
+  assert.equal(config.managementBackgroundColor, "#0F1612");
+  assert.equal(config.managementSurfaceColor, "#18211D");
+  assert.equal(config.managementTextColor, "#F2F5F3");
+  assert.equal(config.managementMutedColor, "#98A69F");
   assert.equal(config.publicLogoSize, 44);
   assert.equal(config.adminLogoSize, 54);
   assert.equal(config.showPublicBrandText, true);
@@ -58,6 +62,10 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     appName: "FDQ",
     primaryColor: "#123ABC",
     adminSidebarColor: "#440052",
+    managementBackgroundColor: "#111827",
+    managementSurfaceColor: "#1F2937",
+    managementTextColor: "#F9FAFB",
+    managementMutedColor: "#9CA3AF",
     publicLogoSize: 58,
     adminLogoSize: 72,
     showPublicBrandText: false,
@@ -82,6 +90,10 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
   assert.equal(result.config.adminSidebarColor, "#440052");
+  assert.equal(result.config.managementBackgroundColor, "#111827");
+  assert.equal(result.config.managementSurfaceColor, "#1F2937");
+  assert.equal(result.config.managementTextColor, "#F9FAFB");
+  assert.equal(result.config.managementMutedColor, "#9CA3AF");
   assert.equal(result.config.publicLogoSize, 58);
   assert.equal(result.config.adminLogoSize, 72);
   assert.equal(result.config.showPublicBrandText, false);
@@ -139,6 +151,7 @@ test("migração mantém o módulo financeiro ativo nas instalações existentes
 test("rejeita cores, horários e logotipos externos inseguros", () => {
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, primaryColor: "verde" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, adminSidebarColor: "roxo" }).error, /hexadecimal/);
+  assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, managementBackgroundColor: "escuro" }).error, /hexadecimal/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, defaultMatchTime: "25:00" }).error, /HH:MM/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, logoUrl: "http://inseguro.example/logo.png" }).error, /logotipo/);
   assert.match(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, shareImageUrl: "http://inseguro.example/social.png" }).error, /compartilhamento/);
@@ -285,6 +298,27 @@ test("migração adiciona a cor do menu administrativo sem alterar a identidade 
   }
 });
 
+test("migração adiciona a paleta da área de gestão sem alterar a identidade existente", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-management-palette-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE instance_configuration SET site_name='Peladix'").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0049_management_palette.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT site_name,management_background_color,management_surface_color,management_text_color,management_muted_color FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, {
+      site_name: "Peladix",
+      management_background_color: "#0F1612",
+      management_surface_color: "#18211D",
+      management_text_color: "#F2F5F3",
+      management_muted_color: "#98A69F",
+    });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("menu administrativo aplica a cor configurada com contraste derivado", async () => {
   const [branding, styles, admin] = await Promise.all([
     readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
@@ -293,8 +327,11 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   ]);
   assert.match(branding, /--admin-sidebar.*adminSidebarColor/);
   assert.match(branding, /--admin-sidebar-contrast.*contrastTextColor/);
+  assert.match(branding, /--management-background.*managementBackgroundColor/);
+  assert.match(branding, /--management-surface.*managementSurfaceColor/);
   assert.match(styles, /background:\s*var\(--admin-sidebar/);
   assert.match(admin, /Menu lateral administrativo/);
+  assert.match(admin, /Fundo da área de gestão/);
 });
 
 test("migração adiciona a apresentação dos logotipos sem ocultar a identidade existente", async () => {
