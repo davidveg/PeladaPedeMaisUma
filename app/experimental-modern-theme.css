@@ -1849,3 +1849,54 @@ body {
 .app-shell .primary:hover {
   filter: brightness(.96);
 }
+
+/* The round center uses a semantic header, but it is not an application
+   header. Reset the legacy global header rule so the card palette can flow. */
+.member-page .round-center > header {
+  position: static;
+  z-index: auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* The shared footer sits outside each page root. Select it from the page
+   present in the body so authenticated workspaces reuse the saved palette. */
+body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .site-footer {
+  max-width: none;
+  margin-left: 232px;
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-muted, #98a69f);
+}
+
+body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .footer-signature b {
+  color: var(--management-text, #f2f5f3);
+}
+
+body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .app-download-badge {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: none;
+}
+
+body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .app-download-badge :is(small, i) {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 70%, transparent);
+}
+
+body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .app-download-badge .app-platform-icon {
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+@media (max-width: 900px) {
+  body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .site-footer {
+    margin-left: 0;
+  }
+}

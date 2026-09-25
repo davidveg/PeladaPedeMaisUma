@@ -406,6 +406,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center-grid > article[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.primary[\s\S]*var\(--management-button/);
   assert.match(theme, /\.finance-page \.primary \{[\s\S]*var\(--management-button-text/);
+  assert.match(theme, /\.member-page \.round-center > header \{[\s\S]*background:\s*transparent/);
+  assert.match(theme, /body:has\(:is\([\s\S]*\.site-footer \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.app-download-badge \{[\s\S]*var\(--control-surface/);
   assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);
   assert.match(statistics, /\.monthly-awards-pending\{[^}]*var\(--control-surface/);
 });
