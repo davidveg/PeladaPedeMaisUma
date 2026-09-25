@@ -383,10 +383,14 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(branding, /--control-text.*controlTextColor/);
   assert.match(styles, /background:\s*var\(--admin-sidebar/);
   assert.match(admin, /Menu lateral administrativo/);
-  assert.match(admin, /Fundo da área de gestão/);
+  assert.match(admin, /Fundo da gestão e do site atual/);
   assert.match(admin, /Botões principais da gestão/);
-  assert.match(admin, /Blocos e controles/);
-  assert.match(admin, /Texto dos blocos e controles/);
+  assert.match(admin, /Destaques do tema clássico/);
+  assert.match(admin, /Cartões da gestão e do site atual/);
+  assert.match(admin, /Botões principais da gestão e do site/);
+  assert.match(admin, /Texto dos botões da gestão e do site/);
+  assert.match(admin, /Containers auxiliares e campos/);
+  assert.match(admin, /Texto dos containers auxiliares/);
 });
 
 test("tema moderno usa a paleta configurável nos blocos e no financeiro", async () => {
@@ -397,6 +401,11 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-shell :is\([\s\S]*\.rating-slider[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.finance-page \.finance-head[\s\S]*background:\s*transparent/);
   assert.match(theme, /\.finance-page :is\([\s\S]*\.finance-dashboard-actions[\s\S]*var\(--control-surface/);
+  assert.match(theme, /Public functional surfaces reuse the palette/);
+  assert.match(theme, /\.member-page :is\([\s\S]*\.round-center[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.member-page :is\([\s\S]*\.round-center-grid > article[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.member-page \.primary[\s\S]*var\(--management-button/);
+  assert.match(theme, /\.finance-page \.primary \{[\s\S]*var\(--management-button-text/);
   assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);
   assert.match(statistics, /\.monthly-awards-pending\{[^}]*var\(--control-surface/);
 });

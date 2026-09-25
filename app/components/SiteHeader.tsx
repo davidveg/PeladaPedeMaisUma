@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
+import { NotificationBell } from "./NotificationBell";
 
 type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
 
@@ -32,12 +33,13 @@ export function SiteHeader({
 }) {
   const { config } = useInstanceBranding();
   const [viewerEmail, setViewerEmail] = useState("");
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigation = useRef<HTMLElement>(null);
   const activeLink = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     const menu = navigation.current;
     const item = activeLink.current;
-    if (!menu || !item) return;
+    if (!menu || !item || window.innerWidth > 900) return;
 
     // Centraliza somente o eixo horizontal para não esconder o início das
     // páginas sob o cabeçalho fixo.
@@ -50,6 +52,27 @@ export function SiteHeader({
       .then(payload => setViewerEmail(String(payload.member?.email || "")))
       .catch(() => undefined);
     return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    let active = true;
+    const refreshUnread = async () => {
+      try {
+        const response = await fetch("/api/notifications?pageSize=10", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (active) setUnreadNotifications(Math.max(0, Number(payload.unread) || 0));
+      } catch {
+        // Sem sessão, o sino continua disponível sem contador.
+      }
+    };
+    void refreshUnread();
+    const timer = window.setInterval(refreshUnread, 60000);
+    window.addEventListener("focus", refreshUnread);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshUnread);
+    };
   }, []);
   const currentSection = active === "separations" || active === "home" ? "matches" : active;
   const viewerInitials = useMemo(() => {
@@ -91,7 +114,7 @@ export function SiteHeader({
       <div className="site-topbar">
         <div><small>Centro de gestão</small><strong>{config.siteName}</strong></div>
         <div className="site-topbar-actions">
-          <a href="/notificacoes" aria-label="Abrir notificações" onClick={(event) => navigateWithDocument(event, "/notificacoes")}>♢</a>
+          <NotificationBell unread={unreadNotifications} onClick={(event) => navigateWithDocument(event, "/notificacoes")}/>
           <a className="site-viewer" href="/conta" aria-label="Abrir minha conta" onClick={(event) => navigateWithDocument(event, "/conta")}>{viewerInitials}</a>
         </div>
       </div>

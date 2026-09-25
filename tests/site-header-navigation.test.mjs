@@ -54,19 +54,44 @@ test("notificações ficam somente no menu compartilhado e não se repetem no ca
   assert.doesNotMatch(matches, /href="\/notificacoes"/);
 });
 
-test("painel administrativo exibe sino com contador apenas para notificações não lidas", async () => {
-  const [admin, theme] = await Promise.all([
+test("site e painel administrativo exibem sino com contador apenas para notificações não lidas", async () => {
+  const [admin, header, bell, theme] = await Promise.all([
     readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/NotificationBell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
   ]);
 
   assert.match(admin, /fetch\('\/api\/notifications\?pageSize=10'/);
   assert.match(admin, /payload\.unread/);
-  assert.match(admin, /link\.dataset\.unread=label/);
-  assert.match(admin, /99\+/);
+  assert.match(header, /fetch\("\/api\/notifications\?pageSize=10"/);
+  assert.match(header, /<NotificationBell unread=\{unreadNotifications\}/);
+  assert.match(bell, /count > 99 \? "99\+"/);
+  assert.match(bell, /className="notification-bell-icon"/);
+  assert.match(bell, /data-unread=\{label\}/);
   assert.match(theme, /a\[href="\/notificacoes"\]::before/);
-  assert.match(theme, /data-unread.*:not\(\[data-unread="0"\]\)::after/);
+  assert.match(theme, /notification-bell-link\[data-unread\]:not\(\[data-unread="0"\]\)::after/);
   assert.match(theme, /background:\s*#dc352f/);
+});
+
+test("menu lateral evita overflow no desktop e centraliza o item somente no mobile", async () => {
+  const [header, theme] = await Promise.all([
+    readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(header, /window\.innerWidth > 900/);
+  assert.match(theme, /\.site-sidebar nav \{[\s\S]*?overflow-x:\s*hidden/);
+  assert.match(theme, /\.site-sidebar nav a:hover \{[\s\S]*?transform:\s*none/);
+  assert.match(theme, /@media \(max-width: 900px\)[\s\S]*?\.site-sidebar nav \{[\s\S]*?overflow-x:\s*auto/);
+});
+
+test("acesso do jogador usa a mesma superfície escura do layout atual", async () => {
+  const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
+
+  assert.match(theme, /\.member-access \{[\s\S]*?#0f1612/);
+  assert.match(theme, /\.member-access-card \{[\s\S]*?background:\s*#18211d/);
+  assert.match(theme, /\.member-access-tabs button\.on \{[\s\S]*?color:\s*#d3eb7a/);
 });
 
 test("a apresentação das estatísticas avançadas não herda o cabeçalho fixo global", async () => {

@@ -62,6 +62,7 @@ body {
     radial-gradient(circle at 24% 0, rgba(124, 166, 145, .22), transparent 34%),
     linear-gradient(180deg, #263c33 0%, #1b3028 48%, #172a23 100%);
   box-shadow: 14px 0 36px rgba(0, 0, 0, .14);
+  overflow-x: hidden;
   pointer-events: auto;
 }
 
@@ -89,6 +90,7 @@ body {
   justify-content: flex-start;
   gap: 4px;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -110,7 +112,7 @@ body {
   border-color: rgba(255, 255, 255, .08);
   background: rgba(255, 255, 255, .055);
   color: #fff;
-  transform: translateX(2px);
+  transform: none;
 }
 
 .site-sidebar nav a.active {
@@ -252,22 +254,59 @@ body {
   font-size: 11px;
 }
 
+.notification-bell-link {
+  position: relative;
+  line-height: 0;
+}
+
+.notification-bell-icon {
+  display: block;
+  width: 19px;
+  height: 19px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notification-bell-link[data-unread]:not([data-unread="0"])::after {
+  content: attr(data-unread);
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  place-items: center;
+  border: 2px solid var(--management-background, #0f1612);
+  border-radius: 999px;
+  background: #dc352f;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(220, 53, 47, .32);
+}
+
 /* Shared dark work area. Existing screens keep their behaviour and data. */
 .member-page,
 .app-shell,
 .finance-page,
 .statistics-page,
 .advanced-statistics-page {
-  --ink: #f2f5f3;
-  --muted: #99a69f;
-  --line: #34433b;
-  --cream: #0f1612;
-  --green: #cfe873;
-  --white: #18211d;
+  --ink: var(--management-text, #f2f5f3);
+  --muted: var(--management-muted, #99a69f);
+  --line: var(--management-line, #34433b);
+  --cream: var(--management-background, #0f1612);
+  --green: var(--management-button, #cfe873);
+  --white: var(--management-surface, #18211d);
   min-height: 100vh;
   background:
     radial-gradient(circle at 91% 5%, rgba(115, 148, 130, .08), transparent 31rem),
-    #0f1612;
+    var(--management-background, #0f1612);
   color: var(--ink);
 }
 
@@ -349,10 +388,10 @@ body {
 .player-absence-card,
 .player-financial-history,
 .member-page .member-access-card {
-  border-color: #34433b;
-  background: #18211d;
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
   box-shadow: 0 16px 44px rgba(0, 0, 0, .15);
-  color: #f2f5f3;
+  color: var(--management-text, #f2f5f3);
 }
 
 .public-player-table {
@@ -387,9 +426,9 @@ body {
 .member-profile-actions dl > div,
 .metrics span,
 .detail-grid span {
-  border-color: #34433b;
-  background: #202b26;
-  color: #eef2ef;
+  border-color: var(--control-line, #34433b);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #eef2ef);
 }
 
 .public-player-search input,
@@ -399,9 +438,9 @@ body {
 }
 
 .match-hub-tabs button.on {
-  border-color: #d1e979;
-  background: #d1e979;
-  color: #162019;
+  border-color: var(--management-button, #d1e979);
+  background: var(--management-button, #d1e979);
+  color: var(--management-button-text, #162019);
 }
 
 .match-hub-card:hover {
@@ -416,8 +455,9 @@ body {
 }
 
 .round-center-grid > article {
-  border-color: #34433b;
-  background: #202b26;
+  border-color: var(--control-line, #34433b);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #eef2ef);
 }
 
 .match-hub-weather-grid > div,
@@ -426,14 +466,21 @@ body {
   border-color: #3b4942;
 }
 
-.primary {
-  color: #fff;
+.member-page .primary,
+.app-shell .primary,
+.finance-page .primary,
+.statistics-page .primary,
+.advanced-statistics-page .primary,
+.member-access .primary {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
 }
 
 .ghost {
-  border-color: #415148;
-  background: #202b26;
-  color: #e6ece8;
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #e6ece8);
 }
 
 .member-page + footer,
@@ -846,6 +893,76 @@ body {
   color: #cfe873;
 }
 
+.member-access {
+  background:
+    radial-gradient(circle at 78% 12%, rgba(207, 232, 115, .08), transparent 27rem),
+    #0f1612;
+  color: #f2f5f3;
+}
+
+.member-access-copy {
+  border-right: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(circle at 74% 85%, rgba(207, 232, 115, .1), transparent 25rem),
+    linear-gradient(145deg, #20392f, #12271f);
+}
+
+.member-access-card {
+  width: min(470px, calc(100% - 48px));
+  padding: 34px;
+  border-color: #34433b;
+  background: #18211d;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+  color: #f2f5f3;
+}
+
+.member-access-card h2 {
+  color: #f6f8f6;
+}
+
+.member-access-card > p,
+.member-access-card > a,
+.member-access-card label small {
+  color: #98a69f;
+}
+
+.member-access-card .ball {
+  background: #26362e;
+}
+
+.member-access-tabs {
+  border: 1px solid #34433b;
+  background: #111a15;
+}
+
+.member-access-tabs button {
+  color: #98a69f;
+}
+
+.member-access-tabs button.on {
+  background: #26362e;
+  color: #d3eb7a;
+  box-shadow: none;
+}
+
+.member-access-card input {
+  border-color: #3b4a42;
+  background: #111a15;
+  color: #eef2ef;
+  color-scheme: dark;
+}
+
+.member-access-card input:focus {
+  border-color: #91aa5f;
+  box-shadow: 0 0 0 3px rgba(207, 232, 115, .12);
+}
+
+.member-access-card .member-forgot,
+.member-access-card .member-back,
+.member-access-card > a {
+  color: #cfe873;
+}
+
 .admin-shell {
   --ink: #f2f5f3;
   --muted: #98a69f;
@@ -914,7 +1031,7 @@ body {
   border-color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 10%, transparent);
   background: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 6%, transparent);
   color: var(--admin-sidebar-contrast, #fff);
-  transform: translateX(2px);
+  transform: none;
 }
 
 .admin-shell aside > button.on {
@@ -1029,11 +1146,16 @@ body {
 
 .admin-topbar-actions > a[href="/notificacoes"]::before {
   content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 18px;
   height: 18px;
   background: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9'/%3E%3Cpath d='M10 21h4'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9'/%3E%3Cpath d='M10 21h4'/%3E%3C/svg%3E") center / contain no-repeat;
+  transform: translate(-50%, -50%);
 }
 
 .admin-topbar-actions > a[href="/notificacoes"][data-unread]:not([data-unread="0"])::after {
@@ -1595,9 +1717,9 @@ body {
 }
 
 .finance-page .primary {
-  border-color: var(--lime, #d3eb7a);
-  background: var(--lime, #d3eb7a);
-  color: #172018;
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
 }
 
 @media (max-width: 760px) {
@@ -1617,4 +1739,113 @@ body {
     margin-inline: 0;
     border-radius: 14px;
   }
+}
+
+/* Public functional surfaces reuse the palette already maintained in
+   Identidade e agenda instead of introducing another set of colors. */
+.member-page :is(
+  .round-center,
+  .match-hub-card,
+  .match-site-card,
+  .empty,
+  .saved-team-editor,
+  .arrival-order-card,
+  .team,
+  .metrics,
+  .participation-editor,
+  .career-match-card,
+  .saved-meta > span
+),
+.app-shell :is(
+  .saved-team-editor,
+  .arrival-order-card,
+  .team,
+  .metrics,
+  .participation-editor,
+  .career-match-card,
+  .saved-meta > span
+) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page :is(
+  .round-center-grid > article,
+  .match-list-filter,
+  .match-hub-tabs button,
+  .match-site-count,
+  .match-site-deadline,
+  .match-site-roster > div,
+  .weather-preview,
+  .weather-metrics span,
+  .arrival-order-card li,
+  .arrival-order-card li > div button,
+  .team-summary,
+  .team-player,
+  .metrics span,
+  .saved-meta > span
+),
+.app-shell :is(
+  .weather-preview,
+  .weather-metrics span,
+  .arrival-order-card li,
+  .arrival-order-card li > div button,
+  .team-summary,
+  .team-player,
+  .metrics span,
+  .saved-meta > span
+) {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page :is(
+  .round-center-grid > article,
+  .match-list-filter,
+  .match-hub-tabs button,
+  .match-site-count,
+  .match-site-deadline,
+  .match-site-roster > div,
+  .weather-preview,
+  .weather-metrics span,
+  .arrival-order-card li,
+  .team-summary,
+  .team-player,
+  .metrics span,
+  .saved-meta > span
+) :is(b, strong, h2, h3, h4, span),
+.app-shell :is(
+  .weather-preview,
+  .weather-metrics span,
+  .arrival-order-card li,
+  .team-summary,
+  .team-player,
+  .metrics span,
+  .saved-meta > span
+) :is(b, strong, h2, h3, h4, span) {
+  color: inherit;
+}
+
+.member-page :is(.match-hub-tabs button.on, .match-state),
+.app-shell .match-state {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+.member-page :is(.match-hub-tabs button.on, .match-state) *,
+.app-shell .match-state * {
+  color: inherit;
+}
+
+.member-page :is(.match-separation-link, .match-site-share button, .arrival-order-head small, .saved-team-editor small),
+.app-shell :is(.arrival-order-head small, .saved-team-editor small) {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page :is(.primary, .match-hub-tabs button.on):hover,
+.app-shell .primary:hover {
+  filter: brightness(.96);
 }
