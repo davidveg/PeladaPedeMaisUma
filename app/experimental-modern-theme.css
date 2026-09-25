@@ -1387,3 +1387,17 @@ body {
   border-radius: 12px;
   background: color-mix(in srgb, var(--management-background, #0f1612) 40%, transparent);
 }
+
+.admin-shell .primary {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--management-button, #d3eb7a) 18%, transparent);
+}
+
+.admin-shell .primary:hover:not(:disabled),
+.admin-shell .primary:focus-visible {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 84%, white);
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 84%, white);
+  color: var(--management-button-text, #172018);
+}

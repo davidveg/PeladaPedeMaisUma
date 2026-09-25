@@ -40,6 +40,8 @@ export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INS
       "--management-surface": config.managementSurfaceColor,
       "--management-text": config.managementTextColor,
       "--management-muted": config.managementMutedColor,
+      "--management-button": config.managementButtonColor,
+      "--management-button-text": config.managementButtonTextColor,
       "--management-line": colorWithOpacity(config.managementTextColor, .16),
       "--admin-sidebar": config.adminSidebarColor,
       "--admin-sidebar-contrast": contrastTextColor(config.adminSidebarColor),
