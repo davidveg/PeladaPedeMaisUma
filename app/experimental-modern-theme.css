@@ -687,6 +687,219 @@ body {
   backdrop-filter: blur(8px);
 }
 
+/* Compact football-card composition. The hierarchy follows the original
+   concept while reserving explicit rows so names and labels never overlap. */
+.player-card-modal {
+  width: min(410px, calc(100vw - 28px));
+  max-height: calc(100vh - 24px);
+}
+
+.player-card-modal .player-card {
+  padding: 24px 27px 42px;
+}
+
+.member-card {
+  width: min(410px, 100%);
+  padding: 24px 27px 44px;
+}
+
+.player-card-modal .card-top,
+.member-card .member-card-top {
+  min-height: 205px;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: end;
+}
+
+.player-card-modal .overall,
+.member-card .member-overall {
+  align-self: start;
+  padding-top: 24px;
+}
+
+.player-card-modal .overall strong,
+.member-card .member-overall strong {
+  font-size: 44px;
+}
+
+.player-card-modal .card-photo .large-player-photo,
+.member-card-top .large-player-photo {
+  width: 218px;
+  height: 218px;
+  max-width: 100%;
+  margin-inline: auto;
+  border-radius: 82px 82px 18px 18px;
+}
+
+.player-card-modal .card-identity,
+.member-card > h2 {
+  min-height: 55px;
+  margin: 0;
+  padding: 10px 5px 11px;
+  display: grid;
+  align-content: center;
+}
+
+.player-card-modal .card-identity h2,
+.member-card > h2 {
+  max-width: 100%;
+  font-size: clamp(22px, 7vw, 29px);
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+}
+
+.player-card-modal .card-identity p {
+  max-width: 100%;
+  margin: 5px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-card-modal .card-role,
+.member-card .member-role {
+  display: flex;
+  min-height: 50px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+.player-card-modal .card-role > small,
+.member-card .member-role > small {
+  color: currentColor;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 1.35px;
+  opacity: .67;
+  text-transform: uppercase;
+}
+
+.card-position-line {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: .75px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.card-position-line b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card-position-line i {
+  flex: 0 0 auto;
+  font-style: normal;
+  opacity: .6;
+}
+
+.player-card-modal .card-stats span,
+.member-card .card-stats span {
+  min-height: 62px;
+  padding: 9px 5px;
+}
+
+.player-card-modal .card-stats b,
+.member-card .card-stats b {
+  font-size: 22px;
+}
+
+.player-card-modal .card-stats small,
+.member-card .card-stats small {
+  min-height: 18px;
+  margin-top: 5px;
+  font-size: 6.8px;
+  letter-spacing: .65px;
+}
+
+.player-card-modal .card-stat-label,
+.member-card .card-stat-label {
+  gap: 3px;
+}
+
+.player-card-modal .card-career-stats,
+.member-card .card-career-stats {
+  margin-top: 12px;
+}
+
+.player-card-modal .card-career-stats span,
+.member-card .card-career-stats span {
+  min-height: 54px;
+  padding: 8px 4px;
+}
+
+/* Scratched brushed metal, derived in CSS so it remains crisp and keeps each
+   tier's own bronze, silver, gold or legendary colour treatment. */
+.player-card-modal.tier-bronze,
+.member-card.tier-bronze {
+  --metal-light: #f0bc91;
+  --metal-mid: #bd7249;
+  --metal-dark: #71391f;
+  --metal-glint: rgba(255, 225, 194, .42);
+}
+
+.player-card-modal.tier-silver,
+.member-card.tier-silver {
+  --metal-light: #f3f5f5;
+  --metal-mid: #b9c2c6;
+  --metal-dark: #77838a;
+  --metal-glint: rgba(255, 255, 255, .68);
+}
+
+.player-card-modal.tier-gold,
+.member-card.tier-gold {
+  --metal-light: #f7e39a;
+  --metal-mid: #cfad48;
+  --metal-dark: #806115;
+  --metal-glint: rgba(255, 248, 190, .62);
+}
+
+.player-card-modal.tier-legendary,
+.member-card.tier-legendary {
+  --metal-light: #31509b;
+  --metal-mid: #43296f;
+  --metal-dark: #0c1129;
+  --metal-glint: rgba(74, 218, 236, .34);
+}
+
+.player-card-modal[class*="tier-"] .player-card,
+.member-card[class*="tier-"] {
+  background:
+    radial-gradient(ellipse at 78% 8%, var(--metal-glint), transparent 30%),
+    radial-gradient(ellipse at 18% 70%, rgba(0, 0, 0, .12), transparent 38%),
+    repeating-linear-gradient(7deg, transparent 0 47px, rgba(255, 255, 255, .13) 48px, transparent 49px 83px, rgba(0, 0, 0, .11) 84px, transparent 85px 122px),
+    repeating-linear-gradient(94deg, rgba(255, 255, 255, .045) 0 1px, transparent 1px 4px),
+    linear-gradient(148deg, var(--metal-light) 0%, var(--metal-mid) 52%, var(--metal-dark) 100%);
+  background-blend-mode: screen, multiply, soft-light, overlay, normal;
+}
+
+.player-card-modal .player-card::before,
+.member-card::before {
+  opacity: .52;
+  background:
+    linear-gradient(14deg, transparent 0 18%, rgba(255, 255, 255, .28) 18.15%, transparent 18.4% 100%),
+    linear-gradient(167deg, transparent 0 43%, rgba(0, 0, 0, .26) 43.12%, transparent 43.35% 100%),
+    linear-gradient(5deg, transparent 0 67%, rgba(255, 255, 255, .2) 67.12%, transparent 67.3% 100%),
+    repeating-linear-gradient(102deg, transparent 0 17px, rgba(255, 255, 255, .075) 18px, transparent 19px 37px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .025) 0 1px, transparent 1px 3px);
+  mix-blend-mode: soft-light;
+}
+
+.player-card-modal .player-card::after,
+.member-card::after {
+  opacity: .72;
+  background:
+    linear-gradient(128deg, transparent 0 31%, rgba(255, 255, 255, .17) 36%, transparent 43% 100%),
+    radial-gradient(ellipse at 76% 8%, rgba(255, 255, 255, .2), transparent 24%);
+}
+
 @media (max-width: 900px) {
   .site-header {
     height: 126px;

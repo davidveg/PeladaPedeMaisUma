@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { playerCardTier } from "../lib/player-card-tier.ts";
 
@@ -22,4 +23,17 @@ test("respeita os limites personalizados configurados pelo administrador",()=>{
  assert.equal(playerCardTier(2.1,settings),"silver");
  assert.equal(playerCardTier(3.6,settings),"gold");
  assert.equal(playerCardTier(4.3,settings),"legendary");
+});
+
+test("cards usam hierarquia compacta e textura metálica sem sobrepor textos", async()=>{
+ const [publicCard,memberCard,theme]=await Promise.all([
+  readFile(new URL("../app/FootballApp.tsx",import.meta.url),"utf8"),
+  readFile(new URL("../app/conta/MemberApp.tsx",import.meta.url),"utf8"),
+  readFile(new URL("../app/experimental-modern-theme.css",import.meta.url),"utf8"),
+ ]);
+ assert.match(publicCard,/className="card-position-line"/);
+ assert.match(memberCard,/className="card-position-line"/);
+ assert.match(theme,/\.card-position-line \{[\s\S]*overflow-wrap:\s*anywhere/);
+ assert.match(theme,/Scratched brushed metal[\s\S]*repeating-linear-gradient\(7deg/);
+ assert.match(theme,/\.player-card-modal \.card-identity h2,[\s\S]*overflow-wrap:\s*anywhere/);
 });
