@@ -1818,6 +1818,43 @@ body {
   color: inherit;
 }
 
+/* Balance settings have higher-specificity valid/invalid rules in the legacy
+   stylesheet. Keep their semantic tint while inheriting the configured
+   auxiliary-container surface instead of returning to a light background. */
+.admin-shell .expanded-weights .weight-total.valid {
+  border-color: color-mix(in srgb, var(--control-line, #4a5851) 72%, #2b8a58 28%);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 90%, #2b8a58 10%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .expanded-weights .weight-total.invalid {
+  border-color: color-mix(in srgb, var(--control-line, #4a5851) 68%, #c75543 32%);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 90%, #c75543 10%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .expanded-weights .weight-total.valid b,
+.admin-shell .expanded-weights .weight-total-hint.valid,
+.admin-shell .expanded-weights .weight-save-status.valid {
+  color: color-mix(in srgb, var(--management-button, #d3eb7a) 72%, #45bd79 28%);
+}
+
+.admin-shell .expanded-weights .weight-total.invalid b,
+.admin-shell .expanded-weights .weight-total-hint.invalid,
+.admin-shell .expanded-weights .weight-save-status.invalid {
+  color: #f19b8c;
+}
+
+.admin-shell .expanded-weights .help-tip > button {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .expanded-weights .weight-group .setting-field {
+  border-color: var(--management-line, #34433b);
+}
+
 /* Audit trail: rows use the configurable card surface; filters, badges and
    expanded payloads use the configurable auxiliary-container surface. */
 .admin-shell :is(.audit-toolbar > div, .audit-list article) {
