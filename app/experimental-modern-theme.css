@@ -1650,6 +1650,29 @@ body {
   }
 }
 
+/* Desktop tables use one clipped outer contour and independent row dividers. */
+@media (min-width: 901px) {
+  .admin-shell .admin-main .admin-card.table {
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--management-line, #34433b);
+    border-radius: 14px;
+    background-clip: padding-box;
+  }
+
+  .admin-shell .admin-main .admin-card.table > .tr {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .admin-shell .admin-main .admin-card.table > .tr + .tr {
+    border-top: 1px solid var(--management-line, #34433b);
+  }
+}
+
 /* Final palette layer: deliberately follows every structural admin rule. */
 .admin-loading,
 .login-page {
