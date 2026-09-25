@@ -32,48 +32,420 @@ body {
     var(--modern-canvas);
 }
 
-/* Public navigation: sober club-management shell. */
+/* Desktop application shell inspired by a modern football-management desk. */
 .site-header {
-  min-height: 78px;
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  color: #f5f7f5;
+  pointer-events: none;
+}
+
+.site-sidebar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  width: 232px;
+  padding: 25px 16px 18px;
+  border-right: 1px solid rgba(255, 255, 255, .07);
   background:
-    radial-gradient(circle at 12% -120%, rgba(112, 157, 135, .32), transparent 52%),
-    rgba(15, 23, 19, .96);
-  box-shadow: 0 14px 36px rgba(10, 20, 15, .14);
-  color: #f5f7f5;
+    radial-gradient(circle at 24% 0, rgba(124, 166, 145, .22), transparent 34%),
+    linear-gradient(180deg, #263c33 0%, #1b3028 48%, #172a23 100%);
+  box-shadow: 14px 0 36px rgba(0, 0, 0, .14);
+  pointer-events: auto;
 }
 
-.site-header .brand,
-.site-header .brand > span.brand-identity:last-child {
-  color: #f5f7f5;
+.site-sidebar .brand,
+.site-sidebar .brand > span.brand-identity:last-child {
+  color: #f7f9f7;
 }
 
-.site-header .brand small,
-.site-header nav a,
-.site-header nav button {
-  color: #aebbb4;
+.site-sidebar .brand {
+  min-height: 64px;
+  padding: 0 8px 22px;
 }
 
-.site-header nav a,
-.site-header nav button {
+.site-sidebar .brand small {
+  color: #a9bbb2;
+}
+
+.site-sidebar nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  align-content: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.site-sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 13px;
+  color: #c4d0ca;
+  font-size: 12px;
+  text-decoration: none;
   transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
 }
 
-.site-header nav a:hover,
-.site-header nav button:hover {
+.site-sidebar nav a:hover {
   border-color: rgba(255, 255, 255, .08);
-  background: rgba(255, 255, 255, .05);
+  background: rgba(255, 255, 255, .055);
   color: #fff;
-  transform: translateY(-1px);
+  transform: translateX(2px);
 }
 
-.site-header nav .active {
-  border-color: rgba(206, 232, 102, .18);
-  background: rgba(205, 232, 93, .12);
-  box-shadow: inset 0 0 0 1px rgba(205, 232, 93, .04);
-  color: #e2f57f;
+.site-sidebar nav a.active {
+  border-color: rgba(255, 255, 255, .82);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .08));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .17), 0 9px 22px rgba(3, 13, 8, .16);
+  color: #fff;
+}
+
+.site-nav-icon {
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  color: #b9cbc2;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.site-sidebar nav a.active .site-nav-icon {
+  color: #ecf5b3;
+}
+
+.site-nav-group {
+  margin: 21px 10px 7px;
+  color: #8fa69b;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+}
+
+.site-nav-group:first-child {
+  margin-top: 8px;
+}
+
+.site-season-card {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .055);
+}
+
+.site-season-card small {
+  color: #9eb0a7;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 1.25px;
+}
+
+.site-season-card strong {
+  font-size: 12px;
+}
+
+.site-season-card span {
+  color: #9eb0a7;
+  font-size: 9px;
+}
+
+.site-season-card i {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .13);
+}
+
+.site-season-card i b {
+  display: block;
+  width: 68%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b9d4c6, #d3ec75);
+}
+
+.site-topbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 232px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76px;
+  padding: 0 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(16, 23, 19, .94);
+  backdrop-filter: blur(16px);
+  pointer-events: auto;
+}
+
+.site-topbar > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.site-topbar small {
+  color: #8c9b94;
+  font-size: 9px;
+}
+
+.site-topbar strong {
+  color: #f7f9f7;
+  font-size: 13px;
+}
+
+.site-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-topbar-actions a {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .035);
+  color: #e8eeea;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.site-topbar-actions a:hover {
+  border-color: rgba(211, 236, 117, .28);
+  background: rgba(211, 236, 117, .09);
+}
+
+.site-topbar-actions .site-viewer {
+  border-color: transparent;
+  background: #31483e;
+  color: #fff;
+  font-size: 11px;
+}
+
+/* Shared dark work area. Existing screens keep their behaviour and data. */
+.member-page,
+.app-shell,
+.finance-page,
+.statistics-page,
+.advanced-statistics-page {
+  --ink: #f2f5f3;
+  --muted: #99a69f;
+  --line: #34433b;
+  --cream: #0f1612;
+  --green: #cfe873;
+  --white: #18211d;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 91% 5%, rgba(115, 148, 130, .08), transparent 31rem),
+    #0f1612;
+  color: var(--ink);
+}
+
+.app-shell > main,
+.member-page > main,
+.finance-page > main,
+.statistics-page > main,
+.advanced-statistics-page > main {
+  width: auto;
+  max-width: 1510px;
+  min-height: 100vh;
+  margin: 0 0 0 232px;
+  padding-top: 110px;
+  padding-right: clamp(22px, 3.5vw, 52px);
+  padding-left: clamp(22px, 3.5vw, 52px);
+}
+
+.app-shell .content {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.member-page .member-main,
+.finance-page .finance-main,
+.statistics-page .statistics-main,
+.advanced-statistics-page .advanced-statistics-main,
+.member-page .match-hub-main {
+  width: auto;
+  max-width: 1510px;
+}
+
+.member-page .member-main,
+.finance-page .finance-main,
+.statistics-page .statistics-main,
+.advanced-statistics-page .advanced-statistics-main {
+  padding-bottom: 72px;
+}
+
+.eyebrow,
+.section-head .eyebrow,
+.member-account-head .eyebrow,
+.match-hub-heading .eyebrow {
+  color: #91a69a;
+}
+
+.section-head h2,
+.member-account-head h1,
+.match-hub-heading h1,
+.finance-head h1,
+.statistics-head h1,
+.advanced-statistics-head h1 {
+  color: #f6f8f6;
+}
+
+.member-page .member-access-card h2 {
+  color: #f6f8f6;
+}
+
+.member-page .member-access-card p {
+  color: #99a69f;
+}
+
+.panel,
+.team,
+.metrics,
+.history-list article,
+.public-player-table,
+.member-profile-actions,
+.match-hub-card,
+.round-center,
+.finance-card,
+.finance-metric,
+.statistics-card,
+.advanced-statistics-card,
+.association-picker,
+.notification-site-main > section,
+.player-absence-card,
+.player-financial-history,
+.member-page .member-access-card {
+  border-color: #34433b;
+  background: #18211d;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .15);
+  color: #f2f5f3;
+}
+
+.public-player-table {
+  overflow: auto;
+}
+
+.public-player-tr,
+.public-player-tr.th,
+.tr,
+.tr.th {
+  border-color: #2c3933;
+  background: #18211d;
+  color: #e9eeeb;
+}
+
+.public-player-tr.th,
+.tr.th {
+  background: #141c18;
+  color: #91a098;
+}
+
+.public-player-table button.public-player-tr:hover,
+.public-player-table button.public-player-tr:focus-visible {
+  background: #202d27;
+}
+
+.public-player-tr > strong,
+.public-player-total,
+.public-player-search input,
+.match-hub-tabs button,
+.match-list-filter,
+.member-profile-actions dl > div,
+.metrics span,
+.detail-grid span {
+  border-color: #34433b;
+  background: #202b26;
+  color: #eef2ef;
+}
+
+.public-player-search input,
+.match-hub-tabs button,
+.member-profile-actions dl > div {
+  box-shadow: none;
+}
+
+.match-hub-tabs button.on {
+  border-color: #d1e979;
+  background: #d1e979;
+  color: #162019;
+}
+
+.match-hub-card:hover {
+  border-color: #738d80;
+  background: #1b2721;
+}
+
+.round-center {
+  background:
+    radial-gradient(circle at 94% 0, rgba(207, 232, 115, .09), transparent 34%),
+    #18231e;
+}
+
+.round-center-grid > article {
+  border-color: #34433b;
+  background: #202b26;
+}
+
+.match-hub-weather-grid > div,
+.match-hub-final-score-team,
+.match-hub-score > span {
+  border-color: #3b4942;
+}
+
+.primary {
+  color: #fff;
+}
+
+.ghost {
+  border-color: #415148;
+  background: #202b26;
+  color: #e6ece8;
+}
+
+.member-page + footer,
+.app-shell + footer,
+.finance-page + footer,
+.statistics-page + footer,
+.advanced-statistics-page + footer {
+  max-width: none;
+  margin-left: 232px;
+  border-color: #2d3a34;
+  background: #0f1612;
+  color: #84928b;
 }
 
 .content,
@@ -268,9 +640,136 @@ body {
   backdrop-filter: blur(8px);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .site-header {
-    padding-block: 10px;
+    height: 126px;
+  }
+
+  .site-topbar {
+    right: 0;
+    left: 0;
+    height: 58px;
+    padding: 0 16px;
+  }
+
+  .site-topbar-actions a {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .site-sidebar {
+    inset: 58px 0 auto;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    height: 68px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    background: #1d3028;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
+  }
+
+  .site-sidebar .brand {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: 0 12px 0 2px;
+  }
+
+  .site-sidebar nav {
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .site-sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-sidebar nav a {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 9px 11px;
+    white-space: nowrap;
+  }
+
+  .site-nav-group,
+  .site-season-card {
+    display: none;
+  }
+
+  .app-shell > main,
+  .member-page > main,
+  .finance-page > main,
+  .statistics-page > main,
+  .advanced-statistics-page > main {
+    width: 100%;
+    margin-left: 0;
+    padding-top: 158px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .member-page + footer,
+  .app-shell + footer,
+  .finance-page + footer,
+  .statistics-page + footer,
+  .advanced-statistics-page + footer {
+    margin-left: 0;
+  }
+
+  .player-card-modal {
+    border-radius: 30px;
+  }
+
+  .player-card-modal .player-card,
+  .member-card {
+    border-radius: 27px 27px 18px 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .site-topbar > div:first-child small {
+    display: none;
+  }
+
+  .site-topbar > div:first-child strong {
+    max-width: 210px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .site-sidebar .brand-copy {
+    display: none !important;
+  }
+
+  .site-sidebar .brand {
+    padding-right: 6px;
+  }
+
+  .site-sidebar .brand-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .site-sidebar nav a {
+    flex-direction: column;
+    gap: 2px;
+    min-width: 62px;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+
+  .site-nav-icon {
+    height: 20px;
+    font-size: 15px;
   }
 
   .site-header nav {
@@ -284,15 +783,6 @@ body {
 
   .site-header nav::-webkit-scrollbar {
     display: none;
-  }
-
-  .player-card-modal {
-    border-radius: 30px;
-  }
-
-  .player-card-modal .player-card,
-  .member-card {
-    border-radius: 27px 27px 18px 18px;
   }
 }
 

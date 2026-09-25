@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 
@@ -31,6 +31,7 @@ export function SiteHeader({
   isAdmin?: boolean;
 }) {
   const { config } = useInstanceBranding();
+  const [viewerEmail, setViewerEmail] = useState("");
   const navigation = useRef<HTMLElement>(null);
   const activeLink = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
@@ -42,27 +43,58 @@ export function SiteHeader({
     // páginas sob o cabeçalho fixo.
     menu.scrollLeft = Math.max(0, item.offsetLeft - (menu.clientWidth - item.offsetWidth) / 2);
   }, [active]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/member-auth", { cache: "no-store", headers: { accept: "application/json" }, signal: controller.signal })
+      .then(response => response.json())
+      .then(payload => setViewerEmail(String(payload.member?.email || "")))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
   const currentSection = active === "separations" || active === "home" ? "matches" : active;
+  const viewerInitials = useMemo(() => {
+    if (!viewerEmail) return "P+";
+    const name = viewerEmail.split("@")[0].split(/[._-]+/).filter(Boolean);
+    return (name.length > 1 ? `${name[0][0]}${name.at(-1)?.[0] || ""}` : name[0]?.slice(0, 2) || "P+").toUpperCase();
+  }, [viewerEmail]);
+  const navigationIcons: Partial<Record<SiteSection, string>> = { matches: "▦", players: "♙", statistics: "⌁", finance: "▤", notifications: "◌", account: "◎", admin: "⚙" };
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
-      {label}
+      <span className="site-nav-icon" aria-hidden="true">{navigationIcons[section] || "•"}</span><span>{label}</span>
     </a>
   );
 
   return (
     <header className="site-header">
-      <a href="/partidas" className="brand" onClick={(event) => navigateWithDocument(event, "/partidas")}>
-        <BrandIdentity/>
-      </a>
-      <nav ref={navigation} aria-label="Navegação principal">
-        {link("players", "/jogadores", "Jogadores")}
-        {link("statistics", "/estatisticas", "Estatísticas")}
-        {link("matches", "/partidas", "Partidas")}
-        {config.financeEnabled && link("finance", "/financeiro", "Financeiro")}
-        {link("notifications", "/notificacoes", "Notificações")}
-        {link("account", "/conta", "Minha conta")}
-        {link("admin", "/admin", "Painel Administrativo")}
-      </nav>
+      <aside className="site-sidebar">
+        <a href="/partidas" className="brand" onClick={(event) => navigateWithDocument(event, "/partidas")}>
+          <BrandIdentity/>
+        </a>
+        <nav ref={navigation} aria-label="Navegação principal">
+          <span className="site-nav-group">GESTÃO</span>
+          {link("matches", "/partidas", "Partidas")}
+          {link("players", "/jogadores", "Jogadores")}
+          {link("statistics", "/estatisticas", "Estatísticas")}
+          <span className="site-nav-group">OPERAÇÃO</span>
+          {config.financeEnabled && link("finance", "/financeiro", "Financeiro")}
+          {link("notifications", "/notificacoes", "Notificações")}
+          {link("account", "/conta", "Minha conta")}
+          {link("admin", "/admin", "Painel Administrativo")}
+        </nav>
+        <div className="site-season-card">
+          <small>AMBIENTE DE VALIDAÇÃO</small>
+          <strong>Gestão da pelada</strong>
+          <span>Layout experimental</span>
+          <i aria-hidden="true"><b/></i>
+        </div>
+      </aside>
+      <div className="site-topbar">
+        <div><small>Centro de gestão</small><strong>{config.siteName}</strong></div>
+        <div className="site-topbar-actions">
+          <a href="/notificacoes" aria-label="Abrir notificações" onClick={(event) => navigateWithDocument(event, "/notificacoes")}>♢</a>
+          <a className="site-viewer" href="/conta" aria-label="Abrir minha conta" onClick={(event) => navigateWithDocument(event, "/conta")}>{viewerInitials}</a>
+        </div>
+      </div>
     </header>
   );
 }
