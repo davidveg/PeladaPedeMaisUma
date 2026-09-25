@@ -54,6 +54,21 @@ test("notificações ficam somente no menu compartilhado e não se repetem no ca
   assert.doesNotMatch(matches, /href="\/notificacoes"/);
 });
 
+test("painel administrativo exibe sino com contador apenas para notificações não lidas", async () => {
+  const [admin, theme] = await Promise.all([
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(admin, /fetch\('\/api\/notifications\?pageSize=10'/);
+  assert.match(admin, /payload\.unread/);
+  assert.match(admin, /link\.dataset\.unread=label/);
+  assert.match(admin, /99\+/);
+  assert.match(theme, /a\[href="\/notificacoes"\]::before/);
+  assert.match(theme, /data-unread.*:not\(\[data-unread="0"\]\)::after/);
+  assert.match(theme, /background:\s*#dc352f/);
+});
+
 test("a apresentação das estatísticas avançadas não herda o cabeçalho fixo global", async () => {
   const advanced = await readFile(new URL("../app/estatisticas/avancadas/AdvancedStatisticsApp.tsx", import.meta.url), "utf8");
 
