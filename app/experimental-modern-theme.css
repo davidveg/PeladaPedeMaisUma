@@ -2075,6 +2075,144 @@ body {
   color: var(--management-button, #d3eb7a);
 }
 
+/* Public roster empty states and counters use the same auxiliary surfaces as
+   the rest of the configurable work area. */
+.member-page :is(.public-player-empty, .public-player-list-title > b),
+.app-shell :is(.public-player-empty, .public-player-list-title > b) {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .public-player-empty,
+.app-shell .public-player-empty {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+/* Advanced statistics follows the palette already configured in Identidade
+   e agenda: main cards use the management surface and their inner controls
+   use the auxiliary-container surface. */
+.advanced-statistics-page :is(
+  .advanced-filters,
+  .advanced-coverage article,
+  .advanced-coverage > p,
+  .advanced-section
+) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.advanced-statistics-page :is(
+  .advanced-filters input,
+  .advanced-filters select,
+  .advanced-player-picker select,
+  .network-picker select,
+  .advanced-empty,
+  .advanced-loading,
+  .advanced-highlight-grid article,
+  .analysis-metrics > span,
+  .balance-dashboard > span,
+  .partnership-list article,
+  .position-rankings > article,
+  .record-list article
+) {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.advanced-statistics-page :is(
+  .advanced-title h2,
+  .advanced-highlight-grid > article > strong,
+  .advanced-highlight-grid b,
+  .advanced-row,
+  .partnership-list strong,
+  .position-rankings strong,
+  .record-list span
+) {
+  color: var(--management-text, #f2f5f3);
+}
+
+.advanced-statistics-page :is(
+  .advanced-filters label,
+  .advanced-player-picker,
+  .network-picker,
+  .advanced-coverage span,
+  .advanced-coverage p,
+  .advanced-highlight-grid em,
+  .advanced-empty,
+  .advanced-loading,
+  .analysis-metrics small,
+  .balance-dashboard small,
+  .association-note,
+  .advanced-player small,
+  .partnership-list div small,
+  .network-spokes small,
+  .position-rankings div small,
+  .position-rankings p,
+  .record-list small,
+  .balance-dashboard + p
+) {
+  color: var(--management-muted, #98a69f);
+}
+
+.advanced-statistics-page :is(.advanced-table, .advanced-row, .position-rankings article > div) {
+  border-color: var(--control-line, #415148);
+}
+
+.advanced-statistics-page :is(.advanced-row.head, .position-rankings h3) {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, #000 24%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.advanced-statistics-page .advanced-hero > span {
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+.advanced-statistics-page .advanced-info > button {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--management-button, #d3eb7a);
+}
+
+.advanced-statistics-page .ipi-card {
+  border: 1px solid var(--control-line, #415148);
+  background:
+    radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--management-button, #d3eb7a) 13%, transparent), transparent 42%),
+    var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.advanced-statistics-page .ipi-card :is(small, strong) {
+  color: var(--management-button, #d3eb7a);
+}
+
+.advanced-statistics-page .chemistry-network {
+  border: 1px solid var(--control-line, #415148);
+  background:
+    radial-gradient(circle at center, color-mix(in srgb, var(--management-button, #d3eb7a) 8%, var(--control-surface, #202b26)) 0 19%, transparent 20%),
+    linear-gradient(135deg, var(--control-surface, #202b26), color-mix(in srgb, var(--control-surface, #202b26) 78%, #000));
+}
+
+.advanced-statistics-page .network-center b {
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+.advanced-statistics-page :is(.network-center .player-photo, .network-spokes .player-photo, .partnership-list .player-photo) {
+  border-color: var(--control-line, #415148);
+}
+
+@media (max-width: 680px) {
+  .advanced-statistics-page .network-spokes article {
+    border: 1px solid var(--control-line, #415148);
+    background: var(--control-surface, #202b26);
+    color: var(--control-text, #f2f5f3);
+  }
+}
+
 /* The round center uses a semantic header, but it is not an application
    header. Reset the legacy global header rule so the card palette can flow. */
 .member-page .round-center > header {
