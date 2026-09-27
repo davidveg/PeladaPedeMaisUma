@@ -430,6 +430,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center-grid > article[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.primary[\s\S]*var\(--management-button/);
   assert.match(theme, /\.member-page \.team-player > span,[\s\S]*\.app-shell \.team-player > span \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-text/);
+  assert.match(theme, /\.app-shell \.section-head \.balance \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.result-actions \.ghost \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell > main \{[\s\S]*padding-bottom:\s*clamp/);
   assert.match(theme, /\.finance-page \.primary \{[\s\S]*var\(--management-button-text/);
   assert.match(theme, /\.member-page \.round-center > header \{[\s\S]*background:\s*transparent/);
   assert.match(theme, /body:has\(:is\([\s\S]*\.site-footer \{[\s\S]*var\(--management-surface/);

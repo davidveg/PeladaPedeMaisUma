@@ -310,6 +310,10 @@ body {
   padding: 0;
 }
 
+.app-shell > main {
+  padding-bottom: clamp(56px, 7vw, 88px);
+}
+
 .member-page .member-main,
 .finance-page .finance-main,
 .statistics-page .statistics-main,
@@ -2505,6 +2509,46 @@ body {
   background: var(--management-button, #d3eb7a);
   color: var(--management-button-text, #172018);
   text-align: center;
+}
+
+/* Generated-team feedback and actions stay on the configurable surfaces.
+   Scoped selectors win over the legacy light badge and ghost-button rules. */
+.app-shell .section-head .balance {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: none;
+}
+
+.app-shell .section-head .balance > span {
+  color: var(--management-button, #d3eb7a);
+}
+
+.app-shell .section-head .balance b {
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .section-head .balance small {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
+}
+
+.app-shell .result-actions {
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.app-shell .result-actions .ghost {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: none;
+}
+
+.app-shell .result-actions .ghost:hover:not(:disabled),
+.app-shell .result-actions .ghost:focus-visible {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 48%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 7%, var(--control-surface, #202b26));
+  color: var(--control-text, #f2f5f3);
 }
 
 .member-page :is(.match-hub-tabs button.on, .match-state),
