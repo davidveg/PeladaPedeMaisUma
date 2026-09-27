@@ -2709,6 +2709,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 }
 
 .member-page :is(
+  .member-profile-actions,
   .player-achievements,
   .season-retrospective,
   .notification-preferences-card,
@@ -2720,6 +2721,24 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   background: var(--management-surface, #18211d);
   color: var(--management-text, #f2f5f3);
   box-shadow: 0 16px 44px color-mix(in srgb, var(--management-background, #0f1612) 38%, transparent);
+}
+
+.member-page .member-profile-actions .eyebrow {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page .member-profile-actions dl > div {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .member-profile-actions dl > div dt {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 64%, transparent);
+}
+
+.member-page .member-profile-actions dl > div dd {
+  color: var(--control-text, #f2f5f3);
 }
 
 .member-page .season-retrospective {
