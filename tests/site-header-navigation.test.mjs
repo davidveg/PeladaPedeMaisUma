@@ -97,8 +97,10 @@ test("menu lateral mostra o mês atual calculado da temporada", async () => {
   assert.doesNotMatch(header, /AMBIENTE DE VALIDAÇÃO|Layout experimental/);
   assert.match(header, /careerSeasonProgress\(season\)/);
   assert.match(header, /new Date\(season\.startedAt\)\.getUTCFullYear\(\)/);
-  assert.match(header, /seasonProgress\.currentMonth.*seasonProgress\.totalMonths/);
-  assert.match(header, /role="progressbar"/);
+  assert.match(header, /date\.setUTCMonth\(date\.getUTCMonth\(\) \+ seasonProgress\.currentMonth - 1\)/);
+  assert.match(header, /Intl\.DateTimeFormat\("pt-BR", \{ month: "long", timeZone: "UTC" \}\)/);
+  assert.match(header, /<strong>\{seasonMonth\}<\/strong>/);
+  assert.doesNotMatch(header, /role="progressbar"|seasonProgress\.percentage/);
   assert.match(branding, /season: PublicCareerSeason \| null/);
   assert.match(publicConfig, /season_duration_months/);
   assert.match(publicConfig, /instance, season/);

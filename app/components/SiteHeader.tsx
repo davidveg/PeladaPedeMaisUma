@@ -83,6 +83,13 @@ export function SiteHeader({
   }, [viewerEmail]);
   const seasonProgress = useMemo(() => season ? careerSeasonProgress(season) : null, [season]);
   const seasonYear = season ? new Date(season.startedAt).getUTCFullYear() : Number.NaN;
+  const seasonMonth = useMemo(() => {
+    if (!season || !seasonProgress) return "";
+    const date = new Date(season.startedAt);
+    if (!Number.isFinite(date.getTime())) return "";
+    date.setUTCMonth(date.getUTCMonth() + seasonProgress.currentMonth - 1);
+    return new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" }).format(date);
+  }, [season, seasonProgress]);
   const navigationIcons: Partial<Record<SiteSection, string>> = { matches: "▦", players: "♙", statistics: "⌁", finance: "▤", account: "◎", admin: "⚙" };
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
@@ -106,12 +113,9 @@ export function SiteHeader({
           {link("account", "/conta", "Minha conta")}
           {link("admin", "/admin", "Painel Administrativo")}
         </nav>
-        {season && seasonProgress && <div className="site-season-card">
+        {season && seasonMonth && <div className="site-season-card">
           <small>TEMPORADA {Number.isFinite(seasonYear) ? seasonYear : season.seasonNumber}</small>
-          <strong>{seasonProgress.currentMonth} de {seasonProgress.totalMonths} {seasonProgress.totalMonths === 1 ? "mês" : "meses"}</strong>
-          <i role="progressbar" aria-label="Progresso da temporada" aria-valuemin={1} aria-valuemax={seasonProgress.totalMonths} aria-valuenow={seasonProgress.currentMonth}>
-            <b style={{ width: `${seasonProgress.percentage}%` }}/>
-          </i>
+          <strong>{seasonMonth}</strong>
         </div>}
       </aside>
       <div className="site-topbar">
