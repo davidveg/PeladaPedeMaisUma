@@ -444,6 +444,10 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-shell :is\([\s\S]*\.career-season-status[\s\S]*\.card-tier-settings[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.expanded-weights \.weight-total\.valid \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.expanded-weights \.weight-total\.invalid \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.member-page \.editor \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.member-page \.editor :is\(input, select, textarea\),[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.member-page :is\([\s\S]*\.player-achievements,[\s\S]*\.notification-preferences-card,[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.member-page :is\([\s\S]*\.achievement-grid article,[\s\S]*\.retrospective-numbers,[\s\S]*\.notification-preferences-grid,[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.admin-main \.admin-card\.table \{[\s\S]*overflow:\s*hidden;[\s\S]*background-clip:\s*padding-box/);
   assert.match(theme, /\.admin-shell \.admin-main \.admin-card\.table > \.tr \+ \.tr \{[\s\S]*border-top:\s*1px solid var\(--management-line/);
   assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);

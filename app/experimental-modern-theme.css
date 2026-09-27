@@ -2525,6 +2525,186 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   }
 }
 
+/* Match/profile editors and account panels share the two configurable
+   surfaces from Identidade e agenda. This replaces the remaining legacy
+   white backgrounds without adding a third, unrelated palette. */
+.member-page .modal-back {
+  background: color-mix(in srgb, var(--management-background, #0f1612) 82%, transparent);
+  backdrop-filter: blur(9px);
+}
+
+.member-page .editor {
+  border: 1px solid var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--management-background, #0f1612) 72%, transparent);
+}
+
+.member-page .editor :is(h2, label) {
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page .editor :is(p, small) {
+  color: var(--management-muted, #98a69f);
+}
+
+.member-page .editor :is(input, select, textarea),
+.member-page .photo-editor,
+.member-page .editor .close,
+.member-page .editor .ball {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .editor :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 50%, transparent);
+}
+
+.member-page .editor :is(input, select, textarea):focus {
+  border-color: var(--management-button, #d3eb7a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--management-button, #d3eb7a) 18%, transparent);
+}
+
+.member-page .editor-actions,
+.member-page .engagement-panel-head,
+.member-page .achievement-progress {
+  border-color: var(--management-line, #34433b);
+}
+
+.member-page :is(
+  .player-achievements,
+  .season-retrospective,
+  .notification-preferences-card,
+  .player-absence-card,
+  .player-financial-history,
+  .association-picker
+) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+  box-shadow: 0 16px 44px color-mix(in srgb, var(--management-background, #0f1612) 38%, transparent);
+}
+
+.member-page .season-retrospective {
+  background:
+    radial-gradient(circle at 95% 0, color-mix(in srgb, var(--management-button, #d3eb7a) 10%, transparent), transparent 35%),
+    var(--management-surface, #18211d);
+}
+
+.member-page :is(
+  .member-profile-actions,
+  .player-achievements,
+  .season-retrospective,
+  .notification-preferences-card,
+  .player-absence-card,
+  .player-financial-history,
+  .association-picker
+) :is(h2, h3, b, dd) {
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page :is(
+  .member-profile-actions,
+  .player-achievements,
+  .season-retrospective,
+  .notification-preferences-card,
+  .player-absence-card,
+  .player-financial-history,
+  .association-picker
+) :is(p, small, dt, label, em) {
+  color: var(--management-muted, #98a69f);
+}
+
+.member-page :is(
+  .player-achievements .engagement-panel-head > strong,
+  .achievement-grid article,
+  .engagement-empty,
+  .retrospective-numbers,
+  .retrospective-numbers span,
+  .retrospective-stories article,
+  .notification-preferences-grid,
+  .notification-preferences-labels,
+  .notification-preference-row,
+  .notification-preferences-actions select,
+  .association-warning,
+  .finance-player-status span,
+  .finance-empty,
+  .finance-loading
+) {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page :is(
+  .player-achievements .engagement-panel-head > strong,
+  .achievement-grid article,
+  .retrospective-numbers span,
+  .retrospective-stories article,
+  .notification-preferences-labels,
+  .notification-preference-row,
+  .finance-player-status span
+) :is(b, strong) {
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page :is(
+  .achievement-grid article,
+  .retrospective-stories article,
+  .notification-preference-row,
+  .finance-player-status span
+) :is(p, small) {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
+}
+
+.member-page .player-achievements .engagement-panel-head > strong,
+.member-page .retrospective-numbers b,
+.member-page .achievement-grid a,
+.member-page .member-advanced-statistics-link {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page .player-achievements .engagement-panel-head > strong small {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.member-page .achievement-grid article > i {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, var(--management-button, #d3eb7a) 24%);
+}
+
+.member-page .achievement-progress article > div {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--management-background, #0f1612) 22%);
+}
+
+.member-page .achievement-progress article > div > i {
+  background: linear-gradient(90deg, var(--management-button, #d3eb7a), color-mix(in srgb, var(--management-button, #d3eb7a) 62%, #5f9f70));
+}
+
+.member-page .notification-preference-row + .notification-preference-row {
+  border-color: var(--control-line, #415148);
+}
+
+.member-page .notification-preference-row input {
+  accent-color: var(--management-button, #d3eb7a);
+}
+
+.member-page .notification-preferences-actions select,
+.member-page .player-absence-form input {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .member-advanced-statistics-link {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 45%, var(--management-line, #34433b));
+  background: transparent;
+}
+
+.member-page .member-advanced-statistics-link:hover {
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 10%, transparent);
+}
+
 /* Public roster rows inherit the saved site palette. Card levels remain easy
    to scan through a restrained tint and an accent rail instead of light rows. */
 .app-shell .public-player-table {
