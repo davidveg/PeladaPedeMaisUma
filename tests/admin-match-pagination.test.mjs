@@ -18,11 +18,12 @@ test("partidas administrativas são paginadas em grupos de dez", () => {
 
 test("gestão de partidas herda as paletas configuráveis do painel", () => {
   assert.match(theme, /Administrative match management uses the same saved management/);
-  assert.match(theme, /\.admin-shell \.match-admin-detail \.weather-preview[\s\S]*var\(--control-surface/);
-  assert.match(theme, /\.admin-shell \.match-player-group-head \{[\s\S]*var\(--control-surface/);
-  assert.match(theme, /\.admin-shell \.match-player-admin-list > div,[\s\S]*var\(--management-surface/);
-  assert.match(theme, /\.admin-shell \.match-admin-pagination[\s\S]*var\(--control-surface/);
-  assert.match(theme, /\.admin-shell \.match-player-admin-list \.attendance-present\.on[\s\S]*var\(--management-button/);
+  assert.match(panel, /className="admin-matches match-admin-surface"/);
+  assert.match(theme, /\.match-admin-surface \.match-admin-detail \.weather-preview[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.match-admin-surface \.match-player-group-head \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.match-admin-surface \.match-player-admin-list > div,[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.match-admin-surface \.match-admin-pagination[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.match-admin-surface \.match-player-admin-list \.attendance-present\.on[\s\S]*var\(--management-button/);
 });
 
 test("filtro reinicia a consulta administrativa na primeira página", () => {

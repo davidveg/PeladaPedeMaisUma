@@ -453,6 +453,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-shell \.release-platform,[\s\S]*\.release-platform\.enabled \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.release-platform\.enabled \{[\s\S]*var\(--management-button/);
   assert.match(theme, /\.admin-shell \.release-admin-help \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.match-admin-surface :is\(\.match-admin-toolbar, \.match-admin-card, \.match-admin-detail, \.separation-draft-setting\) \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.match-admin-surface \.match-attendance-summary span \{[\s\S]*var\(--control-line/);
+  assert.match(theme, /\.match-admin-surface \.match-player-admin-list > div,[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page \.editor \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page \.editor :is\(input, select, textarea\),[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.player-achievements,[\s\S]*\.notification-preferences-card,[\s\S]*var\(--management-surface/);

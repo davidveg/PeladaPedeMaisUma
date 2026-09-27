@@ -90,7 +90,7 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
   }
 
   if (loading && !data.matches.length) return <div className="admin-card match-admin-empty">Carregando partidas…</div>;
-  return <section className="admin-matches">
+  return <section className="admin-matches match-admin-surface">
     {!matchId && <>{canConfigureDrafts&&instanceConfig&&<SeparationDraftSetting api={api} config={instanceConfig} setError={setError} setNotice={setNotice} onSaved={onInstanceConfigSaved}/>}<div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p>{canManage&&<button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button>}</div>
     <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem escalação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => { setOnlyActiveOrSeparated(event.target.checked); setPage(1); }}/></label></>}
     <div className={matchId ? "match-admin-single" : "match-admin-layout"}>{!matchId && <div className="match-admin-list">{visibleMatches.length ? paginatedMatches.map(item => <button className={`match-admin-card ${selected === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelected(item.id)}>
