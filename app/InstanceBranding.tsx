@@ -47,6 +47,7 @@ export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INS
       "--management-muted": config.managementMutedColor,
       "--management-button": config.managementButtonColor,
       "--management-button-text": config.managementButtonTextColor,
+      "--management-button-contrast": contrastTextColor(config.managementButtonColor),
       "--management-line": colorWithOpacity(config.managementTextColor, .16),
       "--control-surface": config.controlSurfaceColor,
       "--control-text": config.controlTextColor,

@@ -397,6 +397,7 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(branding, /--management-surface.*managementSurfaceColor/);
   assert.match(branding, /--management-button.*managementButtonColor/);
   assert.match(branding, /--management-button-text.*managementButtonTextColor/);
+  assert.match(branding, /--management-button-contrast.*contrastTextColor\(config\.managementButtonColor\)/);
   assert.match(branding, /--control-surface.*controlSurfaceColor/);
   assert.match(branding, /--control-text.*controlTextColor/);
   assert.match(styles, /background:\s*var\(--admin-sidebar/);
@@ -429,7 +430,7 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center-grid > article[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.primary[\s\S]*var\(--management-button/);
-  assert.match(theme, /\.member-page \.team-player > span,[\s\S]*\.app-shell \.team-player > span \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-text/);
+  assert.match(theme, /\.member-page \.team-player > span,[\s\S]*\.app-shell \.team-player > span \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-contrast/);
   assert.match(theme, /\.app-shell \.section-head \.balance \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.result-actions \.ghost \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell > main \{[\s\S]*padding-bottom:\s*clamp/);
