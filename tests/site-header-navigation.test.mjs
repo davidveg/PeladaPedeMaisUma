@@ -87,6 +87,23 @@ test("menu lateral evita overflow no desktop e centraliza o item somente no mobi
   assert.match(theme, /@media \(max-width: 900px\)[\s\S]*?\.site-sidebar nav \{[\s\S]*?overflow-x:\s*auto/);
 });
 
+test("menu lateral mostra o mês atual calculado da temporada", async () => {
+  const [header, branding, publicConfig] = await Promise.all([
+    readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/public-config/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(header, /AMBIENTE DE VALIDAÇÃO|Layout experimental/);
+  assert.match(header, /careerSeasonProgress\(season\)/);
+  assert.match(header, /new Date\(season\.startedAt\)\.getUTCFullYear\(\)/);
+  assert.match(header, /seasonProgress\.currentMonth.*seasonProgress\.totalMonths/);
+  assert.match(header, /role="progressbar"/);
+  assert.match(branding, /season: PublicCareerSeason \| null/);
+  assert.match(publicConfig, /season_duration_months/);
+  assert.match(publicConfig, /instance, season/);
+});
+
 test("acesso do jogador usa a mesma superfície escura do layout atual", async () => {
   const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addSeasonMonths, careerVoteForAuthenticatedPlayer, defaultCareerConfig, defaultSeasonResetAt, matchWinner, nextSeasonResetAt, rankCareerRecognition, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
+import { addSeasonMonths, careerSeasonProgress, careerVoteForAuthenticatedPlayer, defaultCareerConfig, defaultSeasonResetAt, matchWinner, nextSeasonResetAt, rankCareerRecognition, rankCareerVotes, teamMomentumForResult, validateCareerConfig, validateCareerVote } from "../lib/career.ts";
 
 const participantIds=["a","b","c","d","e","f","g"];
 const valid={voterPlayerId:"a",motmThirdId:"b",motmSecondId:"c",motmFirstId:"d",dotmThirdId:"e",dotmSecondId:"f",dotmFirstId:"g",partnerId:"b",fairPlayId:"c",defenseId:"d"};
@@ -20,6 +20,15 @@ test("limita a duração da temporada entre um e cento e vinte meses inteiros",(
 test("valida a formação configurável da Seleção do Mês",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,monthlyTeamGoalkeepers:1,monthlyTeamDefenders:4,monthlyTeamMidfielders:4,monthlyTeamAttackers:2}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,monthlyTeamGoalkeepers:0,monthlyTeamDefenders:0,monthlyTeamMidfielders:0,monthlyTeamAttackers:0}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,monthlyTeamDefenders:12}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,monthlyTeamAttackers:1.5}),false)});
 test("agenda a primeira virada para o fim do ano corrente no fuso da pelada",()=>assert.equal(defaultSeasonResetAt(new Date("2026-08-03T12:00:00.000Z")).toISOString(),"2027-01-01T03:00:00.000Z"));
 test("avança a temporada por meses, respeitando fim do mês e períodos vencidos",()=>{assert.equal(addSeasonMonths("2026-01-31T03:00:00.000Z",1).toISOString(),"2026-02-28T03:00:00.000Z");assert.equal(nextSeasonResetAt("2026-01-01T03:00:00.000Z",6,new Date("2027-02-01T00:00:00.000Z")).toISOString(),"2027-07-01T03:00:00.000Z")});
+test("calcula o mês corrente da temporada pela data de início",()=>{
+ const season={durationMonths:12,startedAt:"2026-01-15T03:00:00.000Z",nextResetAt:"2027-01-15T03:00:00.000Z"};
+ const firstMonth=careerSeasonProgress(season,new Date("2026-01-15T03:00:00.000Z"));
+ assert.deepEqual({currentMonth:firstMonth.currentMonth,totalMonths:firstMonth.totalMonths},{currentMonth:1,totalMonths:12});
+ assert.ok(Math.abs(firstMonth.percentage-100/12)<1e-12);
+ assert.equal(careerSeasonProgress(season,new Date("2026-08-14T03:00:00.000Z")).currentMonth,7);
+ assert.equal(careerSeasonProgress(season,new Date("2026-08-15T03:00:00.000Z")).currentMonth,8);
+ assert.deepEqual(careerSeasonProgress(season,new Date("2027-01-15T03:00:00.000Z")),{currentMonth:12,totalMonths:12,percentage:100});
+});
 test("valida os limites crescentes dos níveis de card",()=>{assert.equal(validateCareerConfig({...defaultCareerConfig,cardBronzeMax:2.4,cardSilverMax:3.9,cardGoldMax:4.5}),true);assert.equal(validateCareerConfig({...defaultCareerConfig,cardBronzeMax:4,cardSilverMax:3.9}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,cardGoldMax:5}),false);assert.equal(validateCareerConfig({...defaultCareerConfig,cardSilverMax:3.95}),false)});
 test("impede auto voto, repetição entre categorias e não participantes",()=>{
  assert.match(validateCareerVote({...valid,motmFirstId:"a"},participantIds),/si mesmo/);

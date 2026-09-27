@@ -29,6 +29,14 @@ export type CareerConfig = {
   votingDays: number;
 };
 
+export type PublicCareerSeason = {
+  enabled: boolean;
+  seasonNumber: number;
+  durationMonths: number;
+  startedAt: string;
+  nextResetAt: string;
+};
+
 export type MonthlyTeamFormation = { goalkeepers: number; defenders: number; midfielders: number; attackers: number };
 export const defaultMonthlyTeamFormation: MonthlyTeamFormation = { goalkeepers: 1, defenders: 2, midfielders: 2, attackers: 2 };
 
@@ -68,6 +76,25 @@ export function addSeasonMonths(value: Date | string, months: number) {
   const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
   date.setUTCDate(Math.min(day, lastDay));
   return date;
+}
+
+export function careerSeasonProgress(
+  season: Pick<PublicCareerSeason, "durationMonths" | "startedAt" | "nextResetAt">,
+  now = new Date(),
+) {
+  const totalMonths = Math.min(120, Math.max(1, Math.trunc(Number(season.durationMonths) || 12)));
+  const startedAt = new Date(season.startedAt);
+  const nextResetAt = new Date(season.nextResetAt);
+  let currentMonth = 1;
+
+  if (Number.isFinite(startedAt.getTime()) && now.getTime() >= startedAt.getTime()) {
+    let elapsedMonths = (now.getUTCFullYear() - startedAt.getUTCFullYear()) * 12 + now.getUTCMonth() - startedAt.getUTCMonth();
+    if (addSeasonMonths(startedAt, elapsedMonths).getTime() > now.getTime()) elapsedMonths -= 1;
+    currentMonth = Math.min(totalMonths, Math.max(1, elapsedMonths + 1));
+  }
+  if (Number.isFinite(nextResetAt.getTime()) && now.getTime() >= nextResetAt.getTime()) currentMonth = totalMonths;
+
+  return { currentMonth, totalMonths, percentage: currentMonth * 100 / totalMonths };
 }
 
 export function nextSeasonResetAt(previousReset: Date | string, durationMonths: number, now = new Date()) {

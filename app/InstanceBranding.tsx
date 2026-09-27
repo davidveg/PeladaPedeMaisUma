@@ -4,25 +4,30 @@ import { createContext, useContext, useEffect, useMemo, useState, type CSSProper
 import { DEFAULT_INSTANCE_CONFIGURATION, type InstanceConfiguration } from "../lib/instance-config";
 import { fitBrandLogo } from "../lib/brand-logo";
 import { colorWithOpacity, contrastTextColor, readableTeamColor } from "../lib/team-colors";
+import type { PublicCareerSeason } from "../lib/career";
 
 type BrandingContextValue = {
   config: InstanceConfiguration;
+  season: PublicCareerSeason | null;
   refresh(): Promise<void>;
 };
 
 const BrandingContext = createContext<BrandingContextValue>({
   config: DEFAULT_INSTANCE_CONFIGURATION,
+  season: null,
   async refresh() {},
 });
 
 export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INSTANCE_CONFIGURATION }: PropsWithChildren<{ initialConfig?: InstanceConfiguration }>) {
   const [config, setConfig] = useState<InstanceConfiguration>(initialConfig);
+  const [season, setSeason] = useState<PublicCareerSeason | null>(null);
 
   async function refresh() {
     const response = await fetch("/api/public-config", { cache: "no-store" });
     if (!response.ok) return;
-    const payload = await response.json() as { instance?: InstanceConfiguration };
+    const payload = await response.json() as { instance?: InstanceConfiguration; season?: PublicCareerSeason };
     if (payload.instance) setConfig({ ...DEFAULT_INSTANCE_CONFIGURATION, ...payload.instance });
+    setSeason(payload.season || null);
   }
 
   useEffect(() => {
@@ -67,7 +72,7 @@ export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INS
     if (document.title.includes(defaultName)) document.title = document.title.replace(defaultName, config.siteName);
   }, [config]);
 
-  const value = useMemo(() => ({ config, refresh }), [config]);
+  const value = useMemo(() => ({ config, season, refresh }), [config, season]);
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;
 }
 
