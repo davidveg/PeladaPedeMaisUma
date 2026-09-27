@@ -2131,6 +2131,50 @@ body {
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--control-text, #f2f5f3) 4%, transparent);
 }
 
+.finance-page .modal-back {
+  background: color-mix(in srgb, var(--management-background, #0f1612) 84%, transparent);
+  backdrop-filter: blur(9px);
+}
+
+.finance-page .finance-dialog,
+.finance-page form.finance-card {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.finance-page .finance-dialog {
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--management-background, #0f1612) 58%, transparent);
+}
+
+.finance-page .finance-dialog .eyebrow,
+.finance-page form.finance-card .eyebrow {
+  color: var(--management-button, #d3eb7a);
+}
+
+.finance-page .finance-dialog h2,
+.finance-page form.finance-card .finance-card-head h2 {
+  color: var(--management-text, #f2f5f3);
+}
+
+.finance-page .finance-dialog > p,
+.finance-page .finance-dialog > p b,
+.finance-page form.finance-card .finance-help,
+.finance-page form.finance-card label small {
+  color: var(--management-muted, #98a69f);
+}
+
+.finance-page .finance-dialog .editor-actions {
+  padding-top: 18px;
+  border-top: 1px solid var(--management-line, #34433b);
+}
+
+.finance-page .finance-dialog .ghost {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
 .finance-page :is(
   .finance-form-grid input,
   .finance-form-grid select,
@@ -2153,7 +2197,7 @@ body {
 .finance-page .finance-form-grid label,
 .finance-page .finance-dialog label,
 .finance-page .competence-picker label {
-  color: var(--muted, #98a69f);
+  color: var(--management-muted, #98a69f);
 }
 
 .finance-page .competence-picker button {

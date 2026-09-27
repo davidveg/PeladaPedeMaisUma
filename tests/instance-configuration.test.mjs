@@ -423,6 +423,8 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.finance-page \.finance-closure-notice > button \{[\s\S]*var\(--management-button/);
   assert.match(theme, /\.finance-page \.finance-closure-comparison\.error[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.finance-page \.competence-picker \.localized-month-input \{[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.finance-page \.finance-dialog,[\s\S]*form\.finance-card \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.finance-page \.finance-dialog \.editor-actions \{[\s\S]*var\(--management-line/);
   assert.match(theme, /Public functional surfaces reuse the palette/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center-grid > article[\s\S]*var\(--control-surface/);

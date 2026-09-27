@@ -30,6 +30,16 @@ test("diálogos financeiros só fecham depois de uma operação bem-sucedida", a
   assert.match(source, /if\(await action\(\{ action: "pay-expense"[^\n]+setPaying\(null\)/);
 });
 
+test("formulários financeiros usam as superfícies configuráveis da identidade", async () => {
+  const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
+
+  assert.match(theme, /\.finance-page \.finance-dialog,[\s\S]*form\.finance-card \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.finance-page \.finance-dialog \.eyebrow,[\s\S]*var\(--management-button/);
+  assert.match(theme, /\.finance-page \.finance-dialog \.editor-actions \{[\s\S]*var\(--management-line/);
+  assert.match(theme, /\.finance-page \.finance-dialog \.ghost \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.finance-page :is\([\s\S]*\.finance-dialog input,[\s\S]*var\(--control-surface/);
+});
+
 test("goleiros são opcionais por competência na geração de mensalidades", async () => {
   const source = await readFile(new URL("../app/financeiro/FinanceApp.tsx", import.meta.url), "utf8");
 
