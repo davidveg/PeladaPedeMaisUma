@@ -2226,6 +2226,38 @@ body {
   color: var(--management-button, #d3eb7a);
 }
 
+/* Record cards and their player chips share the two surfaces configured in
+   Identidade e agenda, keeping player names legible in every palette. */
+.statistics-page .statistics-record-grid > article {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.statistics-page .statistics-record-grid > article > i,
+.statistics-page .streak-players > span {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.statistics-page .streak-players b {
+  color: var(--control-text, #f2f5f3);
+}
+
+.statistics-page .streak-players .player-photo {
+  border: 1px solid var(--control-line, #415148);
+}
+
+.statistics-page .statistics-record-grid > article > div > small,
+.statistics-page .statistics-record-grid > article > strong {
+  color: var(--management-button, #d3eb7a);
+}
+
+.statistics-page .statistics-record-grid :is(p, em, strong small) {
+  color: var(--management-muted, #98a69f);
+}
+
 /* Public roster empty states and counters use the same auxiliary surfaces as
    the rest of the configurable work area. */
 .member-page :is(.public-player-empty, .public-player-list-title > b),
