@@ -1965,6 +1965,119 @@ body {
   color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
 }
 
+/* Tier samples are intentionally light metallic swatches. Their labels need
+   local dark inks instead of inheriting the configurable management text. */
+.admin-shell .card-tier-option.bronze .career-number > span {
+  color: #321f16;
+}
+
+.admin-shell .card-tier-option.silver .career-number > span {
+  color: #202a2f;
+}
+
+.admin-shell .card-tier-option.gold .career-number > span {
+  color: #30270d;
+}
+
+/* Consolidation is the primary, reversible action in this group and follows
+   the button colors configured in Identidade e agenda. */
+.admin-shell .career-award-actions > button:first-child {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--management-button, #d3eb7a) 18%, transparent);
+}
+
+.admin-shell .career-award-actions > button:first-child:hover:not(:disabled),
+.admin-shell .career-award-actions > button:first-child:focus-visible {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 84%, white);
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 84%, white);
+  color: var(--management-button-text, #172018);
+}
+
+/* App release management uses the same configurable hierarchy as the other
+   Identidade e agenda surfaces. The active platform keeps a compact accent
+   instead of falling back to the legacy white panel. */
+.admin-shell .release-admin-layout {
+  gap: 18px;
+}
+
+.admin-shell :is(.release-admin-intro, .release-admin-form) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell :is(.release-admin-intro, .release-admin-form) :is(h2, h3, b, label) {
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell :is(.release-admin-intro, .release-admin-form) :is(p, small) {
+  color: var(--management-muted, #98a69f);
+}
+
+.admin-shell .release-version-grid :is(input, textarea),
+.admin-shell .release-platform :is(input, textarea) {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .release-version-grid :is(input, textarea)::placeholder,
+.admin-shell .release-platform :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 48%, transparent);
+}
+
+.admin-shell .release-platform,
+.admin-shell .release-platform.enabled {
+  border-color: var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  opacity: 1;
+}
+
+.admin-shell .release-platform.enabled {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 48%, var(--control-line, #4a5851));
+  box-shadow: inset 4px 0 0 var(--management-button, #d3eb7a);
+}
+
+.admin-shell .release-platform:not(.enabled) {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, var(--management-background, #0d1511) 24%);
+  opacity: .68;
+}
+
+.admin-shell .release-platform legend,
+.admin-shell .release-platform.enabled legend {
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .release-platform > div > label {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 74%, transparent);
+}
+
+.admin-shell .release-platform-toggle {
+  color: var(--management-button, #d3eb7a) !important;
+}
+
+.admin-shell .release-platform-toggle input {
+  accent-color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .release-admin-help {
+  border: 1px solid var(--control-line, #4a5851);
+  background: var(--control-surface, #202b26);
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 70%, transparent);
+}
+
+.admin-shell .release-admin-help b {
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .release-admin-actions {
+  padding-top: 18px;
+  border-top: 1px solid var(--management-line, #34433b);
+}
+
 .admin-shell .career-match-body {
   border-color: var(--management-line, #34433b);
 }

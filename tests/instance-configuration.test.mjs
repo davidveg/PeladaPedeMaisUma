@@ -444,6 +444,15 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-shell :is\([\s\S]*\.career-season-status[\s\S]*\.card-tier-settings[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.expanded-weights \.weight-total\.valid \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.expanded-weights \.weight-total\.invalid \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.card-tier-option\.bronze \.career-number > span \{[\s\S]*color:\s*#321f16/);
+  assert.match(theme, /\.admin-shell \.card-tier-option\.silver \.career-number > span \{[\s\S]*color:\s*#202a2f/);
+  assert.match(theme, /\.admin-shell \.card-tier-option\.gold \.career-number > span \{[\s\S]*color:\s*#30270d/);
+  assert.match(theme, /\.admin-shell \.career-award-actions > button:first-child \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-text/);
+  assert.match(theme, /\.admin-shell :is\(\.release-admin-intro, \.release-admin-form\) \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.admin-shell \.release-version-grid :is\(input, textarea\),[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.release-platform,[\s\S]*\.release-platform\.enabled \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.release-platform\.enabled \{[\s\S]*var\(--management-button/);
+  assert.match(theme, /\.admin-shell \.release-admin-help \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.editor \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page \.editor :is\(input, select, textarea\),[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.player-achievements,[\s\S]*\.notification-preferences-card,[\s\S]*var\(--management-surface/);
