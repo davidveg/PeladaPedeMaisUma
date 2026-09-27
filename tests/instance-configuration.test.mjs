@@ -445,6 +445,7 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.statistics-page \.versus-player b,[\s\S]*\.versus-matches > a :is\(b, strong\) \{[\s\S]*var\(--control-text/);
   assert.match(theme, /\.statistics-page \.versus-matches > a strong\.winner \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-text/);
   assert.match(theme, /\.app-shell :is\(\.public-player-empty, \.public-player-list-title > b\) \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.app-shell \.public-players \{[\s\S]*padding-bottom:\s*clamp/);
   assert.match(theme, /\.app-shell \.public-player-tr\.tier-row \{[\s\S]*var\(--management-surface[\s\S]*var\(--roster-tier-accent/);
   assert.match(theme, /\.app-shell \.public-player-tr > strong,[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.advanced-statistics-page :is\([\s\S]*\.advanced-section[\s\S]*var\(--management-surface/);
