@@ -1,23 +1,22 @@
 import { audit, currentPlayerAccount, db, ensureDb, hashOpaqueToken, hashPassword, verifyPassword } from "../../../lib/database";
 import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../lib/login-rate-limit";
-import { isSecureTransport, secureTransportRequiredResponse } from "../../../lib/secure-transport";
+import { isAuthenticationTransportAllowed, secureTransportRequiredResponse, sessionCookie } from "../../../lib/secure-transport";
 
 const emailPattern = /^\S+@\S+\.\S+$/;
-const cookie = (name: string, value: string, maxAge: number) => `${name}=${value}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
 const noStoreHeaders = () => new Headers({ "content-type": "application/json", "cache-control": "no-store, max-age=0", pragma: "no-cache" });
 
 export async function GET(request: Request) {
   const member = await currentPlayerAccount(request);
   const headers = noStoreHeaders();
   if (!member && /(?:^|;\s*)ppm_(?:member_)?session=/.test(request.headers.get("cookie") || "")) {
-    headers.append("set-cookie", cookie("ppm_member_session", "", 0));
-    headers.append("set-cookie", cookie("ppm_session", "", 0));
+    headers.append("set-cookie", sessionCookie(request, "ppm_member_session", "", 0));
+    headers.append("set-cookie", sessionCookie(request, "ppm_session", "", 0));
   }
   return new Response(JSON.stringify({ member }), { headers });
 }
 
 export async function POST(request: Request) {
-  if (!isSecureTransport(request)) return secureTransportRequiredResponse();
+  if (!await isAuthenticationTransportAllowed(request)) return secureTransportRequiredResponse();
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
   const email = String(payload.email || "").trim().toLowerCase();
@@ -40,11 +39,11 @@ export async function POST(request: Request) {
     db().prepare(`UPDATE member_accounts SET last_login_at=?,updated_at=? WHERE id=?`).bind(now.toISOString(), now.toISOString(), account.id),
   ]);
   await audit(administrator ? account.id : null, "MEMBER_LOGIN", administrator ? "administrator" : "member_account", account.id, { email, portal: "player" });
-  return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json", "set-cookie": cookie(administrator ? "ppm_session" : "ppm_member_session", id, administrator ? 8 * 60 * 60 : 30 * 24 * 60 * 60) } });
+  return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json", "set-cookie": sessionCookie(request, administrator ? "ppm_session" : "ppm_member_session", id, administrator ? 8 * 60 * 60 : 30 * 24 * 60 * 60) } });
 }
 
 export async function PUT(request: Request) {
-  if (!isSecureTransport(request)) return secureTransportRequiredResponse();
+  if (!await isAuthenticationTransportAllowed(request)) return secureTransportRequiredResponse();
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
   const email = String(payload.email || "").trim().toLowerCase(), password = String(payload.password || ""), confirmation = String(payload.confirmation || "");
@@ -63,7 +62,7 @@ export async function PUT(request: Request) {
     throw error;
   }
   await audit(null, "MEMBER_REGISTER", "member_account", id, { email });
-  return new Response(JSON.stringify({ ok: true }), { status: 201, headers: { "content-type": "application/json", "set-cookie": cookie("ppm_member_session", sessionId, 30 * 24 * 60 * 60) } });
+  return new Response(JSON.stringify({ ok: true }), { status: 201, headers: { "content-type": "application/json", "set-cookie": sessionCookie(request, "ppm_member_session", sessionId, 30 * 24 * 60 * 60) } });
 }
 
 export async function DELETE(request: Request) {
@@ -73,6 +72,6 @@ export async function DELETE(request: Request) {
   if (adminToken) await db().prepare(`DELETE FROM sessions WHERE id IN (?,?)`).bind(await hashOpaqueToken(adminToken), adminToken).run();
   if (member) await audit(member.accountType === "administrator" ? member.id : null, "MEMBER_LOGOUT", member.accountType === "administrator" ? "administrator" : "member_account", member.id, { email: member.email, portal: "player" });
   const headers = new Headers({ "content-type": "application/json" });
-  headers.append("set-cookie", cookie("ppm_member_session", "", 0)); headers.append("set-cookie", cookie("ppm_session", "", 0));
+  headers.append("set-cookie", sessionCookie(request, "ppm_member_session", "", 0)); headers.append("set-cookie", sessionCookie(request, "ppm_session", "", 0));
   return new Response(JSON.stringify({ ok: true }), { headers });
 }

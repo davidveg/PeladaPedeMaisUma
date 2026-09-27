@@ -2,19 +2,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, currentStaff, db, ensureDb, hashOpaqueToken, hashPassword, verifyPassword } from "../../../lib/database";
 import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../lib/login-rate-limit";
-import { isSecureTransport, secureTransportRequiredResponse } from "../../../lib/secure-transport";
-
-const cookie=(name:string,value:string,maxAge:number)=>`${name}=${value}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
+import { isAuthenticationTransportAllowed, secureTransportRequiredResponse, sessionCookie } from "../../../lib/secure-transport";
 
 export async function GET(request:Request){
   const staff:any=await currentStaff(request),headers=new Headers({"content-type":"application/json","cache-control":"no-store, max-age=0",pragma:"no-cache"});
-  if(!staff&&/(?:^|;\s*)ppm_session=/.test(request.headers.get("cookie")||""))headers.append("set-cookie",cookie("ppm_session","",0));
-  if(!staff&&/(?:^|;\s*)ppm_member_session=/.test(request.headers.get("cookie")||""))headers.append("set-cookie",cookie("ppm_member_session","",0));
+  if(!staff&&/(?:^|;\s*)ppm_session=/.test(request.headers.get("cookie")||""))headers.append("set-cookie",sessionCookie(request,"ppm_session","",0));
+  if(!staff&&/(?:^|;\s*)ppm_member_session=/.test(request.headers.get("cookie")||""))headers.append("set-cookie",sessionCookie(request,"ppm_member_session","",0));
   return new Response(JSON.stringify({admin:staff}),{headers});
 }
 
 export async function POST(request:Request){
-  if(!isSecureTransport(request))return secureTransportRequiredResponse();
+  if(!await isAuthenticationTransportAllowed(request))return secureTransportRequiredResponse();
   await ensureDb();const payload=await request.json().catch(()=>({})) as any,email=String(payload.email||"").trim().toLowerCase(),password=String(payload.password||"");
   const rateLimit=await beginLoginAttempt(request,"protected",email);if(!rateLimit.allowed)return loginRateLimitResponse(rateLimit);
   const administrator:any=await db().prepare(`SELECT *,'administrator' account_type,'administrator' role FROM administrators WHERE email=? AND active=1`).bind(email).first();
@@ -36,7 +34,7 @@ export async function POST(request:Request){
   }
   await audit(account.id,"LOGIN",isAdministrator?"administrator":"moderator",account.id,{panel:"protected"});
   const staff:any=await currentStaff(new Request(request.url,{headers:{cookie:`${isAdministrator?"ppm_session":"ppm_member_session"}=${token}`}}));
-  return new Response(JSON.stringify({admin:staff}),{headers:{"content-type":"application/json","set-cookie":cookie(isAdministrator?"ppm_session":"ppm_member_session",token,28800)}});
+  return new Response(JSON.stringify({admin:staff}),{headers:{"content-type":"application/json","set-cookie":sessionCookie(request,isAdministrator?"ppm_session":"ppm_member_session",token,28800)}});
 }
 
 export async function PUT(request:Request){
@@ -49,5 +47,5 @@ export async function DELETE(request:Request){
   const staff:any=await currentStaff(request),cookies=request.headers.get("cookie")||"",adminToken=cookies.match(/ppm_session=([^;]+)/)?.[1],memberToken=cookies.match(/ppm_member_session=([^;]+)/)?.[1];
   if(adminToken)await db().prepare(`DELETE FROM sessions WHERE id IN (?,?)`).bind(await hashOpaqueToken(adminToken),adminToken).run();if(memberToken)await db().prepare(`DELETE FROM member_sessions WHERE id IN (?,?)`).bind(await hashOpaqueToken(memberToken),memberToken).run();
   if(staff)await audit(staff.id,"LOGOUT",staff.accountType==="administrator"?"administrator":"moderator",staff.id);
-  const headers=new Headers({"content-type":"application/json"});headers.append("set-cookie",cookie("ppm_session","",0));headers.append("set-cookie",cookie("ppm_member_session","",0));return new Response(JSON.stringify({ok:true}),{headers});
+  const headers=new Headers({"content-type":"application/json"});headers.append("set-cookie",sessionCookie(request,"ppm_session","",0));headers.append("set-cookie",sessionCookie(request,"ppm_member_session","",0));return new Response(JSON.stringify({ok:true}),{headers});
 }

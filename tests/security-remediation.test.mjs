@@ -8,9 +8,10 @@ import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
 
-const [runtime, database, authRoute, memberAuthRoute, mobileAuthRoute, administratorsRoute, playersRoute, instanceConfigRoute, separationsRoute, memberPlayersRoute, associationsRoute] = await Promise.all([
+const [runtime, database, secureTransport, authRoute, memberAuthRoute, mobileAuthRoute, administratorsRoute, playersRoute, instanceConfigRoute, separationsRoute, memberPlayersRoute, associationsRoute] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
+  import("../lib/secure-transport.ts"),
   import("../app/api/auth/route.ts"),
   import("../app/api/member-auth/route.ts"),
   import("../app/api/mobile/auth/route.ts"),
@@ -88,6 +89,38 @@ test("endpoints que emitem cookie recusam autenticação por HTTP fora do localh
   assert.equal((await authRoute.POST(loginRequest("http://pelada.example/api/auth", "admin", "admin", "198.51.100.40"))).status, 426);
   assert.equal((await memberAuthRoute.POST(loginRequest("http://pelada.example/api/member-auth", "member@example.com", "senha-member-123", "198.51.100.41"))).status, 426);
   assert.equal((await memberAuthRoute.PUT(jsonRequest("http://pelada.example/api/member-auth", { email: "member@example.com", password: "senha-member-123", confirmation: "senha-member-123" }))).status, 426);
+});
+
+test("HTTP pode ser habilitado explicitamente apenas para IPs privados da rede local", async () => {
+  assert.equal(secureTransport.isPrivateNetworkHost("192.168.1.162"), true);
+  assert.equal(secureTransport.isPrivateNetworkHost("10.0.0.8"), true);
+  assert.equal(secureTransport.isPrivateNetworkHost("172.31.4.2"), true);
+  assert.equal(secureTransport.isPrivateNetworkHost("8.8.8.8"), false);
+  assert.equal(secureTransport.isPrivateNetworkHost("pelada.example"), false);
+
+  await withDatabase("ppm-local-network-auth-", async () => {
+    const now = new Date().toISOString();
+    await db().batch([
+      db().prepare(`UPDATE instance_configuration SET allow_insecure_local_network_auth=1 WHERE id=1`),
+      db().prepare(`INSERT INTO administrators (id,email,password_hash,active,must_change_password,created_at,updated_at) VALUES (?,?,?,?,?,?,?)`)
+        .bind("lan-admin", "lan-admin@example.com", await hashPassword("senha-local-123"), 1, 0, now, now),
+    ]);
+
+    const login = await authRoute.POST(loginRequest("http://192.168.1.162:3000/api/auth", "lan-admin@example.com", "senha-local-123", "192.168.1.20"));
+    assert.equal(login.status, 200);
+    assert.match(login.headers.get("set-cookie"), /HttpOnly; SameSite=Strict/);
+    assert.doesNotMatch(login.headers.get("set-cookie"), /; Secure;/);
+
+    const registration = await memberAuthRoute.PUT(jsonRequest("http://192.168.1.162:3000/api/member-auth", {
+      email: "lan-member@example.com",
+      password: "senha-member-123",
+      confirmation: "senha-member-123",
+    }));
+    assert.equal(registration.status, 201);
+    assert.doesNotMatch(registration.headers.get("set-cookie"), /; Secure;/);
+
+    assert.equal((await authRoute.POST(loginRequest("http://203.0.113.10/api/auth", "lan-admin@example.com", "senha-local-123", "192.168.1.20"))).status, 426);
+  });
 });
 
 test("logins web, membro e mobile são bloqueados após cinco falhas por conta", async () => {

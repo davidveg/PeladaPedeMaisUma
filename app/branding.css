@@ -436,6 +436,10 @@
   background: #fafbf9;
 }
 
+.instance-color-grid > .instance-feature-toggle {
+  grid-column: 1 / -1;
+}
+
 .instance-feature-toggle span {
   display: grid;
   gap: 5px;
