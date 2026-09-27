@@ -2741,6 +2741,89 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--control-text, #f2f5f3);
 }
 
+.member-page .player-financial-history .finance-card-head {
+  align-items: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--management-line, #34433b);
+}
+
+.member-page .player-financial-history .eyebrow {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page .player-financial-history .finance-card-head > strong {
+  padding: 8px 11px;
+  border: 1px solid var(--control-line, #415148);
+  border-radius: 10px;
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .player-financial-history .finance-table-wrap {
+  overflow: hidden auto;
+  border: 1px solid var(--control-line, #415148);
+  border-radius: 14px;
+  background: var(--control-surface, #202b26);
+}
+
+.member-page .player-financial-history .finance-table th {
+  border-color: var(--control-line, #415148);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--management-background, #0f1612) 22%);
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 64%, transparent);
+}
+
+.member-page .player-financial-history .finance-table td {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .player-financial-history .finance-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--management-surface, #18211d) 12%);
+}
+
+.member-page .player-financial-history .finance-status {
+  border: 1px solid var(--control-line, #415148);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 86%, var(--management-surface, #18211d) 14%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .player-financial-history :is(.status-paid, .status-completed) {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 42%, var(--control-line, #415148));
+}
+
+.member-page .player-financial-history :is(.status-paid, .status-completed) i {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page .player-financial-history .finance-history-link {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 18px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--management-button, #d3eb7a) 38%, var(--management-line, #34433b));
+  border-radius: 10px;
+  background: transparent;
+  color: var(--management-button, #d3eb7a);
+  text-decoration: none;
+}
+
+.member-page .player-financial-history .finance-history-link:hover,
+.member-page .player-financial-history .finance-history-link:focus-visible {
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 10%, transparent);
+}
+
+@media (max-width: 760px) {
+  .member-page .player-financial-history .finance-table-wrap {
+    margin-inline: 0;
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 0;
+  }
+}
+
 .member-page .season-retrospective {
   background:
     radial-gradient(circle at 95% 0, color-mix(in srgb, var(--management-button, #d3eb7a) 10%, transparent), transparent 35%),
