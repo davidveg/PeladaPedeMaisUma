@@ -478,6 +478,10 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page \.player-financial-history \.finance-table-wrap \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.player-financial-history \.finance-table td \{[\s\S]*var\(--control-text/);
   assert.match(theme, /\.member-page \.player-financial-history \.finance-history-link \{[\s\S]*var\(--management-button/);
+  assert.match(theme, /\.member-page \.notification-site-item \{[\s\S]*var\(--management-surface[\s\S]*var\(--management-text/);
+  assert.match(theme, /\.member-page \.notification-site-item\.unread \{[\s\S]*var\(--management-button[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.member-page \.notification-site-toolbar select \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.member-page \.notification-site-main \.member-account-head \{[\s\S]*align-items:\s*flex-start/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.achievement-grid article,[\s\S]*\.retrospective-numbers,[\s\S]*\.notification-preferences-grid,[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.modal-back button\.close,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.modal-back button\.close:hover,[\s\S]*var\(--management-button[\s\S]*var\(--control-surface/);

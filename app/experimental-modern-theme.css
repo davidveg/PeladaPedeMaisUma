@@ -3137,6 +3137,70 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   background: color-mix(in srgb, var(--management-button, #d3eb7a) 10%, transparent);
 }
 
+/* Notification rows are interactive management cards. Read state stays on
+   the configured surface and unread state uses only a restrained accent. */
+.member-page .notification-site-main .member-account-head {
+  align-items: flex-start;
+}
+
+.member-page .notification-site-main .member-account-head > .ghost,
+.member-page .notification-pagination .ghost {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: none;
+}
+
+.member-page .notification-site-item {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+  box-shadow: none;
+}
+
+.member-page .notification-site-item.unread {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 54%, var(--management-line, #34433b));
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 6%, var(--management-surface, #18211d));
+  box-shadow: inset 3px 0 0 var(--management-button, #d3eb7a);
+}
+
+.member-page .notification-site-item:hover,
+.member-page .notification-site-item:focus-visible {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 45%, var(--management-line, #34433b));
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 5%, var(--management-surface, #18211d));
+  outline: none;
+}
+
+.member-page .notification-site-item > span {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .notification-site-item b {
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page .notification-site-item :is(p, small),
+.member-page :is(.notification-site-toolbar, .notification-pagination) {
+  color: var(--management-muted, #98a69f);
+}
+
+.member-page .notification-site-item > i {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page .notification-site-toolbar select {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  color-scheme: dark;
+}
+
+.member-page .notification-pagination > span {
+  color: var(--management-text, #f2f5f3);
+}
+
 /* Public roster rows inherit the saved site palette. Card levels remain easy
    to scan through a restrained tint and an accent rail instead of light rows. */
 .app-shell .public-player-table {
