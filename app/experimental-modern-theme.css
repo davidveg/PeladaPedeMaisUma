@@ -1776,6 +1776,96 @@ body {
   color: var(--management-button-text, #172018);
 }
 
+/* Moderator access editors use the same configurable hierarchy as the rest
+   of the admin workspace. The semantic card header must not inherit the
+   sticky, translucent application-header treatment. */
+.admin-shell .moderator-editor > header {
+  position: static;
+  z-index: auto;
+  width: auto;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  border-color: var(--management-line, #34433b);
+}
+
+.admin-shell .moderator-permission-grid :is(label, article),
+.admin-shell .moderator-candidates article {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .moderator-permission-grid label.selected {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 58%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 9%, var(--control-surface, #202b26));
+  box-shadow: inset 3px 0 0 var(--management-button, #d3eb7a);
+}
+
+.admin-shell .moderator-permission-grid input {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin-top: 2px;
+  accent-color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .moderator-permission-grid label {
+  flex-direction: row;
+  margin-bottom: 0;
+}
+
+.admin-shell .moderator-permission-grid b,
+.admin-shell .moderator-candidates article b {
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .moderator-permission-grid small,
+.admin-shell .moderator-candidates article small,
+.admin-shell .moderator-promotion-note,
+.admin-shell .moderator-promotion-modal > p {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.admin-shell .moderator-permission-check,
+.admin-shell .moderator-promotion-modal .ball {
+  border: 1px solid var(--control-line, #415148);
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 10%, var(--control-surface, #202b26));
+  color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .moderator-admin :is(
+  .moderator-intro > div > small,
+  .moderator-editor header small,
+  .moderator-permission-catalog > div:first-child > small,
+  .moderator-intro > b
+) {
+  color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell .moderator-editor .status.active {
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 12%, var(--control-surface, #202b26));
+  color: var(--management-button, #d3eb7a);
+}
+
+.admin-shell :is(.moderator-editor > footer, .moderator-promotion-modal .editor-actions) {
+  border-color: var(--management-line, #34433b);
+}
+
+.admin-shell .moderator-promotion-modal .ghost,
+.admin-shell .moderator-editor .danger {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .moderator-candidates .promote-account {
+  border-color: var(--management-button, #d3eb7a);
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 10%, var(--management-surface, #18211d));
+  color: var(--management-button, #d3eb7a);
+}
+
 /* Configurable functional surfaces: editors, switches, filters and empty states. */
 .admin-shell :is(
   .rating-slider,

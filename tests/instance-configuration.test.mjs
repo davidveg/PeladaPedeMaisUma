@@ -458,6 +458,10 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-shell \.release-platform,[\s\S]*\.release-platform\.enabled \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.release-platform\.enabled \{[\s\S]*var\(--management-button/);
   assert.match(theme, /\.admin-shell \.release-admin-help \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.moderator-editor > header \{[\s\S]*position:\s*static[\s\S]*background:\s*transparent[\s\S]*var\(--management-line/);
+  assert.match(theme, /\.admin-shell \.moderator-permission-grid :is\(label, article\),[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.admin-shell \.moderator-permission-grid label\.selected \{[\s\S]*var\(--management-button[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.moderator-promotion-modal \.ghost,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.match-admin-surface :is\(\.match-admin-toolbar, \.match-admin-card, \.match-admin-detail, \.separation-draft-setting\) \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.match-admin-surface \.match-attendance-summary span \{[\s\S]*var\(--control-line/);
   assert.match(theme, /\.match-admin-surface \.match-player-admin-list > div,[\s\S]*var\(--management-surface/);
