@@ -448,6 +448,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page \.editor :is\(input, select, textarea\),[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.player-achievements,[\s\S]*\.notification-preferences-card,[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.achievement-grid article,[\s\S]*\.retrospective-numbers,[\s\S]*\.notification-preferences-grid,[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.modal-back button\.close,[\s\S]*background:\s*#ef5350;[\s\S]*color:\s*#111/);
+  assert.match(theme, /\.modal-back button\.close:hover,[\s\S]*background:\s*#ff6b66/);
+  assert.match(theme, /\.admin-notice > button\[aria-label\^="Fechar"\] \{[\s\S]*background:\s*#ef5350/);
   assert.match(theme, /\.admin-shell \.admin-main \.admin-card\.table \{[\s\S]*overflow:\s*hidden;[\s\S]*background-clip:\s*padding-box/);
   assert.match(theme, /\.admin-shell \.admin-main \.admin-card\.table > \.tr \+ \.tr \{[\s\S]*border-top:\s*1px solid var\(--management-line/);
   assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);

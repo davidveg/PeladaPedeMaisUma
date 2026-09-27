@@ -2985,3 +2985,57 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   word-break: normal;
   hyphens: none;
 }
+
+/* One recognizable close action across public, member, finance and admin
+   dialogs. The fixed red/black treatment is intentionally semantic rather
+   than part of the configurable brand palette. */
+.modal-back button.close,
+.member-page .modal-back .editor button.close,
+.admin-shell .modal-back button.close,
+.finance-page .modal-back button.close,
+.app-shell .modal-back button.close,
+.modal-back .player-card-modal > button.close {
+  border: 1px solid #a91f1b;
+  background: #ef5350;
+  color: #111;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(239, 83, 80, .3);
+  transition: background .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.modal-back button.close:hover,
+.modal-back button.close:focus-visible {
+  border-color: #821511;
+  background: #ff6b66;
+  color: #000;
+  box-shadow: 0 8px 20px rgba(239, 83, 80, .42);
+  transform: scale(1.06);
+}
+
+.modal-back button.close:focus-visible,
+.admin-notice > button[aria-label^="Fechar"]:focus-visible {
+  outline: 3px solid rgba(239, 83, 80, .28);
+  outline-offset: 3px;
+}
+
+.admin-notice > button[aria-label^="Fechar"] {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #a91f1b;
+  border-radius: 999px;
+  background: #ef5350;
+  color: #111;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-notice > button[aria-label^="Fechar"]:hover {
+  background: #ff6b66;
+  color: #000;
+}
