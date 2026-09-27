@@ -482,6 +482,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page \.notification-site-item\.unread \{[\s\S]*var\(--management-button[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page \.notification-site-toolbar select \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.member-page \.notification-site-main \.member-account-head \{[\s\S]*align-items:\s*flex-start/);
+  assert.match(theme, /\.member-page :is\(\.match-hub-pagination, \.notification-pagination\),[\s\S]*\.admin-shell :is\(\.career-pagination, \.audit-pagination\),[\s\S]*\.match-admin-surface \.match-admin-pagination \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.member-page :is\(\.match-hub-pagination, \.notification-pagination\) \.ghost,[\s\S]*\.match-admin-surface \.match-admin-pagination \.ghost \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.member-page :is\(\.match-hub-pagination, \.notification-pagination\) \.ghost:disabled,[\s\S]*opacity:\s*1/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.achievement-grid article,[\s\S]*\.retrospective-numbers,[\s\S]*\.notification-preferences-grid,[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.modal-back button\.close,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.modal-back button\.close:hover,[\s\S]*var\(--management-button[\s\S]*var\(--control-surface/);

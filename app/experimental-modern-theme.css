@@ -3201,6 +3201,94 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--management-text, #f2f5f3);
 }
 
+/* Pagination is one shared navigation pattern across matches, notifications,
+   voting, audit and embedded match management. It reuses the two configured
+   surface levels, so another isolated color setting is unnecessary. */
+.member-page :is(.match-hub-pagination, .notification-pagination),
+.admin-shell :is(.career-pagination, .audit-pagination),
+.match-admin-surface .match-admin-pagination {
+  border: 1px solid var(--management-line, #34433b);
+  border-radius: 14px;
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--management-background, #0f1612) 28%, transparent);
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination),
+.admin-shell :is(.career-pagination, .audit-pagination) {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(90px, 1fr) minmax(110px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+
+.member-page .match-hub-pagination {
+  width: min(100%, 560px);
+  margin: 26px auto 0;
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination) > span,
+.admin-shell :is(.career-pagination, .audit-pagination) > span,
+.match-admin-surface .match-admin-pagination > span {
+  color: var(--management-text, #f2f5f3);
+  text-align: center;
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination) > span :is(b, small),
+.admin-shell :is(.career-pagination, .audit-pagination) > span :is(b, small) {
+  color: inherit;
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination) .ghost,
+.admin-shell :is(.career-pagination, .audit-pagination) .ghost,
+.match-admin-surface .match-admin-pagination .ghost {
+  min-width: 110px;
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: none;
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination) .ghost:hover:not(:disabled),
+.member-page :is(.match-hub-pagination, .notification-pagination) .ghost:focus-visible,
+.admin-shell :is(.career-pagination, .audit-pagination) .ghost:hover:not(:disabled),
+.admin-shell :is(.career-pagination, .audit-pagination) .ghost:focus-visible,
+.match-admin-surface .match-admin-pagination .ghost:hover:not(:disabled),
+.match-admin-surface .match-admin-pagination .ghost:focus-visible {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 48%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 7%, var(--control-surface, #202b26));
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination) .ghost:disabled,
+.admin-shell :is(.career-pagination, .audit-pagination) .ghost:disabled,
+.match-admin-surface .match-admin-pagination .ghost:disabled {
+  border-color: color-mix(in srgb, var(--control-line, #415148) 58%, transparent);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 58%, var(--management-background, #0f1612));
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 48%, transparent);
+  opacity: 1;
+}
+
+@media (max-width: 620px) {
+  .member-page :is(.match-hub-pagination, .notification-pagination),
+  .admin-shell :is(.career-pagination, .audit-pagination) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .member-page :is(.match-hub-pagination, .notification-pagination) > span,
+  .admin-shell :is(.career-pagination, .audit-pagination) > span {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+
+  .member-page :is(.match-hub-pagination, .notification-pagination) .ghost,
+  .admin-shell :is(.career-pagination, .audit-pagination) .ghost {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 /* Public roster rows inherit the saved site palette. Card levels remain easy
    to scan through a restrained tint and an accent rail instead of light rows. */
 .app-shell .public-player-table {
