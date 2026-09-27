@@ -460,6 +460,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-shell \.career-award-actions > button:first-child \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-text/);
   assert.match(theme, /\.admin-shell :is\(\.release-admin-intro, \.release-admin-form\) \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.admin-shell \.release-version-grid :is\(input, textarea\),[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.release-version-grid textarea \{[\s\S]*scrollbar-gutter:\s*stable[\s\S]*scrollbar-color:/);
+  assert.match(theme, /\.admin-shell \.release-version-grid textarea::-webkit-scrollbar-thumb \{[\s\S]*var\(--control-text[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.release-version-grid textarea::-webkit-scrollbar-button \{[\s\S]*display:\s*none/);
   assert.match(theme, /\.admin-shell \.release-platform,[\s\S]*\.release-platform\.enabled \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.release-platform\.enabled \{[\s\S]*var\(--management-button/);
   assert.match(theme, /\.admin-shell \.release-admin-help \{[\s\S]*var\(--control-surface/);
