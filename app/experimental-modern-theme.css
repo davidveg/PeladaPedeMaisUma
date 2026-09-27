@@ -2517,6 +2517,137 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   }
 }
 
+/* Administrative match management uses the same saved management and
+   auxiliary palettes as the rest of the protected workspace. */
+.admin-shell .match-admin-card > div b,
+.admin-shell .match-admin-detail .weather-preview,
+.admin-shell .match-admin-detail .weather-metrics span,
+.admin-shell .match-player-admin-list,
+.admin-shell .match-admin-pagination {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-admin-card > div b {
+  border: 1px solid var(--control-line, #415148);
+}
+
+.admin-shell .match-admin-card > div .present {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 36%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--control-surface, #202b26) 82%, var(--management-button, #d3eb7a) 18%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-admin-card > div .absent {
+  border-color: color-mix(in srgb, var(--control-line, #415148) 68%, #c75543 32%);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, #c75543 12%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-admin-detail .weather-preview :is(b, strong),
+.admin-shell .match-admin-detail .weather-metrics b {
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-admin-detail .weather-preview :is(small, em) {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.admin-shell .match-player-admin-list {
+  scrollbar-color: var(--control-line, #415148) var(--management-background, #0f1612);
+}
+
+.admin-shell .match-player-group-head {
+  --match-group-accent: var(--management-button, #d3eb7a);
+  border-color: var(--control-line, #415148);
+  border-left: 4px solid var(--match-group-accent);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--match-group-accent) 12%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-player-group-head.goalkeepers { --match-group-accent: var(--blue, #1768e5); }
+.admin-shell .match-player-group-head.guests { --match-group-accent: var(--yellow, #f4bf20); }
+
+.admin-shell .match-player-group-head small {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 64%, transparent);
+}
+
+.admin-shell .match-player-group-head > strong {
+  border: 1px solid color-mix(in srgb, var(--match-group-accent) 44%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, var(--match-group-accent) 24%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-player-admin-list > div,
+.admin-shell .match-player-admin-list > div.guest,
+.admin-shell .match-player-admin-list > div.preconfirmed {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .match-player-admin-list > div.guest,
+.admin-shell .match-player-admin-list > div.preconfirmed {
+  border-left-color: var(--yellow, #f4bf20);
+  background: color-mix(in srgb, var(--management-surface, #18211d) 90%, var(--yellow, #f4bf20) 10%);
+}
+
+.admin-shell .match-player-admin-list > div > span > b {
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .match-player-admin-list small {
+  color: var(--management-muted, #98a69f);
+}
+
+.admin-shell .match-player-admin-list > div > span > b > em {
+  border: 1px solid color-mix(in srgb, var(--yellow, #f4bf20) 58%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, var(--yellow, #f4bf20) 24%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-player-admin-list :is(.attendance-present, .attendance-absent, .attendance-waiting),
+.admin-shell .match-admin-pagination .ghost {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-player-admin-list .attendance-present.on {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+.admin-shell .match-player-admin-list .attendance-absent.on {
+  border-color: color-mix(in srgb, var(--control-line, #415148) 56%, #c75543 44%);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 72%, #c75543 28%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-admin-pagination > span,
+.admin-shell .match-admin-pagination > span b,
+.admin-shell .match-admin-pagination > span small {
+  color: var(--control-text, #f2f5f3);
+}
+
+.admin-shell .match-admin-pagination > span small {
+  opacity: .68;
+}
+
+.admin-shell .match-state.open {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+.admin-shell .match-state.closed {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
 /* Restore the original information hierarchy of the player cards while
    keeping the newer metallic material and collision-safe sizing. */
 .player-card-modal {
