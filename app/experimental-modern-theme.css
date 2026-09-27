@@ -2496,6 +2496,17 @@ body {
   color: inherit;
 }
 
+/* Player scores are compact emphasis chips. Keep both halves of the saved
+   button palette together so the number never disappears on a light color. */
+.member-page .team-player > span,
+.app-shell .team-player > span {
+  min-width: 40px;
+  border: 1px solid color-mix(in srgb, var(--management-button, #d3eb7a) 76%, var(--control-line, #415148));
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+  text-align: center;
+}
+
 .member-page :is(.match-hub-tabs button.on, .match-state),
 .app-shell .match-state {
   border-color: var(--management-button, #d3eb7a);
