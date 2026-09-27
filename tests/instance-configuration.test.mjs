@@ -437,6 +437,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.statistics-page \.statistics-record-grid > article \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.statistics-page \.streak-players > span \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.statistics-page \.streak-players b \{[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.statistics-page \.versus-picker select,[\s\S]*\.versus-score,[\s\S]*\.versus-matches > a \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.statistics-page \.versus-player b,[\s\S]*\.versus-matches > a :is\(b, strong\) \{[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.statistics-page \.versus-matches > a strong\.winner \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-text/);
   assert.match(theme, /\.app-shell :is\(\.public-player-empty, \.public-player-list-title > b\) \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.app-shell \.public-player-tr\.tier-row \{[\s\S]*var\(--management-surface[\s\S]*var\(--roster-tier-accent/);
   assert.match(theme, /\.app-shell \.public-player-tr > strong,[\s\S]*var\(--control-surface/);

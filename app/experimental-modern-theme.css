@@ -2472,6 +2472,55 @@ body {
   color: var(--management-muted, #98a69f);
 }
 
+/* The direct-comparison result is another statistics surface, so it follows
+   the configurable auxiliary palette instead of the legacy white treatment. */
+.statistics-page .versus-picker select,
+.statistics-page .versus-score,
+.statistics-page .versus-matches > a {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.statistics-page .versus-score {
+  border-style: solid;
+  border-width: 1px;
+}
+
+.statistics-page .versus-picker label,
+.statistics-page .versus-picker > b,
+.statistics-page .versus-score :is(small, span),
+.statistics-page .versus-matches > a small,
+.statistics-page .versus-matches > a > i {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.statistics-page .versus-player b,
+.statistics-page .versus-score > div:nth-child(2) > b,
+.statistics-page .versus-matches > a :is(b, strong) {
+  color: var(--control-text, #f2f5f3);
+}
+
+.statistics-page .versus-player .player-photo,
+.statistics-page .versus-player > span:first-child {
+  border: 1px solid var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+}
+
+.statistics-page .versus-matches > a:hover {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 46%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 6%, var(--control-surface, #202b26));
+}
+
+.statistics-page .versus-matches > a strong.winner {
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+}
+
+.statistics-page .versus-matches > a em {
+  color: var(--management-button, #d3eb7a);
+}
+
 /* Public roster empty states and counters use the same auxiliary surfaces as
    the rest of the configurable work area. */
 .member-page :is(.public-player-empty, .public-player-list-title > b),
