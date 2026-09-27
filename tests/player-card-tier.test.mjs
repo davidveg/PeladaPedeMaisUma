@@ -25,15 +25,19 @@ test("respeita os limites personalizados configurados pelo administrador",()=>{
  assert.equal(playerCardTier(4.3,settings),"legendary");
 });
 
-test("cards usam hierarquia compacta e textura metálica sem sobrepor textos", async()=>{
+test("cards preservam a textura metálica com a hierarquia textual clássica", async()=>{
  const [publicCard,memberCard,theme]=await Promise.all([
   readFile(new URL("../app/FootballApp.tsx",import.meta.url),"utf8"),
   readFile(new URL("../app/conta/MemberApp.tsx",import.meta.url),"utf8"),
   readFile(new URL("../app/experimental-modern-theme.css",import.meta.url),"utf8"),
  ]);
- assert.match(publicCard,/className="card-position-line"/);
- assert.match(memberCard,/className="card-position-line"/);
- assert.match(theme,/\.card-position-line \{[\s\S]*overflow-wrap:\s*anywhere/);
+ assert.match(publicCard,/className=\{`card-role\$\{player\.secondaryPosition\?' has-secondary':''\}`\}/);
+ assert.match(memberCard,/className=\{`member-role\$\{player\.secondaryPosition\?' has-secondary':''\}`\}/);
+ assert.match(publicCard,/<small>POSIÇÃO PRINCIPAL<\/small>/);
+ assert.match(memberCard,/<small>POSIÇÃO PRINCIPAL<\/small>/);
+ assert.doesNotMatch(publicCard,/stat\.shortLabel/);
+ assert.doesNotMatch(memberCard,/stat\.shortLabel/);
  assert.match(theme,/Scratched brushed metal[\s\S]*repeating-linear-gradient\(7deg/);
+ assert.match(theme,/Restore the original information hierarchy[\s\S]*\.card-role\.has-secondary/);
  assert.match(theme,/\.player-card-modal \.card-identity h2,[\s\S]*overflow-wrap:\s*anywhere/);
 });

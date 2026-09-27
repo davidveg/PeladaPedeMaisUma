@@ -2414,3 +2414,153 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
     margin-left: 0;
   }
 }
+
+/* Public roster rows inherit the saved site palette. Card levels remain easy
+   to scan through a restrained tint and an accent rail instead of light rows. */
+.app-shell .public-player-table {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+}
+
+.app-shell .public-player-tr,
+.app-shell .public-player-tr.th {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.app-shell .public-player-tr.th {
+  background: color-mix(in srgb, var(--management-background, #0f1612) 74%, var(--management-surface, #18211d));
+  color: var(--management-muted, #98a69f);
+}
+
+.app-shell .public-player-tr.tier-row {
+  --roster-tier-accent: var(--management-line, #34433b);
+  border-left-color: var(--roster-tier-accent);
+  background: color-mix(in srgb, var(--management-surface, #18211d) 91%, var(--roster-tier-accent) 9%);
+}
+
+.app-shell .public-player-tr.tier-row.tier-bronze { --roster-tier-accent: #c77d50; }
+.app-shell .public-player-tr.tier-row.tier-silver { --roster-tier-accent: #a8b4b9; }
+.app-shell .public-player-tr.tier-row.tier-gold { --roster-tier-accent: #d9b83f; }
+.app-shell .public-player-tr.tier-row.tier-legendary { --roster-tier-accent: #8061c8; }
+
+.app-shell .public-player-table button.public-player-tr.tier-row:hover,
+.app-shell .public-player-table button.public-player-tr.tier-row:focus-visible {
+  background: color-mix(in srgb, var(--management-surface, #18211d) 82%, var(--roster-tier-accent) 18%);
+}
+
+.app-shell .public-player-identity small {
+  color: var(--management-muted, #98a69f);
+}
+
+.app-shell .public-player-tr > strong,
+.app-shell .public-player-tr.tier-row > strong {
+  border: 1px solid color-mix(in srgb, var(--roster-tier-accent, var(--control-line, #415148)) 58%, var(--control-line, #415148));
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: inset 0 3px 0 var(--roster-tier-accent, var(--control-line, #415148));
+}
+
+@media (max-width: 760px) {
+  .app-shell .public-player-table {
+    border: 0;
+    background: transparent;
+  }
+
+  .app-shell .public-player-tr.th {
+    border-color: var(--management-line, #34433b);
+    background: var(--management-surface, #18211d);
+  }
+
+  .app-shell .public-player-tr:not(.th) > span:not(.public-player-identity),
+  .app-shell .public-player-tr:not(.th) > strong {
+    border-color: var(--control-line, #415148);
+    background: color-mix(in srgb, var(--control-surface, #202b26) 86%, transparent);
+    color: var(--control-text, #f2f5f3);
+  }
+
+  .app-shell .public-player-identity {
+    border-color: var(--management-line, #34433b);
+  }
+}
+
+/* Restore the original information hierarchy of the player cards while
+   keeping the newer metallic material and collision-safe sizing. */
+.player-card-modal {
+  width: min(440px, calc(100vw - 28px));
+}
+
+.member-card {
+  width: min(440px, 100%);
+}
+
+.player-card-modal .card-role,
+.member-card .member-role {
+  display: grid;
+  min-height: 62px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.player-card-modal .card-role.has-secondary,
+.member-card .member-role.has-secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.player-card-modal .card-role > span,
+.member-card .member-role > span {
+  display: flex;
+  min-width: 0;
+  min-height: 62px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 7px;
+}
+
+.player-card-modal .card-role > span + span,
+.member-card .member-role > span + span {
+  border-left: 1px solid #66531f70;
+}
+
+.player-card-modal .card-role small,
+.member-card .member-role small {
+  color: currentColor;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1.25;
+  opacity: .68;
+}
+
+.player-card-modal .card-role b,
+.member-card .member-role b {
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.player-card-modal .card-stats span,
+.member-card .card-stats span {
+  min-height: 70px;
+}
+
+.player-card-modal .card-stats small,
+.member-card .card-stats small {
+  min-height: 22px;
+  font-size: 6.5px;
+  letter-spacing: .4px;
+  line-height: 1.2;
+}
+
+.player-card-modal .card-stat-label > span,
+.member-card .card-stat-label > span {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
