@@ -7,6 +7,7 @@ const standalone = readFileSync(new URL("../app/sumula/MatchDraftApp.tsx", impor
 const mobile = readFileSync(new URL("../mobile/src/separation-detail.tsx", import.meta.url), "utf8");
 const route = readFileSync(new URL("../app/api/career/draft/route.ts", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const photoSelect = readFileSync(new URL("../app/components/PlayerPhotoSelect.tsx", import.meta.url), "utf8");
 
 test("site preserva a súmula localmente e sincroniza o rascunho completo", () => {
   assert.match(football, /localStorage\.setItem\(cacheKey/);
@@ -29,6 +30,13 @@ test("placar pendente tem apresentação centralizada e destacada", () => {
 test("participação efetiva aparece depois dos lançamentos no fechamento", () => {
   const pending = football.slice(football.indexOf("if(!career)return"), football.indexOf("if(editingResult)return"));
   assert.ok(pending.indexOf('className="contribution-editor"') < pending.indexOf("<ParticipationEditor"));
+});
+
+test("edição da súmula reutiliza a seleção de jogadores com foto da votação", () => {
+  assert.match(football, /<PlayerPhotoSelect[\s\S]*players=\{scorerPlayers\}/);
+  assert.match(football, /<PlayerPhotoSelect[\s\S]*players=\{goal\.ownGoal\?\[\]:assistPlayers\}/);
+  assert.match(photoSelect, /<PlayerPhoto[\s\S]*player\.photoUrl/);
+  assert.doesNotMatch(football, /<select value=\{goal\.scorerPlayerId\}/);
 });
 
 test("quatro grupos de pontuação do Momentum cabem na mesma linha larga", () => {
