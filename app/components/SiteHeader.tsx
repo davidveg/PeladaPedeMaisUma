@@ -116,6 +116,9 @@ export function SiteHeader({
         {season && seasonMonth && <div className="site-season-card">
           <small>TEMPORADA {Number.isFinite(seasonYear) ? seasonYear : season.seasonNumber}</small>
           <strong>{seasonMonth}</strong>
+          <div className="site-season-progress" role="progressbar" aria-label={`Andamento da temporada: mês ${seasonProgress?.currentMonth} de ${seasonProgress?.totalMonths}`} aria-valuemin={1} aria-valuemax={seasonProgress?.totalMonths} aria-valuenow={seasonProgress?.currentMonth}>
+            <span style={{ width: `${seasonProgress?.percentage ?? 0}%` }}/>
+          </div>
         </div>}
       </aside>
       <div className="site-topbar">

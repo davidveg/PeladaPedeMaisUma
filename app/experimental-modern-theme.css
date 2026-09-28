@@ -171,6 +171,24 @@ body {
   text-transform: capitalize;
 }
 
+.site-season-progress {
+  width: 100%;
+  height: 5px;
+  margin-top: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--admin-sidebar-contrast, #f2f5f3) 18%, transparent);
+}
+
+.site-season-progress > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--admin-sidebar-active, #b7d86a);
+  transition: width .3s ease;
+}
+
 .site-topbar {
   position: absolute;
   top: 0;

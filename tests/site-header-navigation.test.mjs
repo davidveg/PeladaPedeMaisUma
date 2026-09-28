@@ -87,11 +87,12 @@ test("menu lateral evita overflow no desktop e centraliza o item somente no mobi
   assert.match(theme, /@media \(max-width: 900px\)[\s\S]*?\.site-sidebar nav \{[\s\S]*?overflow-x:\s*auto/);
 });
 
-test("menu lateral mostra o mês atual calculado da temporada", async () => {
-  const [header, branding, publicConfig] = await Promise.all([
+test("menu lateral mostra o mês atual calculado e o andamento da temporada", async () => {
+  const [header, branding, publicConfig, theme] = await Promise.all([
     readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/public-config/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
   ]);
 
   assert.doesNotMatch(header, /AMBIENTE DE VALIDAÇÃO|Layout experimental/);
@@ -100,7 +101,12 @@ test("menu lateral mostra o mês atual calculado da temporada", async () => {
   assert.match(header, /date\.setUTCMonth\(date\.getUTCMonth\(\) \+ seasonProgress\.currentMonth - 1\)/);
   assert.match(header, /Intl\.DateTimeFormat\("pt-BR", \{ month: "long", timeZone: "UTC" \}\)/);
   assert.match(header, /<strong>\{seasonMonth\}<\/strong>/);
-  assert.doesNotMatch(header, /role="progressbar"|seasonProgress\.percentage/);
+  assert.match(header, /role="progressbar"/);
+  assert.match(header, /aria-valuemax=\{seasonProgress\?\.totalMonths\}/);
+  assert.match(header, /aria-valuenow=\{seasonProgress\?\.currentMonth\}/);
+  assert.match(header, /width: `\$\{seasonProgress\?\.percentage \?\? 0\}%`/);
+  assert.match(theme, /\.site-season-progress \{[\s\S]*height:\s*5px/);
+  assert.match(theme, /\.site-season-progress > span \{[\s\S]*var\(--admin-sidebar-active/);
   assert.match(branding, /season: PublicCareerSeason \| null/);
   assert.match(publicConfig, /season_duration_months/);
   assert.match(publicConfig, /instance, season/);
