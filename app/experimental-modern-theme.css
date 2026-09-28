@@ -3807,46 +3807,46 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 /* Match reports and the historical Momentum explanation use the functional
    palette from Identidade e agenda. Team colors remain accents, not surfaces. */
-.app-shell .career-match-card.pending .career-score-inputs {
+:is(.app-shell, .member-page) .career-match-card.pending .career-score-inputs {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
   color: var(--control-text, #f2f5f3);
 }
 
-.app-shell .career-match-card.pending .career-score-inputs :is(label, b) {
+:is(.app-shell, .member-page) .career-match-card.pending .career-score-inputs :is(label, b) {
   color: var(--control-text, #f2f5f3);
 }
 
-.app-shell .career-match-card.pending .career-score-inputs label:first-child input {
+:is(.app-shell, .member-page) .career-match-card.pending .career-score-inputs label:first-child input {
   border-color: var(--blue, #1768e5);
   background: color-mix(in srgb, var(--control-surface, #202b26) 86%, var(--blue, #1768e5) 14%);
   color: var(--control-text, #f2f5f3);
 }
 
-.app-shell .career-match-card.pending .career-score-inputs label:last-child input {
+:is(.app-shell, .member-page) .career-match-card.pending .career-score-inputs label:last-child input {
   border-color: var(--yellow, #f4bf20);
   background: color-mix(in srgb, var(--control-surface, #202b26) 86%, var(--yellow, #f4bf20) 14%);
   color: var(--control-text, #f2f5f3);
 }
 
 /* The score editor is an auxiliary control and follows its dedicated palette. */
-.app-shell .career-result-editor .career-score-inputs {
+:is(.app-shell, .member-page) .career-result-editor .career-score-inputs {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
   color: var(--control-text, #f2f5f3);
 }
 
-.app-shell .career-result-editor .career-score-inputs :is(label, b) {
+:is(.app-shell, .member-page) .career-result-editor .career-score-inputs :is(label, b) {
   color: var(--control-text, #f2f5f3);
 }
 
-.app-shell .career-result-editor .career-score-inputs label:first-child input {
+:is(.app-shell, .member-page) .career-result-editor .career-score-inputs label:first-child input {
   border-color: var(--blue, #1768e5);
   background: color-mix(in srgb, var(--control-surface, #202b26) 84%, var(--blue, #1768e5) 16%);
   color: var(--control-text, #f2f5f3);
 }
 
-.app-shell .career-result-editor .career-score-inputs label:last-child input {
+:is(.app-shell, .member-page) .career-result-editor .career-score-inputs label:last-child input {
   border-color: var(--yellow, #f4bf20);
   background: color-mix(in srgb, var(--control-surface, #202b26) 84%, var(--yellow, #f4bf20) 16%);
   color: var(--control-text, #f2f5f3);
