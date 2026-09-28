@@ -444,7 +444,10 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(football, /className="team-player-score" style=\{scoreChipStyle\}/);
   assert.match(theme, /\.app-shell \.section-head \.balance \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.result-actions \.ghost \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
-  assert.match(theme, /\.app-shell \.career-match-card\.pending \.career-score-inputs,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.career-match-card\.pending \.career-score-inputs \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.career-result-editor \.career-score-inputs \{[\s\S]*var\(--management-surface[\s\S]*var\(--management-text/);
+  assert.match(theme, /\.app-shell \.career-result-editor \.career-score-inputs label:first-child input \{[\s\S]*var\(--management-surface[\s\S]*var\(--blue[\s\S]*var\(--management-text/);
+  assert.match(theme, /\.app-shell \.career-result-editor \.career-score-inputs label:last-child input \{[\s\S]*var\(--management-surface[\s\S]*var\(--yellow[\s\S]*var\(--management-text/);
   assert.match(theme, /\.app-shell \.contribution-row select,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.participation-team \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.career-rules-snapshot \{[\s\S]*var\(--management-surface[\s\S]*var\(--management-text/);
