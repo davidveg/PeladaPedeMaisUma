@@ -3829,28 +3829,27 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--control-text, #f2f5f3);
 }
 
-/* The result correction belongs to the management card hierarchy. This keeps
-   it coherent even when the auxiliary-control surface is configured as white. */
+/* The score editor is an auxiliary control and follows its dedicated palette. */
 .app-shell .career-result-editor .career-score-inputs {
-  border-color: var(--management-line, #34433b);
-  background: var(--management-surface, #18211d);
-  color: var(--management-text, #f2f5f3);
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
 }
 
 .app-shell .career-result-editor .career-score-inputs :is(label, b) {
-  color: var(--management-text, #f2f5f3);
+  color: var(--control-text, #f2f5f3);
 }
 
 .app-shell .career-result-editor .career-score-inputs label:first-child input {
   border-color: var(--blue, #1768e5);
-  background: color-mix(in srgb, var(--management-surface, #18211d) 84%, var(--blue, #1768e5) 16%);
-  color: var(--management-text, #f2f5f3);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 84%, var(--blue, #1768e5) 16%);
+  color: var(--control-text, #f2f5f3);
 }
 
 .app-shell .career-result-editor .career-score-inputs label:last-child input {
   border-color: var(--yellow, #f4bf20);
-  background: color-mix(in srgb, var(--management-surface, #18211d) 84%, var(--yellow, #f4bf20) 16%);
-  color: var(--management-text, #f2f5f3);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 84%, var(--yellow, #f4bf20) 16%);
+  color: var(--control-text, #f2f5f3);
 }
 
 .app-shell .contribution-editor {
