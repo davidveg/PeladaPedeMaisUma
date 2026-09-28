@@ -419,6 +419,7 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
     readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(theme, /\.admin-shell :is\([\s\S]*\.rating-slider[\s\S]*var\(--control-surface/);
+  assert.match(statistics, /\.monthly-pitch \{[\s\S]*background-image:\s*repeating-linear-gradient\(0deg/);
   assert.match(theme, /\.admin-shell \.rating-slider > \.rating-slider-value \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-contrast/);
   assert.match(admin, /backgroundColor:brand\.managementButtonColor,color:contrastTextColor\(brand\.managementButtonColor\)/);
   assert.match(admin, /className="rating-slider-value" style=\{valueStyle\}/);
