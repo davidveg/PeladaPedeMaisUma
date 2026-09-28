@@ -8,6 +8,7 @@ const mobile = readFileSync(new URL("../mobile/src/separation-detail.tsx", impor
 const route = readFileSync(new URL("../app/api/career/draft/route.ts", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const photoSelect = readFileSync(new URL("../app/components/PlayerPhotoSelect.tsx", import.meta.url), "utf8");
+const voting = readFileSync(new URL("../app/votacao/VotingApp.tsx", import.meta.url), "utf8");
 
 test("site preserva a súmula localmente e sincroniza o rascunho completo", () => {
   assert.match(football, /localStorage\.setItem\(cacheKey/);
@@ -38,8 +39,13 @@ test("edição da súmula reutiliza a seleção de jogadores com foto da votaç�
   assert.match(photoSelect, /<PlayerPhoto[\s\S]*player\.photoUrl/);
   assert.match(photoSelect, /useInstanceBranding\(\)/);
   assert.match(photoSelect, /--player-select-surface.*brand\.controlSurfaceColor/);
-  assert.match(photoSelect, /--player-select-text.*contrastTextColor\(brand\.controlSurfaceColor\)/);
+  assert.match(photoSelect, /textColor = contrastTextColor\(brand\.controlSurfaceColor\)/);
+  assert.match(photoSelect, /--player-select-text.*textColor/);
+  assert.match(photoSelect, /--control-text.*textColor/);
   assert.match(photoSelect, /--player-select-accent.*brand\.managementButtonColor/);
+  assert.match(photoSelect, /<b style=\{textStyle\}>\{player\.displayName\}<\/b>/);
+  assert.match(voting, /import \{ PlayerPhotoSelect \} from "\.\.\/components\/PlayerPhotoSelect"/);
+  assert.match(voting, /<PlayerPhotoSelect[\s\S]*players=\{options\(field\)\}/);
   assert.doesNotMatch(football, /<select value=\{goal\.scorerPlayerId\}/);
 });
 

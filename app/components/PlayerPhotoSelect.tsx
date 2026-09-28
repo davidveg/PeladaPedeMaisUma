@@ -26,11 +26,16 @@ export function PlayerPhotoSelect({ label, value, players, onChange, emptyLabel 
   const generatedId = useId().replace(/:/g, "");
   const listId = `player-photo-options-${generatedId}`;
   const selected = players.find(player => String(player.id) === String(value));
+  const textColor = contrastTextColor(brand.controlSurfaceColor);
   const theme = {
     "--player-select-surface": brand.controlSurfaceColor,
-    "--player-select-text": contrastTextColor(brand.controlSurfaceColor),
+    "--player-select-text": textColor,
     "--player-select-accent": brand.managementButtonColor,
+    "--control-surface": brand.controlSurfaceColor,
+    "--control-text": textColor,
+    "--management-button": brand.managementButtonColor,
   } as CSSProperties;
+  const textStyle = { color: textColor };
 
   useEffect(() => {
     if (!open) return;
@@ -49,15 +54,15 @@ export function PlayerPhotoSelect({ label, value, players, onChange, emptyLabel 
   return <div className={`vote-player-select player-photo-select ${open ? "open" : ""} ${className}`.trim()} ref={root} style={theme}>
     <button type="button" className="vote-player-trigger" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} disabled={disabled} onClick={() => setOpen(current => !current)}>
       {selected ? <PlayerPhoto photoUrl={selected.photoUrl} name={selected.displayName} className="vote-option-photo" previewSize={280} /> : <span className="vote-empty-photo" aria-hidden="true">👤</span>}
-      <b>{selected?.displayName || emptyLabel}</b><i aria-hidden="true">{open ? "⌃" : "⌄"}</i>
+      <b style={textStyle}>{selected?.displayName || emptyLabel}</b><i style={textStyle} aria-hidden="true">{open ? "⌃" : "⌄"}</i>
     </button>
     {open && <div className="vote-player-options" id={listId} role="listbox" aria-label={label}>
       {value && <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(""); setOpen(false); }}>
-        <span className="vote-empty-photo" aria-hidden="true">—</span><b>{emptyLabel}</b><span />
+        <span className="vote-empty-photo" aria-hidden="true">—</span><b style={textStyle}>{emptyLabel}</b><span />
       </button>}
       {players.map(player => <button type="button" role="option" aria-selected={String(player.id) === String(value)} className={String(player.id) === String(value) ? "selected" : ""} key={player.id} onClick={() => { onChange(String(player.id)); setOpen(false); }}>
         <PlayerPhoto photoUrl={player.photoUrl} name={player.displayName} className="vote-option-photo" previewSize={280} />
-        <b>{player.displayName}</b>{String(player.id) === String(value) ? <span aria-hidden="true">✓</span> : <span />}
+        <b style={textStyle}>{player.displayName}</b>{String(player.id) === String(value) ? <span aria-hidden="true">✓</span> : <span />}
       </button>)}
     </div>}
   </div>;
