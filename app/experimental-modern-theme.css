@@ -1922,6 +1922,11 @@ body {
   color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
 }
 
+.admin-shell .rating-slider > .rating-slider-value {
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-contrast, #172018);
+}
+
 .admin-shell .weight-number {
   border-color: var(--control-line, #4a5851);
   background: color-mix(in srgb, var(--control-surface, #202b26) 78%, #000 22%);

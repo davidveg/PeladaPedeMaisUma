@@ -413,11 +413,15 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
 });
 
 test("tema moderno usa a paleta configurável nos blocos e no financeiro", async () => {
-  const [theme, statistics] = await Promise.all([
+  const [theme, statistics, admin] = await Promise.all([
     readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
     readFile(new URL("../app/estatisticas/statistics.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(theme, /\.admin-shell :is\([\s\S]*\.rating-slider[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.admin-shell \.rating-slider > \.rating-slider-value \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-contrast/);
+  assert.match(admin, /backgroundColor:brand\.managementButtonColor,color:contrastTextColor\(brand\.managementButtonColor\)/);
+  assert.match(admin, /className="rating-slider-value" style=\{valueStyle\}/);
   assert.match(theme, /\.finance-page \.finance-head[\s\S]*background:\s*transparent/);
   assert.match(theme, /\.finance-page :is\([\s\S]*\.finance-dashboard-actions[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.finance-page \.finance-closure-notice \{[\s\S]*var\(--control-surface/);
