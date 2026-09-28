@@ -504,6 +504,7 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page \.member-profile-actions dl > div dd \{[\s\S]*var\(--control-text/);
   assert.match(theme, /\.member-page \.player-financial-history \.finance-table-wrap \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.player-financial-history \.finance-table td \{[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.member-page \.player-financial-history \.finance-table td:first-child \{[\s\S]*display:\s*table-cell/);
   assert.match(theme, /\.member-page \.player-financial-history \.finance-history-link \{[\s\S]*var\(--management-button/);
   assert.match(theme, /\.member-page \.notification-site-item \{[\s\S]*var\(--management-surface[\s\S]*var\(--management-text/);
   assert.match(theme, /\.member-page \.notification-site-item\.unread \{[\s\S]*var\(--management-button[\s\S]*var\(--management-surface/);

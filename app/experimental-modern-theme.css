@@ -3068,6 +3068,10 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--control-text, #f2f5f3);
 }
 
+.member-page .player-financial-history .finance-table td:first-child {
+  display: table-cell;
+}
+
 .member-page .player-financial-history .finance-table tbody tr:nth-child(even) td {
   background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--management-surface, #18211d) 12%);
 }
