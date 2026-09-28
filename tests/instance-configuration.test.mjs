@@ -433,6 +433,11 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page \.team-player > span,[\s\S]*\.app-shell \.team-player > span \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-contrast/);
   assert.match(theme, /\.app-shell \.section-head \.balance \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.result-actions \.ghost \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.career-match-card\.pending \.career-score-inputs,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.contribution-row select,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.participation-team \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
+  assert.match(theme, /\.app-shell \.career-rules-snapshot \{[\s\S]*var\(--management-surface[\s\S]*var\(--management-text/);
+  assert.match(theme, /\.app-shell \.career-rules-snapshot > header,[\s\S]*\.career-rule-points > article \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell > main \{[\s\S]*padding-bottom:\s*clamp/);
   assert.match(theme, /\.finance-page \.primary \{[\s\S]*var\(--management-button-text/);
   assert.match(theme, /\.member-page \.round-center > header \{[\s\S]*background:\s*transparent/);

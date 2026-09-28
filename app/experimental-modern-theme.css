@@ -3699,3 +3699,137 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--management-button, #d3eb7a) 12%);
   color: var(--control-text, #f2f5f3);
 }
+
+/* Match reports and the historical Momentum explanation use the functional
+   palette from Identidade e agenda. Team colors remain accents, not surfaces. */
+.app-shell .career-match-card.pending .career-score-inputs,
+.app-shell .career-result-editor .career-score-inputs {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell :is(
+  .career-match-card.pending,
+  .career-result-editor
+) .career-score-inputs :is(label, b) {
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .career-match-card.pending .career-score-inputs label:first-child input,
+.app-shell .career-result-editor .career-score-inputs label:first-child input {
+  border-color: var(--blue, #1768e5);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 86%, var(--blue, #1768e5) 14%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .career-match-card.pending .career-score-inputs label:last-child input,
+.app-shell .career-result-editor .career-score-inputs label:last-child input {
+  border-color: var(--yellow, #f4bf20);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 86%, var(--yellow, #f4bf20) 14%);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .contribution-editor {
+  border-color: var(--management-line, #34433b);
+}
+
+.app-shell .contribution-head :is(b, small),
+.app-shell .contribution-row :is(strong, label) {
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .contribution-head small {
+  opacity: .68;
+}
+
+.app-shell .contribution-row.blue,
+.app-shell .contribution-row.blue.own-goal {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--blue, #1768e5) 12%);
+}
+
+.app-shell .contribution-row.yellow,
+.app-shell .contribution-row.yellow.own-goal {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--yellow, #f4bf20) 12%);
+}
+
+.app-shell .contribution-row select,
+.app-shell .participant-add select {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .contribution-row select option,
+.app-shell .participant-add select option {
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .contribution-row select:disabled {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 84%, var(--management-background, #0f1612) 16%);
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 54%, transparent);
+}
+
+.app-shell .participation-team {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .participation-team :is(h5, label, .manual-participant) {
+  border-color: var(--control-line, #415148);
+}
+
+.app-shell .participation-team h5 span,
+.app-shell .participation-team label small,
+.app-shell .manual-participant small {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 64%, transparent);
+}
+
+.app-shell .participation-team > div > label.no-show {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, #b84b27 12%);
+}
+
+.app-shell .manual-participant {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--management-button, #d3eb7a) 12%);
+}
+
+.app-shell .career-rules-snapshot {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.app-shell .career-rules-snapshot > header,
+.app-shell .career-rule-weights > article,
+.app-shell .career-rule-example,
+.app-shell .career-rule-points > article {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.app-shell .career-rules-snapshot > header {
+  padding: 14px 16px;
+  border: 1px solid var(--control-line, #415148);
+  border-radius: 11px;
+}
+
+.app-shell .career-rules-snapshot :is(header p, .career-rule-weights span) {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
+}
+
+.app-shell .career-rule-weights article > b,
+.app-shell .career-rule-points-label {
+  color: var(--management-button, #d3eb7a);
+}
+
+.app-shell .career-rule-example {
+  border-left-color: var(--management-button, #d3eb7a);
+}
+
+.app-shell .career-rule-example b,
+.app-shell .career-rule-points article > :is(b, span, span > strong) {
+  color: var(--control-text, #f2f5f3);
+}
