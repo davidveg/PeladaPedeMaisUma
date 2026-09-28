@@ -7,6 +7,7 @@ const standalone = readFileSync(new URL("../app/sumula/MatchDraftApp.tsx", impor
 const mobile = readFileSync(new URL("../mobile/src/separation-detail.tsx", import.meta.url), "utf8");
 const route = readFileSync(new URL("../app/api/career/draft/route.ts", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const theme = readFileSync(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
 const photoSelect = readFileSync(new URL("../app/components/PlayerPhotoSelect.tsx", import.meta.url), "utf8");
 const voting = readFileSync(new URL("../app/votacao/VotingApp.tsx", import.meta.url), "utf8");
 
@@ -44,6 +45,9 @@ test("edição da súmula reutiliza a seleção de jogadores com foto da votaç�
   assert.match(photoSelect, /--control-text.*textColor/);
   assert.match(photoSelect, /--player-select-accent.*brand\.managementButtonColor/);
   assert.match(photoSelect, /<b style=\{textStyle\}>\{player\.displayName\}<\/b>/);
+  assert.match(theme, /\.player-photo-select \.vote-player-trigger,[\s\S]*\.player-photo-select \.vote-player-options > button \{[\s\S]*var\(--player-select-surface[\s\S]*var\(--player-select-text/);
+  assert.match(theme, /\.player-photo-select \.vote-player-trigger :is\(b, i\),[\s\S]*\.player-photo-select \.vote-player-options > button b \{[\s\S]*var\(--player-select-text/);
+  assert.match(theme, /:is\(\.app-shell, \.member-page, \.vote-page\) \.contribution-field/);
   assert.match(voting, /import \{ PlayerPhotoSelect \} from "\.\.\/components\/PlayerPhotoSelect"/);
   assert.match(voting, /<PlayerPhotoSelect[\s\S]*players=\{options\(field\)\}/);
   assert.doesNotMatch(football, /<select value=\{goal\.scorerPlayerId\}/);
