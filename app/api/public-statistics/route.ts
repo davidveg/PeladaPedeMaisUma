@@ -8,6 +8,7 @@ const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 export async function GET(request: Request) {
   await ensureDb();
   const account = await currentPlayerAccount(request);
+  if (!account) return Response.json({ error: "Entre na sua conta para consultar as estatísticas." }, { status: 401, headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
   const expiredVoting = await db().prepare(`SELECT * FROM career_matches WHERE status='OPEN' AND closes_at<=?`).bind(new Date().toISOString()).all();
   for (const match of expiredVoting.results) await finalizeIfExpired(match);
   const params = new URL(request.url).searchParams;

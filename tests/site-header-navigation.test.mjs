@@ -27,11 +27,21 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
 });
 
 test("o login retorna ao menu protegido solicitado depois de renovar a sessão", async () => {
-  const account = await readFile(new URL("../app/conta/MemberApp.tsx", import.meta.url), "utf8");
+  const [account, gate, layout] = await Promise.all([
+    readFile(new URL("../app/conta/MemberApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/SiteAccessGate.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
 
   assert.match(account, /Sua sessão expirou\. Entre novamente para continuar\./);
   assert.match(account, /window\.location\.assign\(returnTo\)/);
   assert.match(account, /safeSiteReturnTo/);
+  assert.match(gate, /fetch\("\/api\/member-auth"/);
+  assert.match(gate, /window\.location\.replace\(accountSignInHref\(returnTo,/);
+  assert.match(gate, /window\.setInterval\(validate, 60_000\)/);
+  assert.match(gate, /visibilitychange/);
+  assert.match(layout, /<SiteAccessGate>\{children\}<SiteFooter\/><\/SiteAccessGate>/);
+  assert.doesNotMatch(account, /área pública/);
 });
 
 test("a saída da sessão fica dentro de Minha conta e não no menu superior", async () => {

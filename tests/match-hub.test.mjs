@@ -188,28 +188,21 @@ test("hub unifica histórico e agenda sem alterar dados, vínculos ou permissõe
       await db().prepare("UPDATE member_accounts SET active=1 WHERE id='hub-moderator'").run();
     });
 
-    await t.test("estatísticas públicas mantêm agregados sem vazar detalhes de partidas", async () => {
+    await t.test("estatísticas exigem conta cadastrada e entregam os detalhes ao usuário autenticado", async () => {
       const general = await import("../app/api/public-statistics/route.ts");
       const advanced = await import("../app/api/public-statistics/advanced/route.ts");
       const path = `/api/public-statistics?from=2026-07-01&to=2026-07-31&playerA=${player.id}&playerB=other`;
-      const publicData = await (await general.GET(request(path))).json();
+      assert.equal((await general.GET(request(path))).status, 401);
       const privateData = await (await general.GET(request(path, member))).json();
-      assert.deepEqual(publicData.coverage, privateData.coverage);
-      assert.deepEqual(publicData.leaderboard, privateData.leaderboard);
-      assert.equal(publicData.versus.totalMatches, 1);
-      assert.equal(publicData.versus.matchDetailsRestricted, true);
-      assert.deepEqual(publicData.versus.matches, []);
+      assert.deepEqual(privateData.coverage, { matches: 1, matchesWithContributions: 0 });
+      assert.equal(privateData.versus.totalMatches, 1);
+      assert.equal(privateData.versus.matchDetailsRestricted, false);
       assert.equal(privateData.versus.matches[0].separationId, "linked");
       const advancedPath = "/api/public-statistics/advanced?from=2026-07-01&to=2026-07-31";
-      const publicAdvanced = await (await advanced.GET(request(advancedPath))).json();
+      assert.equal((await advanced.GET(request(advancedPath))).status, 401);
       const privateAdvanced = await (await advanced.GET(request(advancedPath, member))).json();
-      assert.deepEqual(publicAdvanced.players, privateAdvanced.players);
-      assert.equal(publicAdvanced.records.matchDetailsRestricted, true);
-      for (const field of ["mostGoals", "mostAssists", "biggestBlowout", "highestScoring"]) assert.equal(publicAdvanced.records[field], null);
+      assert.equal(privateAdvanced.records.matchDetailsRestricted, false);
       assert.equal(privateAdvanced.records.biggestBlowout.separationId, "linked");
-      assert.equal(JSON.stringify(publicAdvanced).includes('"separationId"'), false);
-      assert.equal(JSON.stringify(publicAdvanced).includes('"votes"'), false);
-      assert.equal(JSON.stringify(publicData).includes('"blueIds"'), false);
     });
 
     await t.test("detalhes de presenças carregam apenas a partida solicitada", async () => {
@@ -220,7 +213,8 @@ test("hub unifica histórico e agenda sem alterar dados, vínculos ou permissõe
     });
     await t.test("consulta leve mantém configurações dos cards sem carregar cadastro de jogadores", async () => {
       const publicPlayers = await import("../app/api/public-players/route.ts");
-      const payload = await (await publicPlayers.GET(request("/api/public-players?configOnly=1"))).json();
+      assert.equal((await publicPlayers.GET(request("/api/public-players?configOnly=1"))).status, 401);
+      const payload = await (await publicPlayers.GET(request("/api/public-players?configOnly=1", member))).json();
       assert.deepEqual(payload.players, []);
       assert.equal(typeof payload.config.cardTiersEnabled, "boolean");
       assert.equal(typeof payload.config.showContributions, "boolean");

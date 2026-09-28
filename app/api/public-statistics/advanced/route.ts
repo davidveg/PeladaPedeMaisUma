@@ -10,6 +10,7 @@ const positions = new Set(["Goleiro", "Defesa", "Meio-campo", "Ataque"]);
 export async function GET(request: Request) {
   await ensureDb();
   const account = await currentPlayerAccount(request);
+  if (!account) return Response.json({ error: "Entre na sua conta para consultar as estatísticas avançadas." }, { status: 401, headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
   const expired = await db().prepare(`SELECT * FROM career_matches WHERE status='OPEN' AND closes_at<=?`).bind(new Date().toISOString()).all();
   for (const match of expired.results) await finalizeIfExpired(match);
   const url = new URL(request.url), params = url.searchParams, now = new Date(), year = now.getFullYear();
@@ -26,8 +27,7 @@ export async function GET(request: Request) {
   const seasons = [...new Set(matches.map(match => match.seasonNumber))].sort((left, right) => right - left);
   // These four records contain match identifiers, lineups, goals and voting data.
   // Keep aggregate rankings public without providing another route to private match details.
-  const records = { ...statistics.records, matchDetailsRestricted: !account,
-    ...(!account ? { mostGoals: null, mostAssists: null, biggestBlowout: null, highestScoring: null } : {}) };
+  const records = { ...statistics.records, matchDetailsRestricted: false };
   return Response.json({ from, to, seasons, allPlayers: players, ...statistics, records }, { headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
 }
 

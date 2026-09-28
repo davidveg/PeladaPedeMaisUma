@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const member = await currentPlayerAccount(request);
   const headers = noStoreHeaders();
   if (!member && /(?:^|;\s*)ppm_(?:member_)?session=/.test(request.headers.get("cookie") || "")) {
+    headers.set("x-session-expired", "1");
     headers.append("set-cookie", sessionCookie(request, "ppm_member_session", "", 0));
     headers.append("set-cookie", sessionCookie(request, "ppm_session", "", 0));
   }

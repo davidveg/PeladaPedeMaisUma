@@ -57,7 +57,7 @@ test("exclusão lógica exige jogador inativo e sem conta associada", async () =
     assert.equal(adminList.status, 200);
     assert.equal((await adminList.json()).players.some(player => player.id === "eligible-player"), false);
 
-    const historicalStatistics = await statisticsRoute.GET(new Request("https://pelada.example/api/public-statistics?from=2000-01-01&to=2099-12-31"));
+    const historicalStatistics = await statisticsRoute.GET(new Request("https://pelada.example/api/public-statistics?from=2000-01-01&to=2099-12-31", { headers: { cookie } }));
     assert.equal(historicalStatistics.status, 200);
     assert.equal((await historicalStatistics.json()).players.some(player => player.id === "eligible-player"), true);
 

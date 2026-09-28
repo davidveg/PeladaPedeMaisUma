@@ -178,7 +178,7 @@ function MemberAccess({ onDone }: { onDone: () => Promise<{ member: any; player:
     <button className="primary" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar →" : mode === "register" ? "Cadastrar e continuar →" : mode === "request" ? "Enviar link de recuperação" : "Redefinir senha"}</button>
     {mode === "request" && <button className="member-back" type="button" onClick={() => changeMode("login")}>← Voltar ao login</button>}
     {mode === "reset" && <button className="member-back" type="button" onClick={() => { window.history.replaceState({}, "", window.location.pathname); changeMode("login"); }}>Cancelar</button>}
-    <a href="/">← Voltar para a área pública</a>
+    <small>Acesso exclusivo para usuários cadastrados.</small>
   </form></div>;
 }
 

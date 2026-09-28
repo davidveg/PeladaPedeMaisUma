@@ -18,7 +18,11 @@ const [{ setRuntimeBindings }, { db, ensureDb }, memberAuth, adminAuth, navigati
 test("rotas protegidas preservam o destino e rejeitam retornos externos", () => {
   assert.equal(navigation.isAccountProtectedPath("/partidas#proxima"), true);
   assert.equal(navigation.isAccountProtectedPath("/notificacoes?page=2"), true);
-  assert.equal(navigation.isAccountProtectedPath("/jogadores"), false);
+  assert.equal(navigation.isAccountProtectedPath("/jogadores"), true);
+  assert.equal(navigation.isAccountProtectedPath("/estatisticas"), true);
+  assert.equal(navigation.isAccountProtectedPath("/baixar-app"), true);
+  assert.equal(navigation.isAccountProtectedPath("/conta"), false);
+  assert.equal(navigation.isAccountProtectedPath("/admin"), false);
   assert.equal(navigation.isAccountProtectedPath("/separacoes-salvas?separation=antiga"), true);
   assert.equal(navigation.isAccountProtectedPath("/votacao?token=link"), true);
   assert.equal(navigation.accountSignInHref("/partidas?match=pelada&tab=voting"), "/conta?returnTo=%2Fpartidas%3Fmatch%3Dpelada%26tab%3Dvoting");
@@ -47,6 +51,7 @@ test("sessões web expiradas são invalidadas sem permitir cache da autenticaç�
       headers: { cookie: "ppm_member_session=expired-member-session; ppm_session=expired-admin-session" },
     }));
     assert.deepEqual(await memberResponse.json(), { member: null });
+    assert.equal(memberResponse.headers.get("x-session-expired"), "1");
     assert.match(memberResponse.headers.get("cache-control") || "", /no-store/);
     assert.match(memberResponse.headers.get("set-cookie") || "", /ppm_member_session=.*Max-Age=0/);
     assert.match(memberResponse.headers.get("set-cookie") || "", /ppm_session=.*Max-Age=0/);

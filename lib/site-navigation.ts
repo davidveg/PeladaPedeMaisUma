@@ -1,7 +1,11 @@
-const protectedAccountPaths = new Set(["/partidas", "/separacoes-salvas", "/votacao", "/notificacoes", "/financeiro"]);
+const publicSitePaths = new Set(["/conta", "/admin"]);
+
+export function isPublicSitePath(href: string) {
+  return publicSitePaths.has(pathname(href));
+}
 
 export function isAccountProtectedPath(href: string) {
-  return protectedAccountPaths.has(pathname(href));
+  return !isPublicSitePath(href);
 }
 
 export function accountSignInHref(returnTo: string, sessionExpired = false) {

@@ -6,6 +6,7 @@ import { instanceFaviconUrl, instanceShareImageUrl } from "../lib/instance-metad
 import { getRuntimeBindings } from "../lib/runtime-bindings";
 import { InstanceBrandingProvider } from "./InstanceBranding";
 import { SiteFooter } from "./components/SiteFooter";
+import { SiteAccessGate } from "./components/SiteAccessGate";
 import "./globals.css";
 import "./branding.css";
 import "./experimental-modern-theme.css";
@@ -68,7 +69,7 @@ export default async function RootLayout({
   }
   return (
     <html lang="pt-BR">
-      <body><InstanceBrandingProvider initialConfig={instance}>{children}<SiteFooter/></InstanceBrandingProvider></body>
+      <body><InstanceBrandingProvider initialConfig={instance}><SiteAccessGate>{children}<SiteFooter/></SiteAccessGate></InstanceBrandingProvider></body>
     </html>
   );
 }

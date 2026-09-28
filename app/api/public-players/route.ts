@@ -1,11 +1,13 @@
-import { db, ensureDb } from "../../../lib/database";
+import { currentPlayerAccount, db, ensureDb } from "../../../lib/database";
 import { attachPlayerCareerStats } from "../../../lib/player-career-stats";
 import { loadPlayerCareerStats } from "../../../lib/player-career-stats-store";
 import { publicPlayer } from "../../../lib/public-player";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 
-export async function GET(request?: Request) {
-  const configOnly = Boolean(request && new URL(request.url).searchParams.get("configOnly") === "1");
+export async function GET(request: Request) {
+  const account = await currentPlayerAccount(request);
+  if (!account) return Response.json({ error: "Entre na sua conta para consultar os jogadores." }, { status: 401, headers: { "cache-control": "private, no-store", vary: "Cookie, Authorization" } });
+  const configOnly = new URL(request.url).searchParams.get("configOnly") === "1";
   await ensureDb();
   if (!configOnly) await ensureCareerSeasonCurrent();
   const [players, careerStats, configuration, careerConfiguration] = await Promise.all([
@@ -37,5 +39,5 @@ export async function GET(request?: Request) {
       cardSilverMax: Number(careerConfiguration?.card_silver_max ?? 3.9),
       cardGoldMax: Number(careerConfiguration?.card_gold_max ?? 4.5),
     },
-  }, { headers: { "cache-control": "no-store, max-age=0" } });
+  }, { headers: { "cache-control": "private, no-store, max-age=0", vary: "Cookie, Authorization" } });
 }
