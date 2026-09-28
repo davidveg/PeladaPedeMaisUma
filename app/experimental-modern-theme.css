@@ -2251,11 +2251,19 @@ body {
 }
 
 .finance-page .finance-head {
+  position: static;
+  top: auto;
+  z-index: auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
   align-items: center;
   margin: 0;
   padding: 6px 0 2px;
   border: 0;
   background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .finance-page .finance-head h1 {
