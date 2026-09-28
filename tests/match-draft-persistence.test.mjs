@@ -36,6 +36,10 @@ test("edição da súmula reutiliza a seleção de jogadores com foto da votaç�
   assert.match(football, /<PlayerPhotoSelect[\s\S]*players=\{scorerPlayers\}/);
   assert.match(football, /<PlayerPhotoSelect[\s\S]*players=\{goal\.ownGoal\?\[\]:assistPlayers\}/);
   assert.match(photoSelect, /<PlayerPhoto[\s\S]*player\.photoUrl/);
+  assert.match(photoSelect, /useInstanceBranding\(\)/);
+  assert.match(photoSelect, /--player-select-surface.*brand\.controlSurfaceColor/);
+  assert.match(photoSelect, /--player-select-text.*contrastTextColor\(brand\.controlSurfaceColor\)/);
+  assert.match(photoSelect, /--player-select-accent.*brand\.managementButtonColor/);
   assert.doesNotMatch(football, /<select value=\{goal\.scorerPlayerId\}/);
 });
 

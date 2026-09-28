@@ -3956,19 +3956,19 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 :is(.app-shell, .vote-page) .vote-player-options,
 :is(.app-shell, .vote-page) .vote-player-options > button {
   border-color: var(--control-line, #415148);
-  background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  background: var(--player-select-surface, var(--control-surface, #202b26));
+  color: var(--player-select-text, var(--control-text, #f2f5f3));
 }
 
 :is(.app-shell, .vote-page) .vote-player-trigger :is(b, i),
 :is(.app-shell, .vote-page) .vote-player-options > button b {
-  color: var(--control-text, #f2f5f3);
+  color: var(--player-select-text, var(--control-text, #f2f5f3));
 }
 
 :is(.app-shell, .vote-page) .vote-empty-photo {
   border: 1px solid var(--control-line, #415148);
-  background: color-mix(in srgb, var(--control-surface, #202b26) 82%, var(--management-background, #0f1612) 18%);
-  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+  background: color-mix(in srgb, var(--player-select-surface, var(--control-surface, #202b26)) 82%, var(--management-background, #0f1612) 18%);
+  color: color-mix(in srgb, var(--player-select-text, var(--control-text, #f2f5f3)) 68%, transparent);
 }
 
 :is(.app-shell, .vote-page) .vote-player-trigger:hover,
@@ -3977,9 +3977,9 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 :is(.app-shell, .vote-page) .vote-player-options > button:hover,
 :is(.app-shell, .vote-page) .vote-player-options > button:focus-visible,
 :is(.app-shell, .vote-page) .vote-player-options > button.selected {
-  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 48%, var(--control-line, #415148));
-  background: color-mix(in srgb, var(--control-surface, #202b26) 90%, var(--management-button, #d3eb7a) 10%);
-  color: var(--control-text, #f2f5f3);
+  border-color: color-mix(in srgb, var(--player-select-accent, var(--management-button, #d3eb7a)) 48%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--player-select-surface, var(--control-surface, #202b26)) 88%, var(--player-select-accent, var(--management-button, #d3eb7a)) 12%);
+  color: var(--player-select-text, var(--control-text, #f2f5f3));
 }
 
 :is(.app-shell, .vote-page) .vote-player-trigger:disabled {

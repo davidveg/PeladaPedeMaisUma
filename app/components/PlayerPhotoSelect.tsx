@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { contrastTextColor } from "../../lib/team-colors";
+import { useInstanceBranding } from "../InstanceBranding";
 import { PlayerPhoto } from "./PlayerPhoto";
 
 export type PlayerPhotoOption = {
@@ -18,11 +20,17 @@ export function PlayerPhotoSelect({ label, value, players, onChange, emptyLabel 
   disabled?: boolean;
   className?: string;
 }) {
+  const { config: brand } = useInstanceBranding();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const generatedId = useId().replace(/:/g, "");
   const listId = `player-photo-options-${generatedId}`;
   const selected = players.find(player => String(player.id) === String(value));
+  const theme = {
+    "--player-select-surface": brand.controlSurfaceColor,
+    "--player-select-text": contrastTextColor(brand.controlSurfaceColor),
+    "--player-select-accent": brand.managementButtonColor,
+  } as CSSProperties;
 
   useEffect(() => {
     if (!open) return;
@@ -38,7 +46,7 @@ export function PlayerPhotoSelect({ label, value, players, onChange, emptyLabel 
 
   useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
 
-  return <div className={`vote-player-select player-photo-select ${open ? "open" : ""} ${className}`.trim()} ref={root}>
+  return <div className={`vote-player-select player-photo-select ${open ? "open" : ""} ${className}`.trim()} ref={root} style={theme}>
     <button type="button" className="vote-player-trigger" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} disabled={disabled} onClick={() => setOpen(current => !current)}>
       {selected ? <PlayerPhoto photoUrl={selected.photoUrl} name={selected.displayName} className="vote-option-photo" previewSize={280} /> : <span className="vote-empty-photo" aria-hidden="true">👤</span>}
       <b>{selected?.displayName || emptyLabel}</b><i aria-hidden="true">{open ? "⌃" : "⌄"}</i>
