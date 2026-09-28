@@ -2567,8 +2567,8 @@ body {
 
 /* Player scores are compact emphasis chips. Derive their ink from the saved
    button background so light accents stay readable without changing buttons. */
-.member-page .team-player > span,
-.app-shell .team-player > span {
+.member-page .team-player > .team-player-score,
+.app-shell .team-player > .team-player-score {
   min-width: 40px;
   border: 1px solid color-mix(in srgb, var(--management-button, #d3eb7a) 76%, var(--control-line, #415148));
   background: var(--management-button, #d3eb7a);

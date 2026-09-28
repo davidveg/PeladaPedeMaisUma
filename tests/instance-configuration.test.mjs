@@ -430,7 +430,10 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.member-page :is\([\s\S]*\.round-center-grid > article[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.member-page \.primary[\s\S]*var\(--management-button/);
-  assert.match(theme, /\.member-page \.team-player > span,[\s\S]*\.app-shell \.team-player > span \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-contrast/);
+  assert.match(theme, /\.member-page \.team-player > \.team-player-score,[\s\S]*\.app-shell \.team-player > \.team-player-score \{[\s\S]*var\(--management-button[\s\S]*var\(--management-button-contrast/);
+  const football = await readFile(new URL("../app/FootballApp.tsx", import.meta.url), "utf8");
+  assert.match(football, /backgroundColor:brand\.managementButtonColor,color:contrastTextColor\(brand\.managementButtonColor\)/);
+  assert.match(football, /className="team-player-score" style=\{scoreChipStyle\}/);
   assert.match(theme, /\.app-shell \.section-head \.balance \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.result-actions \.ghost \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.app-shell \.career-match-card\.pending \.career-score-inputs,[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
