@@ -1777,7 +1777,7 @@ body {
   overflow: hidden;
 }
 
-.admin-shell .instance-color-grid label {
+.admin-shell :is(.instance-color-grid, .instance-team-grid) label {
   padding: 12px;
   border: 1px solid var(--management-line, #34433b);
   border-radius: 12px;

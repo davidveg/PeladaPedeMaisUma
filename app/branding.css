@@ -412,6 +412,19 @@
   row-gap: 14px;
 }
 
+.instance-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.instance-team-settings {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
 .instance-feature-settings {
   align-content: start;
   order: 3;
@@ -474,7 +487,8 @@
   }
 
   .instance-settings-grid,
-  .instance-color-grid {
+  .instance-color-grid,
+  .instance-team-grid {
     grid-template-columns: 1fr;
   }
 

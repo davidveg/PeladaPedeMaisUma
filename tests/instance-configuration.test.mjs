@@ -410,6 +410,9 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(admin, /Texto dos botões da gestão e do site/);
   assert.match(admin, /Containers auxiliares e campos/);
   assert.match(admin, /Texto dos containers auxiliares/);
+  assert.match(admin, /const teamSettings=\[\["teamBlueName","Nome da primeira equipe","teamBlueColor"\],\["teamYellowName","Nome da segunda equipe","teamYellowColor"\]\]/);
+  assert.match(admin, /className="instance-team-grid"/);
+  assert.match(styles, /\.instance-team-grid \{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 test("tema moderno usa a paleta configurável nos blocos e no financeiro", async () => {
