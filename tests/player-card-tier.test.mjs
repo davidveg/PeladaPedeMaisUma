@@ -40,4 +40,8 @@ test("cards preservam a textura metálica com a hierarquia textual clássica", a
  assert.match(theme,/Scratched brushed metal[\s\S]*repeating-linear-gradient\(7deg/);
  assert.match(theme,/Restore the original information hierarchy[\s\S]*\.card-role\.has-secondary/);
  assert.match(theme,/\.player-card-modal \.card-identity h2,[\s\S]*overflow-wrap:\s*anywhere/);
+ assert.match(theme,/\.player-card-modal \.card-stats span,[\s\S]*grid-template-rows:\s*34px 28px/);
+ assert.match(theme,/\.player-card-modal \.card-stats b,[\s\S]*font-size:\s*27px/);
+ assert.match(theme,/\.player-card-modal \.card-stats > span:last-child b,[\s\S]*font-size:\s*29px/);
+ assert.match(theme,/\.player-card-modal \.card-photo \.large-player-photo,[\s\S]*width:\s*240px[\s\S]*aspect-ratio:\s*1/);
 });

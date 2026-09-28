@@ -3628,15 +3628,37 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .player-card-modal .card-stats span,
 .member-card .card-stats span {
-  min-height: 70px;
+  display: grid;
+  min-height: 82px;
+  grid-template-rows: 34px 28px;
+  align-content: center;
+  align-items: center;
+  justify-items: center;
+  padding: 10px 5px;
+}
+
+.player-card-modal .card-stats b,
+.member-card .card-stats b {
+  align-self: end;
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: -.02em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .2);
 }
 
 .player-card-modal .card-stats small,
 .member-card .card-stats small {
-  min-height: 22px;
+  align-self: start;
+  min-height: 28px;
+  margin-top: 6px;
   font-size: 6.5px;
   letter-spacing: .4px;
   line-height: 1.2;
+}
+
+.player-card-modal .card-stats > span:last-child b,
+.member-card .card-stats > span:last-child b {
+  font-size: 29px;
 }
 
 .player-card-modal .card-stat-label > span,
@@ -3644,6 +3666,28 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+}
+
+/* Give the portrait more visual weight without changing the card footprint.
+   The aspect ratio keeps it square when narrow screens reduce its width. */
+.player-card-modal .card-top,
+.member-card .member-card-top {
+  min-height: 225px;
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
+.player-card-modal .card-photo,
+.member-card .member-card-top > .player-avatar-wrap {
+  min-width: 0;
+  justify-self: center;
+}
+
+.player-card-modal .card-photo .large-player-photo,
+.member-card-top .large-player-photo {
+  width: 240px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
 }
 
 /* Close actions stay discreet and follow the auxiliary controls configured in
