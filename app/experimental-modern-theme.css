@@ -2056,6 +2056,24 @@ body {
   color: var(--management-button, #d3eb7a);
 }
 
+/* Tooltip text follows the actual tooltip surface instead of inheriting a
+   potentially incompatible color from its parent card. */
+.help-tip.help-tip > [role="tooltip"],
+.metric-help.metric-help > [role="tooltip"],
+.advanced-info.advanced-info > [role="tooltip"] {
+  background: var(--control-surface, #202b26);
+  color: var(--control-contrast, #f2f5f3);
+}
+
+.help-tip.help-tip > [role="tooltip"]::before {
+  background: var(--control-surface, #202b26);
+}
+
+.career-switch.career-switch::before {
+  background: var(--control-surface, #202b26);
+  color: var(--control-contrast, #f2f5f3);
+}
+
 .admin-shell .card-tier-settings.disabled .card-tier-settings-head > span {
   background: color-mix(in srgb, var(--control-surface, #202b26) 76%, #000 24%);
   color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);

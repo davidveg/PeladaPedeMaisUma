@@ -51,6 +51,7 @@ export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INS
       "--management-line": colorWithOpacity(config.managementTextColor, .16),
       "--control-surface": config.controlSurfaceColor,
       "--control-text": config.controlTextColor,
+      "--control-contrast": contrastTextColor(config.controlSurfaceColor),
       "--control-line": colorWithOpacity(config.controlTextColor, .16),
       "--admin-sidebar": config.adminSidebarColor,
       "--admin-sidebar-contrast": contrastTextColor(config.adminSidebarColor),
