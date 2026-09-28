@@ -3287,7 +3287,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .member-page :is(.match-hub-pagination, .notification-pagination),
 .admin-shell :is(.career-pagination, .audit-pagination) {
   display: grid;
-  grid-template-columns: minmax(110px, auto) minmax(90px, 1fr) minmax(110px, auto);
+  grid-template-columns: minmax(110px, 1fr) max-content minmax(110px, 1fr);
   align-items: center;
   gap: 12px;
   padding: 12px;
@@ -3298,15 +3298,22 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   margin: 26px auto 0;
 }
 
-.member-page :is(.match-hub-pagination, .notification-pagination) > span,
-.admin-shell :is(.career-pagination, .audit-pagination) > span,
-.match-admin-surface .match-admin-pagination > span {
+.member-page :is(.match-hub-pagination, .notification-pagination) > .pagination-summary,
+.admin-shell :is(.career-pagination, .audit-pagination) > .pagination-summary,
+.match-admin-surface .match-admin-pagination > .pagination-summary {
+  min-width: max-content;
   color: var(--management-text, #f2f5f3);
   text-align: center;
+  white-space: nowrap;
 }
 
-.member-page :is(.match-hub-pagination, .notification-pagination) > span :is(b, small),
-.admin-shell :is(.career-pagination, .audit-pagination) > span :is(b, small) {
+.pagination-summary > .pagination-range {
+  display: block;
+  white-space: nowrap;
+}
+
+.member-page :is(.match-hub-pagination, .notification-pagination) > .pagination-summary :is(b, small),
+.admin-shell :is(.career-pagination, .audit-pagination) > .pagination-summary :is(b, small) {
   color: inherit;
 }
 
@@ -3314,6 +3321,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .admin-shell :is(.career-pagination, .audit-pagination) .ghost,
 .match-admin-surface .match-admin-pagination .ghost {
   min-width: 110px;
+  white-space: nowrap;
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
   color: var(--control-text, #f2f5f3);
@@ -3340,14 +3348,14 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   opacity: 1;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 760px) {
   .member-page :is(.match-hub-pagination, .notification-pagination),
   .admin-shell :is(.career-pagination, .audit-pagination) {
     grid-template-columns: 1fr 1fr;
   }
 
-  .member-page :is(.match-hub-pagination, .notification-pagination) > span,
-  .admin-shell :is(.career-pagination, .audit-pagination) > span {
+  .member-page :is(.match-hub-pagination, .notification-pagination) > .pagination-summary,
+  .admin-shell :is(.career-pagination, .audit-pagination) > .pagination-summary {
     grid-row: 1;
     grid-column: 1 / -1;
   }
