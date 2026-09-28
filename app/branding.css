@@ -175,6 +175,18 @@
   gap: 16px;
 }
 
+.brand-presentation-shared-settings {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fafbf9;
+}
+
+.brand-presentation-shared-settings .brand-size-control {
+  margin-bottom: 0;
+}
+
 .brand-presentation-grid > section {
   min-width: 0;
   padding: 16px;

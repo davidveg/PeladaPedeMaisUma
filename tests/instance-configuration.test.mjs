@@ -538,12 +538,13 @@ test("migração adiciona a apresentação dos logotipos sem ocultar a identidad
   }
 });
 
-test("cabeçalhos público e administrativo usam tamanhos e textos independentes", async () => {
+test("apresentação do logotipo aplica a mesma configuração nas áreas pública e administrativa", async () => {
   const [branding, styles, admin] = await Promise.all([
     readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/branding.css", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
   ]);
+  const presentationPanel = admin.match(/function BrandPresentationPanel[\s\S]*?function InstanceConfigForm/)?.[0] || "";
   assert.match(branding, /--brand-public-logo-height/);
   assert.match(branding, /--brand-admin-logo-height/);
   assert.match(branding, /naturalWidth/);
@@ -551,7 +552,11 @@ test("cabeçalhos público e administrativo usam tamanhos e textos independentes
   assert.match(branding, /showPublicBrandText/);
   assert.match(styles, /\.brand \.brand-mark/);
   assert.match(styles, /\.admin-brand \.brand-mark/);
-  assert.match(admin, /Apresentação dos logotipos/);
+  assert.match(admin, /Apresentação do logotipo/);
   assert.match(admin, /BrandIdentity previewConfig/);
   assert.match(admin, /Arquivo carregado/);
+  assert.match(presentationPanel, /publicLogoSize:draft\.logoSize,adminLogoSize:draft\.logoSize/);
+  assert.match(presentationPanel, /showPublicBrandText:draft\.showBrandText,showAdminBrandText:draft\.showBrandText/);
+  assert.equal((presentationPanel.match(/type="range"/g) || []).length, 1);
+  assert.match(presentationPanel, /Configuração única/);
 });

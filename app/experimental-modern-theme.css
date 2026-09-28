@@ -1746,6 +1746,7 @@ body {
 }
 
 .admin-shell .brand-presentation-grid > section,
+.admin-shell .brand-presentation-shared-settings,
 .admin-shell .instance-settings fieldset {
   border-color: var(--management-line, #34433b);
   background: color-mix(in srgb, var(--management-surface, #18211d) 88%, var(--management-text, #f2f5f3) 2%);
