@@ -125,7 +125,7 @@ test("menu lateral mostra o mês atual calculado e o andamento da temporada", as
   assert.match(header, /aria-valuenow=\{calendarMonth\}/);
   assert.match(header, /width: `\$\{calendarMonth \/ 12 \* 100\}%`/);
   assert.match(theme, /\.site-season-progress \{[\s\S]*height:\s*5px/);
-  assert.match(theme, /\.site-season-progress > span \{[\s\S]*var\(--admin-sidebar-active/);
+  assert.match(theme, /\.site-season-progress > span \{[\s\S]*var\(--public-sidebar-highlight/);
   assert.match(branding, /season: PublicCareerSeason \| null/);
   assert.match(publicConfig, /season_duration_months/);
   assert.match(publicConfig, /instance, season/);
