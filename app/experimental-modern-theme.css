@@ -461,7 +461,20 @@ body {
   color: var(--control-text, #eef2ef);
 }
 
-.match-hub-weather-grid > div,
+.match-hub-weather-grid > div {
+  border-color: color-mix(in srgb, var(--control-text, #f2f5f3) 18%, var(--control-surface, #202b26));
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.match-hub-weather-grid :is(dt, strong) {
+  color: var(--control-text, #f2f5f3);
+}
+
+.match-hub-weather-grid dt {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
 .match-hub-final-score-team,
 .match-hub-score > span {
   border-color: #3b4942;

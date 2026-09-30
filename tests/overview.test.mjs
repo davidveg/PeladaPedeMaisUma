@@ -20,6 +20,9 @@ test("a visão geral reúne jogador, equilíbrio e histórico", async () => {
     readFile(new URL("../app/visao-geral/overview.css", import.meta.url), "utf8"),
   ]);
   assert.match(source, /Resumo do jogador/);
+  assert.match(source, /overview-player-empty/);
+  assert.match(styles, /\.overview-player-empty>p\{[^}]*margin:10px 0 18px/);
+  assert.match(styles, /\.overview-player-empty>a\{[^}]*display:inline-flex/);
   assert.match(source, /Equilíbrio da última escalação/);
   assert.match(source, /Últimas partidas/);
   assert.match(styles, /var\(--control-surface/);

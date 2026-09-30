@@ -83,13 +83,13 @@
 .monthly-selection>h3 span{background:color-mix(in srgb,var(--control-surface,#202b26) 74%,var(--green) 12%);color:var(--green)}
 .monthly-selection>h3 .monthly-selection-title{display:flex;flex-direction:column;gap:3px;padding:0;background:transparent;color:inherit}
 .monthly-selection-title small{color:var(--muted);font:750 8px Arial,sans-serif;text-transform:capitalize}
-.monthly-selection-shell{display:flex;min-width:0;flex-direction:column;gap:10px}
-.player-of-month-shell{display:flex;min-width:0;flex-direction:column;gap:10px}
+.monthly-selection-shell{display:flex;min-width:0;flex-direction:column;gap:10px;container-type:inline-size}
+.player-of-month-shell{display:flex;min-width:0;flex-direction:column;gap:10px;container-type:inline-size}
 .player-of-month-shell .player-of-month{flex:1;min-height:0}
-.monthly-selection-share,.player-of-month-share{box-sizing:border-box;align-self:flex-end;max-width:100%}
-.monthly-selection-share span,.player-of-month-share span{min-width:0;text-align:center}
+.monthly-selection-share,.player-of-month-share{box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;align-self:stretch;width:100%;max-width:100%;min-width:0;gap:8px;padding-inline:12px;overflow:hidden;white-space:normal;font-size:clamp(11px,4cqi,14px);line-height:1.2}
+.monthly-selection-share span,.player-of-month-share span{display:block;min-width:0;max-width:100%;text-align:center;white-space:normal;overflow-wrap:break-word}
 .monthly-selection-share-notice{margin:0;color:var(--muted);font-size:10px;text-align:right}
-@media(max-width:600px){.monthly-selection-share,.player-of-month-share{align-self:stretch;width:100%;gap:7px;padding-inline:12px;white-space:normal;font-size:clamp(12px,3.8vw,14px);line-height:1.2}.monthly-selection-share span,.player-of-month-share span{overflow-wrap:anywhere}.monthly-selection-share-notice{text-align:center}.player-of-month-shell .player-of-month{min-height:540px}}
+@media(max-width:600px){.monthly-selection-share,.player-of-month-share{gap:7px;padding-inline:10px}.monthly-selection-share-notice{text-align:center}.player-of-month-shell .player-of-month{min-height:540px}}
 
 /* Fotos dos destaques mensais sem aro duplo. */
 .formation-line article>.player-avatar-wrap{display:grid;place-items:center;width:58px;height:58px;margin:0;border:0;border-radius:50%;background:transparent;box-shadow:none}

@@ -50,6 +50,8 @@ test("zero, temperatura única e uso do local padrão ficam explícitos", () => 
 test("resumo usa colunas flexíveis, sem altura fixa nem corte das descrições", () => {
   assert.match(css, /\.match-hub-weather-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css, /\.match-hub-weather\{[^}]*width:100%;max-width:520px;min-width:0/);
+  assert.match(css, /\.match-hub-weather-grid>div\{[^}]*background:var\(--control-surface/);
+  assert.match(css, /\.match-hub-weather-grid strong\{[^}]*color:var\(--control-text/);
   assert.match(css, /\.match-hub-weather-grid strong\{[^}]*overflow-wrap:anywhere/);
   const declarations = [...css.matchAll(/(\.match-hub-weather[^{}]*)\{([^{}]*)\}/g)].map(match => match[2]).join(";");
   assert.doesNotMatch(declarations, /(?:^|;)height:|white-space:nowrap|overflow:hidden/);
