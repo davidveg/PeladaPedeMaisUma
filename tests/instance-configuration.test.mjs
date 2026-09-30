@@ -416,10 +416,11 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
 });
 
 test("tema moderno usa a paleta configurável nos blocos e no financeiro", async () => {
-  const [theme, statistics, admin] = await Promise.all([
+  const [theme, statistics, admin, globals] = await Promise.all([
     readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
     readFile(new URL("../app/estatisticas/statistics.css", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(theme, /\.admin-shell :is\([\s\S]*\.rating-slider[\s\S]*var\(--control-surface/);
   assert.match(statistics, /\.monthly-pitch \{[\s\S]*background-image:\s*repeating-linear-gradient\(0deg/);
@@ -519,6 +520,9 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.admin-notice > button\[aria-label\^="Fechar"\] \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.admin-shell \.admin-main \.admin-card\.table \{[\s\S]*overflow:\s*hidden;[\s\S]*background-clip:\s*padding-box/);
   assert.match(theme, /\.admin-shell \.admin-main \.admin-card\.table > \.tr \+ \.tr \{[\s\S]*border-top:\s*1px solid var\(--management-line/);
+  assert.match(globals, /\.association-summary>div\{[^}]*var\(--control-surface[^}]*var\(--control-text/);
+  assert.match(globals, /\.table>\.tr\.admin-tr:not\(\.th\),\.table>\.tr\.member-association-tr:not\(\.th\)\{[^}]*var\(--management-surface[^}]*var\(--management-text/);
+  assert.match(globals, /\.table>\.tr\.admin-tr:not\(\.th\)>span:not\(:first-child\),\.table>\.tr\.member-association-tr:not\(\.th\)>span:not\(:first-child\):not\(\.association-account-actions\)\{[^}]*var\(--control-surface[^}]*var\(--control-text/);
   assert.match(statistics, /\.statistics-period\{[^}]*var\(--control-surface/);
   assert.match(statistics, /\.monthly-awards-pending\{[^}]*var\(--control-surface/);
 });

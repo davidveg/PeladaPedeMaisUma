@@ -424,7 +424,7 @@
  .separation-draft-setting .feature-switch .help-tip>[role=tooltip]{width:min(280px,calc(100vw - 32px));max-width:calc(100vw - 32px);white-space:normal;overflow-wrap:anywhere}
 
  .association-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:16px}
- .association-summary>div{min-width:0;padding:12px 7px;border-radius:10px;background:#f3f7f4}
+ .association-summary>div{min-width:0;padding:12px 7px;border:1px solid var(--control-line,#415148);border-radius:10px;background:var(--control-surface,#202b26);color:var(--control-text,#f2f5f3)}
  .association-summary b{font-size:26px}
  .association-summary span{text-align:center;line-height:1.35}
  .association-summary p{grid-column:1/-1;margin:2px 0 0;padding:14px 0 0;border-top:1px solid var(--line);border-left:0;font-size:10px;overflow-wrap:anywhere}
@@ -432,13 +432,13 @@
  .admin-main>.admin-card.table,.admin-main>.member-associations{width:100%}
  .admin-main>.admin-card.table{display:block}
  .table>.tr.sep.th,.table>.tr.admin-tr.th,.table>.tr.member-association-tr.th{display:none}
- .table>.tr.sep:not(.th),.table>.tr.admin-tr:not(.th),.table>.tr.member-association-tr:not(.th){width:calc(100% - 20px);min-width:0!important;margin:10px;gap:8px;padding:12px!important;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
+ .table>.tr.sep:not(.th),.table>.tr.admin-tr:not(.th),.table>.tr.member-association-tr:not(.th){width:calc(100% - 20px);min-width:0!important;margin:10px;gap:8px;padding:12px!important;border:1px solid var(--management-line,#34433b);border-radius:13px;background:var(--management-surface,#18211d);color:var(--management-text,#f2f5f3);overflow:hidden}
  .table>.tr.sep:not(.th)>span,.table>.tr.admin-tr:not(.th)>span,.table>.tr.member-association-tr:not(.th)>span{min-width:0}
- .table>.tr.sep:not(.th)>span:not(:first-child),.table>.tr.admin-tr:not(.th)>span:not(:first-child),.table>.tr.member-association-tr:not(.th)>span:not(:first-child):not(.association-account-actions){display:flex;flex-direction:column;align-items:flex-start;justify-content:center;justify-self:stretch;min-height:54px;padding:8px;border:1px solid #e1e8e3;border-radius:9px;background:#f8faf8;overflow-wrap:anywhere}
- .table>.tr.sep:not(.th)>span:not(:first-child)::before,.table>.tr.admin-tr:not(.th)>span:not(:first-child)::before,.table>.tr.member-association-tr:not(.th)>span:not(:first-child):not(.association-account-actions)::before{display:block;margin-bottom:5px;color:#718078;font-size:7px;font-weight:900;letter-spacing:.7px;text-transform:uppercase}
+ .table>.tr.sep:not(.th)>span:not(:first-child),.table>.tr.admin-tr:not(.th)>span:not(:first-child),.table>.tr.member-association-tr:not(.th)>span:not(:first-child):not(.association-account-actions){display:flex;flex-direction:column;align-items:flex-start;justify-content:center;justify-self:stretch;min-height:54px;padding:8px;border:1px solid var(--control-line,#415148);border-radius:9px;background:var(--control-surface,#202b26);color:var(--control-text,#f2f5f3);overflow-wrap:anywhere}
+ .table>.tr.sep:not(.th)>span:not(:first-child)::before,.table>.tr.admin-tr:not(.th)>span:not(:first-child)::before,.table>.tr.member-association-tr:not(.th)>span:not(:first-child):not(.association-account-actions)::before{display:block;margin-bottom:5px;color:color-mix(in srgb,var(--control-text,#f2f5f3) 68%,transparent);font-size:7px;font-weight:900;letter-spacing:.7px;text-transform:uppercase}
 
  .table>.tr.sep:not(.th){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
- .table>.tr.sep:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+ .table>.tr.sep:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--management-line,#34433b);overflow-wrap:anywhere}
  .table>.tr.sep:not(.th)>span:nth-child(2)::before{content:"Confirmação"}
  .table>.tr.sep:not(.th)>span:nth-child(3)::before{content:"Jogadores"}
  .table>.tr.sep:not(.th)>span:nth-child(4)::before{content:"Equilíbrio"}
@@ -446,7 +446,7 @@
  .table>.tr.sep:not(.th)>button{grid-column:1/-1;width:100%;min-height:40px}
 
  .table>.tr.admin-tr:not(.th){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
- .table>.tr.admin-tr:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+ .table>.tr.admin-tr:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--management-line,#34433b);overflow-wrap:anywhere}
  .table>.tr.admin-tr:not(.th)>span:nth-child(2)::before{content:"Cadastro"}
  .table>.tr.admin-tr:not(.th)>span:nth-child(3)::before{content:"Atualização"}
  .table>.tr.admin-tr:not(.th)>span:nth-child(4)::before{content:"Status"}
@@ -454,7 +454,7 @@
  .table>.tr.admin-tr:not(.th)>button{grid-column:1/-1;width:100%;min-height:40px}
 
  .table>.tr.member-association-tr:not(.th){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
- .table>.tr.member-association-tr:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+ .table>.tr.member-association-tr:not(.th)>span:first-child{grid-column:1/-1;padding:2px 2px 11px;border-bottom:1px solid var(--management-line,#34433b);overflow-wrap:anywhere}
  .table>.tr.member-association-tr:not(.th)>span:first-child b{overflow-wrap:anywhere}
  .table>.tr.member-association-tr:not(.th)>span:nth-child(2)::before{content:"Jogador associado"}
  .table>.tr.member-association-tr:not(.th)>span:nth-child(3)::before{content:"Tipo / posição"}
