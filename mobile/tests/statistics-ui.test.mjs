@@ -154,6 +154,7 @@ test("fotos preenchem círculos, suportam falha e não sobrepõem o nome do dest
   const champion = app.render("statistics-awards", "PlayerOfMonth", { standing: highlights.focus.playerOfMonth });
   const name = champion.find(node => node.type === "Text" && plain(node.props.children) === highlights.focus.playerOfMonth.player.displayName);
   assert.equal(style(name).position, undefined); assert.equal(style(name).textAlign, "center");
+  assert.ok(champion.some(node => node.type === "Button" && node.props.icon === "whatsapp" && typeof node.props.onPress === "function"));
 });
 
 test("campo adapta onze vagas e fontes grandes sem altura fixa", () => {

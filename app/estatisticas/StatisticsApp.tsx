@@ -112,8 +112,11 @@ function StreakRecord({title,record,suffix,icon}:{title:string;record:{length:nu
 }
 
 function PlayerOfMonth({standing}:{standing:MonthlyStanding|null}) {
+  const captureRef=useRef<HTMLElement>(null),[sharing,setSharing]=useState(false),[shareNotice,setShareNotice]=useState("");
   if(!standing)return <article className="player-of-month empty">Sem jogador elegível.</article>;
-  return <article className="player-of-month">
+  const title=`Jogador do mês · ${standing.player.displayName}`;
+  const share=async()=>{setSharing(true);setShareNotice("");try{if(!captureRef.current)throw new Error("Destaque indisponível para compartilhamento.");const image=await renderRecapPng(captureRef.current,title,"#123f31");const message=`⭐ *${title}*\n${signed(standing.totalMomentum)} de momentum no destaque mensal.\n\n${window.location.href}`;const outcome=await shareRecapFile(image,title,message);if(outcome==="downloaded"){window.open(buildWhatsAppShareUrl(message),"_blank","noopener,noreferrer");setShareNotice("Imagem baixada. O WhatsApp foi aberto com a legenda.")}}catch(error:any){setShareNotice(error?.message||"Não foi possível gerar a imagem do destaque.")}finally{setSharing(false)}};
+  return <div className="player-of-month-shell"><article className="player-of-month" ref={captureRef}>
     <div className="player-of-month-title"><span aria-hidden="true">★</span><div><small>DESTAQUE INDIVIDUAL</small><b>Jogador do mês</b></div></div>
     <div className="player-of-month-profile">
       <PlayerPhoto photoUrl={standing.player.photoUrl} name={standing.player.displayName} className="player-of-month-photo"/>
@@ -125,7 +128,7 @@ function PlayerOfMonth({standing}:{standing:MonthlyStanding|null}) {
       <div><dt>Votações</dt><dd>{signed(standing.votingMomentum)}</dd></div>
     </dl>
     <div className="player-of-month-campaign"><small>Campanha no mês</small><p><span><b>{standing.wins}</b> vitórias</span><span><b>{standing.draws}</b> empates</span><span><b>{standing.losses}</b> derrotas</span></p></div>
-  </article>;
+  </article><button type="button" className="primary whatsapp-button player-of-month-share" disabled={sharing} onClick={share}><WhatsAppIcon/>{sharing?"Gerando imagem…":"Compartilhar destaque no WhatsApp"}</button>{shareNotice&&<p className="monthly-selection-share-notice" role="status">{shareNotice}</p>}</div>;
 }
 
 function MonthlySelection({award}:{award:MonthlyAward}) {

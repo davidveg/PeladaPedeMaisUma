@@ -46,8 +46,12 @@ export function MonthlyHonors({ highlights }: { highlights: GeneralStatistics["c
 }
 
 export function PlayerOfMonth({ standing }: { standing: MonthlyStanding | null }) {
+  const { config: brand } = useMobileBranding();
+  const highlightRef = useRef<View>(null);
+  const [sharing, setSharing] = useState(false);
   if (!standing) return <Note>Sem jogador elegível.</Note>;
-  return <LinearGradient colors={["#205F48", "#123E30"]} style={styles.champion}>
+  const shareHighlight=async()=>{let uri="";setSharing(true);try{if(!await Sharing.isAvailableAsync())throw new Error("O compartilhamento de arquivos não está disponível neste aparelho.");uri=await captureRef(highlightRef,{format:"png",quality:1,result:"tmpfile"});await Clipboard.setStringAsync(`⭐ Jogador do mês · ${standing.player.displayName}\n${signed(standing.totalMomentum)} de momentum · ${brand.appName}`);await Sharing.shareAsync(uri,{dialogTitle:`Jogador do mês · ${standing.player.displayName}`,mimeType:"image/png",UTI:"public.png"});Alert.alert("Legenda copiada","Escolha o WhatsApp e cole a legenda na conversa após anexar a imagem.")}catch(error:any){Alert.alert("Compartilhamento indisponível",error?.message||"Não foi possível gerar a imagem do destaque.")}finally{if(uri)releaseCapture(uri);setSharing(false)}};
+  return <View style={{gap:12}}><View ref={highlightRef} collapsable={false}><LinearGradient colors={["#205F48", "#123E30"]} style={styles.champion}>
     <View style={s.row}><Ionicons name="star" size={22} color="#DCFA6B"/><Text style={styles.championLabel}>JOGADOR DO MÊS</Text></View>
     <View style={styles.portrait}><Avatar player={standing.player} size={112}/></View>
     <View style={{ gap: 6, alignItems: "center" }}>
@@ -61,7 +65,7 @@ export function PlayerOfMonth({ standing }: { standing: MonthlyStanding | null }
       <Metric label="Votações" value={signed(standing.votingMomentum)}/>
     </View>
     <Text style={styles.championNote}>{standing.games} jogos · {standing.wins}V · {standing.draws}E · {standing.losses}D</Text>
-  </LinearGradient>;
+  </LinearGradient></View><Button title={sharing ? "Gerando imagem…" : "Compartilhar destaque no WhatsApp"} icon="whatsapp" busy={sharing} onPress={shareHighlight}/></View>;
 }
 
 export function MonthlyPitch({ award }: { award: MonthlyAward }) {
