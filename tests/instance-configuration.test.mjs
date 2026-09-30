@@ -34,6 +34,8 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.shareImageUrl, null);
   assert.equal(config.faviconUrl, null);
   assert.equal(config.adminSidebarColor, "#133F31");
+  assert.equal(config.publicSidebarColor, "#133F31");
+  assert.equal(config.publicTopbarColor, "#0F1612");
   assert.equal(config.managementBackgroundColor, "#0F1612");
   assert.equal(config.managementSurfaceColor, "#18211D");
   assert.equal(config.managementTextColor, "#F2F5F3");
@@ -69,6 +71,8 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     appName: "FDQ",
     primaryColor: "#123ABC",
     adminSidebarColor: "#440052",
+    publicSidebarColor: "#3B0B48",
+    publicTopbarColor: "#19051F",
     managementBackgroundColor: "#111827",
     managementSurfaceColor: "#1F2937",
     managementTextColor: "#F9FAFB",
@@ -104,6 +108,8 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.teamBlueName, "Camisa");
   assert.equal(result.config.teamYellowName, "Sem camisa");
   assert.equal(result.config.adminSidebarColor, "#440052");
+  assert.equal(result.config.publicSidebarColor, "#3B0B48");
+  assert.equal(result.config.publicTopbarColor, "#19051F");
   assert.equal(result.config.managementBackgroundColor, "#111827");
   assert.equal(result.config.managementSurfaceColor, "#1F2937");
   assert.equal(result.config.managementTextColor, "#F9FAFB");
@@ -452,6 +458,43 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(admin, /const teamSettings=\[\["teamBlueName","Nome da primeira equipe","teamBlueColor"\],\["teamYellowName","Nome da segunda equipe","teamYellowColor"\]\]/);
   assert.match(admin, /className="instance-team-grid"/);
   assert.match(styles, /\.instance-team-grid \{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test("navegação pública possui paleta própria com fallback retrocompatível", async () => {
+  const legacy = instanceConfigurationFromRow({
+    admin_sidebar_color: "#440052",
+    management_background_color: "#111827",
+  });
+  assert.equal(legacy.publicSidebarColor, "#440052");
+  assert.equal(legacy.publicTopbarColor, "#111827");
+
+  const directory = await mkdtemp(join(tmpdir(), "pelada-public-navigation-palette-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0056_public_navigation_palette.sql", import.meta.url), "utf8"));
+    const columns = await bindings.DB.prepare("PRAGMA table_info(instance_configuration)").all();
+    const names = columns.results.map(column => column.name);
+    assert.ok(names.includes("public_sidebar_color"));
+    assert.ok(names.includes("public_topbar_color"));
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+
+  const [branding, theme, admin] = await Promise.all([
+    readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(branding, /--public-sidebar.*publicSidebarColor/);
+  assert.match(branding, /--public-topbar.*publicTopbarColor/);
+  assert.match(branding, /--public-sidebar-contrast.*contrastTextColor\(config\.publicSidebarColor\)/);
+  assert.match(branding, /--public-topbar-contrast.*contrastTextColor\(config\.publicTopbarColor\)/);
+  assert.match(theme, /\.site-sidebar\s*\{[\s\S]*background:\s*var\(--public-sidebar/);
+  assert.match(theme, /\.site-topbar\s*\{[\s\S]*background:\s*var\(--public-topbar/);
+  assert.match(admin, /Menu lateral da área pública/);
+  assert.match(admin, /Barra superior da área pública/);
 });
 
 test("tema moderno usa a paleta configurável nos blocos e no financeiro", async () => {

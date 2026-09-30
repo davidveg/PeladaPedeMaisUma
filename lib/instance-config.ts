@@ -12,6 +12,8 @@ export type InstanceConfiguration = {
   showAdminBrandText: boolean;
   primaryColor: string;
   adminSidebarColor: string;
+  publicSidebarColor: string;
+  publicTopbarColor: string;
   secondaryColor: string;
   backgroundColor: string;
   surfaceColor: string;
@@ -68,6 +70,8 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   showAdminBrandText: true,
   primaryColor: "#174D3B",
   adminSidebarColor: "#133F31",
+  publicSidebarColor: "#133F31",
+  publicTopbarColor: "#0F1612",
   secondaryColor: "#D9F36B",
   backgroundColor: "#F5F7F3",
   surfaceColor: "#FFFFFF",
@@ -131,6 +135,8 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     showAdminBrandText: Boolean(row.show_admin_brand_text ?? DEFAULT_INSTANCE_CONFIGURATION.showAdminBrandText),
     primaryColor: value("primary_color", DEFAULT_INSTANCE_CONFIGURATION.primaryColor),
     adminSidebarColor: value("admin_sidebar_color", DEFAULT_INSTANCE_CONFIGURATION.adminSidebarColor),
+    publicSidebarColor: value("public_sidebar_color", value("admin_sidebar_color", DEFAULT_INSTANCE_CONFIGURATION.publicSidebarColor)),
+    publicTopbarColor: value("public_topbar_color", value("management_background_color", DEFAULT_INSTANCE_CONFIGURATION.publicTopbarColor)),
     secondaryColor: value("secondary_color", DEFAULT_INSTANCE_CONFIGURATION.secondaryColor),
     backgroundColor: value("background_color", DEFAULT_INSTANCE_CONFIGURATION.backgroundColor),
     surfaceColor: value("surface_color", DEFAULT_INSTANCE_CONFIGURATION.surfaceColor),
@@ -197,6 +203,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     showAdminBrandText: source.showAdminBrandText !== false,
     primaryColor: color("primaryColor", DEFAULT_INSTANCE_CONFIGURATION.primaryColor),
     adminSidebarColor: color("adminSidebarColor", DEFAULT_INSTANCE_CONFIGURATION.adminSidebarColor),
+    publicSidebarColor: color("publicSidebarColor", DEFAULT_INSTANCE_CONFIGURATION.publicSidebarColor),
+    publicTopbarColor: color("publicTopbarColor", DEFAULT_INSTANCE_CONFIGURATION.publicTopbarColor),
     secondaryColor: color("secondaryColor", DEFAULT_INSTANCE_CONFIGURATION.secondaryColor),
     backgroundColor: color("backgroundColor", DEFAULT_INSTANCE_CONFIGURATION.backgroundColor),
     surfaceColor: color("surfaceColor", DEFAULT_INSTANCE_CONFIGURATION.surfaceColor),
@@ -248,7 +256,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   }
   if (config.teamBlueName.toLocaleLowerCase("pt-BR") === config.teamYellowName.toLocaleLowerCase("pt-BR")) return { error: "As duas equipes precisam ter nomes diferentes." };
   const colorKeys = [
-    "primaryColor", "adminSidebarColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
+    "primaryColor", "adminSidebarColor", "publicSidebarColor", "publicTopbarColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
     "managementBackgroundColor", "managementSurfaceColor", "managementTextColor", "managementMutedColor", "managementButtonColor", "managementButtonTextColor",
     "controlSurfaceColor", "controlTextColor",
     "teamBlueColor", "teamYellowColor", "appPrimaryColor", "appSecondaryColor", "appBackgroundColor", "appTextColor",
@@ -287,7 +295,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
 export const INSTANCE_CONFIGURATION_COLUMNS = [
   "site_name", "site_short_name", "site_tagline", "footer_text", "logo_url", "favicon_url", "share_image_url",
   "public_logo_size", "admin_logo_size", "show_public_brand_text", "show_admin_brand_text",
-  "primary_color", "admin_sidebar_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
+  "primary_color", "admin_sidebar_color", "public_sidebar_color", "public_topbar_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
   "management_background_color", "management_surface_color", "management_text_color", "management_muted_color", "management_button_color", "management_button_text_color",
   "control_surface_color", "control_text_color",
   "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
@@ -301,7 +309,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
   return [
     config.siteName, config.siteShortName, config.siteTagline, config.footerText, config.logoUrl, config.faviconUrl, config.shareImageUrl,
     config.publicLogoSize, config.adminLogoSize, Number(config.showPublicBrandText), Number(config.showAdminBrandText),
-    config.primaryColor, config.adminSidebarColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
+    config.primaryColor, config.adminSidebarColor, config.publicSidebarColor, config.publicTopbarColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
     config.mutedColor, config.managementBackgroundColor, config.managementSurfaceColor, config.managementTextColor, config.managementMutedColor,
     config.managementButtonColor, config.managementButtonTextColor, config.controlSurfaceColor, config.controlTextColor,
     config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,

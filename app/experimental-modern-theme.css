@@ -57,10 +57,8 @@ body {
   flex-direction: column;
   width: 232px;
   padding: 25px 16px 18px;
-  border-right: 1px solid rgba(255, 255, 255, .07);
-  background:
-    radial-gradient(circle at 24% 0, rgba(124, 166, 145, .22), transparent 34%),
-    linear-gradient(180deg, #263c33 0%, #1b3028 48%, #172a23 100%);
+  border-right: 1px solid var(--public-sidebar-border, rgba(255, 255, 255, .16));
+  background: var(--public-sidebar, #133f31);
   box-shadow: 14px 0 36px rgba(0, 0, 0, .14);
   overflow-x: hidden;
   pointer-events: auto;
@@ -68,7 +66,7 @@ body {
 
 .site-sidebar .brand,
 .site-sidebar .brand > span.brand-identity:last-child {
-  color: #f7f9f7;
+  color: var(--public-sidebar-contrast, #fff);
 }
 
 .site-sidebar .brand {
@@ -77,7 +75,7 @@ body {
 }
 
 .site-sidebar .brand small {
-  color: #a9bbb2;
+  color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
 }
 
 .site-sidebar nav {
@@ -102,24 +100,24 @@ body {
   padding: 10px 12px;
   border: 1px solid transparent;
   border-radius: 13px;
-  color: #c4d0ca;
+  color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
   font-size: 12px;
   text-decoration: none;
   transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
 }
 
 .site-sidebar nav a:hover {
-  border-color: rgba(255, 255, 255, .08);
-  background: rgba(255, 255, 255, .055);
-  color: #fff;
+  border-color: var(--public-sidebar-border, rgba(255, 255, 255, .16));
+  background: color-mix(in srgb, var(--public-sidebar-contrast, #fff) 7%, transparent);
+  color: var(--public-sidebar-contrast, #fff);
   transform: none;
 }
 
 .site-sidebar nav a.active {
-  border-color: rgba(255, 255, 255, .82);
-  background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .08));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .17), 0 9px 22px rgba(3, 13, 8, .16);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--public-sidebar-contrast, #fff) 72%, transparent);
+  background: color-mix(in srgb, var(--public-sidebar-contrast, #fff) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--public-sidebar-contrast, #fff) 12%, transparent), 0 9px 22px rgba(3, 13, 8, .16);
+  color: var(--public-sidebar-contrast, #fff);
 }
 
 .site-nav-icon {
@@ -128,18 +126,18 @@ body {
   width: 25px;
   height: 25px;
   place-items: center;
-  color: #b9cbc2;
+  color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
   font-size: 17px;
   line-height: 1;
 }
 
 .site-sidebar nav a.active .site-nav-icon {
-  color: #ecf5b3;
+  color: var(--public-sidebar-highlight, #d9f36b);
 }
 
 .site-nav-group {
   margin: 21px 10px 7px;
-  color: #8fa69b;
+  color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 1.7px;
@@ -154,13 +152,13 @@ body {
   gap: 7px;
   margin-top: 18px;
   padding: 15px;
-  border: 1px solid rgba(255, 255, 255, .13);
+  border: 1px solid var(--public-sidebar-border, rgba(255, 255, 255, .16));
   border-radius: 15px;
-  background: rgba(255, 255, 255, .055);
+  background: color-mix(in srgb, var(--public-sidebar-contrast, #fff) 6%, transparent);
 }
 
 .site-season-card small {
-  color: #9eb0a7;
+  color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
   font-size: 7px;
   font-weight: 800;
   letter-spacing: 1.25px;
@@ -177,7 +175,7 @@ body {
   margin-top: 2px;
   overflow: hidden;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--admin-sidebar-contrast, #f2f5f3) 18%, transparent);
+  background: color-mix(in srgb, var(--public-sidebar-contrast, #f2f5f3) 18%, transparent);
 }
 
 .site-season-progress > span {
@@ -185,7 +183,7 @@ body {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: var(--admin-sidebar-active, #b7d86a);
+  background: var(--public-sidebar-highlight, #d9f36b);
   transition: width .3s ease;
 }
 
@@ -199,8 +197,8 @@ body {
   justify-content: space-between;
   height: 76px;
   padding: 0 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
-  background: rgba(16, 23, 19, .94);
+  border-bottom: 1px solid var(--public-topbar-border, rgba(255, 255, 255, .1));
+  background: var(--public-topbar, #0f1612);
   backdrop-filter: blur(16px);
   pointer-events: auto;
 }
@@ -211,12 +209,12 @@ body {
 }
 
 .site-topbar small {
-  color: #8c9b94;
+  color: var(--public-topbar-muted, rgba(255, 255, 255, .62));
   font-size: 9px;
 }
 
 .site-topbar strong {
-  color: #f7f9f7;
+  color: var(--public-topbar-contrast, #fff);
   font-size: 13px;
 }
 
@@ -231,23 +229,23 @@ body {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, .1);
+  border: 1px solid var(--public-topbar-border, rgba(255, 255, 255, .1));
   border-radius: 13px;
-  background: rgba(255, 255, 255, .035);
-  color: #e8eeea;
+  background: color-mix(in srgb, var(--public-topbar-contrast, #fff) 4%, transparent);
+  color: var(--public-topbar-contrast, #fff);
   font-weight: 850;
   text-decoration: none;
 }
 
 .site-topbar-actions a:hover {
-  border-color: rgba(211, 236, 117, .28);
-  background: rgba(211, 236, 117, .09);
+  border-color: color-mix(in srgb, var(--public-sidebar-highlight, #d9f36b) 34%, transparent);
+  background: color-mix(in srgb, var(--public-sidebar-highlight, #d9f36b) 10%, transparent);
 }
 
 .site-topbar-actions .site-viewer {
   border-color: transparent;
-  background: #31483e;
-  color: #fff;
+  background: color-mix(in srgb, var(--public-topbar-contrast, #fff) 16%, var(--public-topbar, #0f1612));
+  color: var(--public-topbar-contrast, #fff);
   font-size: 11px;
 }
 
@@ -940,8 +938,8 @@ body {
     height: 68px;
     padding: 8px 12px;
     border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
-    background: #1d3028;
+    border-bottom: 1px solid var(--public-sidebar-border, rgba(255, 255, 255, .16));
+    background: var(--public-sidebar, #133f31);
     box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
   }
 
