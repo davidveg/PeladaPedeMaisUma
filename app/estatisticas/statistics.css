@@ -100,3 +100,22 @@
 .statistics-advanced-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 16px;border:1px solid #bfd2c7;border-radius:12px;background:#fff;color:var(--green);font-size:12px;font-weight:850;text-decoration:none;box-shadow:0 8px 22px rgba(20,57,44,.06)}
 .statistics-advanced-link:hover{background:#eef6f1}
 @media(max-width:600px){.statistics-advanced-entry{margin:0 0 16px}.statistics-advanced-link{width:100%}}
+
+/* Ranking de gols: mantém as cinco colunas dentro do card em telas estreitas. */
+.statistics-label-short{display:none}
+.leaderboard-table{width:100%;min-width:0}
+.leaderboard-row>*{min-width:0}
+.leaderboard-row .statistics-player{min-width:0}
+.leaderboard-row .statistics-player>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+@media(max-width:760px){
+  .statistics-section{padding:16px}
+  .statistics-row.leaderboard-row{grid-template-columns:24px minmax(92px,1fr) repeat(3,minmax(38px,44px));column-gap:2px;padding:0 6px}
+  .statistics-row.leaderboard-row.head{font-size:7px;letter-spacing:0}
+  .leaderboard-row.head button{min-width:0;padding:6px 1px;gap:2px;white-space:nowrap}
+  .leaderboard-row.head button i{font-size:9px}
+  .leaderboard-row .statistics-player{gap:7px}
+  .leaderboard-row .statistics-player>span,.leaderboard-row .statistics-player img{width:34px;height:34px;border-radius:9px}
+  .statistics-label-long{display:none}
+  .statistics-label-short{display:inline}
+}
