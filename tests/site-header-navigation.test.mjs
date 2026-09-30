@@ -97,6 +97,16 @@ test("menu lateral evita overflow no desktop e centraliza o item somente no mobi
   assert.match(theme, /@media \(max-width: 900px\)[\s\S]*?\.site-sidebar nav \{[\s\S]*?overflow-x:\s*auto/);
 });
 
+test("menu administrativo amplia os ícones móveis sem alargar os itens", async () => {
+  const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
+  const mobile = [...theme.matchAll(/@media \(max-width: 600px\) \{([\s\S]*?)\r?\n\}/g)]
+    .map(match => match[1])
+    .find(block => block.includes(".admin-shell aside > button")) || "";
+
+  assert.match(mobile, /\.admin-shell aside > button \{[\s\S]*?min-width:\s*64px;[\s\S]*?padding:\s*5px 8px/);
+  assert.match(mobile, /\.admin-nav-icon \{[\s\S]*?width:\s*24px;[\s\S]*?height:\s*22px;[\s\S]*?font-size:\s*20px/);
+});
+
 test("menu lateral mostra o mês atual calculado e o andamento da temporada", async () => {
   const [header, branding, publicConfig, theme] = await Promise.all([
     readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
