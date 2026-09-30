@@ -29,6 +29,7 @@ export type ScheduledMatch = {
   separationDraft?: { enabled: boolean; exists: boolean; stale: boolean; updatedAt?: string | null };
   counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: MatchAttendance[];
   guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
+  guestConfirmation?: { enabled: boolean; opensAt?: string | null; canSelfConfirm: boolean };
   preconfirmedGuestIds?: string[];
   preconfirmedGuests?: { playerId: string; playerName: string; photoUrl?: string | null }[];
   goalkeepers?: { present: number; max: number };

@@ -25,6 +25,8 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.manualSeparationEnabled, false);
   assert.equal(config.separationDraftsEnabled, false);
   assert.equal(config.guestPreconfirmationEnabled, false);
+  assert.equal(config.guestSelfConfirmationEnabled, false);
+  assert.equal(config.guestSelfConfirmationLeadHours, 48);
   assert.equal(config.guestConfirmationThreshold, 16);
   assert.equal(config.financeEnabled, true);
   assert.equal(config.delinquencyAttendanceBlockEnabled, false);
@@ -87,6 +89,8 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     manualSeparationEnabled: true,
     separationDraftsEnabled: true,
     guestPreconfirmationEnabled: true,
+    guestSelfConfirmationEnabled: true,
+    guestSelfConfirmationLeadHours: 72,
     guestConfirmationThreshold: 18,
     financeEnabled: false,
     delinquencyAttendanceBlockEnabled: true,
@@ -115,6 +119,8 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.manualSeparationEnabled, false);
   assert.equal(result.config.separationDraftsEnabled, true);
   assert.equal(result.config.guestPreconfirmationEnabled, true);
+  assert.equal(result.config.guestSelfConfirmationEnabled, true);
+  assert.equal(result.config.guestSelfConfirmationLeadHours, 72);
   assert.equal(result.config.guestConfirmationThreshold, 18);
   assert.equal(result.config.financeEnabled, false);
   assert.equal(result.config.delinquencyAttendanceBlockEnabled, true);
@@ -124,16 +130,49 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
 });
 
 test("mantém colunas e valores alinhados ao salvar a configuração", () => {
-  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20, financeEnabled: false, delinquencyAttendanceBlockEnabled: true, allowInsecureLocalNetworkAuth: true };
+  const config = { ...DEFAULT_INSTANCE_CONFIGURATION, manualSeparationEnabled: true, separationDraftsEnabled: true, guestPreconfirmationEnabled: true, guestConfirmationThreshold: 20, guestSelfConfirmationEnabled: true, guestSelfConfirmationLeadHours: 72, financeEnabled: false, delinquencyAttendanceBlockEnabled: true, allowInsecureLocalNetworkAuth: true };
   assert.equal(INSTANCE_CONFIGURATION_COLUMNS.length, instanceConfigurationValues(config).length);
   const index = INSTANCE_CONFIGURATION_COLUMNS.indexOf("manual_separation_enabled");
   assert.equal(instanceConfigurationValues(config)[index], 0);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("separation_drafts_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_preconfirmation_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_confirmation_threshold")], 20);
+  assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_self_confirmation_enabled")], 1);
+  assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("guest_self_confirmation_lead_hours")], 72);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("finance_enabled")], 0);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("delinquency_attendance_block_enabled")], 1);
   assert.equal(instanceConfigurationValues(config)[INSTANCE_CONFIGURATION_COLUMNS.indexOf("allow_insecure_local_network_auth")], 1);
+});
+
+test("migração define 48 horas como antecedência padrão dos convidados", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-guest-confirmation-lead-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE instance_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO instance_configuration (id) VALUES (1)").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0055_guest_confirmation_default_lead.sql", import.meta.url), "utf8"));
+    assert.equal(await bindings.DB.prepare("SELECT guest_self_confirmation_lead_hours FROM instance_configuration WHERE id=1").first("guest_self_confirmation_lead_hours"), 48);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração cria a confirmação própria de convidados desativada e sem abrir partidas", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-guest-self-confirmation-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(`CREATE TABLE scheduled_matches (id TEXT PRIMARY KEY);`);
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0053_guest_self_confirmation.sql", import.meta.url), "utf8"));
+    const config = await bindings.DB.prepare("SELECT guest_self_confirmation_enabled FROM instance_configuration WHERE id=1").first();
+    const columns = await bindings.DB.prepare("PRAGMA table_info(scheduled_matches)").all();
+    assert.deepEqual({ ...config }, { guest_self_confirmation_enabled: 0 });
+    assert.ok(columns.results.some(column => column.name === "guest_confirmation_opens_at"));
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("migração mantém o login HTTP pela rede local desativado por padrão", async () => {

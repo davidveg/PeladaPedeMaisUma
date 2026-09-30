@@ -15,6 +15,7 @@ type Match = {
   maxChanges: number; status: string; separationId?: string | null;
   counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: Attendance[];
   guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
+  guestConfirmation?: { enabled: boolean; opensAt?: string | null; canSelfConfirm: boolean };
   preconfirmedGuests?: { playerId: string; playerName: string; photoUrl?: string | null }[];
   goalkeepers?: { present: number; max: number };
   shareMessage?: string;
@@ -86,7 +87,7 @@ export default function MatchesApp({ matchId }: { matchId?: string }) {
 
 function MatchSiteCard({ item, busy, onAnswer, onShare }: { item: Match; busy: string; onAnswer(item: Match, status: "PRESENT" | "ABSENT"): void; onShare(item: Match): void }) {
   const waiting = item.preconfirmedGuests || [];
-  const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest);
+  const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest && !item.guestConfirmation?.canSelfConfirm);
   const answerText = guestManaged
     ? item.viewer.status === "PRESENT" ? "Sua presença foi aprovada pelo administrador."
       : item.viewer.preconfirmed ? "Você está na lista de espera e aguarda aprovação do administrador."

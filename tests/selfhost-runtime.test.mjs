@@ -417,6 +417,20 @@ test("migração adiciona a formação mensal e o histórico finalizado", async 
   }
 });
 
+test("migração adiciona o mínimo mensal de duas partidas", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-monthly-selection-minimum-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE career_configuration (id INTEGER PRIMARY KEY)").run();
+    await bindings.DB.prepare("INSERT INTO career_configuration (id) VALUES (1)").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0054_monthly_selection_minimum_matches.sql", import.meta.url), "utf8"));
+    assert.equal(await bindings.DB.prepare("SELECT monthly_selection_minimum_matches FROM career_configuration WHERE id=1").first("monthly_selection_minimum_matches"), 2);
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("migração preserva o resultado final de uma temporada", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-season-awards-"));
   const bindings = await createSelfhostBindings(directory);

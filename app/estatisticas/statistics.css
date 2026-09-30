@@ -86,9 +86,10 @@
 .monthly-selection-shell{display:flex;min-width:0;flex-direction:column;gap:10px}
 .player-of-month-shell{display:flex;min-width:0;flex-direction:column;gap:10px}
 .player-of-month-shell .player-of-month{flex:1;min-height:0}
-.monthly-selection-share,.player-of-month-share{align-self:flex-end;max-width:100%}
+.monthly-selection-share,.player-of-month-share{box-sizing:border-box;align-self:flex-end;max-width:100%}
+.monthly-selection-share span,.player-of-month-share span{min-width:0;text-align:center}
 .monthly-selection-share-notice{margin:0;color:var(--muted);font-size:10px;text-align:right}
-@media(max-width:600px){.monthly-selection-share,.player-of-month-share{align-self:stretch;width:100%;white-space:normal}.monthly-selection-share-notice{text-align:center}.player-of-month-shell .player-of-month{min-height:540px}}
+@media(max-width:600px){.monthly-selection-share,.player-of-month-share{align-self:stretch;width:100%;gap:7px;padding-inline:12px;white-space:normal;font-size:clamp(12px,3.8vw,14px);line-height:1.2}.monthly-selection-share span,.player-of-month-share span{overflow-wrap:anywhere}.monthly-selection-share-notice{text-align:center}.player-of-month-shell .player-of-month{min-height:540px}}
 
 /* Fotos dos destaques mensais sem aro duplo. */
 .formation-line article>.player-avatar-wrap{display:grid;place-items:center;width:58px;height:58px;margin:0;border:0;border-radius:50%;background:transparent;box-shadow:none}

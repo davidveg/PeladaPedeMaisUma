@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildMonthlyCareerHighlights, buildPublicStatistics } from "../lib/public-statistics.ts";
+import { buildMonthAward, buildMonthlyCareerHighlights, buildPublicStatistics } from "../lib/public-statistics.ts";
 
 const players = [
   { id: "a", displayName: "Ana", type: "monthly" },
@@ -99,4 +99,23 @@ test("monta jogador, seleção mensal, histórico fechado e pódio anual pelo mo
   const compactFormation = buildMonthlyCareerHighlights(awardPlayers, awardMatches, 2026, "2026-03-15", "2026-02", "2026-12-31", [], { goalkeepers: 1, defenders: 1, midfielders: 1, attackers: 1 });
   assert.deepEqual(compactFormation.focus.formation, { goalkeepers: 1, defenders: 1, midfielders: 1, attackers: 1 });
   assert.deepEqual(compactFormation.focus.selection.map(member => member.role), ["Goleiro", "Defesa", "Meio-campo", "Ataque"]);
+});
+
+test("seleção mensal exige o mínimo configurado somente quando o mês tem mais de duas partidas", () => {
+  const eligible = [
+    { id: "regular", displayName: "Regular", type: "monthly", primaryPosition: "Ataque" },
+    { id: "one-game", displayName: "Uma partida", type: "monthly", primaryPosition: "Ataque" },
+  ];
+  const monthlyMatches = [
+    { id: "minimum-1", separationId: "minimum-s1", title: "Jogo 1", date: "2026-04-01", blueScore: 1, yellowScore: 0, winnerTeam: "BLUE", blueIds: ["one-game"], yellowIds: ["regular"], results: { motm: [{ playerId: "one-game", momentum: 1 }] } },
+    { id: "minimum-2", separationId: "minimum-s2", title: "Jogo 2", date: "2026-04-08", blueScore: 1, yellowScore: 0, winnerTeam: "BLUE", blueIds: ["regular"], yellowIds: [] },
+    { id: "minimum-3", separationId: "minimum-s3", title: "Jogo 3", date: "2026-04-15", blueScore: 1, yellowScore: 0, winnerTeam: "BLUE", blueIds: ["regular"], yellowIds: [] },
+  ];
+  const formation = { goalkeepers: 0, defenders: 0, midfielders: 0, attackers: 1 };
+  const playerMap = new Map(eligible.map(player => [player.id, player]));
+  const normalMonth = buildMonthAward("2026-04", monthlyMatches, playerMap, formation, 2);
+  assert.equal(normalMonth.playerOfMonth.player.id, "one-game", "o filtro solicitado altera a seleção, não o prêmio individual");
+  assert.deepEqual(normalMonth.selection.map(entry => entry.player.id), ["regular"]);
+  const shortMonth = buildMonthAward("2026-04", monthlyMatches.slice(0, 2), playerMap, formation, 3);
+  assert.deepEqual(shortMonth.selection.map(entry => entry.player.id), ["one-game"], "meses com até dois jogos ignoram o mínimo configurado");
 });

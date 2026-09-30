@@ -23,6 +23,9 @@ export default function MatchHubApp() {
     update(); window.addEventListener("popstate", update);
     return () => window.removeEventListener("popstate", update);
   }, []);
+  useEffect(() => {
+    if (search !== null && new URLSearchParams(search).get("new") === "1") setCreating(true);
+  }, [search]);
   const queryParams = new URLSearchParams(search || "");
   queryParams.delete("tab");
   const querySearch = search === null ? null : queryParams.toString();

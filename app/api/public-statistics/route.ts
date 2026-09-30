@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
       ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)),c.created_at`).bind(yearFrom, yearTo).all(),
-    db().prepare(`SELECT next_season_reset_at,monthly_team_goalkeepers,monthly_team_defenders,monthly_team_midfielders,monthly_team_attackers FROM career_configuration WHERE id=1`).first(),
+    db().prepare(`SELECT next_season_reset_at,monthly_team_goalkeepers,monthly_team_defenders,monthly_team_midfielders,monthly_team_attackers,monthly_selection_minimum_matches FROM career_configuration WHERE id=1`).first(),
   ]);
 
   const players = (playerRows.results as Record<string, unknown>[]).map(row => ({
@@ -70,7 +70,8 @@ export async function GET(request: Request) {
   const focusMonth = selectedYear === Number(today.slice(0, 4)) && requestedMonth > currentMonth ? currentMonth : requestedMonth;
   const annualAwardsAvailableAt = annualAwardsDate(selectedYear, careerRow?.next_season_reset_at);
   const monthlyFormation = { goalkeepers: Number(careerRow?.monthly_team_goalkeepers ?? 1), defenders: Number(careerRow?.monthly_team_defenders ?? 2), midfielders: Number(careerRow?.monthly_team_midfielders ?? 2), attackers: Number(careerRow?.monthly_team_attackers ?? 2) };
-  const calculatedHighlights = buildMonthlyCareerHighlights(players, yearMatches, selectedYear, today, focusMonth, annualAwardsAvailableAt, [], monthlyFormation);
+  const monthlySelectionMinimumMatches = Number(careerRow?.monthly_selection_minimum_matches ?? 2);
+  const calculatedHighlights = buildMonthlyCareerHighlights(players, yearMatches, selectedYear, today, focusMonth, annualAwardsAvailableAt, [], monthlyFormation, monthlySelectionMinimumMatches);
   const finalizedAt = new Date().toISOString();
   for (const award of calculatedHighlights.history) {
     await db().prepare(`INSERT OR IGNORE INTO monthly_career_awards (month,year,snapshot,finalized_at) VALUES (?,?,?,?)`)
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
     const award = parseJson(row.snapshot, null) as MonthlyCareerAward | null;
     return award?.month ? [award] : [];
   });
-  const careerHighlights = buildMonthlyCareerHighlights(players, yearMatches, selectedYear, today, focusMonth, annualAwardsAvailableAt, finalizedAwards, monthlyFormation);
+  const careerHighlights = buildMonthlyCareerHighlights(players, yearMatches, selectedYear, today, focusMonth, annualAwardsAvailableAt, finalizedAwards, monthlyFormation, monthlySelectionMinimumMatches);
   const seasonSnapshot = parseJson(seasonAwardRow?.snapshot, null);
   if (Array.isArray(seasonSnapshot?.annualMvp)) {
     careerHighlights.annualMvp = seasonSnapshot.annualMvp;

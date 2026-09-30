@@ -16,11 +16,11 @@ export async function finalizeMonthlyCareerAward(month: string, reason: AwardFin
   const stored: any = await db().prepare(`SELECT snapshot,finalized_at FROM monthly_career_awards WHERE month=?`).bind(month).first();
   if (stored) return { award: parseJson(stored.snapshot, null) as MonthlyCareerAward, finalizedAt: String(stored.finalized_at), created: false };
 
-  const { players, matches, formation, openVotes } = await loadMonthData(month);
+  const { players, matches, formation, monthlySelectionMinimumMatches, openVotes } = await loadMonthData(month);
   if (!matches.length) throw statusError("Não há partidas com resultado registrado neste mês.", 409);
   if (openVotes > 0) throw statusError("Ainda existem votações abertas neste mês. Encerre-as antes de consolidar o resultado.", 409);
   const eligible = players.filter(player => player.type === "monthly" || player.type === "goalkeeper" || player.type === "casual" || player.primaryPosition === "Goleiro");
-  const award = buildMonthAward(month, matches, new Map(eligible.map(player => [player.id, player])), formation);
+  const award = buildMonthAward(month, matches, new Map(eligible.map(player => [player.id, player])), formation, monthlySelectionMinimumMatches);
   if (!award) throw statusError("Não há jogadores elegíveis para a premiação deste mês.", 409);
   const inserted = await db().prepare(`INSERT OR IGNORE INTO monthly_career_awards (month,year,snapshot,finalized_at) VALUES (?,?,?,?)`)
     .bind(month, Number(month.slice(0, 4)), JSON.stringify(award), finalizedAt).run();
@@ -103,7 +103,7 @@ async function loadMonthData(month: string) {
   const allRows = matchRows.results as any[];
   const matches = allRows.filter(row => row.status === "CLOSED").map(mapStatisticsMatch);
   const config = careerConfigFromRow(configRow);
-  return { players, matches, formation: monthlyTeamFormation(config), openVotes: allRows.filter(row => row.status !== "CLOSED").length };
+  return { players, matches, formation: monthlyTeamFormation(config), monthlySelectionMinimumMatches: config.monthlySelectionMinimumMatches, openVotes: allRows.filter(row => row.status !== "CLOSED").length };
 }
 
 function mapStatisticsMatch(row: any): StatisticsMatch {

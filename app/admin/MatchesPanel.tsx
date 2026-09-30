@@ -16,6 +16,7 @@ type Match = {
   maxChanges: number; status: string; separationId?: string | null;
   counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: Attendance[];
   guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
+  guestConfirmation?: { enabled: boolean; opensAt?: string | null; canSelfConfirm: boolean };
   separationDraft?: { enabled: boolean; exists: boolean; stale: boolean; updatedAt?: string | null };
   preconfirmedGuestIds?: string[];
   goalkeepers?: { present: number; max: number };
@@ -127,7 +128,7 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
   ).length;
   const share = () => match.shareMessage?.trim() && window.open(buildWhatsAppShareUrl(match.shareMessage), "_blank", "noopener,noreferrer");
   return <section className="admin-card match-admin-detail">
-    <div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações</p></div>{canManage&&match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
+    <div className="match-detail-head"><div><span className={`match-state ${match.status.toLowerCase()}`}>{statusLabel(match.status)}</span><h2>{match.title}</h2><p>Jogo: {dateTime(match.matchAt)}<br/>Confirmações até {dateTime(match.confirmationDeadline)} · máximo de {match.maxChanges} remarcações{match.guestConfirmation?.opensAt&&<><br/>Acesso dos convidados a partir de {dateTime(match.guestConfirmation.opensAt)}</>}</p></div>{canManage&&match.status === "OPEN" && <button className="ghost" onClick={onEdit}>Editar</button>}</div>
     <WeatherPreview weather={match.weather}/>
     <div className="match-attendance-summary">
       <span><b>{match.counts.present}</b>Presentes</span><span><b>{match.counts.absent}</b>Ausentes</span>
@@ -160,24 +161,43 @@ export function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { 
   const defaults = nextMatchDefaults(instanceConfig);
   const matchParts = match ? brazilianDateTimeParts(match.matchAt) : defaults.match;
   const deadlineParts = match ? brazilianDateTimeParts(match.confirmationDeadline) : defaults.deadline;
+  const defaultGuestOpening = new Date(new Date(brazilianDateTimeIso(matchParts.date, matchParts.time)).getTime() - Number(instanceConfig?.guestSelfConfirmationLeadHours ?? 48) * 3_600_000).toISOString();
+  const guestParts = match?.guestConfirmation?.opensAt ? brazilianDateTimeParts(match.guestConfirmation.opensAt) : brazilianDateTimeParts(defaultGuestOpening);
+  const guestOpeningMatchesDefault = Boolean(match?.guestConfirmation?.opensAt && Math.abs(new Date(match.matchAt).getTime() - new Date(match.guestConfirmation.opensAt).getTime() - Number(instanceConfig?.guestSelfConfirmationLeadHours ?? 48) * 3_600_000) < 1_000);
   const [title, setTitle] = useState(match?.title || instanceConfig?.defaultMatchTitle || "Pelada");
   const [matchDate, setMatchDate] = useState(matchParts.date), [matchTime, setMatchTime] = useState(matchParts.time);
   const [deadlineDate, setDeadlineDate] = useState(deadlineParts.date), [deadlineTime, setDeadlineTime] = useState(deadlineParts.time);
+  const [guestConfirmationEnabled, setGuestConfirmationEnabled] = useState(match ? Boolean(match.guestConfirmation?.opensAt) : Boolean(instanceConfig?.guestSelfConfirmationEnabled));
+  const [guestConfirmationDate, setGuestConfirmationDate] = useState(guestParts.date), [guestConfirmationTime, setGuestConfirmationTime] = useState(guestParts.time);
+  const [guestOpeningCustomized, setGuestOpeningCustomized] = useState(Boolean(match?.guestConfirmation?.opensAt) && !guestOpeningMatchesDefault);
   const [location, setLocation] = useState(match?.location || instanceConfig?.defaultMatchLocation || "Rio de Janeiro, Brasil");
   const [maxChanges, setMaxChanges] = useState(match?.maxChanges ?? 2);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  useEffect(() => {
+    if ((match && !guestOpeningMatchesDefault) || guestOpeningCustomized) return;
+    const nextMatchAt = brazilianDateTimeIso(matchDate, matchTime);
+    if (!nextMatchAt) return;
+    const next = brazilianDateTimeParts(new Date(new Date(nextMatchAt).getTime() - Number(instanceConfig?.guestSelfConfirmationLeadHours ?? 48) * 3_600_000).toISOString());
+    setGuestConfirmationDate(next.date); setGuestConfirmationTime(next.time);
+  }, [match, matchDate, matchTime, guestOpeningCustomized, guestOpeningMatchesDefault, instanceConfig?.guestSelfConfirmationLeadHours]);
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
       const matchAt = brazilianDateTimeIso(matchDate, matchTime), confirmationDeadline = brazilianDateTimeIso(deadlineDate, deadlineTime);
+      const guestConfirmationOpensAt = guestConfirmationEnabled ? guestOpeningCustomized
+        ? brazilianDateTimeIso(guestConfirmationDate, guestConfirmationTime)
+        : new Date(new Date(matchAt).getTime() - Number(instanceConfig?.guestSelfConfirmationLeadHours ?? 48) * 3_600_000).toISOString()
+        : null;
       if (!matchAt || !confirmationDeadline) throw new Error("Use datas no formato DD/MM/AAAA e horários no formato HH:MM.");
+      if (guestConfirmationEnabled && !guestConfirmationOpensAt) throw new Error("Informe uma data e um horário válidos para liberar os convidados.");
       if (new Date(confirmationDeadline).getTime() > new Date(matchAt).getTime()) throw new Error("O prazo de confirmação deve terminar antes do início do jogo.");
-      const body = { ...(match ? { action: "update", matchId: match.id } : {}), title, matchAt, confirmationDeadline, location, maxChanges };
+      if (guestConfirmationOpensAt && new Date(guestConfirmationOpensAt).getTime() > new Date(confirmationDeadline).getTime()) throw new Error("A confirmação de convidados deve abrir antes do prazo geral.");
+      const body = { ...(match ? { action: "update", matchId: match.id } : {}), title, matchAt, confirmationDeadline, guestConfirmationEnabled, guestConfirmationOpensAt, location, maxChanges };
       const result = await api("/api/admin/matches", { method: match ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       await onSaved(result.message);
     } catch (cause: any) { setError(cause.message); } finally { setBusy(false); }
   }
-  return <div className="modal-back"><form className="editor match-editor" onSubmit={submit}><button type="button" className="close" onClick={onClose}>×</button><div className="ball">📅</div><h2>{match ? "Editar partida" : "Criar partida"}</h2><p>Todos os usuários serão avisados no aplicativo e, quando disponível, por push.</p>{error && <div className="alert error">{error}</div>}<div className="form-grid"><label className="wide">Título<input value={title} onChange={event => setTitle(event.target.value)} required maxLength={120}/></label><label>Data do jogo (DD/MM/AAAA)<input value={matchDate} onChange={event => setMatchDate(brazilianDateInput(event.target.value))} inputMode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxLength={10} required/></label><label>Hora do jogo (HH:MM)<input value={matchTime} onChange={event => setMatchTime(brazilianTimeInput(event.target.value))} inputMode="numeric" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}" maxLength={5} required/></label><label>Confirmar até (DD/MM/AAAA)<input value={deadlineDate} onChange={event => setDeadlineDate(brazilianDateInput(event.target.value))} inputMode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxLength={10} required/></label><label>Horário limite (HH:MM)<input value={deadlineTime} onChange={event => setDeadlineTime(brazilianTimeInput(event.target.value))} inputMode="numeric" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}" maxLength={5} required/></label><label>Local<input value={location} onChange={event => setLocation(event.target.value)} maxLength={160}/></label><label>Máximo de remarcações<input type="number" min="0" max="20" value={maxChanges} onChange={event => setMaxChanges(Number(event.target.value))} required/></label></div><div className="editor-actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary" disabled={busy}>{busy ? "Salvando…" : match ? "Salvar alterações" : "Criar e notificar"}</button></div></form></div>;
+  return <div className="modal-back"><form className="editor match-editor" onSubmit={submit}><button type="button" className="close" onClick={onClose}>×</button><div className="ball">📅</div><h2>{match ? "Editar partida" : "Criar partida"}</h2><p>Todos os usuários serão avisados no aplicativo e, quando disponível, por push.</p>{error && <div className="alert error">{error}</div>}<div className="form-grid"><label className="wide">Título<input value={title} onChange={event => setTitle(event.target.value)} required maxLength={120}/></label><label>Data do jogo (DD/MM/AAAA)<input value={matchDate} onChange={event => setMatchDate(brazilianDateInput(event.target.value))} inputMode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxLength={10} required/></label><label>Hora do jogo (HH:MM)<input value={matchTime} onChange={event => setMatchTime(brazilianTimeInput(event.target.value))} inputMode="numeric" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}" maxLength={5} required/></label><label>Confirmar até (DD/MM/AAAA)<input value={deadlineDate} onChange={event => setDeadlineDate(brazilianDateInput(event.target.value))} inputMode="numeric" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxLength={10} required/></label><label>Horário limite (HH:MM)<input value={deadlineTime} onChange={event => setDeadlineTime(brazilianTimeInput(event.target.value))} inputMode="numeric" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}" maxLength={5} required/></label><label>Local<input value={location} onChange={event => setLocation(event.target.value)} maxLength={160}/></label><label>Máximo de remarcações<input type="number" min="0" max="20" value={maxChanges} onChange={event => setMaxChanges(Number(event.target.value))} required/></label>{instanceConfig?.guestSelfConfirmationEnabled&&<><label className="wide instance-feature-toggle"><span><b>Liberar esta partida para convidados</b><small>Ativada por padrão com {instanceConfig?.guestSelfConfirmationLeadHours??48} horas de antecedência. Você pode ajustar ou desativar somente nesta partida.</small></span><input type="checkbox" checked={guestConfirmationEnabled} onChange={event=>setGuestConfirmationEnabled(event.target.checked)}/></label>{guestConfirmationEnabled&&<><label>Liberar convidados em (DD/MM/AAAA)<input value={guestConfirmationDate} onChange={event=>{setGuestOpeningCustomized(true);setGuestConfirmationDate(brazilianDateInput(event.target.value));}} inputMode="numeric" placeholder="DD/MM/AAAA" maxLength={10} required/></label><label>Horário de liberação (HH:MM)<input value={guestConfirmationTime} onChange={event=>{setGuestOpeningCustomized(true);setGuestConfirmationTime(brazilianTimeInput(event.target.value));}} inputMode="numeric" placeholder="HH:MM" maxLength={5} required/></label></>}</>}</div><div className="editor-actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary" disabled={busy}>{busy ? "Salvando…" : match ? "Salvar alterações" : "Criar e notificar"}</button></div></form></div>;
 }
 
 function nextMatchDefaults(config?: any) {

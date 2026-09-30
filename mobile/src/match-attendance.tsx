@@ -36,7 +36,7 @@ export default function MatchAttendance({ id, topContent }: { id: string; topCon
   const players = canManageAttendance ? query.data?.players || [] : [];
   const playerSections = canManageAttendance ? administrativePlayerSections(players) : [];
   const goalkeeperLimitReached = Boolean(item.viewer.isGoalkeeper && item.viewer.status !== "PRESENT" && (item.goalkeepers?.present || 0) >= (item.goalkeepers?.max || 2));
-  const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest);
+  const guestManaged = Boolean(item.guestPreconfirmation?.enabled && item.viewer.isGuest && !item.guestConfirmation?.canSelfConfirm);
   const financialBlocked = Boolean(item.viewer.attendanceBlockedByDelinquency);
   const waitingIds = new Set(item.preconfirmedGuestIds || []);
   function answer(status: "PRESENT" | "ABSENT") {
@@ -51,7 +51,7 @@ export default function MatchAttendance({ id, topContent }: { id: string; topCon
     keyExtractor={(player: MatchPlayer) => player.id}
     stickySectionHeadersEnabled={canManageAttendance}
     ListHeaderComponent={<>{topContent ? <View style={styles.hubHeader}>{topContent}</View> : null}<Header eyebrow={item.status === "OPEN" ? item.acceptingResponses ? "CONFIRMAÇÕES ABERTAS" : "PRAZO ENCERRADO" : item.status === "CLOSED" ? "LISTA ENCERRADA" : "PARTIDA CANCELADA"} title={item.title}/>
-      <Card style={styles.info}><Text style={styles.date}>{dateTime(item.matchAt)}</Text>{item.location ? <Text style={styles.location}>📍 {item.location}</Text> : null}<Text style={styles.deadline}>Responda até {dateTime(item.confirmationDeadline)}</Text><View style={styles.counts}><Count value={item.counts.present} label="Presentes" color={colors.success}/><Count value={item.counts.absent} label="Ausentes" color={colors.danger}/>{item.guestPreconfirmation?.enabled ? <Count value={item.counts.preconfirmed || 0} label="Na espera" color={colors.yellow}/> : null}<Count value={item.counts.pending} label="Pendentes" color={colors.muted}/></View></Card>
+      <Card style={styles.info}><Text style={styles.date}>{dateTime(item.matchAt)}</Text>{item.location ? <Text style={styles.location}>📍 {item.location}</Text> : null}<Text style={styles.deadline}>Responda até {dateTime(item.confirmationDeadline)}</Text>{canManageMatches&&item.guestConfirmation?.opensAt?<Text style={styles.help}>Acesso dos convidados a partir de {dateTime(item.guestConfirmation.opensAt)}</Text>:null}<View style={styles.counts}><Count value={item.counts.present} label="Presentes" color={colors.success}/><Count value={item.counts.absent} label="Ausentes" color={colors.danger}/>{item.guestPreconfirmation?.enabled ? <Count value={item.counts.preconfirmed || 0} label="Na espera" color={colors.yellow}/> : null}<Count value={item.counts.pending} label="Pendentes" color={colors.muted}/></View></Card>
       <MobileWeather weather={item.weather}/>
       {!canManageAttendance ? <Card style={styles.answer}>
         <Text style={styles.answerTitle}>{guestManaged ? item.viewer.preconfirmed ? "Você está na lista de espera" : item.viewer.status === "PRESENT" ? "Presença aprovada" : item.viewer.status === "ABSENT" ? "Sua resposta: Não vou" : "Presença gerenciada pela organização" : financialBlocked ? "Confirmação temporariamente indisponível" : item.viewer.status ? `Sua resposta: ${item.viewer.status === "PRESENT" ? "Vou jogar" : "Não vou"}` : "Confirme sua presença"}</Text>

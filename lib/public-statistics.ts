@@ -96,7 +96,7 @@ export function buildStreakLeaders(players: StatisticsPlayer[], matches: Statist
   return { winning: leader("wins"), unbeaten: leader("unbeaten") };
 }
 
-export function buildMonthlyCareerHighlights(players: StatisticsPlayer[], matches: StatisticsMatch[], year: number, referenceDate = new Date().toISOString().slice(0, 10), focusMonth = referenceDate.slice(0, 7), annualAwardsAvailableAt = `${year}-12-31`, finalizedAwards: MonthlyCareerAward[] = [], requestedFormation: MonthlyTeamFormation = defaultMonthlyTeamFormation) {
+export function buildMonthlyCareerHighlights(players: StatisticsPlayer[], matches: StatisticsMatch[], year: number, referenceDate = new Date().toISOString().slice(0, 10), focusMonth = referenceDate.slice(0, 7), annualAwardsAvailableAt = `${year}-12-31`, finalizedAwards: MonthlyCareerAward[] = [], requestedFormation: MonthlyTeamFormation = defaultMonthlyTeamFormation, monthlySelectionMinimumMatches = 2) {
   const formation = normalizeFormation(requestedFormation);
   const eligiblePlayers = players.filter(player => player.type === "monthly" || player.type === "goalkeeper" || player.type === "casual" || player.primaryPosition === "Goleiro");
   const playerMap = new Map(eligiblePlayers.map(player => [player.id, player]));
@@ -106,7 +106,7 @@ export function buildMonthlyCareerHighlights(players: StatisticsPlayer[], matche
     if (Number(key.slice(0, 4)) !== year) continue;
     months.set(key, [...(months.get(key) || []), match]);
   }
-  const awards = [...months].map(([month, monthMatches]) => buildMonthAward(month, monthMatches, playerMap, formation)).filter(Boolean) as MonthlyCareerAward[];
+  const awards = [...months].map(([month, monthMatches]) => buildMonthAward(month, monthMatches, playerMap, formation, monthlySelectionMinimumMatches)).filter(Boolean) as MonthlyCareerAward[];
   awards.sort((a, b) => b.month.localeCompare(a.month));
   const referenceMonth = referenceDate.slice(0, 7), selectedMonth = focusMonth.startsWith(`${year}-`) ? focusMonth : `${year}-12`;
   const finalizedByMonth = new Map(finalizedAwards.filter(award => award.month.startsWith(`${year}-`)).map(award => [award.month, award]));
@@ -139,7 +139,7 @@ export type MonthlyCareerAward = {
   selection: (MonthlyCareerStanding & { role: string })[];
 };
 
-export function buildMonthAward(month: string, matches: StatisticsMatch[], playerMap: Map<string, StatisticsPlayer>, formation: MonthlyTeamFormation): MonthlyCareerAward | null {
+export function buildMonthAward(month: string, matches: StatisticsMatch[], playerMap: Map<string, StatisticsPlayer>, formation: MonthlyTeamFormation, monthlySelectionMinimumMatches = 2): MonthlyCareerAward | null {
   const standings = new Map<string, MonthlyCareerStanding>();
   const get = (playerId: string) => {
     const player = playerMap.get(playerId); if (!player) return null;
@@ -162,7 +162,9 @@ export function buildMonthAward(month: string, matches: StatisticsMatch[], playe
   }
   const ranked = [...standings.values()].map(standing => ({ ...standing, resultMomentum: round(standing.resultMomentum), votingMomentum: round(standing.votingMomentum), totalMomentum: round(standing.resultMomentum + standing.votingMomentum) })).sort(byMonthlyStanding);
   if (!ranked.length) return null;
-  const select = (role: string, amount: number) => ranked.filter(entry => playerRole(entry.player) === role).slice(0, amount).map(entry => ({ ...entry, role }));
+  const minimumMatches = Math.min(100, Math.max(1, Math.trunc(Number(monthlySelectionMinimumMatches) || 2)));
+  const selectionCandidates = matches.length <= 2 ? ranked : ranked.filter(entry => entry.games >= minimumMatches);
+  const select = (role: string, amount: number) => selectionCandidates.filter(entry => playerRole(entry.player) === role).slice(0, amount).map(entry => ({ ...entry, role }));
   return { month, matchCount: matches.length, formation, playerOfMonth: ranked[0] || null, selection: [...select("Goleiro", formation.goalkeepers), ...select("Defesa", formation.defenders), ...select("Meio-campo", formation.midfielders), ...select("Ataque", formation.attackers)] };
 }
 

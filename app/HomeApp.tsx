@@ -1,7 +1,8 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import FootballApp from "./FootballApp";
-import MatchHubApp from "./partidas/MatchHubApp";
+import OverviewApp from "./visao-geral/OverviewApp";
+import "./visao-geral/overview.css";
 
 function subscribe(onChange: () => void) {
   window.addEventListener("popstate", onChange);
@@ -15,5 +16,5 @@ function currentView() {
 export default function HomeApp() {
   const view = useSyncExternalStore(subscribe, currentView, () => "loading");
   if (view === "loading") return <div className="member-loading">Carregando partidas…</div>;
-  return view === "builder" ? <FootballApp/> : <MatchHubApp/>;
+  return view === "builder" ? <FootballApp/> : <OverviewApp/>;
 }

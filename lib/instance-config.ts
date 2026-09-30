@@ -45,6 +45,8 @@ export type InstanceConfiguration = {
   separationDraftsEnabled: boolean;
   guestPreconfirmationEnabled: boolean;
   guestConfirmationThreshold: number;
+  guestSelfConfirmationEnabled: boolean;
+  guestSelfConfirmationLeadHours: number;
   financeEnabled: boolean;
   delinquencyAttendanceBlockEnabled: boolean;
   allowInsecureLocalNetworkAuth: boolean;
@@ -98,6 +100,8 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   separationDraftsEnabled: false,
   guestPreconfirmationEnabled: false,
   guestConfirmationThreshold: 16,
+  guestSelfConfirmationEnabled: false,
+  guestSelfConfirmationLeadHours: 48,
   financeEnabled: true,
   delinquencyAttendanceBlockEnabled: false,
   allowInsecureLocalNetworkAuth: false,
@@ -159,6 +163,8 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     separationDraftsEnabled: Boolean(row.separation_drafts_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.separationDraftsEnabled),
     guestPreconfirmationEnabled: Boolean(row.guest_preconfirmation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.guestPreconfirmationEnabled),
     guestConfirmationThreshold: Number(row.guest_confirmation_threshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
+    guestSelfConfirmationEnabled: Boolean(row.guest_self_confirmation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.guestSelfConfirmationEnabled),
+    guestSelfConfirmationLeadHours: Number(row.guest_self_confirmation_lead_hours ?? DEFAULT_INSTANCE_CONFIGURATION.guestSelfConfirmationLeadHours),
     financeEnabled: Boolean(row.finance_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.financeEnabled),
     delinquencyAttendanceBlockEnabled: Boolean(row.delinquency_attendance_block_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.delinquencyAttendanceBlockEnabled),
     allowInsecureLocalNetworkAuth: Boolean(row.allow_insecure_local_network_auth ?? DEFAULT_INSTANCE_CONFIGURATION.allowInsecureLocalNetworkAuth),
@@ -223,6 +229,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     separationDraftsEnabled: source.separationDraftsEnabled === true,
     guestPreconfirmationEnabled: source.guestPreconfirmationEnabled === true,
     guestConfirmationThreshold: Number(source.guestConfirmationThreshold ?? DEFAULT_INSTANCE_CONFIGURATION.guestConfirmationThreshold),
+    guestSelfConfirmationEnabled: source.guestSelfConfirmationEnabled === true,
+    guestSelfConfirmationLeadHours: Number(source.guestSelfConfirmationLeadHours ?? DEFAULT_INSTANCE_CONFIGURATION.guestSelfConfirmationLeadHours),
     financeEnabled: source.financeEnabled !== false,
     delinquencyAttendanceBlockEnabled: source.delinquencyAttendanceBlockEnabled === true,
     allowInsecureLocalNetworkAuth: source.allowInsecureLocalNetworkAuth === true,
@@ -256,6 +264,9 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   if (!Number.isInteger(config.guestConfirmationThreshold) || config.guestConfirmationThreshold < 1 || config.guestConfirmationThreshold > 100) {
     return { error: "O mínimo para confirmar convidados deve ficar entre 1 e 100 jogadores." };
   }
+  if (!Number.isInteger(config.guestSelfConfirmationLeadHours) || config.guestSelfConfirmationLeadHours < 1 || config.guestSelfConfirmationLeadHours > 720) {
+    return { error: "A antecedência dos convidados deve ficar entre 1 e 720 horas." };
+  }
   try {
     new Intl.DateTimeFormat("pt-BR", { timeZone: config.timezone }).format(new Date());
   } catch {
@@ -283,7 +294,7 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
   "separation_drafts_enabled",
-  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "finance_enabled", "delinquency_attendance_block_enabled", "allow_insecure_local_network_auth", "timezone",
+  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "guest_self_confirmation_enabled", "guest_self_confirmation_lead_hours", "finance_enabled", "delinquency_attendance_block_enabled", "allow_insecure_local_network_auth", "timezone",
 ] as const;
 
 export function instanceConfigurationValues(config: InstanceConfiguration) {
@@ -296,7 +307,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
-    0, Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.financeEnabled), Number(config.delinquencyAttendanceBlockEnabled), Number(config.allowInsecureLocalNetworkAuth),
+    0, Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.guestSelfConfirmationEnabled), config.guestSelfConfirmationLeadHours, Number(config.financeEnabled), Number(config.delinquencyAttendanceBlockEnabled), Number(config.allowInsecureLocalNetworkAuth),
     config.timezone,
   ];
 }

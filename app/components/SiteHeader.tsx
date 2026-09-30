@@ -4,9 +4,8 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 import { NotificationBell } from "./NotificationBell";
-import { careerSeasonProgress } from "../../lib/career";
 
-type SiteSection = "home" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
+type SiteSection = "home" | "overview" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
 
 async function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -75,22 +74,18 @@ export function SiteHeader({
       window.removeEventListener("focus", refreshUnread);
     };
   }, []);
-  const currentSection = active === "separations" || active === "home" ? "matches" : active;
+  const currentSection = active === "separations" ? "matches" : active === "home" ? "overview" : active;
   const viewerInitials = useMemo(() => {
     if (!viewerEmail) return "P+";
     const name = viewerEmail.split("@")[0].split(/[._-]+/).filter(Boolean);
     return (name.length > 1 ? `${name[0][0]}${name.at(-1)?.[0] || ""}` : name[0]?.slice(0, 2) || "P+").toUpperCase();
   }, [viewerEmail]);
-  const seasonProgress = useMemo(() => season ? careerSeasonProgress(season) : null, [season]);
   const seasonYear = season ? new Date(season.startedAt).getUTCFullYear() : Number.NaN;
-  const seasonMonth = useMemo(() => {
-    if (!season || !seasonProgress) return "";
-    const date = new Date(season.startedAt);
-    if (!Number.isFinite(date.getTime())) return "";
-    date.setUTCMonth(date.getUTCMonth() + seasonProgress.currentMonth - 1);
-    return new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" }).format(date);
-  }, [season, seasonProgress]);
-  const navigationIcons: Partial<Record<SiteSection, string>> = { matches: "▦", players: "♙", statistics: "⌁", finance: "▤", account: "◎", admin: "⚙" };
+  const calendarMonth = useMemo(() => {
+    const value = Number(new Intl.DateTimeFormat("en-US", { month: "numeric", timeZone: config.timezone || "America/Sao_Paulo" }).format(new Date()));
+    return Number.isFinite(value) && value >= 1 && value <= 12 ? value : new Date().getMonth() + 1;
+  }, [config.timezone]);
+  const navigationIcons: Partial<Record<SiteSection, string>> = { overview: "▦", matches: "□", players: "♙", statistics: "⌁", finance: "▤", account: "◎", admin: "⚙" };
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       <span className="site-nav-icon" aria-hidden="true">{navigationIcons[section] || "•"}</span><span>{label}</span>
@@ -100,11 +95,12 @@ export function SiteHeader({
   return (
     <header className="site-header">
       <aside className="site-sidebar">
-        <a href="/partidas" className="brand" onClick={(event) => navigateWithDocument(event, "/partidas")}>
+        <a href="/visao-geral" className="brand" onClick={(event) => navigateWithDocument(event, "/visao-geral")}>
           <BrandIdentity/>
         </a>
         <nav ref={navigation} aria-label="Navegação principal">
           <span className="site-nav-group">GESTÃO</span>
+          {link("overview", "/visao-geral", "Visão geral")}
           {link("matches", "/partidas", "Partidas")}
           {link("players", "/jogadores", "Jogadores")}
           {link("statistics", "/estatisticas", "Estatísticas")}
@@ -113,11 +109,11 @@ export function SiteHeader({
           {link("account", "/conta", "Minha conta")}
           {link("admin", "/admin", "Painel Administrativo")}
         </nav>
-        {season && seasonMonth && <div className="site-season-card">
+        {season && <div className="site-season-card">
           <small>TEMPORADA {Number.isFinite(seasonYear) ? seasonYear : season.seasonNumber}</small>
-          <strong>{seasonMonth}</strong>
-          <div className="site-season-progress" role="progressbar" aria-label={`Andamento da temporada: mês ${seasonProgress?.currentMonth} de ${seasonProgress?.totalMonths}`} aria-valuemin={1} aria-valuemax={seasonProgress?.totalMonths} aria-valuenow={seasonProgress?.currentMonth}>
-            <span style={{ width: `${seasonProgress?.percentage ?? 0}%` }}/>
+          <strong>{calendarMonth} de 12 meses</strong>
+          <div className="site-season-progress" role="progressbar" aria-label={`Andamento do ano: mês ${calendarMonth} de 12`} aria-valuemin={1} aria-valuemax={12} aria-valuenow={calendarMonth}>
+            <span style={{ width: `${calendarMonth / 12 * 100}%` }}/>
           </div>
         </div>}
       </aside>

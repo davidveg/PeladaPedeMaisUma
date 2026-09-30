@@ -1,6 +1,7 @@
 import { db, ensureDb, playerAccountRequired } from "../../../lib/database";
 import { matchHubFilters, type MatchHubItem } from "../../../lib/match-hub";
 import { weatherSummaryFromRow } from "../../../lib/weather-presentation";
+import { instanceConfigurationFromRow } from "../../../lib/instance-config";
 
 const noStore = { "cache-control": "private, no-store", vary: "Cookie, Authorization" };
 
@@ -13,6 +14,12 @@ export async function GET(request: Request) {
   const filter = matchHubFilters.some(item => item.value === params.get("filter")) ? params.get("filter") : "all";
   const matchId = params.get("match"), separationId = params.get("separation");
   const detail = Boolean(matchId || separationId);
+  const [viewerPlayer, instanceRow] = await Promise.all([
+    account.playerId ? db().prepare(`SELECT type FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`).bind(account.playerId).first<{ type: string }>() : null,
+    db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first(),
+  ]);
+  const instance = instanceConfigurationFromRow(instanceRow as any);
+  const restrictedGuest = instance.guestSelfConfirmationEnabled && viewerPlayer?.type === "guest" && account.accountType !== "administrator" && (account as any).role !== "moderator";
   const predicates: string[] = [];
   const values: (string | number)[] = [account ? 1 : 0, account ? 1 : 0];
   if (matchId) { predicates.push("matchId=?"); values.push(matchId); }
@@ -34,7 +41,7 @@ export async function GET(request: Request) {
       s.confirmed_at confirmedAt,
       (SELECT COUNT(*) FROM match_attendance a WHERE a.match_id=m.id AND a.status='PRESENT') present,
       c.blue_score blueScore,c.yellow_score yellowScore,c.status votingStatus,c.closes_at votingClosesAt,
-      m.match_at sortDate,m.weather_snapshot weatherSnapshot
+      m.match_at sortDate,m.weather_snapshot weatherSnapshot,m.guest_confirmation_opens_at guestConfirmationOpensAt
     FROM scheduled_matches m
     LEFT JOIN team_separations s ON s.id=m.separation_id AND s.deleted_at IS NULL
     LEFT JOIN career_matches c ON c.separation_id=s.id
@@ -43,14 +50,15 @@ export async function GET(request: Request) {
     SELECT 'separation:'||s.id,
       (SELECT m.id FROM scheduled_matches m WHERE m.separation_id=s.id LIMIT 1),s.id,s.match_title,s.match_date,s.location,
       CASE WHEN c.id IS NOT NULL THEN 'FINISHED' ELSE 'TEAMS' END,s.confirmed_at,NULL,
-      c.blue_score,c.yellow_score,c.status,c.closes_at,COALESCE(s.match_date,s.confirmed_at),NULL
+      c.blue_score,c.yellow_score,c.status,c.closes_at,COALESCE(s.match_date,s.confirmed_at),NULL,NULL
     FROM team_separations s LEFT JOIN career_matches c ON c.separation_id=s.id
     WHERE s.deleted_at IS NULL AND (?=0 OR NOT EXISTS(SELECT 1 FROM scheduled_matches m WHERE m.separation_id=s.id))
   ) SELECT id,matchId,separationId,title,date,location,status,confirmedAt,present,
       blueScore,yellowScore,votingStatus,votingClosesAt,weatherSnapshot FROM entries
-    WHERE ${predicates.join(" AND ")}
+    WHERE ${restrictedGuest ? `(status<>'OPEN' OR ${instance.guestSelfConfirmationEnabled ? `(guestConfirmationOpensAt IS NOT NULL AND guestConfirmationOpensAt<=?)` : "0=1"}) AND ` : ""}${predicates.join(" AND ")}
     ORDER BY CASE WHEN status='OPEN' THEN 0 ELSE 1 END,
       CASE WHEN status='OPEN' THEN sortDate END ASC,sortDate DESC,id DESC LIMIT ? OFFSET ?`;
+  if (restrictedGuest && instance.guestSelfConfirmationEnabled) values.splice(2, 0, new Date().toISOString());
   values.push(detail ? 1 : 13, detail ? 0 : (page - 1) * 12);
   const result = await db().prepare(query).bind(...values).all<MatchHubItem & { weatherSnapshot: string | null }>();
   let items: MatchHubItem[] = result.results.slice(0, detail ? 1 : 12).map(({ weatherSnapshot, ...item }) => ({

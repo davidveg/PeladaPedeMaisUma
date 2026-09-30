@@ -29,11 +29,15 @@ export async function loadScheduledMatches(account: any, includePlayers = false,
   const rows = matchResult.results as any[];
   const instance = instanceConfigurationFromRow(instanceRow as any);
   const playerRows = allPlayerResult.results as any[];
+  const viewerPlayer = playerRows.find(item => String(item.id) === String(account?.playerId || ""));
+  const viewerIsStaff = account?.accountType === "administrator" || account?.role === "moderator";
+  const restrictOpenMatchesForGuest = instance.guestSelfConfirmationEnabled && viewerPlayer?.type === "guest" && !viewerIsStaff;
   const viewerAttendanceBlocked = account?.playerId
     ? await isAttendanceBlockedByDelinquency(String(account.playerId), instance)
     : false;
   const matches = [];
   for (const row of rows) {
+    if (restrictOpenMatchesForGuest && row.status === "OPEN" && !guestSelfConfirmationIsOpen(row, instance)) continue;
     if (row.status === "OPEN") {
       try {
         row.weather_snapshot = JSON.stringify(await refreshMatchWeather(row, instance.defaultMatchLocation));
@@ -80,6 +84,9 @@ export async function setAttendance(params: {
   if (!administratorOverride && new Date(match.confirmation_deadline).getTime() < Date.now()) {
     throw statusError("O prazo para confirmar presença foi encerrado.", 409);
   }
+  if (!administratorOverride && !account?.playerId) {
+    throw statusError("Sua conta ainda não está associada a um jogador ativo.", 403);
+  }
   if (!administratorOverride && String(account.playerId || "") !== playerId) {
     throw statusError("Você só pode responder pela sua própria associação.", 403);
   }
@@ -89,6 +96,11 @@ export async function setAttendance(params: {
   ).bind(playerId).first();
   if (!player) throw statusError("Jogador não encontrado ou inativo.", 404);
   const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+  const viewerIsStaff = account?.accountType === "administrator" || account?.role === "moderator";
+  const guestSelfConfirmation = player.type === "guest" && !administratorOverride && !viewerIsStaff && guestSelfConfirmationIsOpen(match, instance);
+  if (instance.guestSelfConfirmationEnabled && player.type === "guest" && !administratorOverride && !viewerIsStaff && !guestSelfConfirmation) {
+    throw statusError("Esta partida ainda não está disponível para confirmação de convidados.", 403);
+  }
   const previous: any = await db().prepare(
     `SELECT * FROM match_attendance WHERE match_id=? AND player_id=?`,
   ).bind(matchId, playerId).first();
@@ -98,7 +110,7 @@ export async function setAttendance(params: {
   if (!administratorOverride && status === "PRESENT" && await isAttendanceBlockedByDelinquency(playerId, instance)) {
     throw statusError(DELINQUENCY_ATTENDANCE_MESSAGE, 403);
   }
-  if (instance.guestPreconfirmationEnabled && player.type === "guest" && status === "PRESENT") {
+  if (instance.guestPreconfirmationEnabled && player.type === "guest" && status === "PRESENT" && !guestSelfConfirmation && !viewerIsStaff) {
     if (!administratorOverride) {
       throw statusError("A presença de convidados precisa ser aprovada por um administrador.", 403);
     }
@@ -426,6 +438,9 @@ function publicMatch(
 ) {
   const own = attendance.find(item => String(item.player_id) === String(account?.playerId || ""));
   const viewerPlayer = players.find(item => String(item.id) === String(account?.playerId || ""));
+  const viewerIsStaff = account?.accountType === "administrator" || account?.role === "moderator";
+  const guestSelfConfirmationOpen = guestSelfConfirmationIsOpen(row, instance);
+  const guestViewerMayRespond = viewerIsStaff || viewerPlayer?.type !== "guest" || !instance.guestSelfConfirmationEnabled || guestSelfConfirmationOpen;
   const preconfirmedIds = new Set(guestPreconfirmations.map(item => String(item.player_id)));
   const ownPreconfirmed = Boolean(account?.playerId && preconfirmedIds.has(String(account.playerId)));
   const presentPlayerIds = new Set(attendance.filter(item => item.status === "PRESENT").map(item => String(item.player_id)));
@@ -436,7 +451,7 @@ function publicMatch(
     id: String(row.id), title: String(row.title), matchAt: String(row.match_at),
     confirmationDeadline: String(row.confirmation_deadline), location: row.location ? String(row.location) : null,
     maxChanges: Number(row.max_changes), status: String(row.status),
-    acceptingResponses: row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now(),
+    acceptingResponses: row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now() && guestViewerMayRespond,
     separationId: row.separation_id ? String(row.separation_id) : null,
     separationDraft: {
       enabled: instance.separationDraftsEnabled,
@@ -459,6 +474,11 @@ function publicMatch(
       enabled: instance.guestPreconfirmationEnabled,
       threshold: instance.guestConfirmationThreshold,
       canApprove: presentCount + preconfirmedCount >= instance.guestConfirmationThreshold,
+    },
+    guestConfirmation: {
+      enabled: instance.guestSelfConfirmationEnabled,
+      opensAt: row.guest_confirmation_opens_at ? String(row.guest_confirmation_opens_at) : null,
+      canSelfConfirm: Boolean(viewerPlayer?.type === "guest" && guestSelfConfirmationOpen),
     },
     preconfirmedGuestIds: instance.guestPreconfirmationEnabled ? [...preconfirmedIds] : [],
     preconfirmedGuests: instance.guestPreconfirmationEnabled ? guestPreconfirmations.map(item => ({
@@ -485,14 +505,25 @@ function publicMatch(
       preconfirmed: ownPreconfirmed,
       attendanceBlockedByDelinquency: viewerAttendanceBlocked,
       attendanceBlockMessage: viewerAttendanceBlocked ? DELINQUENCY_ATTENDANCE_MESSAGE : null,
-      canRespond: Boolean(account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()),
+      canRespond: Boolean(account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now() && guestViewerMayRespond),
       canConfirmPresence: Boolean(
         account?.playerId && row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now()
-        && !(instance.guestPreconfirmationEnabled && viewerPlayer?.type === "guest")
+        && guestViewerMayRespond
+        && !(instance.guestPreconfirmationEnabled && viewerPlayer?.type === "guest" && !guestSelfConfirmationOpen && !viewerIsStaff)
         && !viewerAttendanceBlocked,
       ),
     },
   };
+}
+
+export function guestSelfConfirmationIsOpen(
+  match: { guest_confirmation_opens_at?: string | null; confirmation_deadline?: string | null },
+  instance: Pick<ReturnType<typeof instanceConfigurationFromRow>, "guestSelfConfirmationEnabled">,
+  now = Date.now(),
+) {
+  if (!instance.guestSelfConfirmationEnabled || !match.guest_confirmation_opens_at) return false;
+  const opensAt = new Date(match.guest_confirmation_opens_at).getTime();
+  return Number.isFinite(opensAt) && opensAt <= now;
 }
 
 export async function isAttendanceBlockedByDelinquency(playerId: string, instance?: ReturnType<typeof instanceConfigurationFromRow>) {

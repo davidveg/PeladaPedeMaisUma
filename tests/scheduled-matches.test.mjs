@@ -7,7 +7,7 @@ import test from "node:test";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
-const [{ setRuntimeBindings }, database, adminMatches, separationDrafts, matches, notifications, separationProposal] = await Promise.all([
+const [{ setRuntimeBindings }, database, adminMatches, separationDrafts, matches, notifications, separationProposal, matchHub, matchHubBadges] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
   import("../app/api/admin/matches/route.ts"),
@@ -15,6 +15,8 @@ const [{ setRuntimeBindings }, database, adminMatches, separationDrafts, matches
   import("../app/api/matches/route.ts"),
   import("../app/api/notifications/route.ts"),
   import("../app/api/mobile/separations/proposal/route.ts"),
+  import("../app/api/match-hub/route.ts"),
+  import("../app/api/match-hub/badges/route.ts"),
 ]);
 const { db, ensureDb, hashOpaqueToken, hashPassword } = database;
 
@@ -227,6 +229,81 @@ test("lista de espera mantém convidado fora dos presentes até a aprovação ad
     assert.equal(finalMatch.counts.present, 2);
     assert.equal(finalMatch.counts.preconfirmed, 0);
     assert.equal(finalMatch.viewer.status, "PRESENT");
+  } finally {
+    bindings.DB.close();
+    setRuntimeBindings(undefined);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("convidado associado só vê e confirma a partida após a abertura configurada", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ppm-guest-self-confirmation-"));
+  const bindings = await createSelfhostBindings(directory);
+  setRuntimeBindings({ ...bindings, APP_BASE_URL: "https://pelada.example" });
+  try {
+    await ensureDb();
+    const now = new Date().toISOString(), adminId = "guest-access-admin", memberId = "guest-access-member", unlinkedId = "guest-access-unlinked", guestId = "guest-access-player";
+    await db().prepare(`INSERT INTO administrators (id,email,password_hash,active,must_change_password,created_at,updated_at) VALUES (?,?,?,?,?,?,?)`)
+      .bind(adminId, "guest-access-admin@example.com", await hashPassword("guest-access-admin-password"), 1, 0, now, now).run();
+    await db().prepare(`INSERT INTO sessions (id,administrator_id,expires_at,created_at) VALUES (?,?,?,?)`)
+      .bind("guest-access-admin-session", adminId, "2099-01-01T00:00:00.000Z", now).run();
+    await db().prepare(`INSERT INTO member_accounts (id,email,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,?,?)`)
+      .bind(memberId, "guest-access-member@example.com", await hashPassword("guest-access-member-password"), 1, now, now).run();
+    await db().prepare(`INSERT INTO member_sessions (id,member_account_id,expires_at,created_at) VALUES (?,?,?,?)`)
+      .bind("guest-access-member-session", memberId, "2099-01-01T00:00:00.000Z", now).run();
+    await db().prepare(`INSERT INTO member_accounts (id,email,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,?,?)`)
+      .bind(unlinkedId, "guest-access-unlinked@example.com", await hashPassword("guest-access-unlinked-password"), 1, now, now).run();
+    await db().prepare(`INSERT INTO member_sessions (id,member_account_id,expires_at,created_at) VALUES (?,?,?,?)`)
+      .bind("guest-access-unlinked-session", unlinkedId, "2099-01-01T00:00:00.000Z", now).run();
+    await db().prepare(`INSERT INTO players (id,full_name,display_name,nickname,aliases,type,primary_position,speed,skill,marking,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(guestId, "Convidado com conta", "Convidado com conta", "Convidado", "[]", "guest", "Ataque", 3, 3, 3, 1, now, now).run();
+    await db().prepare(`INSERT INTO player_account_links (player_id,account_type,account_id,created_at) VALUES (?,?,?,?)`)
+      .bind(guestId, "member", memberId, now).run();
+    await db().prepare(`UPDATE instance_configuration SET guest_preconfirmation_enabled=1,guest_self_confirmation_enabled=1,guest_self_confirmation_lead_hours=48 WHERE id=1`).run();
+
+    const defaultCreate = await adminMatches.POST(jsonRequest("https://pelada.example/api/admin/matches", {
+      title: "Partida com abertura padrão", matchAt: "2099-10-01T12:00:00.000Z",
+      confirmationDeadline: "2099-10-01T11:00:00.000Z", maxChanges: 2, location: "Batista",
+    }, "ppm_session=guest-access-admin-session"));
+    assert.equal(defaultCreate.status, 201);
+    const defaultMatchId = (await defaultCreate.json()).id;
+    assert.equal((await db().prepare(`SELECT guest_confirmation_opens_at FROM scheduled_matches WHERE id=?`).bind(defaultMatchId).first()).guest_confirmation_opens_at, "2099-09-29T12:00:00.000Z");
+
+    const create = await adminMatches.POST(jsonRequest("https://pelada.example/api/admin/matches", {
+      title: "Partida para convidados", matchAt: "2099-09-01T12:00:00.000Z",
+      confirmationDeadline: "2099-09-01T11:00:00.000Z", guestConfirmationEnabled: true,
+      guestConfirmationOpensAt: "2098-09-01T11:00:00.000Z", maxChanges: 2, location: "Batista",
+    }, "ppm_session=guest-access-admin-session"));
+    assert.equal(create.status, 201);
+    const matchId = (await create.json()).id;
+    const guestRequest = () => new Request("https://pelada.example/api/matches", { headers: { cookie: "ppm_member_session=guest-access-member-session" } });
+    assert.equal((await (await matches.GET(guestRequest())).json()).matches.some(item => item.id === matchId), false);
+    const hiddenHub = await (await matchHub.GET(new Request("https://pelada.example/api/match-hub", { headers: { cookie: "ppm_member_session=guest-access-member-session" } }))).json();
+    assert.equal(hiddenHub.items.some(item => item.matchId === matchId), false);
+    assert.equal((await (await matchHubBadges.GET(new Request("https://pelada.example/api/match-hub/badges", { headers: { cookie: "ppm_member_session=guest-access-member-session" } }))).json()).attendance, 0);
+    const tooEarly = await matches.PUT(jsonRequest("https://pelada.example/api/matches", { matchId, status: "PRESENT" }, "ppm_member_session=guest-access-member-session", "PUT"));
+    assert.equal(tooEarly.status, 403);
+    assert.match((await tooEarly.json()).error, /ainda não está disponível/i);
+    const withoutPlayer = await matches.PUT(jsonRequest("https://pelada.example/api/matches", { matchId, status: "PRESENT" }, "ppm_member_session=guest-access-unlinked-session", "PUT"));
+    assert.equal(withoutPlayer.status, 403);
+    assert.match((await withoutPlayer.json()).error, /não está associada/i);
+
+    const update = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
+      action: "update", matchId, title: "Partida para convidados", matchAt: "2099-09-01T12:00:00.000Z",
+      confirmationDeadline: "2099-09-01T11:00:00.000Z", guestConfirmationEnabled: true,
+      guestConfirmationOpensAt: "2020-09-01T11:00:00.000Z", maxChanges: 2, location: "Batista",
+    }, "ppm_session=guest-access-admin-session", "PATCH"));
+    assert.equal(update.status, 200);
+    const visible = (await (await matches.GET(guestRequest())).json()).matches.find(item => item.id === matchId);
+    assert.equal(visible.guestConfirmation.canSelfConfirm, true);
+    assert.equal(visible.viewer.canConfirmPresence, true);
+    const visibleHub = await (await matchHub.GET(new Request("https://pelada.example/api/match-hub", { headers: { cookie: "ppm_member_session=guest-access-member-session" } }))).json();
+    assert.equal(visibleHub.items.some(item => item.matchId === matchId), true);
+    assert.equal((await (await matchHubBadges.GET(new Request("https://pelada.example/api/match-hub/badges", { headers: { cookie: "ppm_member_session=guest-access-member-session" } }))).json()).attendance, 1);
+    assert.equal((await matches.PUT(jsonRequest("https://pelada.example/api/matches", { matchId, status: "PRESENT" }, "ppm_member_session=guest-access-member-session", "PUT"))).status, 200);
+    const saved = await db().prepare(`SELECT status FROM match_attendance WHERE match_id=? AND player_id=?`).bind(matchId, guestId).first();
+    assert.equal(saved.status, "PRESENT");
+    assert.equal(Number((await db().prepare(`SELECT COUNT(*) total FROM match_guest_preconfirmations WHERE match_id=?`).bind(matchId).first()).total), 0);
   } finally {
     bindings.DB.close();
     setRuntimeBindings(undefined);

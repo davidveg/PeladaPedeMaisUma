@@ -24,14 +24,14 @@ export async function POST(request: Request) {
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
   const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
-  const validation = validateMatch(payload, instance.defaultMatchLocation);
+  const validation = validateMatch(payload, instance);
   if (validation.error) return Response.json({ error: validation.error }, { status: 400, headers: noStore });
   const id = crypto.randomUUID(), now = new Date().toISOString();
   await db().prepare(
     `INSERT INTO scheduled_matches
-     (id,title,match_at,confirmation_deadline,location,max_changes,status,created_by_administrator_id,created_at,updated_at)
-     VALUES (?,?,?,?,?,?,'OPEN',?,?,?)`,
-  ).bind(id, validation.title, validation.matchAt, validation.deadline, validation.location, validation.maxChanges, admin.id, now, now).run();
+     (id,title,match_at,confirmation_deadline,guest_confirmation_opens_at,location,max_changes,status,created_by_administrator_id,created_at,updated_at)
+     VALUES (?,?,?,?,?,?,?,'OPEN',?,?,?)`,
+  ).bind(id, validation.title, validation.matchAt, validation.deadline, validation.guestConfirmationOpensAt, validation.location, validation.maxChanges, admin.id, now, now).run();
   await refreshAutomaticAbsencesForMatch(id);
   const created: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
   if (created) await refreshMatchWeather(created, instance.defaultMatchLocation, true).catch(() => undefined);
@@ -111,12 +111,12 @@ export async function PATCH(request: Request) {
     if (!previous) return Response.json({ error: "Partida não encontrada." }, { status: 404, headers: noStore });
     if (previous.status !== "OPEN") return Response.json({ error: "Somente partidas abertas podem ser editadas." }, { status: 409, headers: noStore });
     const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
-    const validation = validateMatch(payload, instance.defaultMatchLocation);
+    const validation = validateMatch(payload, instance);
     if (validation.error) return Response.json({ error: validation.error }, { status: 400, headers: noStore });
     const now = new Date().toISOString();
     await db().prepare(
-      `UPDATE scheduled_matches SET title=?,match_at=?,confirmation_deadline=?,location=?,max_changes=?,weather_snapshot=NULL,weather_updated_at=NULL,updated_at=? WHERE id=?`,
-    ).bind(validation.title, validation.matchAt, validation.deadline, validation.location, validation.maxChanges, now, id).run();
+      `UPDATE scheduled_matches SET title=?,match_at=?,confirmation_deadline=?,guest_confirmation_opens_at=?,location=?,max_changes=?,weather_snapshot=NULL,weather_updated_at=NULL,updated_at=? WHERE id=?`,
+    ).bind(validation.title, validation.matchAt, validation.deadline, validation.guestConfirmationOpensAt, validation.location, validation.maxChanges, now, id).run();
     await refreshAutomaticAbsencesForMatch(id);
     const updated: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
     if (updated) await refreshMatchWeather(updated, instance.defaultMatchLocation, true).catch(() => undefined);
@@ -132,15 +132,21 @@ export async function PATCH(request: Request) {
   }
 }
 
-function validateMatch(payload: any, defaultLocation: string) {
+function validateMatch(payload: any, instance: ReturnType<typeof instanceConfigurationFromRow>) {
   const title = String(payload.title || "").trim().slice(0, 120);
   const matchAt = validIso(payload.matchAt), deadline = validIso(payload.confirmationDeadline);
+  const guestConfirmationEnabled = instance.guestSelfConfirmationEnabled && payload.guestConfirmationEnabled !== false;
+  const requestedGuestOpening = validIso(payload.guestConfirmationOpensAt);
+  const guestConfirmationOpensAt = guestConfirmationEnabled
+    ? requestedGuestOpening || (matchAt ? new Date(new Date(matchAt).getTime() - instance.guestSelfConfirmationLeadHours * 3_600_000).toISOString() : null)
+    : null;
   const maxChanges = Math.floor(Number(payload.maxChanges));
   if (!title) return { error: "Informe o título da partida." };
   if (!matchAt || !deadline) return { error: "Informe datas e horários válidos." };
   if (new Date(deadline).getTime() > new Date(matchAt).getTime()) return { error: "O prazo de confirmação deve terminar antes do início da partida." };
+  if (guestConfirmationOpensAt && new Date(guestConfirmationOpensAt).getTime() > new Date(deadline).getTime()) return { error: "A confirmação de convidados deve abrir antes do prazo geral de confirmação." };
   if (!Number.isInteger(maxChanges) || maxChanges < 0 || maxChanges > 20) return { error: "O limite de remarcações deve ficar entre 0 e 20." };
-  return { title, matchAt, deadline, maxChanges, location: String(payload.location || "").trim().slice(0, 300) || defaultLocation, error: "" };
+  return { title, matchAt, deadline, guestConfirmationOpensAt, maxChanges, location: String(payload.location || "").trim().slice(0, 300) || instance.defaultMatchLocation, error: "" };
 }
 
 function validIso(value: unknown) {

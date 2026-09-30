@@ -16,9 +16,10 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.doesNotMatch(source, />Início<|"Início"/);
   assert.doesNotMatch(source, /Entrar como administrador|Últimas separações/);
   assert.doesNotMatch(source, /link\("separations"/);
+  assert.match(source, /link\("overview", "\/visao-geral", "Visão geral"\)/);
   assert.match(source, /link\("matches", "\/partidas", "Partidas"\)/);
   assert.match(source, /link\("admin", "\/admin", "Painel Administrativo"\)/);
-  assert.match(source, /href="\/partidas" className="brand"/);
+  assert.match(source, /href="\/visao-geral" className="brand"/);
   assert.doesNotMatch(source, /scrollIntoView/);
   assert.match(source, /menu\.scrollLeft = Math\.max\(0,/);
   assert.match(worker, /text\/html/);
@@ -116,15 +117,13 @@ test("menu lateral mostra o mês atual calculado e o andamento da temporada", as
   ]);
 
   assert.doesNotMatch(header, /AMBIENTE DE VALIDAÇÃO|Layout experimental/);
-  assert.match(header, /careerSeasonProgress\(season\)/);
   assert.match(header, /new Date\(season\.startedAt\)\.getUTCFullYear\(\)/);
-  assert.match(header, /date\.setUTCMonth\(date\.getUTCMonth\(\) \+ seasonProgress\.currentMonth - 1\)/);
-  assert.match(header, /Intl\.DateTimeFormat\("pt-BR", \{ month: "long", timeZone: "UTC" \}\)/);
-  assert.match(header, /<strong>\{seasonMonth\}<\/strong>/);
+  assert.match(header, /timeZone: config\.timezone \|\| "America\/Sao_Paulo"/);
+  assert.match(header, /<strong>\{calendarMonth\} de 12 meses<\/strong>/);
   assert.match(header, /role="progressbar"/);
-  assert.match(header, /aria-valuemax=\{seasonProgress\?\.totalMonths\}/);
-  assert.match(header, /aria-valuenow=\{seasonProgress\?\.currentMonth\}/);
-  assert.match(header, /width: `\$\{seasonProgress\?\.percentage \?\? 0\}%`/);
+  assert.match(header, /aria-valuemax=\{12\}/);
+  assert.match(header, /aria-valuenow=\{calendarMonth\}/);
+  assert.match(header, /width: `\$\{calendarMonth \/ 12 \* 100\}%`/);
   assert.match(theme, /\.site-season-progress \{[\s\S]*height:\s*5px/);
   assert.match(theme, /\.site-season-progress > span \{[\s\S]*var\(--admin-sidebar-active/);
   assert.match(branding, /season: PublicCareerSeason \| null/);
