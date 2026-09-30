@@ -1,8 +1,8 @@
-export async function renderRecapPng(element: HTMLElement, title: string): Promise<File> {
+export async function renderRecapPng(element: HTMLElement, title: string, backgroundColor = "#fbf7ed"): Promise<File> {
   await document.fonts?.ready;
   const { toBlob } = await import("html-to-image");
   const blob = await toBlob(element, {
-    backgroundColor: "#fbf7ed",
+    backgroundColor,
     cacheBust: true,
     pixelRatio: 2,
   });

@@ -1,7 +1,12 @@
-import { useState } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Sharing from "expo-sharing";
+import { captureRef, releaseCapture } from "react-native-view-shot";
+import { useMobileBranding } from "./branding";
+import { Button } from "./components";
 import { Avatar, Metric, Note, Panel, Person, Select, s } from "./statistics-ui";
 import { closedAward, dateLabel, formationRows, monthLabel, momentum as signed, pitchColumns, type GeneralStatistics, type MonthlyAward, type MonthlyStanding } from "./statistics";
 
@@ -61,11 +66,15 @@ export function PlayerOfMonth({ standing }: { standing: MonthlyStanding | null }
 
 export function MonthlyPitch({ award }: { award: MonthlyAward }) {
   const { fontScale } = useWindowDimensions();
-  const [width, setWidth] = useState(0);
+  const { config: brand } = useMobileBranding();
+  const selectionRef = useRef<View>(null);
+  const [width, setWidth] = useState(0), [sharing, setSharing] = useState(false);
   const rows = formationRows(award), total = rows.reduce((sum, row) => sum + row.slots, 0);
   const columns = pitchColumns(width || 270, fontScale);
+  const shareSelection=async()=>{let uri="";setSharing(true);try{if(!await Sharing.isAvailableAsync())throw new Error("O compartilhamento de arquivos não está disponível neste aparelho.");uri=await captureRef(selectionRef,{format:"png",quality:1,result:"tmpfile"});await Clipboard.setStringAsync(`⚽ Seleção do mês · ${monthLabel(award.month)}\n${brand.appName}`);await Sharing.shareAsync(uri,{dialogTitle:`Seleção do mês · ${monthLabel(award.month)}`,mimeType:"image/png",UTI:"public.png"});Alert.alert("Legenda copiada","Escolha o WhatsApp e cole a legenda na conversa após anexar a imagem.")}catch(error:any){Alert.alert("Compartilhamento indisponível",error?.message||"Não foi possível gerar a imagem da seleção.")}finally{if(uri)releaseCapture(uri);setSharing(false)}};
   return <View style={{ gap: 12 }}>
-    <View style={s.row}><Text style={[s.title, s.grow]}>Seleção do mês</Text><Text style={s.label}>{award.selection.length}/{total}</Text></View>
+    <View ref={selectionRef} collapsable={false} style={styles.selectionCapture}>
+    <View style={s.row}><View style={[s.grow,{gap:2}]}><Text style={s.title}>Seleção do mês</Text><Text style={s.label}>{monthLabel(award.month)}</Text></View><Text style={s.label}>{award.selection.length}/{total}</Text></View>
     <View testID="monthly-pitch" onLayout={event => setWidth(event.nativeEvent.layout.width)} style={styles.pitch}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <View style={styles.stripes}>{Array.from({ length: 6 }, (_, index) => <View key={index} style={{ flex: 1, backgroundColor: index % 2 ? "transparent" : "rgba(255,255,255,.035)" }}/>)}</View>
@@ -86,6 +95,8 @@ export function MonthlyPitch({ award }: { award: MonthlyAward }) {
         </View>
       </View>)}
     </View>
+    </View>
+    <Button title={sharing ? "Gerando imagem…" : "Compartilhar seleção no WhatsApp"} icon="whatsapp" busy={sharing} onPress={shareSelection}/>
   </View>;
 }
 
@@ -97,6 +108,7 @@ const styles = StyleSheet.create({
   portrait: { padding: 14, borderRadius: 90, borderWidth: 1, borderColor: "#82AE96", marginTop: 4 },
   momentum: { color: "#DCFA6B", fontSize: 38, fontWeight: "900", fontVariant: ["tabular-nums"] },
   medal: { borderWidth: 1, borderLeftWidth: 5, borderRadius: 14, padding: 14, gap: 10, backgroundColor: "#F8FAF8" },
+  selectionCapture: { gap: 12, padding: 12, marginHorizontal: -12, backgroundColor: "#FFFFFF" },
   pitch: { backgroundColor: "#216D45", borderWidth: 3, borderColor: "#BFDDC9", borderRadius: 16, paddingVertical: 18, paddingHorizontal: 8, overflow: "hidden", gap: 14 },
   stripes: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, flexDirection: "row" },
   halfway: { position: "absolute", top: "50%", width: "100%", borderTopWidth: 1, borderColor: "#8EBDA1" },

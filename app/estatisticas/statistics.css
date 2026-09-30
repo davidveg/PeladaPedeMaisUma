@@ -81,6 +81,12 @@
 .statistics-period label{color:var(--muted)}
 .monthly-selection{border-color:var(--control-line,#4a5851);background:var(--control-surface,#202b26);color:var(--control-text,#f2f5f3)}
 .monthly-selection>h3 span{background:color-mix(in srgb,var(--control-surface,#202b26) 74%,var(--green) 12%);color:var(--green)}
+.monthly-selection>h3 .monthly-selection-title{display:flex;flex-direction:column;gap:3px;padding:0;background:transparent;color:inherit}
+.monthly-selection-title small{color:var(--muted);font:750 8px Arial,sans-serif;text-transform:capitalize}
+.monthly-selection-shell{display:flex;min-width:0;flex-direction:column;gap:10px}
+.monthly-selection-share{align-self:flex-end;max-width:100%}
+.monthly-selection-share-notice{margin:0;color:var(--muted);font-size:10px;text-align:right}
+@media(max-width:600px){.monthly-selection-share{align-self:stretch;width:100%;white-space:normal}.monthly-selection-share-notice{text-align:center}}
 
 /* Fotos dos destaques mensais sem aro duplo. */
 .formation-line article>.player-avatar-wrap{display:grid;place-items:center;width:58px;height:58px;margin:0;border:0;border-radius:50%;background:transparent;box-shadow:none}

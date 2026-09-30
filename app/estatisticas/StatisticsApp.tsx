@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "../components/SiteHeader";
 import { PlayerPhoto } from "../components/PlayerPhoto";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
+import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
+import { renderRecapPng, shareRecapFile } from "../recap-image-client";
 
 type Player = { id: string; displayName: string; photoUrl?: string | null; type?: string | null; primaryPosition?: string | null };
 type VersusMatch = { id: string; separationId: string; title: string; date: string; blueScore: number; yellowScore: number; teamA: "BLUE" | "YELLOW"; teamB: "BLUE" | "YELLOW"; result: "A" | "B" | "DRAW" };
@@ -129,7 +132,10 @@ function MonthlySelection({award}:{award:MonthlyAward}) {
   const formation=award.formation||{goalkeepers:1,defenders:2,midfielders:2,attackers:2};
   const roles=[{name:"Goleiro",amount:formation.goalkeepers},{name:"Defesa",amount:formation.defenders},{name:"Meio-campo",amount:formation.midfielders},{name:"Ataque",amount:formation.attackers}].filter(role=>role.amount>0);
   const fieldLines=[...roles].reverse();
-  return <div className="monthly-selection"><h3>Seleção do mês <span>{award.selection.length}/{monthlySelectionSize(award)}</span></h3><div className="monthly-pitch"><i className="pitch-box pitch-box-top" aria-hidden="true"/><i className="pitch-box pitch-box-bottom" aria-hidden="true"/><div className="monthly-formation" style={{gridTemplateRows:`repeat(${Math.max(fieldLines.length,1)},1fr)`}}>{fieldLines.map(role=><section className={`formation-line role-${role.name.toLowerCase().replace("-","")}`} key={role.name}><small>{role.name}</small><div>{award.selection.filter(member=>member.role===role.name).map(member=><article key={member.player.id}><PlayerPhoto photoUrl={member.player.photoUrl} name={member.player.displayName}/><span><b>{member.player.displayName}</b><small>{signed(member.totalMomentum)} momentum</small></span></article>)}{Array.from({length:Math.max(0,role.amount-award.selection.filter(member=>member.role===role.name).length)},(_,index)=><article className="vacant" key={index}><span>—</span><small>Vaga disponível</small></article>)}</div></section>)}</div></div></div>;
+  const captureRef=useRef<HTMLDivElement>(null),[sharing,setSharing]=useState(false),[shareNotice,setShareNotice]=useState("");
+  const title=`Seleção do mês · ${monthLabel(award.month)}`;
+  const share=async()=>{setSharing(true);setShareNotice("");try{if(!captureRef.current)throw new Error("Seleção indisponível para compartilhamento.");const image=await renderRecapPng(captureRef.current,title,"#202b26");const message=`⚽ *${title}*\nConfira os destaques mensais da pelada.\n\n${window.location.href}`;const outcome=await shareRecapFile(image,title,message);if(outcome==="downloaded"){window.open(buildWhatsAppShareUrl(message),"_blank","noopener,noreferrer");setShareNotice("Imagem baixada. O WhatsApp foi aberto com a legenda.")}}catch(error:any){setShareNotice(error?.message||"Não foi possível gerar a imagem da seleção.")}finally{setSharing(false)}};
+  return <div className="monthly-selection-shell"><div className="monthly-selection" ref={captureRef}><h3><span className="monthly-selection-title">Seleção do mês <small>{monthLabel(award.month)}</small></span><span>{award.selection.length}/{monthlySelectionSize(award)}</span></h3><div className="monthly-pitch"><i className="pitch-box pitch-box-top" aria-hidden="true"/><i className="pitch-box pitch-box-bottom" aria-hidden="true"/><div className="monthly-formation" style={{gridTemplateRows:`repeat(${Math.max(fieldLines.length,1)},1fr)`}}>{fieldLines.map(role=><section className={`formation-line role-${role.name.toLowerCase().replace("-","")}`} key={role.name}><small>{role.name}</small><div>{award.selection.filter(member=>member.role===role.name).map(member=><article key={member.player.id}><PlayerPhoto photoUrl={member.player.photoUrl} name={member.player.displayName}/><span><b>{member.player.displayName}</b><small>{signed(member.totalMomentum)} momentum</small></span></article>)}{Array.from({length:Math.max(0,role.amount-award.selection.filter(member=>member.role===role.name).length)},(_,index)=><article className="vacant" key={index}><span>—</span><small>Vaga disponível</small></article>)}</div></section>)}</div></div></div><button type="button" className="primary whatsapp-button monthly-selection-share" disabled={sharing} onClick={share}><WhatsAppIcon/>{sharing?"Gerando imagem…":"Compartilhar seleção no WhatsApp"}</button>{shareNotice&&<p className="monthly-selection-share-notice" role="status">{shareNotice}</p>}</div>;
 }
 
 function monthlySelectionSize(award:MonthlyAward){const formation=award.formation;return formation?formation.goalkeepers+formation.defenders+formation.midfielders+formation.attackers:7}

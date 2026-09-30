@@ -41,7 +41,7 @@ function runtime(data = advanced, options = {}) {
       if (!states.has(key)) states.set(key, typeof initial === "function" ? initial() : initial);
       return [states.get(key), value => states.set(key, typeof value === "function" ? value(states.get(key)) : value)];
     },
-    useMemo: fn => fn(), useCallback: fn => fn,
+    useMemo: fn => fn(), useCallback: fn => fn, useRef: value => ({ current: value }),
   };
   const native = Object.fromEntries(["View", "Text", "Image", "Pressable", "ScrollView", "Switch", "TextInput", "Modal", "KeyboardAvoidingView", "ActivityIndicator", "RefreshControl"].map(name => [name, name]));
   Object.assign(native, { StyleSheet: { create: styles => styles, absoluteFill: { position: "absolute", top: 0, left: 0, bottom: 0, right: 0 } }, Platform: { OS: "android" }, Alert: { alert: (...args) => alerts.push(args) }, useWindowDimensions: () => ({ width: 360, height: 800, fontScale: options.fontScale || 1 }), FlatList: ({ data, renderItem, ListEmptyComponent }) => data.length ? data.map(item => renderItem({ item })) : ListEmptyComponent });
@@ -52,6 +52,8 @@ function runtime(data = advanced, options = {}) {
     react, "react/jsx-runtime": jsxRuntime, "react-native": native,
     "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" }, "@expo/vector-icons/Ionicons": "Icon",
     "expo-linear-gradient": { LinearGradient: "LinearGradient" },
+    "expo-clipboard": { setStringAsync: async () => {} }, "expo-sharing": { isAvailableAsync: async () => true, shareAsync: async () => {} },
+    "react-native-view-shot": { captureRef: async () => "selection.png", releaseCapture() {} },
     "expo-router": { useRouter: () => router, useLocalSearchParams: () => options.params || {}, useFocusEffect() {} },
     "@tanstack/react-query": { useQuery: config => { queries.push(config); return queryResult; } },
     "@react-native-community/netinfo": { useNetInfo: () => ({ isConnected: options.online !== false }) },
@@ -156,7 +158,7 @@ test("fotos preenchem círculos, suportam falha e não sobrepõem o nome do dest
 
 test("campo adapta onze vagas e fontes grandes sem altura fixa", () => {
   const app = runtime(undefined, { fontScale: 2 });
-  const award = { selection: [], formation: { goalkeepers: 1, defenders: 4, midfielders: 3, attackers: 3 } };
+  const award = { month: "2026-07", selection: [], formation: { goalkeepers: 1, defenders: 4, midfielders: 3, attackers: 3 } };
   let tree = app.render("statistics-awards", "MonthlyPitch", { award });
   tree.find(node => node.props.testID === "monthly-pitch").props.onLayout({ nativeEvent: { layout: { width: 224 } } });
   tree = app.render("statistics-awards", "MonthlyPitch", { award });
@@ -164,6 +166,7 @@ test("campo adapta onze vagas e fontes grandes sem altura fixa", () => {
   assert.equal(style(field).height, undefined);
   assert.equal(tree.filter(node => node.type === "Text" && node.props.children === "Vaga disponível").length, 11);
   assert.ok(tree.some(node => style(node).width === "100%" && style(node).minWidth === 0));
+  assert.ok(tree.some(node => node.type === "Button" && node.props.title === "Compartilhar seleção no WhatsApp"));
 });
 
 test("listas carregam mais sob demanda e ajuda abre explicação inteira", () => {
