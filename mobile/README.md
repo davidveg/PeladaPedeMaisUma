@@ -4,7 +4,7 @@ Aplicativo Expo/React Native com uma única base TypeScript para iOS e Android. 
 
 ## Arquitetura e decisões
 
-- Expo SDK 56 + Expo Router, seguindo o template estável oficial disponível durante a implementação.
+- Expo SDK 57 + Expo Router, seguindo o template estável oficial disponível durante a implementação.
 - TanStack Query para cache, invalidação e persistência offline de separações, partidas, notificações, perfil e configuração pública.
 - Tokens somente no SecureStore. Senhas existem apenas durante o envio do login.
 - Uma resposta `401` provoca uma única tentativa compartilhada de refresh; falha remove a sessão local e volta ao login.

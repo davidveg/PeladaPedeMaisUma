@@ -1,6 +1,6 @@
 # Pelada Pede Mais Uma
 
-Aplicação web responsiva e aplicativo Expo/React Native para organizar peladas, confirmar presenças, montar times equilibrados, registrar resultados e acompanhar a evolução dos jogadores.
+Aplicação web responsiva e aplicativo Expo/React Native para organizar peladas, confirmar presenças, montar times equilibrados, registrar resultados, acompanhar a evolução dos jogadores e administrar as finanças do grupo.
 
 O mesmo código pode atender vários grupos em implantações independentes. Cada instância mantém identidade visual, agenda, banco de dados, uploads e configurações próprias.
 
@@ -11,6 +11,7 @@ Documentação complementar:
 - [Fórmulas das estatísticas avançadas](docs/estatisticas-avancadas.md)
 - [Engajamento, conquistas e retrospectivas](docs/engajamento.md)
 - [Operação de múltiplas peladas](docs/MULTI_INSTANCE.md)
+- [Implantação personalizada da Peladix](docs/PELADIX.md)
 - [Notas da versão 1.0](RELEASE_NOTES_1.0.0.md)
 
 ## Visão geral
@@ -29,7 +30,18 @@ Documentação complementar:
   - opção de incluir ou ocultar convidados.
 - Dashboard de estatísticas avançadas com IPI por posição e confiança da amostra, saldo +/-, forma recente, consistência, impacto com/sem, melhores duplas, rede de entrosamento, recordes e qualidade do balanceamento.
 - Filtros avançados por período, temporada, posição, mínimo de jogos, janela recente e amostra mínima das duplas; dados ausentes aparecem como **Dados insuficientes**.
+- Destaque e Seleção do Mês com formação e mínimo de partidas configuráveis, histórico mensal e MVP anual consolidado.
+- Compartilhamento do destaque e da Seleção do Mês como imagem no site e no aplicativo.
 - Página oficial para download das versões Android e iOS publicadas pelos administradores.
+
+### Visão geral e hub de partidas
+
+- A página inicial e `/visao-geral` exibem a próxima partida aberta ou o último resultado, previsão do tempo, situação da presença, métricas pessoais, jogadores ativos e média recente de público.
+- O painel também reúne o Destaque do Mês, resumo do jogador associado, equilíbrio da última escalação e partidas recentes.
+- **Partidas** é a entrada única para presenças, times, súmula, resultado e votação no site e no aplicativo.
+- O hub oferece filtros para partidas abertas, times publicados, finalizadas, histórico e canceladas, com paginação e carregamento dos detalhes somente ao abrir a partida.
+- Badges indicam pendências de presença e votação. Links antigos de separação e votação continuam funcionando e preservam o destino após o login.
+- Partidas, escalações e históricos detalhados exigem autenticação; rankings e estatísticas agregadas permanecem públicos.
 
 ### Jogadores e contas
 
@@ -44,7 +56,9 @@ Documentação complementar:
 - Contas comuns e administrativas podem ser associadas a um jogador.
 - Cada conta aceita um único jogador e cada jogador aceita um único login, independentemente do tipo da conta.
 - A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição principal, posição secundária e observações.
+- O jogador pode registrar um período de ausência por férias, lesão ou outro afastamento. Partidas abertas no intervalo recebem ausência automática sem consumir remarcações; alterações ou remoção restauram a resposta anterior quando possível.
 - A área do jogador oferece acesso direto à sua análise avançada completa.
+- Cards pessoais incluem conquistas, reconhecimentos, evolução da temporada e retrospectiva compartilhável.
 - Recuperação de senha por e-mail para administradores e contas de jogadores.
 - Administradores podem redefinir uma senha temporária de conta de jogador e revogar todas as sessões anteriores.
 - Perfil intermediário de **moderador**, promovido a partir de uma conta de jogador e sempre reversível pelo administrador.
@@ -61,8 +75,11 @@ Documentação complementar:
 - Lista de espera opcional para convidados, desativada por padrão e configurável em **Identidade e agenda**.
 - Quando ativada, somente administradores colocam convidados na lista de espera e aprovam sua presença após presentes + espera atingirem o limite configurado (16 por padrão).
 - Convidados na espera aparecem na parcial do WhatsApp sem `✅`, não contam como presentes ou pendentes e não entram na geração dos times até a aprovação final.
+- Confirmação própria de convidados opcional e independente da lista de espera. A abertura padrão é configurável por antecedência e pode ser ajustada ou desativada em cada partida; antes da janela, convidados comuns não veem partidas abertas restritas.
+- Bloqueio opcional de confirmação para jogadores com cobrança vencida e saldo pendente; administradores continuam podendo responder após regularização ou negociação.
 - Fechamento antecipado da lista e geração automática de uma separação equilibrada.
 - Cancelamento e edição de partidas com auditoria.
+- Previsão de tempo salva por partida, com localização padrão da instância e provedor secundário automático.
 - Central de notificações por conta, com paginação e marcação de itens lidos.
 - Preferências individuais para:
   - partidas e alterações;
@@ -71,6 +88,16 @@ Documentação complementar:
   - atualizações do aplicativo;
   - lembretes de votação do Modo Carreira.
 - Push Android/iOS via Expo quando disponível. A central interna continua funcionando mesmo sem push.
+
+### Financeiro
+
+- Módulo opcional por instância, ativado por padrão e protegido por autenticação.
+- Geração de mensalidades, cobranças avulsas e extraordinárias, isenções, cancelamentos e pagamentos parciais.
+- Despesas pagas ou pendentes, despesas recorrentes e geração por competência.
+- Métodos de pagamento por PIX, dinheiro, transferência, cartão ou outro meio.
+- Saldo inicial, resumo de receitas/despesas, fechamento e reabertura mensal com auditoria.
+- Administradores e moderadores com `FINANCE_MANAGE` operam a gestão; jogadores consultam somente o próprio histórico.
+- Site e aplicativo compartilham a parcial mensal pelo WhatsApp. Cadastros, estornos, fechamento e configurações completas permanecem no site.
 
 ### Montagem de times pelas partidas
 
@@ -113,6 +140,10 @@ Documentação complementar:
 - Temporadas automáticas com duração configurável entre 1 e 120 meses; a primeira virada é agendada por padrão para o fim do ano corrente.
 - Na virada da temporada, os dois saldos de Momentum são zerados sem apagar jogos, vitórias, derrotas, gols, assistências ou o histórico das partidas.
 - Partidas e votações de temporadas anteriores permanecem consultáveis, mas não reaplicam Momentum na temporada atual.
+- Reconhecimentos de Parceiro, Fair Play e Defesa da rodada, além dos melhores e piores da votação.
+- Fechamento mensal automático após a última partida regular elegível, ou manual pelo administrador, com snapshot permanente do destaque e da Seleção do Mês.
+- Formação mensal configurável por posição e mínimo de participações; em meses com até duas partidas, o mínimo não elimina jogadores elegíveis.
+- Fechamento da temporada consolida o MVP anual a partir das premiações mensais sem reescrever meses anteriores.
 
 #### Regras da votação
 
@@ -137,15 +168,17 @@ O painel possui:
 - visão geral com jogadores, convidados, separações, administradores, contas, pesos do algoritmo e estados do Modo Carreira;
 - jogadores e goleiros em tabelas separadas e ordenáveis;
 - partidas e presenças;
+- gestão financeira completa, quando habilitada;
 - versões do aplicativo Android/iOS;
 - separações salvas;
 - administradores;
 - contas de jogadores e associações;
 - moderadores e suas permissões;
-- identidade, agenda, nomes e cores das equipes;
-- ativação e limite da lista de espera administrativa de convidados;
+- identidade, logotipos, favicon, imagem social, paleta do site/painel/aplicativo, nomes e cores das equipes;
+- agenda padrão, meteorologia, lista de espera e janela de confirmação própria dos convidados;
+- ativação do financeiro e bloqueio opcional de presença por inadimplência;
 - configurações de equilíbrio;
-- configurações, votos e encerramento do Modo Carreira;
+- configurações, votos, formação mensal, premiações e encerramento do Modo Carreira;
 - auditoria pesquisável, filtrável e paginada.
 
 A auditoria carrega 10 eventos por página por padrão e permite 10, 25, 50 ou 100 eventos.
@@ -158,10 +191,13 @@ O aplicativo oferece:
 
 - login de jogador ou administrador;
 - tokens nativos com refresh rotativo;
-- partidas, confirmações de presença e notificações;
+- hub de partidas, confirmações de presença, badges e notificações;
 - lista de espera e aprovação administrativa de convidados quando a funcionalidade estiver habilitada;
 - separações salvas e card do jogador;
+- cadastro e remoção de período de ausência na conta;
+- financeiro com histórico próprio para jogadores e resumo mensal para administradores ou moderadores autorizados;
 - estatísticas avançadas do jogador pelo card, com IPI, forma, consistência, saldo, impacto, parceria e ranking;
+- Destaque e Seleção do Mês, MVP anual e compartilhamento das premiações como imagem;
 - criação de separações para administradores a partir das presenças de uma partida;
 - montagem de times a partir das presenças de uma partida, com revisão, ajustes e rascunhos opcionais;
 - ordem de chegada por equipe;
@@ -172,15 +208,15 @@ O aplicativo oferece:
 - push notifications em development builds e builds distribuídos;
 - verificação da versão instalada e orientação para atualização.
 
-Administradores publicam versão, build mínimo, links Android/iOS e notas da versão pelo painel. A publicação atualiza a página `/baixar-app` e notifica os usuários. O rodapé do site também aponta para essa página.
+Administradores publicam versão, build mínimo, links Android/iOS e notas da versão pelo painel. A publicação atualiza a página `/baixar-app` e notifica os usuários. O rodapé do site também aponta para essa página. Ao publicar mudanças do Match Hub, atualize primeiro o servidor, que fornece `/api/match-hub` e `/api/match-hub/badges`, e somente depois distribua a versão ou OTA mobile compatível.
 
 ## Tecnologias
 
 ### Aplicação web e API
 
-- Node.js 22
+- Node.js 22.23.3 nos builds Docker; o projeto aceita Node.js 22.13 ou superior
 - React 19
-- Next.js/Vinext
+- Next.js 16 e Vinext/Vite
 - TypeScript
 - Cloudflare D1 e R2 no ambiente hospedado
 - SQLite e filesystem no ambiente self-hosted
@@ -190,7 +226,7 @@ Administradores publicam versão, build mínimo, links Android/iOS e notas da ve
 
 ### Aplicativo
 
-- Expo SDK 56 e React Native
+- Expo SDK 57 e React Native 0.86
 - Expo Router
 - TanStack Query
 - React Hook Form e Zod
@@ -200,7 +236,7 @@ Administradores publicam versão, build mínimo, links Android/iOS e notas da ve
 
 ## Execução local da aplicação web
 
-Requer Node.js `22.13` ou superior.
+Requer Node.js `22.13` ou superior. Os Dockerfiles usam `22.23.3` como versão reproduzível recomendada.
 
 ```bash
 npm ci
@@ -214,6 +250,7 @@ Validação:
 ```bash
 npm test
 npm run build
+npm run lint
 ```
 
 ## Execução local do aplicativo
@@ -256,9 +293,15 @@ Copie `.env.example` ou `.env.docker.example` conforme o ambiente. Nunca version
 | `SMTP_PASSWORD` | Senha de aplicativo ou segredo SMTP |
 | `SMTP_FROM` | Nome e endereço do remetente |
 | `LOG_LEVEL` | `debug`, `info`, `warn` ou `error` |
+| `NODE_VERSION` | Versão usada pelo build Docker; padrão atual `22.23.3` |
+| `COMPOSE_PROJECT_NAME` | Nome isolado da pilha Compose |
+| `CONTAINER_NAME` | Nome do container no modelo OMV |
 | `HOST_PORT` | Porta publicada pelo Compose |
+| `CONTAINER_PORT` | Porta interna do servidor Node no modelo OMV |
 | `INSTANCE_DATA_PATH` | Diretório persistente exclusivo da instância no OMV |
+| `DATA_VOLUME_NAME` | Nome do volume persistente no Compose padrão |
 | `LOGGING_JOB_NAME` | Identificador usado por Promtail/Grafana Alloy |
+| `TZ` | Fuso do processo self-hosted; use também o fuso IANA salvo na configuração da instância |
 
 ### Gmail
 
@@ -306,8 +349,11 @@ Características de persistência:
 - UUIDs em texto;
 - datas em ISO 8601;
 - snapshots JSON das separações;
+- snapshots imutáveis das premiações mensais e de temporada;
 - exclusão lógica de jogadores e separações;
 - associação exclusiva entre conta e jogador;
+- períodos de ausência com restauração das respostas anteriores;
+- livro financeiro por competência, com estornos e fechamento auditáveis;
 - idempotência nas mutações administrativas do aplicativo;
 - armazenamento apenas de hashes dos tokens de recuperação e refresh.
 
@@ -360,29 +406,29 @@ Somente a confirmação oficial do resultado atualiza estatísticas e momentum. 
 
 | Página | Finalidade |
 | --- | --- |
-| `/` | Organização e criação de times para administradores |
+| `/` e `/visao-geral` | Resumo autenticado da instância, próxima partida, desempenho, destaque e equilíbrio |
 | `/admin` | Painel completo para administradores e painel limitado às permissões concedidas para moderadores |
 | `/jogadores` | Lista pública e cards |
 | `/separacoes-salvas` | Acesso legado ao histórico de partidas, protegido por login |
-| `/estatisticas` | Rankings e confrontos |
-| `/partidas` | Agenda e confirmação de presença |
+| `/estatisticas` | Rankings, confrontos, Destaque/Seleção do Mês e MVP anual |
+| `/estatisticas/avancadas` | IPI, forma, consistência, impacto, parcerias e equilíbrio |
+| `/partidas` | Hub autenticado de agenda, presenças, times, resultado e votação |
+| `/financeiro` | Gestão ou histórico financeiro, quando o módulo estiver habilitado |
 | `/notificacoes` | Central da conta autenticada |
-| `/conta` | Login, associação e perfil |
+| `/conta` | Login, associação, perfil, card e período de ausência |
 | `/votacao?token=...` | Votação autenticada do Modo Carreira |
 | `/sumula?separationId=...` | Rascunho administrativo |
 | `/baixar-app` | Versões oficiais Android/iOS |
-| `/admin` | Painel administrativo |
 
 ## API
 
-As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa Bearer tokens opacos emitidos por `/api/mobile/auth`.
+As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa Bearer tokens opacos emitidos por `/api/mobile/auth`. A lista abaixo resume os contratos principais; o contrato mobile detalhado está em [docs/mobile-openapi.yaml](docs/mobile-openapi.yaml).
 
 ### Públicas
 
 - `GET /api/public-config` — URL canônica, identidade, agenda, nomes e cores das equipes.
 - `GET /api/public-players` — jogadores e estatísticas esportivas públicas.
 - `GET /api/public-statistics` — rankings, assiduidade e confrontos por período.
-- `GET /api/separations` — separações confirmadas, somente para contas autenticadas.
 - `GET /api/mobile/version` — versão e link oficial por plataforma.
 - `GET /api/health` — saúde da aplicação e banco.
 
@@ -392,14 +438,20 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 - `POST/PUT /api/member-password-reset` — recuperação de senha de jogador.
 - `GET/POST /api/member-players` — jogadores disponíveis e associação.
 - `GET/PUT /api/member-profile` — card e perfil associado.
+- `GET/PUT/DELETE /api/player-absence` — período de ausência do jogador associado.
 - `GET/PUT /api/notification-preferences` — preferências da conta.
 - `GET/PATCH /api/notifications` — central interna.
+- `GET /api/overview` — resumo pessoal e operacional da visão geral.
+- `GET /api/finance` — gestão autorizada ou histórico financeiro exclusivo do jogador.
 
 ### Partidas e separações
 
 - `GET/PUT /api/matches` — agenda e confirmação do jogador.
+- `GET /api/match-hub` — listagem paginada ou detalhe autenticado da partida.
+- `GET /api/match-hub/badges` — pendências autenticadas de presença e votação.
 - `GET/POST/PATCH /api/admin/matches` — gestão administrativa das partidas, presenças e lista de espera de convidados.
 - `GET/PUT /api/admin/separation-drafts` — consulta e gravação privada dos rascunhos de separação.
+- `GET /api/separations` — separações confirmadas para contas autenticadas.
 - `GET/PATCH/DELETE /api/separations` — histórico, edição dos times/chegada e exclusão lógica (permissões existentes preservadas).
 - `POST /api/separations` — criação avulsa encerrada: `410 Gone` para clientes autorizados.
 - `GET/PUT /api/career/draft` — rascunho de súmula.
@@ -416,6 +468,7 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 - `PUT /api/member-associations/password` — senha temporária de jogador.
 - `GET/PUT /api/config` — equilíbrio.
 - `GET/PUT /api/instance-config` — identidade, agenda e equipes.
+- `GET/POST /api/finance` — consultas e operações financeiras; mutações exigem `FINANCE_MANAGE`.
 - `GET/PUT/POST /api/admin/mobile-release` — versões Android/iOS.
 - `GET /api/audit` — auditoria paginada.
 - `GET/POST /api/upload` — fotos validadas.
@@ -430,14 +483,13 @@ As rotas retornam JSON. Cookies HTTP-only são usados no site; o aplicativo usa 
 - `POST/PUT /api/mobile/career/match` — resultado idempotente.
 - `POST/DELETE /api/mobile/notifications` — registro e desativação de push.
 
-O contrato detalhado está em [docs/mobile-openapi.yaml](docs/mobile-openapi.yaml).
-
 ## Segurança
 
 - PBKDF2-SHA-256 com salt aleatório e 210 mil iterações para senhas.
-- Cookies de sessão HTTP-only, Secure e SameSite=Strict no site; autenticação remota por HTTP é recusada.
+- Cookies de sessão HTTP-only e SameSite=Strict; `Secure` é aplicado quando a requisição é reconhecida como HTTPS. Autenticação remota por HTTP é recusada, salvo quando a exceção explícita para rede privada estiver habilitada.
 - Tokens de sessão web e mobile persistidos somente como hash; sessões web legadas são migradas no primeiro uso.
 - Limitação persistente de tentativas por conta e por IP nos logins administrativo, de jogador e mobile.
+- E-mails são normalizados e validados com algoritmo linear e limite de tamanho nos cadastros, na troca de credenciais e na recuperação de senha.
 - Access tokens mobile de curta duração e refresh tokens rotativos.
 - Refresh tokens e tokens de redefinição persistidos somente como hash.
 - Reutilização de refresh token revoga as sessões mobile da conta.
@@ -484,7 +536,7 @@ O Compose do OMV mantém cinco arquivos de log de até 10 MB. O nome real dos la
 | --- | --- | --- |
 | `docker-compose.yml` | PC ou servidor compatível | Wrangler/workerd |
 | `docker-compose.dev.yml` | Desenvolvimento com recarga | Vinext |
-| `docker-compose.omv.yml` | Raspberry Pi ARM64 com OMV 7 | Node 22 self-hosted |
+| `docker-compose.omv.yml` | Raspberry Pi ARM64 com OMV 7 | Node 22.23.3 self-hosted |
 
 ### Compose padrão
 
@@ -552,7 +604,7 @@ No plugin, execute **Check**, **Build** e **Up**. Não use **Pull** para a image
 
 O modelo do OMV:
 
-- usa Node sem workerd;
+- usa Node `22.23.3` sem workerd;
 - executa como usuário `1000:100`;
 - remove capabilities;
 - ativa `no-new-privileges`;
@@ -560,6 +612,12 @@ O modelo do OMV:
 - persiste banco e fotos em `/data`.
 
 Publique a aplicação por um proxy HTTPS e acesse a URL configurada em `APP_BASE_URL`. O acesso HTTP direto por IP pode ser usado para o healthcheck, mas os endpoints que emitem cookies recusam autenticação remota sem HTTPS. Os logs devem registrar `application_starting` e `database_ready`.
+
+#### Cloudflare e NGINX em outro container
+
+Quando o NGINX estiver em outro container no mesmo host, conecte proxy e aplicação a uma rede Docker privada compartilhada. Prefira remover `ports` da aplicação e declarar somente `expose`, deixando o NGINX alcançar `http://<nome-do-container>:3000`. O proxy deve sobrescrever `Host`, `X-Forwarded-Host`, `X-Forwarded-Proto` e os cabeçalhos de IP recebidos do cliente.
+
+No Cloudflare, use **Full (strict)** com certificado válido ou Origin CA no NGINX; não use o modo Flexible. Se a origem continuar publicamente acessível, restrinja a porta HTTPS aos endereços do Cloudflare ou configure Authenticated Origin Pulls. O healthcheck interno em `127.0.0.1` continua usando HTTP normalmente.
 
 ## Múltiplas instâncias
 
@@ -573,20 +631,6 @@ Uma única imagem pode atender vários grupos, desde que cada Compose use valore
 - `LOGGING_JOB_NAME`.
 
 Nunca compartilhe `INSTANCE_DATA_PATH` entre grupos. Consulte [docs/MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md) para configuração da identidade, agenda e builds personalizados do aplicativo.
-
-## Partidas: agenda e separações no mesmo lugar
-
-A navegação principal do site e do aplicativo usa **Partidas** como entrada única para presenças, times, súmula/resultado e votação. A página inicial do site também usa essa área.
-
-- Filtros: Todas (abertas ou com times publicados), Abertas, Times gerados, Finalizadas (resultado confirmado), Histórico e Canceladas. Canceladas ficam ocultas por padrão.
-- A listagem é paginada, com 12 registros por página, e não transfere snapshots, súmulas, presenças individuais ou rascunhos. Esses detalhes são carregados ao abrir uma partida.
-- Separações antigas sem agendamento continuam disponíveis, sem inventar listas de presenças ou datas. As URLs antigas de separações e de votação continuam funcionando.
-- Toda a área de Partidas exige login de administrador, moderador ou conta de jogador, inclusive histórico, times, súmulas, resultados e votações. Links antigos e links compartilhados preservam o destino após o login, sem expor dados da partida antes da autenticação. Sessões inválidas, expiradas ou de contas desativadas não dão acesso. As APIs de consulta retornam 401 sem dados e não permitem cache compartilhado.
-- As permissões de edição e de voto permanecem inalteradas; rascunhos continuam restritos a quem tem permissão. O aplicativo usa a mesma proteção com sua sessão autenticada. Estatísticas agregadas continuam públicas, mas históricos e recordes detalhados de partidas exigem login.
-- O algoritmo, o Modo Carreira e os registros históricos não foram migrados ou recalculados por essa reorganização. O painel administrativo mantém as configurações e ferramentas próprias de gestão.
-- As APIs anteriores mantêm o comportamento padrão para versões antigas do aplicativo. Os novos parâmetros `?id=` permitem consultar uma partida/separação específica, inclusive separações anteriores ao limite legado de 50 registros.
-
-**Ordem de publicação:** atualizar primeiro o servidor/site, que disponibiliza `/api/match-hub` e `/api/match-hub/badges`, e depois distribuir a atualização mobile. Não há mudança de dependências nativas nesta funcionalidade; uma OTA deve usar o canal e o runtime compatíveis com o aplicativo instalado. Não publicar a OTA antes do servidor, pois a nova navegação depende desses endpoints.
 
 ## Licença e operação
 
