@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
       args:
-        NODE_VERSION: ${NODE_VERSION:-22.19.0}
+        NODE_VERSION: ${NODE_VERSION:-22.23.3}
     environment:
       NODE_ENV: development
       PORT: 3000

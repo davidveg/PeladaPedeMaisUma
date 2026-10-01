@@ -2,7 +2,7 @@
 
 # Variante do build para kernels OMV/Raspberry que bloqueiam o npm no sandbox
 # padrão do BuildKit. O container final continua sem privilégios e sem workerd.
-ARG NODE_VERSION=22.19.0
+ARG NODE_VERSION=22.23.3
 
 FROM node:${NODE_VERSION}-bookworm-slim AS dependencies
 WORKDIR /app

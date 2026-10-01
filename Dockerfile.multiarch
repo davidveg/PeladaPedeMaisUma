@@ -2,7 +2,7 @@
 
 # Imagem nativa para Linux amd64 e arm64. O Dockerfile original permanece
 # disponível como alternativa legada.
-ARG NODE_VERSION=22.19.0
+ARG NODE_VERSION=22.23.3
 ARG WRANGLER_VERSION=4.92.0
 ARG WORKERD_VERSION=1.20260515.1
 
