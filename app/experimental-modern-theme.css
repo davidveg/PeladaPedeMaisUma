@@ -1120,72 +1120,123 @@ body {
 
 .member-access {
   background:
-    radial-gradient(circle at 78% 12%, rgba(207, 232, 115, .08), transparent 27rem),
-    #0f1612;
-  color: #f2f5f3;
+    radial-gradient(circle at 78% 12%, color-mix(in srgb, var(--management-button, #d3eb7a) 8%, transparent), transparent 27rem),
+    var(--management-background, #0f1612);
+  color: var(--management-text, #f2f5f3);
 }
 
 .member-access-copy {
-  border-right: 1px solid rgba(255, 255, 255, .08);
+  border-right: 1px solid var(--public-sidebar-border, rgba(255, 255, 255, .08));
   background:
-    radial-gradient(circle at 74% 85%, rgba(207, 232, 115, .1), transparent 25rem),
-    linear-gradient(145deg, #20392f, #12271f);
+    radial-gradient(circle at 74% 85%, color-mix(in srgb, var(--public-sidebar-highlight, #d3eb7a) 12%, transparent), transparent 25rem),
+    var(--public-sidebar, #133f31);
+  color: var(--public-sidebar-contrast, #fff);
+}
+
+.member-access-copy .member-access-brand {
+  color: var(--public-sidebar-contrast, #fff);
+}
+
+.member-access-copy .member-access-brand .brand-identity {
+  color: inherit;
+}
+
+.member-access-copy .member-access-brand .brand-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+}
+
+.member-access-copy .member-access-brand .brand-copy {
+  display: flex;
+}
+
+.member-access-copy .member-access-brand .brand-copy b {
+  color: inherit;
+  font: 700 21px Georgia, serif;
+}
+
+.member-access-copy > div > span {
+  color: var(--public-sidebar-highlight, #d3eb7a);
+}
+
+.member-access-copy :is(h1, p, small) {
+  color: inherit;
+}
+
+.member-access-copy p,
+.member-access-copy > small {
+  color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
 }
 
 .member-access-card {
   width: min(470px, calc(100% - 48px));
   padding: 34px;
-  border-color: #34433b;
-  background: #18211d;
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
   box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
-  color: #f2f5f3;
+  color: var(--management-text, #f2f5f3);
 }
 
 .member-access-card h2 {
-  color: #f6f8f6;
+  color: var(--management-text, #f6f8f6);
 }
 
 .member-access-card > p,
 .member-access-card > a,
 .member-access-card label small {
-  color: #98a69f;
+  color: var(--management-muted, #98a69f);
 }
 
 .member-access-card .ball {
-  background: #26362e;
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-access-card .member-access-logo.has-image {
+  overflow: hidden;
+  padding: 6px;
+}
+
+.member-access-card .member-access-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .member-access-tabs {
-  border: 1px solid #34433b;
-  background: #111a15;
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
 }
 
 .member-access-tabs button {
-  color: #98a69f;
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
 }
 
 .member-access-tabs button.on {
-  background: #26362e;
-  color: #d3eb7a;
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
   box-shadow: none;
 }
 
 .member-access-card input {
-  border-color: #3b4a42;
-  background: #111a15;
-  color: #eef2ef;
-  color-scheme: dark;
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #eef2ef);
+  color-scheme: light dark;
 }
 
 .member-access-card input:focus {
-  border-color: #91aa5f;
-  box-shadow: 0 0 0 3px rgba(207, 232, 115, .12);
+  border-color: var(--management-button, #d3eb7a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--management-button, #d3eb7a) 18%, transparent);
 }
 
 .member-access-card .member-forgot,
 .member-access-card .member-back,
 .member-access-card > a {
-  color: #cfe873;
+  color: var(--management-button, #d3eb7a);
 }
 
 .admin-shell {

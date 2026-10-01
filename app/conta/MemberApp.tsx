@@ -7,7 +7,7 @@ import { playerCardTier, playerCardTierLabel } from "../../lib/player-card-tier"
 import { safeSiteReturnTo } from "../../lib/site-navigation";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 import { SiteHeader } from "../components/SiteHeader";
-import { useInstanceBranding } from "../InstanceBranding";
+import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 import { playerTypeLabel } from "../../lib/player-types";
 import { PlayerFinancialHistory } from "../components/PlayerFinancialHistory";
 import type { PlayerEngagement } from "../../lib/player-engagement";
@@ -167,9 +167,10 @@ function MemberAccess({ onDone }: { onDone: () => Promise<{ member: any; player:
   }
   const heading = mode === "login" ? "Bem-vindo de volta" : mode === "register" ? "Crie sua conta" : mode === "request" ? "Recuperar senha" : "Criar nova senha";
   const description = mode === "login" ? "Jogadores e administradores podem entrar com seu e-mail e senha." : mode === "register" ? "Depois do cadastro, você escolherá seu nome na lista de jogadores disponíveis." : mode === "request" ? "Enviaremos um link de uso único para o e-mail da sua conta de jogador." : "Escolha uma nova senha. O link expira em 30 minutos e só pode ser utilizado uma vez.";
-  return <div className="member-access"><section className="member-access-copy"><a href="/">⚽ <b>{brand.siteName}</b></a><div><span>ÁREA DO JOGADOR</span><h1>Seus números,<br />seu perfil, sua pelada.</h1><p>Associe sua conta ao seu jogador e acompanhe atributos, momentum e histórico de partidas.</p></div><small>{brand.siteTagline}</small></section><form className="member-access-card" onSubmit={submit}>
+  const accountLogo = brand.logoUrl ? <img src={brand.logoUrl} alt="" /> : mode === "request" ? "✉️" : mode === "reset" ? "🔐" : "⚽";
+  return <div className="member-access"><section className="member-access-copy"><a className="member-access-brand" href="/" aria-label={`Ir para o início de ${brand.siteName}`}><BrandIdentity compact /></a><div><span>ÁREA DO JOGADOR</span><h1>Seus números,<br />seu perfil, sua pelada.</h1><p>Associe sua conta ao seu jogador e acompanhe atributos, momentum e histórico de partidas.</p></div><small>{brand.siteTagline}</small></section><form className="member-access-card" onSubmit={submit}>
     {mode === "login" || mode === "register" ? <div className="member-access-tabs"><button type="button" className={mode === "login" ? "on" : ""} onClick={() => changeMode("login")}>Entrar</button><button type="button" className={mode === "register" ? "on" : ""} onClick={() => changeMode("register")}>Criar conta</button></div> : null}
-    <div className="ball">{mode === "request" ? "✉️" : mode === "reset" ? "🔐" : "⚽"}</div><h2>{heading}</h2><p>{description}</p>
+    <div className={`ball member-access-logo${brand.logoUrl ? " has-image" : ""}`} aria-hidden="true">{accountLogo}</div><h2>{heading}</h2><p>{description}</p>
     {error && <div className="alert error">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b></div>}
     {mode !== "reset" && <label>{mode === "login" ? "E-mail ou usuário" : "E-mail"}<input type={mode === "login" ? "text" : "email"} value={email} onChange={event => setEmail(event.target.value)} autoComplete={mode === "login" ? "username" : "email"} required /></label>}
     {mode !== "request" && <label>{mode === "reset" ? "Nova senha" : "Senha"}<input type="password" minLength={mode === "login" ? undefined : 8} value={password} onChange={event => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} required />{mode === "reset" && <small>Mínimo de 8 caracteres.</small>}</label>}

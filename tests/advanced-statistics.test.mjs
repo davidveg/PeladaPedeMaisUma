@@ -127,4 +127,9 @@ test("a rede de entrosamento mantém altura própria e seletor separado do títu
   assert.match(styles, /\.advanced-two-columns\{align-items:start\}/);
   assert.match(styles, /\.advanced-two-columns>\.advanced-section\{height:auto\}/);
   assert.match(styles, /\.network-section \.network-picker\{max-width:300px;margin:0 0 20px auto\}/);
+  assert.match(styles, /No celular, preserva a mesma rede radial do desktop/);
+  assert.match(styles, /\.network-section \.chemistry-network\{min-height:390px;padding:0\}/);
+  assert.match(styles, /\.network-section \.network-center\{position:absolute/);
+  assert.match(styles, /\.network-section \.network-spokes\{position:absolute;inset:0;display:block/);
+  assert.match(styles, /\.network-section \.network-spokes article>span\{display:block/);
 });

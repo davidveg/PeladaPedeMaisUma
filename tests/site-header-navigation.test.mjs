@@ -131,12 +131,26 @@ test("menu lateral mostra o mês atual calculado e o andamento da temporada", as
   assert.match(publicConfig, /instance, season/);
 });
 
-test("acesso do jogador usa a mesma superfície escura do layout atual", async () => {
-  const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
+test("acesso e cadastro do jogador acompanham a identidade configurável", async () => {
+  const [theme, member] = await Promise.all([
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/conta/MemberApp.tsx", import.meta.url), "utf8"),
+  ]);
 
-  assert.match(theme, /\.member-access \{[\s\S]*?#0f1612/);
-  assert.match(theme, /\.member-access-card \{[\s\S]*?background:\s*#18211d/);
-  assert.match(theme, /\.member-access-tabs button\.on \{[\s\S]*?color:\s*#d3eb7a/);
+  assert.match(theme, /\.member-access \{[\s\S]*?var\(--management-background/);
+  assert.match(theme, /\.member-access-copy \{[\s\S]*?var\(--public-sidebar/);
+  assert.match(theme, /\.member-access-card \{[\s\S]*?background:\s*var\(--management-surface/);
+  assert.match(theme, /\.member-access-tabs button\.on \{[\s\S]*?var\(--management-button/);
+  assert.match(member, /<BrandIdentity compact \/>/);
+  assert.match(member, /brand\.logoUrl \? <img src=\{brand\.logoUrl\}/);
+});
+
+test("opções do modo carreira ocupam linhas próprias no celular", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(styles, /@media\(max-width:760px\)\{\.career-config-head\{[^}]*flex-direction:column/);
+  assert.match(styles, /\.career-switches\{[^}]*width:100%/);
+  assert.match(styles, /\.career-switches>\.career-switch\{[^}]*grid-template-columns:24px minmax\(0,1fr\) 20px/);
 });
 
 test("a apresentação das estatísticas avançadas não herda o cabeçalho fixo global", async () => {

@@ -9,3 +9,26 @@
 .advanced-two-columns>.advanced-section{height:auto}
 .network-section .network-picker{max-width:300px;margin:0 0 20px auto}
 @media(max-width:680px){.network-section .network-picker{max-width:none;margin:0 0 16px}}
+
+/* No celular, preserva a mesma rede radial do desktop em uma escala menor. */
+@media(max-width:680px){
+  .network-section .chemistry-network{min-height:390px;padding:0}
+  .network-section .network-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+  .network-section .network-center .player-photo{width:66px;height:66px;border-width:4px}
+  .network-section .network-center b{max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .network-section .network-spokes{position:absolute;inset:0;display:block;margin:0}
+  .advanced-statistics-page .network-section .network-spokes article,
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(n){position:absolute;left:50%;top:50%;display:flex;width:72px;min-width:0;align-items:center;flex-direction:column;padding:0;border:0;background:transparent;box-shadow:none}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(1){transform:translate(-50%,-50%) translate(0,-132px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(2){transform:translate(-50%,-50%) translate(clamp(70px,24vw,96px),-94px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(3){transform:translate(-50%,-50%) translate(clamp(82px,28vw,112px),24px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(4){transform:translate(-50%,-50%) translate(clamp(58px,20vw,78px),110px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(5){transform:translate(-50%,-50%) translate(clamp(-78px,-20vw,-58px),110px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(6){transform:translate(-50%,-50%) translate(clamp(-112px,-28vw,-82px),24px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(7){transform:translate(-50%,-50%) translate(clamp(-96px,-24vw,-70px),-94px)}
+  .advanced-statistics-page .network-section .network-spokes article:nth-child(8){transform:translate(-50%,-50%) translate(0,132px)}
+  .network-section .network-spokes article>span{display:block;width:138px}
+  .network-section .network-spokes .player-photo{width:40px;height:40px;border-width:2px}
+  .network-section .network-spokes b{max-width:72px;font-size:8px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .network-section .network-spokes small{max-width:72px;font-size:7px;line-height:1.25;white-space:nowrap}
+}
