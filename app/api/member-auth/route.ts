@@ -1,8 +1,8 @@
 import { audit, currentPlayerAccount, db, ensureDb, hashOpaqueToken, hashPassword, verifyPassword } from "../../../lib/database";
+import { normalizeEmail } from "../../../lib/email";
 import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../lib/login-rate-limit";
 import { isAuthenticationTransportAllowed, secureTransportRequiredResponse, sessionCookie } from "../../../lib/secure-transport";
 
-const emailPattern = /^\S+@\S+\.\S+$/;
 const noStoreHeaders = () => new Headers({ "content-type": "application/json", "cache-control": "no-store, max-age=0", pragma: "no-cache" });
 
 export async function GET(request: Request) {
@@ -47,8 +47,8 @@ export async function PUT(request: Request) {
   if (!await isAuthenticationTransportAllowed(request)) return secureTransportRequiredResponse();
   await ensureDb();
   const payload = await request.json().catch(() => ({})) as any;
-  const email = String(payload.email || "").trim().toLowerCase(), password = String(payload.password || ""), confirmation = String(payload.confirmation || "");
-  if (!emailPattern.test(email)) return Response.json({ error: "Informe um e-mail válido." }, { status: 400 });
+  const email = normalizeEmail(payload.email), password = String(payload.password || ""), confirmation = String(payload.confirmation || "");
+  if (!email) return Response.json({ error: "Informe um e-mail válido." }, { status: 400 });
   if (password.length < 8) return Response.json({ error: "A senha deve ter pelo menos 8 caracteres." }, { status: 400 });
   if (password !== confirmation) return Response.json({ error: "A confirmação da senha não corresponde." }, { status: 400 });
   if (await db().prepare(`SELECT id FROM administrators WHERE email=?`).bind(email).first()) return Response.json({ error: "Este e-mail já pertence a uma conta administrativa. Use a opção Entrar." }, { status: 409 });

@@ -1,4 +1,5 @@
 import { audit, db, ensureDb, hashPassword } from "../../../lib/database";
+import { normalizeEmail } from "../../../lib/email";
 import { logEvent } from "../../../lib/logger";
 import { createPasswordResetToken, hashPasswordResetToken, validNewPassword, validPasswordResetToken } from "../../../lib/password-reset-token";
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
@@ -16,8 +17,8 @@ export async function POST(request: Request) {
   }
 
   const payload = await request.json().catch(() => ({})) as { email?: string };
-  const email = String(payload.email ?? "").trim().toLowerCase();
-  const admin = /^\S+@\S+\.\S+$/.test(email) ? await db().prepare(`SELECT id,email FROM administrators WHERE email=? AND active=1`).bind(email).first<Administrator>() : null;
+  const email = normalizeEmail(payload.email);
+  const admin = email ? await db().prepare(`SELECT id,email FROM administrators WHERE email=? AND active=1`).bind(email).first<Administrator>() : null;
   if (!admin) {
     logEvent("info", "password_reset_requested", { accountFound: false });
     return Response.json({ ok: true, message: genericMessage }, { status: 202 });

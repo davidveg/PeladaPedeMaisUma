@@ -1,6 +1,7 @@
 /* Database rows are narrowed at the endpoint boundary. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb, hashPassword } from "../../../lib/database";
+import { normalizeEmail } from "../../../lib/email";
 import { logEvent } from "../../../lib/logger";
 import { createPasswordResetToken, hashPasswordResetToken, validNewPassword, validPasswordResetToken } from "../../../lib/password-reset-token";
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
@@ -15,8 +16,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "O envio de e-mail ainda não está configurado. Contate o administrador do sistema." }, { status: 503 });
   }
   const payload = await request.json().catch(() => ({})) as { email?: string };
-  const email = String(payload.email ?? "").trim().toLowerCase();
-  const member: any = /^\S+@\S+\.\S+$/.test(email)
+  const email = normalizeEmail(payload.email);
+  const member: any = email
     ? await db().prepare(`SELECT id,email FROM member_accounts WHERE email=? AND active=1`).bind(email).first()
     : null;
   if (!member) {

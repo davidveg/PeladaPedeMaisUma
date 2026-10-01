@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, currentStaff, db, ensureDb, hashOpaqueToken, hashPassword, verifyPassword } from "../../../lib/database";
 import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../lib/login-rate-limit";
+import { normalizeEmail } from "../../../lib/email";
 import { isAuthenticationTransportAllowed, secureTransportRequiredResponse, sessionCookie } from "../../../lib/secure-transport";
 
 export async function GET(request:Request){
@@ -39,8 +40,8 @@ export async function POST(request:Request){
 
 export async function PUT(request:Request){
   const staff:any=await currentStaff(request);if(!staff||staff.accountType!=="administrator")return Response.json({error:"Não autorizado"},{status:401});
-  const payload=await request.json() as any;if(!/^\S+@\S+\.\S+$/.test(payload.email)||!payload.password||payload.password.length<8||payload.password==="admin")return Response.json({error:"Informe e-mail válido e senha de ao menos 8 caracteres."},{status:400});
-  const now=new Date().toISOString(),token=(request.headers.get("cookie")||"").match(/ppm_session=([^;]+)/)?.[1]||"",sessionHash=await hashOpaqueToken(token),hash=await hashPassword(payload.password),email=payload.email.toLowerCase();await db().batch([db().prepare(`UPDATE administrators SET email=?,password_hash=?,must_change_password=0,updated_at=? WHERE id=?`).bind(email,hash,now,staff.id),db().prepare(`DELETE FROM sessions WHERE administrator_id=? AND id<>?`).bind(staff.id,sessionHash),db().prepare(`UPDATE mobile_sessions SET revoked_at=COALESCE(revoked_at,?) WHERE account_type='administrator' AND account_id=?`).bind(now,staff.id)]);await audit(staff.id,"CHANGE_PASSWORD","administrator",staff.id,{email,passwordChanged:true,otherSessionsRevoked:true,mobileSessionsRevoked:true},{email:staff.email});return Response.json({ok:true});
+  const payload=await request.json() as any,email=normalizeEmail(payload.email);if(!email||!payload.password||payload.password.length<8||payload.password==="admin")return Response.json({error:"Informe e-mail válido e senha de ao menos 8 caracteres."},{status:400});
+  const now=new Date().toISOString(),token=(request.headers.get("cookie")||"").match(/ppm_session=([^;]+)/)?.[1]||"",sessionHash=await hashOpaqueToken(token),hash=await hashPassword(payload.password);await db().batch([db().prepare(`UPDATE administrators SET email=?,password_hash=?,must_change_password=0,updated_at=? WHERE id=?`).bind(email,hash,now,staff.id),db().prepare(`DELETE FROM sessions WHERE administrator_id=? AND id<>?`).bind(staff.id,sessionHash),db().prepare(`UPDATE mobile_sessions SET revoked_at=COALESCE(revoked_at,?) WHERE account_type='administrator' AND account_id=?`).bind(now,staff.id)]);await audit(staff.id,"CHANGE_PASSWORD","administrator",staff.id,{email,passwordChanged:true,otherSessionsRevoked:true,mobileSessionsRevoked:true},{email:staff.email});return Response.json({ok:true});
 }
 
 export async function DELETE(request:Request){
