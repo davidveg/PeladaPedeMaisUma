@@ -13,7 +13,8 @@ export const players = sqliteTable("players", {
   tacticalIntelligence: real("tactical_intelligence").notNull().default(3), competitiveness: real("competitiveness").notNull().default(3),
   goalkeeperPositioning: real("goalkeeper_positioning").notNull().default(3), goalExit: real("goal_exit").notNull().default(3),
   goalkeeperSafety: real("goalkeeper_safety").notNull().default(3), goalkeeperLeadership: real("goalkeeper_leadership").notNull().default(3),
-  momentum: real("momentum").notNull().default(0), resultMomentum: real("result_momentum").notNull().default(0), votingMomentum: real("voting_momentum").notNull().default(0), photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
+  momentum: real("momentum").notNull().default(0), resultMomentum: real("result_momentum").notNull().default(0), votingMomentum: real("voting_momentum").notNull().default(0),
+  careerRatingAdjustment: real("career_rating_adjustment").notNull().default(0), photoUrl: text("photo_url"), active: integer("active", { mode: "boolean" }).notNull().default(true), notes: text("notes"),
   deletedAt: text("deleted_at"), ...timestamps,
 });
 
@@ -287,3 +288,21 @@ export const careerSeasonAwards = sqliteTable("career_season_awards", {
   seasonNumber: integer("season_number").primaryKey(), year: integer("year").notNull(), startedAt: text("started_at"), endedAt: text("ended_at").notNull(),
   snapshot: text("snapshot").notNull(), finalizedByAdministratorId: text("finalized_by_administrator_id").notNull(), finalizedAt: text("finalized_at").notNull(),
 }, table => [index("career_season_awards_year_idx").on(table.year, table.seasonNumber)]);
+
+export const careerSeasonRatingReviews = sqliteTable("career_season_rating_reviews", {
+  seasonNumber: integer("season_number").primaryKey(), status: text("status").notNull().default("PROPOSED"),
+  formulaVersion: integer("formula_version").notNull(), snapshot: text("snapshot").notNull(),
+  createdByAdministratorId: text("created_by_administrator_id").notNull(), createdAt: text("created_at").notNull(),
+  appliedByAdministratorId: text("applied_by_administrator_id"), appliedAt: text("applied_at"),
+});
+
+export const playerSeasonRatingAdjustments = sqliteTable("player_season_rating_adjustments", {
+  id: text("id").primaryKey(), seasonNumber: integer("season_number").notNull(), playerId: text("player_id").notNull(),
+  previousAdjustment: real("previous_adjustment").notNull(), proposedDelta: real("proposed_delta").notNull(),
+  appliedDelta: real("applied_delta").notNull(), newAdjustment: real("new_adjustment").notNull(),
+  metricsSnapshot: text("metrics_snapshot").notNull(), formulaVersion: integer("formula_version").notNull(),
+  appliedByAdministratorId: text("applied_by_administrator_id").notNull(), appliedAt: text("applied_at").notNull(),
+}, table => [
+  uniqueIndex("player_season_rating_adjustment_unique").on(table.seasonNumber, table.playerId),
+  index("player_season_rating_adjustment_player_idx").on(table.playerId, table.seasonNumber),
+]);

@@ -32,6 +32,15 @@ async function checkAndResetSeason(now: Date) {
   const row: any = await db().prepare(`SELECT season_duration_months,season_started_at,next_season_reset_at,season_number FROM career_configuration WHERE id=1`).first();
   if (!row?.next_season_reset_at || new Date(row.next_season_reset_at).getTime() > now.getTime()) return false;
 
+  // Seasons with recorded matches require the administrator-facing rating preview.
+  // Empty seasons can still roll automatically, preserving the previous scheduler behavior.
+  const matchRows = await db().prepare(`SELECT config_snapshot FROM career_matches`).all();
+  const hasCurrentSeasonMatches = (matchRows.results as any[]).some(match => {
+    try { return Number(JSON.parse(String(match.config_snapshot || "{}")).seasonNumber || 1) === Number(row.season_number || 1); }
+    catch { return false; }
+  });
+  if (hasCurrentSeasonMatches) return false;
+
   const durationMonths = Number(row.season_duration_months || 12);
   const previousResetAt = String(row.next_season_reset_at);
   const nextResetAt = nextSeasonResetAt(previousResetAt, durationMonths, now).toISOString();

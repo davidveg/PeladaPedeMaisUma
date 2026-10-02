@@ -21,6 +21,7 @@ const map = (row: any) => ({
   momentum: Number(row.momentum ?? 0),
   resultMomentum: Number(row.result_momentum ?? 0),
   votingMomentum: Number(row.voting_momentum ?? 0),
+  careerRatingAdjustment: Number(row.career_rating_adjustment ?? 0),
   aliases: JSON.parse(row.aliases || "[]"),
   active: Boolean(row.active),
 });

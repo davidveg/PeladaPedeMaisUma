@@ -10,6 +10,9 @@ test("a visão geral alterna entre partida aberta e última pelada", async () =>
   assert.match(source, /data\.openMatch\|\|data\.latestMatch/);
   assert.match(source, /Confirmar presença/);
   assert.match(source, /Ver resultado/);
+  assert.match(source, /className="overview-score-team blue"/);
+  assert.match(source, /className="overview-score-team yellow"/);
+  assert.match(source, /aria-label=\{`Placar final:/);
   assert.match(route, /m\.status='OPEN'/);
   assert.match(route, /monthly_career_awards/);
 });
@@ -32,5 +35,8 @@ test("a visão geral reúne jogador, equilíbrio e histórico", async () => {
   assert.match(styles, /\.overview-balance-bar\.even>i b\{background:var\(--muted/);
   assert.match(styles, /\.overview-balance-bar\.blue>i b\{background:var\(--blue\)/);
   assert.match(styles, /\.overview-balance-bar\.yellow>i b\{background:var\(--yellow\)/);
+  assert.match(styles, /\.overview-last-score \.overview-score-team\{--score-team:var\(--blue\)[^}]*background:linear-gradient/);
+  assert.match(styles, /\.overview-last-score \.overview-score-team\.yellow\{--score-team:var\(--yellow\)\}/);
+  assert.match(styles, /box-shadow:inset 0 -4px 0 var\(--score-team\)/);
   assert.match(styles, /@media\(max-width:560px\)/);
 });

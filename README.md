@@ -50,9 +50,9 @@ Documentação complementar:
 - Correspondência por nome de exibição, nome completo, apelido e aliases.
 - Foto individual com avatar padrão quando não houver imagem.
 - Notas decimais entre 1 e 5:
-  - jogadores de linha: Velocidade, Habilidade e Marcação;
-  - goleiros: Habilidade, Posicionamento e Saída de Gol;
-  - todos os jogadores: Momentum.
+  - jogadores de linha: Físico, Técnica, Marcação, Inteligência Tática e Competitividade;
+  - goleiros: Defesas, Posicionamento, Jogo com os Pés, Segurança e Liderança;
+  - todos os jogadores: Evolução permanente de carreira e Momentum temporário.
 - Contas comuns e administrativas podem ser associadas a um jogador.
 - Cada conta aceita um único jogador e cada jogador aceita um único login, independentemente do tipo da conta.
 - A área **Minha conta** permite visualizar o card e atualizar foto, nome completo, apelido, posição principal, posição secundária e observações.
@@ -137,8 +137,11 @@ Documentação complementar:
 - Compartilhamento do resultado final da votação pelo WhatsApp.
 - Momentum separado por origem: resultados de partidas e votações.
 - Multiplicadores independentes e configuráveis para o Momentum de resultados e o Momentum das votações.
-- Temporadas automáticas com duração configurável entre 1 e 120 meses; a primeira virada é agendada por padrão para o fim do ano corrente.
-- Na virada da temporada, os dois saldos de Momentum são zerados sem apagar jogos, vitórias, derrotas, gols, assistências ou o histórico das partidas.
+- Temporadas com duração configurável entre 1 e 120 meses; temporadas vazias avançam automaticamente e temporadas com partidas aguardam o fechamento administrativo.
+- O fechamento ocorre em duas etapas: uma prévia auditável e, depois da confirmação, a aplicação definitiva da evolução de carreira.
+- A evolução usa o IPI bruto por posição com confiança progressiva, exige ao menos 5 jogos e é limitada a ±0,20 por temporada e ±0,60 acumulado.
+- Se partidas, jogadores ou pesos estatísticos mudarem depois da prévia, o sistema exige seu recálculo antes da aplicação.
+- Na aplicação da temporada, os dois saldos de Momentum são zerados sem apagar jogos, vitórias, derrotas, gols, assistências ou o histórico das partidas.
 - Partidas e votações de temporadas anteriores permanecem consultáveis, mas não reaplicam Momentum na temporada atual.
 - Reconhecimentos de Parceiro, Fair Play e Defesa da rodada, além dos melhores e piores da votação.
 - Fechamento mensal automático após a última partida regular elegível, ou manual pelo administrador, com snapshot permanente do destaque e da Seleção do Mês.
@@ -375,6 +378,7 @@ Para jogadores de linha, o overall base usa:
 Velocidade × pesoVelocidade
 + Habilidade × pesoHabilidade
 + Marcação × pesoMarcação
++ Evolução permanente de carreira
 + Momentum de vitórias e derrotas
 + Momentum das votações × multiplicadorMomentum
 ```

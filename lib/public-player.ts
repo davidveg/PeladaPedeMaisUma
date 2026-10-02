@@ -19,6 +19,7 @@ export function publicPlayer(row: any): Player {
     goalkeeperSafety: Number(row.goalkeeper_safety ?? row.goalkeeperSafety ?? 3),
     goalkeeperLeadership: Number(row.goalkeeper_leadership ?? row.goalkeeperLeadership ?? 3),
     momentum: Number(row.momentum ?? 0),
+    careerRatingAdjustment: Number(row.career_rating_adjustment ?? row.careerRatingAdjustment ?? 0),
     ...(row.result_momentum != null || row.voting_momentum != null || row.resultMomentum != null || row.votingMomentum != null ? {
       resultMomentum: Number(row.result_momentum ?? row.resultMomentum ?? 0),
       votingMomentum: Number(row.voting_momentum ?? row.votingMomentum ?? 0),

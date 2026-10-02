@@ -1,7 +1,7 @@
 import { finalizeMonthlyCareerAward, finalizeSeasonAwards, getCareerAwardControl } from "../../../../lib/career-awards";
-import { resetCareerSeasonNow } from "../../../../lib/career-season";
 import { finalizeCareerMatch, getCareerConfig } from "../../../../lib/career-service";
 import { adminRequired, db, ensureDb } from "../../../../lib/database";
+import { applySeasonRatingReview, createSeasonRatingReview } from "../../../../lib/season-rating";
 
 const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -14,9 +14,9 @@ export async function POST(request: Request) {
   const administrator: any = await adminRequired(request);
   if (!administrator) return Response.json({ error: "Não autorizado" }, { status: 401 });
   await ensureDb();
-  const payload = await request.json().catch(() => ({})) as any, action = String(payload.action || "");
+  const payload = await request.json().catch(() => ({})) as any, requestedAction = String(payload.action || ""), action = requestedAction === "FINALIZE_SEASON" ? "PREVIEW_SEASON" : requestedAction;
   try {
-    if (payload.confirmation !== action || !["FINALIZE_MONTH", "FINALIZE_SEASON"].includes(action)) {
+    if (payload.confirmation !== requestedAction || !["FINALIZE_MONTH", "FINALIZE_SEASON", "PREVIEW_SEASON", "APPLY_SEASON"].includes(requestedAction)) {
       throw statusError("A confirmação final do encerramento não foi recebida.", 400);
     }
     if (action === "FINALIZE_MONTH") {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       const result = await finalizeMonthlyCareerAward(month, "MANUAL_MONTH", administrator.id);
       return Response.json({ ok: true, award: result.award, message: result.created ? `Resultados de ${monthLabel(month)} consolidados.` : `Os resultados de ${monthLabel(month)} já estavam consolidados.` });
     }
-    if (action === "FINALIZE_SEASON") {
+    if (action === "PREVIEW_SEASON") {
       const config = await getCareerConfig(), today = new Date().toISOString().slice(0, 10);
       const rows = (await db().prepare(`SELECT c.id,c.status,c.config_snapshot,s.match_date FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE s.deleted_at IS NULL AND s.match_date<=? ORDER BY s.match_date`).bind(today).all()).results as any[];
       const seasonRows = rows.filter(row => Number(parseJson(row.config_snapshot, {}).seasonNumber ?? 1) === config.seasonNumber);
@@ -37,8 +37,13 @@ export async function POST(request: Request) {
       const months = [...new Set(seasonRows.map(row => String(row.match_date).slice(0, 7)).filter(month => monthPattern.test(month)))].sort();
       for (const month of months) await finalizeMonthlyCareerAward(month, "MANUAL_SEASON", administrator.id);
       const seasonAwards = await finalizeSeasonAwards({ seasonNumber: config.seasonNumber, startedAt: config.seasonStartedAt || null, endedAt: today, administratorId: administrator.id });
-      const next = await resetCareerSeasonNow(administrator.id);
-      return Response.json({ ok: true, seasonAwards: seasonAwards.snapshot, season: next, message: `Temporada ${config.seasonNumber} encerrada; os resultados foram preservados e a temporada ${next.seasonNumber} foi iniciada.` });
+      const ratingReview = await createSeasonRatingReview({ seasonNumber: config.seasonNumber, startedAt: config.seasonStartedAt || null, endedAt: today, administratorId: administrator.id });
+      return Response.json({ ok: true, seasonAwards: seasonAwards.snapshot, ratingReview, message: `Prévia da temporada ${config.seasonNumber} gerada. Revise os ajustes antes de iniciar a próxima temporada.` });
+    }
+    if (action === "APPLY_SEASON") {
+      const config = await getCareerConfig();
+      const result = await applySeasonRatingReview({ seasonNumber: config.seasonNumber, administratorId: administrator.id });
+      return Response.json({ ok: true, ratingReview: result, season: { previousSeasonNumber: config.seasonNumber, seasonNumber: result.nextSeasonNumber, seasonStartedAt: result.appliedAt, nextSeasonResetAt: result.nextSeasonResetAt }, message: `Evolução da temporada ${config.seasonNumber} aplicada; a temporada ${result.nextSeasonNumber} foi iniciada.` });
     }
     throw statusError("Ação de encerramento inválida.", 400);
   } catch (error: any) {

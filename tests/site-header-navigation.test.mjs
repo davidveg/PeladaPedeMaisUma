@@ -18,6 +18,8 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.doesNotMatch(source, /link\("separations"/);
   assert.match(source, /link\("overview", "\/visao-geral", "Visão geral"\)/);
   assert.match(source, /link\("matches", "\/partidas", "Partidas"\)/);
+  assert.match(source, /matches: "calendar"/);
+  assert.match(source, /<NavigationIcon name=\{navigationIcons\[section\]/);
   assert.match(source, /link\("admin", "\/admin", "Painel Administrativo"\)/);
   assert.match(source, /href="\/visao-geral" className="brand"/);
   assert.doesNotMatch(source, /scrollIntoView/);
@@ -105,7 +107,25 @@ test("menu administrativo amplia os ícones móveis sem alargar os itens", async
     .find(block => block.includes(".admin-shell aside > button")) || "";
 
   assert.match(mobile, /\.admin-shell aside > button \{[\s\S]*?min-width:\s*64px;[\s\S]*?padding:\s*5px 8px/);
-  assert.match(mobile, /\.admin-nav-icon \{[\s\S]*?width:\s*24px;[\s\S]*?height:\s*22px;[\s\S]*?font-size:\s*20px/);
+  assert.match(mobile, /\.admin-nav-icon \{[\s\S]*?width:\s*24px;[\s\S]*?height:\s*24px;[\s\S]*?font-size:\s*0/);
+});
+
+test("menus público e administrativo compartilham o mesmo conjunto vetorial de ícones", async () => {
+  const [header, admin, icons, theme] = await Promise.all([
+    readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/NavigationIcon.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+  ]);
+
+  for (const mapping of [/overview: "dashboard"/, /matches: "calendar"/, /players: "players"/]) assert.match(header, mapping);
+  for (const mapping of [/overview:'dashboard'/, /matches:'calendar'/, /players:'players'/]) assert.match(admin, mapping);
+  assert.match(admin, /<NavigationIcon name=\{navigationIcons\[id\]\}/);
+  assert.match(icons, /className="navigation-icon-svg"/);
+  assert.match(icons, /stroke="currentColor"/);
+  assert.doesNotMatch(header, /📅|♙|▦/);
+  assert.doesNotMatch(admin.match(/const navigationIcons:[^\n]+/)?.[0] || "", /[▦♙▤◉◎◌◇≋★≡]/);
+  assert.match(theme, /\.site-nav-icon \.navigation-icon-svg,[\s\S]*\.admin-nav-icon \.navigation-icon-svg \{[\s\S]*width:\s*18px;[\s\S]*height:\s*18px;[\s\S]*stroke-width:\s*1\.8/);
 });
 
 test("menu lateral mostra o mês atual calculado e o andamento da temporada", async () => {

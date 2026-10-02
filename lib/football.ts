@@ -1,6 +1,6 @@
 export type Position = "Defesa" | "Meio-campo" | "Ataque" | "Goleiro";
 export type PlayerCareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
-export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; secondaryPosition?: Position | null; speed: number; skill: number; marking?: number; tacticalIntelligence?: number; competitiveness?: number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?: number; goalkeeperLeadership?: number; momentum?: number; resultMomentum?: number; votingMomentum?: number; historicalPerformance?: { adjustment: number; confidence: number; games: number; recentMatches: number; [key: string]: number }; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
+export type Player = { id: string; fullName: string; displayName: string; nickname?: string | null; aliases?: string[]; type: string; primaryPosition: Position; secondaryPosition?: Position | null; speed: number; skill: number; marking?: number; tacticalIntelligence?: number; competitiveness?: number; goalkeeperPositioning?: number; goalExit?: number; goalkeeperSafety?: number; goalkeeperLeadership?: number; momentum?: number; resultMomentum?: number; votingMomentum?: number; careerRatingAdjustment?: number; historicalPerformance?: { adjustment: number; confidence: number; games: number; recentMatches: number; [key: string]: number }; careerStats?: PlayerCareerStats; photoUrl?: string | null; notes?: string | null; active?: boolean };
 export type Config = { speedWeight: number; skillWeight: number; markingWeight: number; tacticalIntelligenceWeight?: number; competitivenessWeight?: number; goalkeeperDefensesWeight?: number; goalkeeperPositioningWeight?: number; goalkeeperSafetyWeight?: number; goalkeeperFootworkWeight?: number; goalkeeperLeadershipWeight?: number; ratingSystemVersion?: number; resultMomentumMultiplier?: number; momentumMultiplier?: number; historicalLearningEnabled?: boolean; showContributions?: boolean; cardTiersEnabled?: boolean; cardBronzeMax?: number; cardSilverMax?: number; cardGoldMax?: number; maximumPositionDifference?: number; protectedTopPlayersPercentage: number; algorithmAttempts: number };
 
 export const defaultConfig: Config = { speedWeight: .35, skillWeight: .25, markingWeight: .15, tacticalIntelligenceWeight: .2, competitivenessWeight: .05, goalkeeperDefensesWeight: .4, goalkeeperPositioningWeight: .25, goalkeeperSafetyWeight: .2, goalkeeperFootworkWeight: .1, goalkeeperLeadershipWeight: .05, ratingSystemVersion: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, historicalLearningEnabled: false, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, maximumPositionDifference: 1, protectedTopPlayersPercentage: .25, algorithmAttempts: 2500 };
@@ -16,18 +16,20 @@ export const momentumContribution = (p: Player, c: Config = defaultConfig) => {
   if (!hasSeparatedSources) return (p.momentum ?? 0) * (c.momentumMultiplier ?? 1);
   return (p.resultMomentum ?? 0) * (c.resultMomentumMultiplier ?? 1) + (p.votingMomentum ?? 0) * (c.momentumMultiplier ?? 1);
 };
-export const score = (p: Player, c = defaultConfig) => {
+export const attributeRating = (p: Player, c: Config = defaultConfig) => {
   const attributes=playerAttributes(p);
   const goalkeeper=p.primaryPosition==="Goleiro"||p.type==="goalkeeper";
   const hasExpandedRatings=goalkeeper?(p.goalkeeperSafety!=null||p.goalkeeperLeadership!=null):(p.tacticalIntelligence!=null||p.competitiveness!=null);
-  const base=modernRatingSystem(c)&&!hasExpandedRatings
+  return modernRatingSystem(c)&&!hasExpandedRatings
     ? attributes.speed*.48+attributes.skill*.32+attributes.marking*.2
     : !modernRatingSystem(c)
     ? attributes.speed*c.speedWeight+attributes.skill*c.skillWeight+attributes.marking*c.markingWeight
     : goalkeeper
       ? attributes.skill*(c.goalkeeperDefensesWeight??.4)+attributes.speed*(c.goalkeeperPositioningWeight??.25)+attributes.tacticalIntelligence*(c.goalkeeperSafetyWeight??.2)+attributes.marking*(c.goalkeeperFootworkWeight??.1)+attributes.competitiveness*(c.goalkeeperLeadershipWeight??.05)
       : attributes.speed*c.speedWeight+attributes.skill*c.skillWeight+attributes.marking*c.markingWeight+attributes.tacticalIntelligence*(c.tacticalIntelligenceWeight??.2)+attributes.competitiveness*(c.competitivenessWeight??.05);
-  const raw=base+momentumContribution(p,c);
+};
+export const score = (p: Player, c = defaultConfig) => {
+  const raw=attributeRating(p,c)+Number(p.careerRatingAdjustment??0)+momentumContribution(p,c);
   return Math.round(Math.max(1,Math.min(5,raw))*10)/10;
 };
 export const historicalLearningContribution = (p: Player, c: Config = defaultConfig) => c.historicalLearningEnabled ? Number(p.historicalPerformance?.adjustment ?? 0) : 0;

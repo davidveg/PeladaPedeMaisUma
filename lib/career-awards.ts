@@ -5,6 +5,7 @@ import { audit, db, ensureDb } from "./database";
 import { logEvent } from "./logger";
 import { buildAnnualMvpFromAwards, buildMonthAward, type MonthlyCareerAward, type StatisticsMatch, type StatisticsPlayer } from "./public-statistics";
 import { isLastRegularMatchOfMonth } from "./career-award-calendar";
+import { getSeasonRatingReview } from "./season-rating";
 
 const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -65,12 +66,14 @@ export async function getCareerAwardControl(referenceDate = new Date().toISOStri
     db().prepare(`SELECT COUNT(*) match_count,SUM(CASE WHEN c.status<>'CLOSED' THEN 1 ELSE 0 END) open_votes FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE s.deleted_at IS NULL AND substr(s.match_date,1,7)=?`).bind(month).first<any>(),
     db().prepare(`SELECT season_number,started_at,ended_at,finalized_at FROM career_season_awards ORDER BY season_number DESC LIMIT 1`).first<any>(),
   ]);
+  const seasonNumber = Number(config?.season_number || 1);
   return {
     currentMonth: month,
     finalizedMonths: (finalized.results as any[]).map(row => ({ month: String(row.month), finalizedAt: String(row.finalized_at) })),
     currentMonthMatchCount: Number(monthCounts?.match_count || 0),
     currentMonthOpenVotes: Number(monthCounts?.open_votes || 0),
-    season: { number: Number(config?.season_number || 1), startedAt: config?.season_started_at || null, nextResetAt: config?.next_season_reset_at || null },
+    season: { number: seasonNumber, startedAt: config?.season_started_at || null, nextResetAt: config?.next_season_reset_at || null },
+    ratingReview: await getSeasonRatingReview(seasonNumber),
     lastSeasonClosure: lastSeason ? { seasonNumber: Number(lastSeason.season_number), startedAt: lastSeason.started_at, endedAt: lastSeason.ended_at, finalizedAt: lastSeason.finalized_at } : null,
   };
 }

@@ -573,7 +573,7 @@ function mapPlayer(row: any): Player {
     primaryPosition: row.primary_position, secondaryPosition: row.secondary_position ?? null, speed: Number(row.speed), skill: Number(row.skill),
     marking: Number(row.marking ?? 3), tacticalIntelligence:Number(row.tactical_intelligence??3), competitiveness:Number(row.competitiveness??3), goalkeeperPositioning: Number(row.goalkeeper_positioning ?? row.speed ?? 3),
     goalExit: Number(row.goal_exit ?? row.marking ?? 3), goalkeeperSafety:Number(row.goalkeeper_safety??3), goalkeeperLeadership:Number(row.goalkeeper_leadership??3), momentum: Number(row.momentum ?? 0),
-    resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0),
+    resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), careerRatingAdjustment: Number(row.career_rating_adjustment ?? 0),
     photoUrl: row.photo_url, active: Boolean(row.active),
   };
 }

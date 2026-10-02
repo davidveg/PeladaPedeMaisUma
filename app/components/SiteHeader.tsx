@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 import { NotificationBell } from "./NotificationBell";
+import { NavigationIcon, type NavigationIconName } from "./NavigationIcon";
 
 type SiteSection = "home" | "overview" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
 
@@ -85,10 +86,10 @@ export function SiteHeader({
     const value = Number(new Intl.DateTimeFormat("en-US", { month: "numeric", timeZone: config.timezone || "America/Sao_Paulo" }).format(new Date()));
     return Number.isFinite(value) && value >= 1 && value <= 12 ? value : new Date().getMonth() + 1;
   }, [config.timezone]);
-  const navigationIcons: Partial<Record<SiteSection, string>> = { overview: "▦", matches: "□", players: "♙", statistics: "⌁", finance: "▤", account: "◎", admin: "⚙" };
+  const navigationIcons: Partial<Record<SiteSection, NavigationIconName>> = { overview: "dashboard", matches: "calendar", players: "players", statistics: "statistics", finance: "finance", account: "account", admin: "settings" };
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
-      <span className="site-nav-icon" aria-hidden="true">{navigationIcons[section] || "•"}</span><span>{label}</span>
+      <span className="site-nav-icon" aria-hidden="true"><NavigationIcon name={navigationIcons[section] || "dashboard"}/></span><span>{label}</span>
     </a>
   );
 

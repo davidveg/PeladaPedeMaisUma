@@ -64,6 +64,25 @@ Confiança: **Baixa** abaixo de 5 partidas, **Média** entre 5 e 14 e **Alta** a
 
 Limitações: não há minutos, substituições, desarmes, defesas ou finalizações. Por isso o cálculo representa a partida inteira e usa somente os sinais atualmente armazenados.
 
+## Evolução permanente ao fim da temporada
+
+O encerramento da temporada transforma o desempenho avançado em um ajuste pequeno e persistente no overall, sem reescrever as cinco notas manuais. O overall efetivo passa a ser:
+
+```text
+overall = nota_dos_atributos + evolução_de_carreira + momentum_temporário
+```
+
+A prévia usa o **IPI bruto** da temporada, pois a confiança da amostra é aplicada de forma explícita nesta etapa:
+
+```text
+confiança = min(1, partidas / 15)
+ajuste_bruto = ((IPI_bruto - 50) / 50) × 0,25 × confiança
+```
+
+Somente jogadores com pelo menos 5 partidas e IPI disponível são elegíveis. O ajuste é arredondado em passos de 0,05, limitado a ±0,20 por temporada e mantém a evolução acumulada entre −0,60 e +0,60. O administrador vê IPI, saldo +/− por jogo, confiança, nota atual, ajuste e nova nota antes de confirmar.
+
+A prévia armazena a versão da fórmula, as métricas usadas e uma assinatura das partidas, jogadores e pesos estatísticos. Se qualquer uma dessas fontes mudar, a aplicação é bloqueada até que a prévia seja recalculada. A confirmação grava um livro-razão por jogador, preserva o snapshot da temporada, inicia a seguinte e zera apenas o Momentum temporário.
+
 ## Estatística +/-
 
 Para cada partida em que o jogador participou:

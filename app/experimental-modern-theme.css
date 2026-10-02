@@ -122,12 +122,12 @@ body {
 
 .site-nav-icon {
   display: grid;
-  flex: 0 0 25px;
-  width: 25px;
-  height: 25px;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   place-items: center;
   color: var(--public-sidebar-muted, rgba(255, 255, 255, .72));
-  font-size: 17px;
+  font-size: 0;
   line-height: 1;
 }
 
@@ -1324,12 +1324,21 @@ body {
   height: 24px;
   place-items: center;
   color: color-mix(in srgb, var(--admin-sidebar-contrast, #fff) 68%, transparent);
-  font-size: 15px;
+  font-size: 0;
   line-height: 1;
 }
 
+.site-nav-icon .navigation-icon-svg,
+.admin-nav-icon .navigation-icon-svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+  stroke-width: 1.8;
+}
+
 .admin-shell aside > button.on .admin-nav-icon {
-  color: #e5f58f;
+  color: var(--lime, #e5f58f);
 }
 
 .admin-shell .admin-user {
@@ -1701,9 +1710,8 @@ body {
 
   .admin-nav-icon {
     width: 24px;
-    height: 22px;
-    font-size: 20px;
-    font-weight: 800;
+    height: 24px;
+    font-size: 0;
     line-height: 1;
   }
 
@@ -2373,6 +2381,21 @@ body {
 }
 
 .finance-page .finance-tabs button.active {
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  box-shadow: inset 0 0 0 1px var(--control-line, #4a5851), 0 8px 18px rgba(0, 0, 0, .16);
+}
+
+.finance-page .finance-monthly-tabs {
+  border-color: var(--control-line, #4a5851);
+  background: color-mix(in srgb, var(--control-surface, #202b26) 82%, transparent);
+}
+
+.finance-page .finance-monthly-tabs button {
+  color: var(--muted, #98a69f);
+}
+
+.finance-page .finance-monthly-tabs button.active {
   background: var(--control-surface, #202b26);
   color: var(--control-text, #f2f5f3);
   box-shadow: inset 0 0 0 1px var(--control-line, #4a5851), 0 8px 18px rgba(0, 0, 0, .16);
@@ -3815,6 +3838,122 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   max-width: 100%;
   height: auto;
   aspect-ratio: 1;
+}
+
+/* Career evolution is a permanent headline metric, visually separated from
+   the six match-facing ratings while using the free rail beside the portrait. */
+.player-card-modal .card-side-metrics,
+.member-card .card-side-metrics {
+  position: relative;
+  z-index: 2;
+  align-self: stretch;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0 20px;
+}
+
+.player-card-modal .card-side-metrics .overall,
+.member-card .card-side-metrics .member-overall {
+  align-self: auto;
+  padding-top: 0;
+}
+
+.card-evolution-highlight {
+  display: flex;
+  width: 100%;
+  min-height: 62px;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 8px 4px 7px;
+  border: 1px solid rgba(102, 83, 31, .44);
+  border-radius: 11px;
+  background: rgba(255, 248, 214, .22);
+  text-align: center;
+}
+
+.card-evolution-highlight > b {
+  color: inherit;
+  font: 800 27px/1 Georgia, serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-featured-rating-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  gap: 3px;
+  margin-top: 5px;
+  color: currentColor;
+  font-size: 6.8px;
+  font-weight: 900;
+  letter-spacing: .65px;
+  opacity: .76;
+}
+
+.card-featured-rating-label .card-stat-help {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+.card-featured-rating-label .card-stat-help > button {
+  width: 15px;
+  height: 15px;
+  border-color: currentColor;
+  background: rgba(255, 255, 255, .55);
+  color: inherit;
+  font-size: 9px;
+}
+
+.card-evolution-highlight .card-stat-help > [role="tooltip"] {
+  left: -28px;
+  top: calc(100% + 7px);
+  width: 250px;
+  transform: translateY(-3px);
+  color: #fff;
+  font-size: 10.5px;
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: none;
+}
+
+.card-evolution-highlight .card-stat-help > [role="tooltip"]::before {
+  display: none;
+}
+
+.card-evolution-highlight .card-stat-help:hover > [role="tooltip"],
+.card-evolution-highlight .card-stat-help:focus-within > [role="tooltip"] {
+  transform: translateY(0);
+}
+
+.card-stats > .momentum-stat.positive > b {
+  color: #155e3d;
+}
+
+.card-stats > .momentum-stat.negative > b {
+  color: #8f3028;
+}
+
+.tier-legendary .card-stats > .momentum-stat.positive > b {
+  color: #75f0b0;
+}
+
+.tier-legendary .card-stats > .momentum-stat.negative > b {
+  color: #ff8f82;
+}
+
+.tier-legendary .card-evolution-highlight {
+  border-color: rgba(243, 216, 117, .45);
+  background: rgba(7, 17, 43, .38);
 }
 
 /* Close actions stay discreet and follow the auxiliary controls configured in

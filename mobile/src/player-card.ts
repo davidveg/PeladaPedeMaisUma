@@ -1,5 +1,10 @@
 import type { Player, ProfilePayload } from "./types";
 
+export const PLAYER_RATING_HELP = {
+  evolution: "Ajuste permanente somado ao overall. É calculado ao fim de cada temporada com base no IPI, no desempenho e na quantidade de jogos, e permanece nas temporadas seguintes.",
+  momentum: "Ajuste temporário somado ao overall, gerado por resultados e votações do Modo Carreira. É zerado quando uma nova temporada começa.",
+} as const;
+
 export type PlayerCardTier = "default" | "bronze" | "silver" | "gold" | "legendary";
 export type CardConfig = ProfilePayload["config"];
 export const isKeeper = (player: Player) => player.type === "goalkeeper" || player.primaryPosition === "Goleiro";
@@ -21,7 +26,7 @@ export function playerOverall(player: Player, config: CardConfig) {
   const base=!modern?speed*(config?.speedWeight??.48)+player.skill*(config?.skillWeight??.32)+marking*(config?.markingWeight??.2):goalkeeper
     ?player.skill*(config?.goalkeeperDefensesWeight??.4)+speed*(config?.goalkeeperPositioningWeight??.25)+(player.goalkeeperSafety??3)*(config?.goalkeeperSafetyWeight??.2)+marking*(config?.goalkeeperFootworkWeight??.1)+(player.goalkeeperLeadership??3)*(config?.goalkeeperLeadershipWeight??.05)
     :speed*(config?.speedWeight??.35)+player.skill*(config?.skillWeight??.25)+marking*(config?.markingWeight??.15)+(player.tacticalIntelligence??3)*(config?.tacticalIntelligenceWeight??.2)+(player.competitiveness??3)*(config?.competitivenessWeight??.05);
-  const raw=base+playerMomentumContribution(player,config?.momentumMultiplier??1,config?.resultMomentumMultiplier??1);
+  const raw=base+(player.careerRatingAdjustment??0)+playerMomentumContribution(player,config?.momentumMultiplier??1,config?.resultMomentumMultiplier??1);
   return Math.round(Math.max(1,Math.min(5,raw))*10)/10;
 }
 

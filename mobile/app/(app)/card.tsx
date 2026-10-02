@@ -13,6 +13,7 @@ import {
   playerCardTier,
   playerCardTierLabel,
   playerOverall,
+  PLAYER_RATING_HELP,
   type PlayerCardTier,
 } from "@/player-card";
 import { colors } from "@/theme";
@@ -147,6 +148,9 @@ export default function MyCard() {
   const overall = playerOverall(player, config);
   const tier = playerCardTier(overall, config);
   const palette = palettes[tier];
+  const evolution = Number(player.careerRatingAdjustment ?? 0);
+  const momentum = Number(player.momentum ?? 0);
+  const momentumColor = momentum > 0 ? (tier === "legendary" ? "#75F0B0" : "#155E3D") : momentum < 0 ? (tier === "legendary" ? "#FF8F82" : "#8F3028") : palette.text;
   const career = player.careerStats;
   const openPhotoMenu = () => Alert.alert("Foto do jogador", "Escolha como deseja atualizar a foto exibida no card.", [
     { text: "Escolher da galeria", onPress: () => photoMutation.mutate("choose") },
@@ -205,17 +209,23 @@ export default function MyCard() {
             <Text numberOfLines={2} style={[styles.name, { color: palette.text }]}>{player.displayName}</Text>
             <Text style={[styles.role, { color: palette.muted }]}>Principal: {player.primaryPosition}{player.secondaryPosition ? ` · Secundária: ${player.secondaryPosition}` : ""} · {typeLabel(player.type)}</Text>
           </View>
-          <View style={styles.overall}>
-            <Text style={[styles.overallValue, { color: palette.text }]}>{overall.toFixed(1)}</Text>
-            <Text style={[styles.overallLabel, { color: palette.muted }]}>OVERALL</Text>
+          <View style={styles.topMetrics}>
+            <View style={styles.overall}>
+              <Text style={[styles.overallValue, { color: palette.text }]}>{overall.toFixed(1)}</Text>
+              <Text style={[styles.overallLabel, { color: palette.muted }]}>OVERALL</Text>
+            </View>
+            <View style={[styles.featuredRating, { backgroundColor: palette.stats, borderColor: palette.statsBorder }]}>
+              <Text style={[styles.featuredRatingValue, { color: palette.text }]}>{evolution > 0 ? "+" : ""}{evolution.toFixed(1)}</Text>
+              <View style={styles.featuredRatingLabelRow}><Text style={[styles.featuredRatingLabel, { color: palette.muted }]}>EVOLUÇÃO</Text><Pressable accessibilityRole="button" accessibilityLabel="Ver explicação de Evolução" hitSlop={8} onPress={()=>Alert.alert("Evolução",PLAYER_RATING_HELP.evolution)} style={styles.featuredRatingHelp}><Ionicons name="help-circle-outline" size={16} color={palette.muted}/></Pressable></View>
+            </View>
           </View>
         </View>
 
         <View style={styles.attributes}>
-          {playerAttributes(player).map(([label, value]) => <View key={label} style={[styles.attribute, { backgroundColor: palette.panel, borderColor: palette.panelBorder }]}>
-            <Text style={[styles.attributeLabel, { color: palette.muted }]}>{label}</Text>
-            <Text style={[styles.attributeValue, { color: palette.text }]}>{value > 0 && label === "Momentum" ? "+" : ""}{Number(value).toFixed(1)}</Text>
-          </View>)}
+          {playerAttributes(player).map(([label, value]) => { const help=label==="Momentum"?PLAYER_RATING_HELP.momentum:null;return <View key={label} style={[styles.attribute, { backgroundColor: palette.panel, borderColor: palette.panelBorder }]}>
+            <View style={styles.attributeHeading}><Text style={[styles.attributeLabel, { color: palette.muted }]}>{label}</Text>{help?<Pressable accessibilityRole="button" accessibilityLabel={`Ver explicação de ${label}`} hitSlop={8} onPress={()=>Alert.alert(label,help)} style={styles.attributeHelp}><Ionicons name="help-circle-outline" size={17} color={palette.muted}/></Pressable>:null}</View>
+            <Text style={[styles.attributeValue, { color: label === "Momentum" ? momentumColor : palette.text }]}>{value > 0 && label === "Momentum" ? "+" : ""}{Number(value).toFixed(1)}</Text>
+          </View>})}
         </View>
 
         <View style={[styles.careerStats, { backgroundColor: palette.stats, borderColor: palette.statsBorder }]}>
@@ -231,7 +241,7 @@ export default function MyCard() {
         <View style={styles.profileHeading}>
           <Text style={styles.profileEyebrow}>MEU PERFIL</Text>
           <Text accessibilityRole="header" style={styles.profileTitle}>Informações do jogador</Text>
-          <Text style={styles.profileDescription}>Mantenha seus dados pessoais atualizados. As notas esportivas e o Momentum continuam sob responsabilidade dos administradores.</Text>
+          <Text style={styles.profileDescription}>Mantenha seus dados pessoais atualizados. As notas esportivas, a evolução de carreira e o Momentum continuam sob responsabilidade dos administradores.</Text>
         </View>
         <View style={styles.profileGrid}>
           <ProfileInfo label="Nome completo" value={player.fullName || player.displayName}/>
@@ -332,12 +342,20 @@ const styles = StyleSheet.create({
   tierBadge: { overflow: "hidden", borderWidth: 1, borderRadius: 99, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, lineHeight: 12, fontWeight: "900", letterSpacing: 1 },
   name: { fontSize: 24, lineHeight: 28, fontWeight: "900" },
   role: { fontSize: 14, fontWeight: "600" },
+  topMetrics: { alignSelf: "stretch", minWidth: 64, alignItems: "center", justifyContent: "space-between" },
   overall: { alignItems: "center", minWidth: 54 },
   overallValue: { fontSize: 34, lineHeight: 38, fontWeight: "900" },
   overallLabel: { marginTop: 2, fontSize: 8, fontWeight: "900", letterSpacing: 1.2 },
+  featuredRating: { minWidth: 72, minHeight: 62, alignItems: "center", justifyContent: "center", paddingVertical: 6, paddingHorizontal: 4, borderWidth: 1, borderRadius: 12 },
+  featuredRatingValue: { fontSize: 23, lineHeight: 26, fontWeight: "900" },
+  featuredRatingLabelRow: { flexDirection: "row", alignItems: "center", gap: 2 },
+  featuredRatingLabel: { fontSize: 7, fontWeight: "900", letterSpacing: .7 },
+  featuredRatingHelp: { width: 22, height: 22, alignItems: "center", justifyContent: "center", marginRight: -8 },
   attributes: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   attribute: { flexGrow: 1, flexBasis: "46%", borderWidth: 1, borderRadius: 14, padding: 14 },
+  attributeHeading: { flexDirection: "row", alignItems: "center", gap: 5 },
   attributeLabel: { fontSize: 12, fontWeight: "800" },
+  attributeHelp: { minWidth: 24, minHeight: 24, alignItems: "center", justifyContent: "center", marginVertical: -4 },
   attributeValue: { marginTop: 5, fontSize: 24, fontWeight: "900" },
   careerStats: { flexDirection: "row", borderWidth: 1, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 6 },
   careerStat: { flex: 1, minWidth: 0, alignItems: "center" },

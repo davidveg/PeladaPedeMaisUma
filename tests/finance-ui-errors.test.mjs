@@ -59,3 +59,21 @@ test("goleiros são opcionais por competência na geração de mensalidades", as
   assert.match(source, /includeGoalkeepers, goalkeepersOnly: competenceGenerated/);
   assert.match(source, /Goleiro · isento por padrão/);
 });
+
+test("mensalidades priorizam cobranças em abas responsivas", async () => {
+  const source = await readFile(new URL("../app/financeiro/FinanceApp.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
+
+  assert.match(source, /type MonthlyTab = "charges" \| "settings"/);
+  assert.match(source, /useState<MonthlyTab>\("charges"\)/);
+  assert.match(source, /aria-label="Áreas das mensalidades"/);
+  assert.match(source, /id="finance-monthly-charges-tab"/);
+  assert.match(source, /id="finance-monthly-settings-tab"/);
+  assert.match(source, /section=\{monthlyTab\} setSection=\{setMonthlyTab\}/);
+  assert.match(source, /setSection\("charges"\);[\s\S]*requestAnimationFrame/);
+  assert.match(source, /ref=\{chargesPanel\} tabIndex=\{-1\}/);
+  assert.match(styles, /\.finance-monthly-tabs\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(styles, /@media\(max-width:560px\)\{\.finance-monthly-tabs\{width:100%\}/);
+  assert.match(theme, /\.finance-page \.finance-monthly-tabs button\.active \{/);
+});
