@@ -6,9 +6,9 @@ import { useInstanceBranding } from "../InstanceBranding";
 
 type AccessState = "checking" | "allowed" | "failed";
 
-export function SiteAccessGate({ children }: PropsWithChildren) {
+export function SiteAccessGate({ children, authenticated = false }: PropsWithChildren<{ authenticated?: boolean }>) {
   const { config } = useInstanceBranding();
-  const [state, setState] = useState<AccessState>("checking");
+  const [state, setState] = useState<AccessState>(authenticated ? "allowed" : "checking");
   const accessScreenStyle = {
     "--access-background": config.managementBackgroundColor,
     "--access-surface": config.managementSurfaceColor,
@@ -42,7 +42,7 @@ export function SiteAccessGate({ children }: PropsWithChildren) {
       }
     };
 
-    void validate();
+    if (!authenticated) void validate();
     const timer = window.setInterval(validate, 60_000);
     const revalidate = () => { if (document.visibilityState === "visible") void validate(); };
     window.addEventListener("focus", validate);
@@ -53,7 +53,7 @@ export function SiteAccessGate({ children }: PropsWithChildren) {
       window.removeEventListener("focus", validate);
       document.removeEventListener("visibilitychange", revalidate);
     };
-  }, []);
+  }, [authenticated]);
 
   if (state === "checking") return <div className="site-access-screen" style={accessScreenStyle} role="status" aria-live="polite">
     <div className="site-access-football" aria-hidden="true">

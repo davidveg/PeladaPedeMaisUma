@@ -11,8 +11,8 @@ test("o menu usa navegação de documento compatível com o vinext", async () =>
   assert.doesNotMatch(source, /next\/link/);
   assert.match(source, /window\.location\.assign\(href\)/);
   assert.match(source, /event\.ctrlKey/);
-  assert.match(source, /fetch\("\/api\/member-auth"/);
-  assert.match(source, /accountSignInHref\(href, true\)/);
+  assert.doesNotMatch(source, /isAccountProtectedPath/);
+  assert.doesNotMatch(source, /accountSignInHref\(href/);
   assert.doesNotMatch(source, />Início<|"Início"/);
   assert.doesNotMatch(source, /Entrar como administrador|Últimas separações/);
   assert.doesNotMatch(source, /link\("separations"/);
@@ -43,7 +43,11 @@ test("o login retorna ao menu protegido solicitado depois de renovar a sessão",
   assert.match(gate, /window\.location\.replace\(accountSignInHref\(returnTo,/);
   assert.match(gate, /window\.setInterval\(validate, 60_000\)/);
   assert.match(gate, /visibilitychange/);
-  assert.match(layout, /<SiteAccessGate>\{children\}<SiteFooter\/><\/SiteAccessGate>/);
+  assert.match(layout, /currentPlayerAccount/);
+  assert.match(layout, /authenticated = Boolean\(await currentPlayerAccount/);
+  assert.match(layout, /<SiteAccessGate authenticated=\{authenticated\}>\{children\}<SiteFooter\/><\/SiteAccessGate>/);
+  assert.match(gate, /authenticated \? "allowed" : "checking"/);
+  assert.match(gate, /if \(!authenticated\) void validate\(\)/);
   assert.doesNotMatch(account, /área pública/);
 });
 

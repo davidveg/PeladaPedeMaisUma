@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { db, ensureDb } from "../lib/database";
+import { currentPlayerAccount, db, ensureDb } from "../lib/database";
 import { DEFAULT_INSTANCE_CONFIGURATION, instanceConfigurationFromRow } from "../lib/instance-config";
 import { instanceFaviconUrl, instanceShareImageUrl } from "../lib/instance-metadata";
 import { getRuntimeBindings } from "../lib/runtime-bindings";
@@ -61,15 +61,18 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   let instance = DEFAULT_INSTANCE_CONFIGURATION;
+  let authenticated = false;
   try {
+    const incoming = await headers();
     await ensureDb();
     instance = instanceConfigurationFromRow(await db().prepare("SELECT * FROM instance_configuration WHERE id=1").first());
+    authenticated = Boolean(await currentPlayerAccount(new Request("http://pelada.local", { headers: { cookie: incoming.get("cookie") || "" } })));
   } catch {
     // O provedor mantém os padrões durante builds sem acesso ao banco.
   }
   return (
     <html lang="pt-BR">
-      <body><InstanceBrandingProvider initialConfig={instance}><SiteAccessGate>{children}<SiteFooter/></SiteAccessGate></InstanceBrandingProvider></body>
+      <body><InstanceBrandingProvider initialConfig={instance}><SiteAccessGate authenticated={authenticated}>{children}<SiteFooter/></SiteAccessGate></InstanceBrandingProvider></body>
     </html>
   );
 }

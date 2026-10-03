@@ -1,28 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { accountSignInHref, isAccountProtectedPath } from "../../lib/site-navigation";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 import { NotificationBell } from "./NotificationBell";
 import { NavigationIcon, type NavigationIconName } from "./NavigationIcon";
 
 type SiteSection = "home" | "overview" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
 
-async function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
+function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
-  if (isAccountProtectedPath(href)) {
-    try {
-      const response = await fetch("/api/member-auth", { cache: "no-store", headers: { accept: "application/json" } });
-      const payload = await response.json().catch(() => ({}));
-      if (!payload.member) {
-        window.location.assign(accountSignInHref(href, true));
-        return;
-      }
-    } catch {
-      // The destination also validates the session and remains the safe fallback.
-    }
-  }
   window.location.assign(href);
 }
 
