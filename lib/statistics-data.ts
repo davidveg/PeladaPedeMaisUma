@@ -5,7 +5,7 @@ import type { AdvancedStatisticsMatch, AdvancedStatisticsPlayer, StatisticsParti
 export async function loadAdvancedStatisticsData(from: string, to: string) {
   await ensureDb();
   const [playerRows, matchRows, contributionRows, voteRows] = await Promise.all([
-    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players ORDER BY display_name`).all(),
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE active=1 AND deleted_at IS NULL ORDER BY display_name`).all(),
     db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.participation_snapshot,
       s.match_title,s.match_date,s.snapshot,s.manually_adjusted,s.balance_score,s.balance_classification,
       substr(c.created_at,1,10) created_date

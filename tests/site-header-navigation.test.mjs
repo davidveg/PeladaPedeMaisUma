@@ -47,6 +47,27 @@ test("o login retorna ao menu protegido solicitado depois de renovar a sessão",
   assert.doesNotMatch(account, /área pública/);
 });
 
+test("a verificação de acesso acompanha a identidade atual com loading acessível", async () => {
+  const [gate, styles] = await Promise.all([
+    readFile(new URL("../app/components/SiteAccessGate.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(gate, /useInstanceBranding/);
+  assert.match(gate, /--access-background.*config\.managementBackgroundColor/);
+  assert.match(gate, /--access-surface.*config\.managementSurfaceColor/);
+  assert.match(gate, /--access-text.*config\.managementTextColor/);
+  assert.match(gate, /--access-accent.*config\.managementButtonColor/);
+  assert.match(gate, /role="status" aria-live="polite"/);
+  assert.match(gate, /className="site-access-football"/);
+  assert.match(gate, /site-access-football-panels/);
+  assert.match(gate, /className="site-access-loading"/);
+  assert.match(styles, /\.site-access-screen\{[^}]*background:radial-gradient\([^}]*var\(--access-background\)/);
+  assert.match(styles, /@keyframes site-access-bar/);
+  assert.match(styles, /@keyframes site-access-football-spin/);
+  assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
+});
+
 test("a saída da sessão fica dentro de Minha conta e não no menu superior", async () => {
   const [header, account] = await Promise.all([
     readFile(new URL("../app/components/SiteHeader.tsx", import.meta.url), "utf8"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useInstanceBranding } from "../InstanceBranding";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 import { PlayerPhotoSelect } from "../components/PlayerPhotoSelect";
@@ -9,7 +9,6 @@ const podiumFields = ["motmThirdId", "motmSecondId", "motmFirstId", "dotmThirdId
 const recognitionFields = ["partnerId", "fairPlayId", "defenseId"] as const;
 const fields = [...podiumFields, ...recognitionFields] as const;
 type Field = typeof fields[number];
-type VotePlayer = { id: string; displayName: string; photoUrl?: string | null; team: "BLUE" | "YELLOW" };
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options);
@@ -29,7 +28,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
   const [busy, setBusy] = useState(false);
   const token = votingToken || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") || "" : "");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const payload = await api(`/api/career/vote?token=${encodeURIComponent(token)}`, { cache: "no-store" });
       setData(payload); setAccessRequired(false);
@@ -42,7 +41,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
       }
       throw cause;
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     let active = true;
@@ -58,7 +57,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [token]);
+  }, [load]);
 
   const names = useMemo(() => Object.fromEntries((data?.players || []).map((player: any) => [player.id, player.displayName])), [data]);
   const selected = new Set(podiumFields.map(field => votes[field]).filter(Boolean));

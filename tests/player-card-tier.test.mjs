@@ -50,6 +50,7 @@ test("cards preservam a textura metálica com a hierarquia textual clássica", a
  assert.match(theme,/\.player-card-modal \.card-stats > span:last-child b,[\s\S]*font-size:\s*29px/);
  assert.match(theme,/\.player-card-modal \.card-photo \.large-player-photo,[\s\S]*width:\s*240px[\s\S]*aspect-ratio:\s*1/);
  assert.match(theme,/\.card-evolution-highlight \{[\s\S]*min-height:\s*62px[\s\S]*border:\s*1px solid[\s\S]*border-radius:\s*11px[\s\S]*background:\s*rgba\(255, 248, 214, \.22\)/);
+ assert.match(theme,/@media \(max-width: 560px\) \{[\s\S]*\.player-card-modal \.card-top,[\s\S]*\.member-card \.member-card-top \{[\s\S]*grid-template-columns:\s*84px minmax\(0, 1fr\)[\s\S]*column-gap:\s*10px[\s\S]*\.player-card-modal \.card-evolution-highlight,[\s\S]*width:\s*calc\(100% - 2px\)/);
  assert.match(publicCard,/className="card-side-metrics"[\s\S]*className="card-evolution-highlight"[\s\S]*PLAYER_RATING_HELP\.evolution[\s\S]*className="card-stats"[\s\S]*momentum-stat \$\{momentumClass\}[\s\S]*PLAYER_RATING_HELP\.momentum/);
  assert.match(memberCard,/className="card-side-metrics"[\s\S]*className="card-evolution-highlight"[\s\S]*PLAYER_RATING_HELP\.evolution[\s\S]*className="card-stats"[\s\S]*momentum-stat \$\{momentumClass\}[\s\S]*PLAYER_RATING_HELP\.momentum/);
  assert.match(mobileCard,/accessibilityLabel=\{`Ver explicação de \$\{label\}`\}[\s\S]*Alert\.alert\(label,help\)/);

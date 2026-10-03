@@ -2,7 +2,7 @@
 /* API errors are narrowed at runtime and match state is synchronized after each request. */
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { accountSignInHref } from "../../lib/site-navigation";
 import { SiteHeader } from "../components/SiteHeader";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
@@ -33,7 +33,7 @@ export default function MatchesApp({ matchId }: { matchId?: string }) {
   const [matches, setMatches] = useState<Match[]>([]), [loading, setLoading] = useState(true), [unauthorized, setUnauthorized] = useState(false);
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(""), [isAdmin, setIsAdmin] = useState(false);
   const [targetMatchId, setTargetMatchId] = useState(""), [onlyActiveOrSeparated, setOnlyActiveOrSeparated] = useState(true);
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const [matchPayload, authPayload] = await Promise.all([api(`/api/matches${matchId ? `?id=${encodeURIComponent(matchId)}` : ""}`), api("/api/member-auth")]);
       setMatches(matchPayload.matches || []);
@@ -42,16 +42,16 @@ export default function MatchesApp({ matchId }: { matchId?: string }) {
     }
     catch (cause: any) { if (cause.status === 401) setUnauthorized(true); else setError(cause.message); }
     finally { setLoading(false); }
-  }
+  }, [matchId]);
   useEffect(() => {
     setTargetMatchId(matchId || new URLSearchParams(window.location.search).get("match") || "");
     void load();
-  }, [matchId]);
+  }, [matchId, load]);
   useEffect(() => {
     if (matchId || !targetMatchId || !matches.some(item => item.id === targetMatchId)) return;
     if (onlyActiveOrSeparated && !isActiveOrSeparated(matches.find(item => item.id === targetMatchId)!)) { setOnlyActiveOrSeparated(false); return; }
     window.requestAnimationFrame(() => document.getElementById(targetMatchId)?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  }, [matches, onlyActiveOrSeparated, targetMatchId]);
+  }, [matchId, matches, onlyActiveOrSeparated, targetMatchId]);
   async function answer(item: Match, status: "PRESENT" | "ABSENT") {
     const changes = item.viewer.status && item.viewer.status !== status;
     if (changes && !confirm(`Alterar sua resposta? Isso consumirá 1 das ${item.maxChanges} remarcações permitidas.`)) return;

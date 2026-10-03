@@ -98,7 +98,7 @@ export async function finalizeSeasonAwards(params: { seasonNumber: number; start
 async function loadMonthData(month: string) {
   const from = `${month}-01`, to = monthEnd(month);
   const [playerRows, matchRows, configRow] = await Promise.all([
-    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players ORDER BY display_name`).all(),
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE active=1 AND deleted_at IS NULL ORDER BY display_name`).all(),
     db().prepare(`SELECT c.id,c.separation_id,c.status,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE s.deleted_at IS NULL AND s.match_date BETWEEN ? AND ? ORDER BY s.match_date,c.created_at`).bind(from, to).all(),
     db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first(),
   ]);

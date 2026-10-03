@@ -31,7 +31,7 @@ function PlayerAbsenceCard() {
     setStartDate(absence ? isoToBrDate(absence.startDate) : "");
     setEndDate(absence ? isoToBrDate(absence.endDate) : "");
     setReason(absence?.reason || "");
-  }, [query.isSuccess, absence?.id, absence?.updatedAt]);
+  }, [query.isSuccess, absence]);
   const save = useMutation({
     mutationFn: async () => {
       const start = brDateToIso(startDate), end = brDateToIso(endDate);

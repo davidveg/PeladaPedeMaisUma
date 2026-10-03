@@ -3956,6 +3956,21 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   background: rgba(7, 17, 43, .38);
 }
 
+/* On narrow browser viewports, keep a real gutter between the evolution rail
+   and the portrait. The desktop composition remains unchanged. */
+@media (max-width: 560px) {
+  .player-card-modal .card-top,
+  .member-card .member-card-top {
+    grid-template-columns: 84px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+
+  .player-card-modal .card-evolution-highlight,
+  .member-card .card-evolution-highlight {
+    width: calc(100% - 2px);
+  }
+}
+
 /* Close actions stay discreet and follow the auxiliary controls configured in
    Identidade e agenda instead of introducing a fixed high-contrast color. */
 .modal-back button.close,

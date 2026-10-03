@@ -7,11 +7,12 @@ import test from "node:test";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
-const [{ setRuntimeBindings }, { db, ensureDb, hashPassword }, playersRoute, statisticsRoute] = await Promise.all([
+const [{ setRuntimeBindings }, { db, ensureDb, hashPassword }, playersRoute, statisticsRoute, advancedStatisticsRoute] = await Promise.all([
   import("../lib/runtime-bindings.ts"),
   import("../lib/database.ts"),
   import("../app/api/players/route.ts"),
   import("../app/api/public-statistics/route.ts"),
+  import("../app/api/public-statistics/advanced/route.ts"),
 ]);
 
 test("exclusão lógica exige jogador inativo e sem conta associada", async () => {
@@ -59,7 +60,15 @@ test("exclusão lógica exige jogador inativo e sem conta associada", async () =
 
     const historicalStatistics = await statisticsRoute.GET(new Request("https://pelada.example/api/public-statistics?from=2000-01-01&to=2099-12-31", { headers: { cookie } }));
     assert.equal(historicalStatistics.status, 200);
-    assert.equal((await historicalStatistics.json()).players.some(player => player.id === "eligible-player"), true);
+    const historicalPayload = await historicalStatistics.json();
+    assert.equal(historicalPayload.players.some(player => player.id === "eligible-player"), false);
+    assert.equal(historicalPayload.players.some(player => player.id === "linked-player"), false);
+
+    const advancedStatistics = await advancedStatisticsRoute.GET(new Request("https://pelada.example/api/public-statistics/advanced?from=2000-01-01&to=2099-12-31", { headers: { cookie } }));
+    assert.equal(advancedStatistics.status, 200);
+    const advancedPayload = await advancedStatistics.json();
+    assert.equal(advancedPayload.allPlayers.some(player => player.id === "eligible-player"), false);
+    assert.equal(advancedPayload.allPlayers.some(player => player.id === "linked-player"), false);
 
     const audit = await db().prepare(`SELECT action,entity_id,new_data FROM audit_logs WHERE action='DELETE' AND entity_id=?`).bind("eligible-player").first();
     assert.equal(audit.action, "DELETE");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   balanceTeams,
   defaultConfig,
@@ -57,7 +57,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
   const [draftMode, setDraftMode] = useState(false);
   const [loadedDraft, setLoadedDraft] = useState<any>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const [auth, h, publicConfig, publicPlayersPayload] = await Promise.all([
       fetch("/api/auth", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/separations").then((response) => response.json()),
@@ -147,7 +147,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     previousAdministrator.current = protectedAccess;
     initialized.current = true;
     return separations;
-  };
+  }, [initialStage]);
 
   function openSavedSeparation(item:any){setHistoryDetail(item);setStage("history");window.history.pushState({},"",`/separacoes-salvas?separation=${encodeURIComponent(item.id)}`);window.scrollTo({top:0,behavior:"smooth"})}
   function closeSavedSeparation(){setHistoryDetail(null);setStage("history");window.history.pushState({},"","/separacoes-salvas")}
@@ -163,7 +163,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     window.addEventListener("popstate",syncNavigation);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => { window.removeEventListener("pageshow", refresh);window.removeEventListener("popstate",syncNavigation); document.removeEventListener("visibilitychange", refreshWhenVisible); };
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     if (isAdmin === undefined || previousInitialStage.current === initialStage) return;
@@ -336,8 +336,8 @@ function RoundRecapCard({recap,onShare}:any){
 
 function ArrivalOrder({item,isAdmin,onSave}:any){
  const {config:brand}=useInstanceBranding(),blueName=brand.teamBlueName,yellowName=brand.teamYellowName;
-  const bluePlayers:Player[]=item.snapshot.blue||[],yellowPlayers:Player[]=item.snapshot.yellow||[],saved=item.arrivalOrder&&typeof item.arrivalOrder==='object'&&!Array.isArray(item.arrivalOrder)?item.arrivalOrder:null,initialBlue=saved?.blue||bluePlayers.map(player=>player.id),initialYellow=saved?.yellow||yellowPlayers.map(player=>player.id),[blueOrder,setBlueOrder]=useState<string[]>(initialBlue),[yellowOrder,setYellowOrder]=useState<string[]>(initialYellow),[editing,setEditing]=useState(!saved),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  useEffect(()=>{setBlueOrder(saved?.blue||bluePlayers.map(player=>player.id));setYellowOrder(saved?.yellow||yellowPlayers.map(player=>player.id));setEditing(!saved)},[item.id,JSON.stringify(saved)]);
+  const bluePlayers:Player[]=useMemo(()=>item.snapshot.blue||[],[item.snapshot.blue]),yellowPlayers:Player[]=useMemo(()=>item.snapshot.yellow||[],[item.snapshot.yellow]),saved=item.arrivalOrder&&typeof item.arrivalOrder==='object'&&!Array.isArray(item.arrivalOrder)?item.arrivalOrder:null,initialBlue=saved?.blue||bluePlayers.map(player=>player.id),initialYellow=saved?.yellow||yellowPlayers.map(player=>player.id),[blueOrder,setBlueOrder]=useState<string[]>(initialBlue),[yellowOrder,setYellowOrder]=useState<string[]>(initialYellow),[editing,setEditing]=useState(!saved),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{setBlueOrder(saved?.blue||bluePlayers.map(player=>player.id));setYellowOrder(saved?.yellow||yellowPlayers.map(player=>player.id));setEditing(!saved)},[item.id,saved,bluePlayers,yellowPlayers]);
   if(!isAdmin&&!saved)return null;
   const dirty=!saved||blueOrder.join('|')!==(saved.blue||[]).join('|')||yellowOrder.join('|')!==(saved.yellow||[]).join('|');
   const move=(setter:any,index:number,direction:-1|1)=>setter((current:string[])=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next});
@@ -352,14 +352,15 @@ function ArrivalTeamList({color,title,order,players,isAdmin,onMove}:any){const b
 function CareerMatchCard({item,isAdmin,section="all",enabled,trackContributions,publicBaseUrl,onConfirm,onEdit}:any){
  const {config:brand}=useInstanceBranding(),blueName=brand.teamBlueName,yellowName=brand.teamYellowName;
   const career=item.career;
-  const bluePlayers=item.snapshot.blue||[],yellowPlayers=item.snapshot.yellow||[];
-  const initialBlueIds=(career?.participation?.blue||bluePlayers).map((player:any)=>String(player.id)),initialYellowIds=(career?.participation?.yellow||yellowPlayers).map((player:any)=>String(player.id));
+  const bluePlayers=useMemo(()=>item.snapshot.blue||[],[item.snapshot.blue]),yellowPlayers=useMemo(()=>item.snapshot.yellow||[],[item.snapshot.yellow]);
+  const participationBlue=career?.participation?.blue,participationYellow=career?.participation?.yellow;
+  const initialBlueIds=useMemo(()=>(participationBlue||bluePlayers).map((player:any)=>String(player.id)),[participationBlue,bluePlayers]),initialYellowIds=useMemo(()=>(participationYellow||yellowPlayers).map((player:any)=>String(player.id)),[participationYellow,yellowPlayers]);
   const [blueScore,setBlueScore]=useState(0),[yellowScore,setYellowScore]=useState(0),[contributions,setContributions]=useState<any[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[qr,setQr]=useState(''),[editingResult,setEditingResult]=useState(false),[savedDraft,setSavedDraft]=useState<any>(null),[draftReady,setDraftReady]=useState(false),[draftStatus,setDraftStatus]=useState(''),[eligiblePlayers,setEligiblePlayers]=useState<Player[]>([...bluePlayers,...yellowPlayers]),[blueParticipantIds,setBlueParticipantIds]=useState<string[]>(initialBlueIds),[yellowParticipantIds,setYellowParticipantIds]=useState<string[]>(initialYellowIds);
   const playersById=Object.fromEntries(eligiblePlayers.map((player:any)=>[String(player.id),player])),actualBluePlayers=blueParticipantIds.map(id=>playersById[id]||bluePlayers.find((player:any)=>String(player.id)===id)).filter(Boolean),actualYellowPlayers=yellowParticipantIds.map(id=>playersById[id]||yellowPlayers.find((player:any)=>String(player.id)===id)).filter(Boolean);
   const votingUrl=career&&publicBaseUrl?buildVotingUrl(publicBaseUrl,career.votingToken):'';
   useEffect(()=>{if(votingUrl)QRCode.toDataURL(votingUrl,{width:220,margin:1,color:{dark:'#143f31',light:'#ffffff'}}).then(setQr).catch(()=>setQr(''))},[votingUrl]);
-  useEffect(()=>{setBlueParticipantIds(initialBlueIds);setYellowParticipantIds(initialYellowIds)},[item.id,career?.participation?.reviewedAt]);
-  useEffect(()=>{if(!isAdmin||!enabled||career)return;setDraftReady(false);fetch(`/api/career/draft?separationId=${encodeURIComponent(item.id)}`,{cache:'no-store'}).then(async response=>{const payload=await response.json();if(!response.ok)return;const cacheKey=`ppm.match-draft.${item.id}`;let local:any=null;try{local=JSON.parse(localStorage.getItem(cacheKey)||'null')}catch{local=null}const server=payload.draft||{},draft=local&&new Date(local.updatedAt||0).getTime()>new Date(server.updatedAt||0).getTime()?local:server;setSavedDraft(server);setEligiblePlayers(payload.eligiblePlayers||[...bluePlayers,...yellowPlayers]);setBlueScore(Number(draft.blueScore||0));setYellowScore(Number(draft.yellowScore||0));setContributions((draft.contributions||[]).map((goal:any)=>({...goal,assistPlayerId:goal.assistPlayerId||''})));const savedParticipation=draft.participation||payload.participation;if(savedParticipation){setBlueParticipantIds(savedParticipation.blueIds||initialBlueIds);setYellowParticipantIds(savedParticipation.yellowIds||initialYellowIds)}setDraftReady(true)}).catch(()=>setDraftStatus('Não foi possível carregar o rascunho salvo.'))},[item.id,isAdmin,enabled,Boolean(career)]);
+  useEffect(()=>{setBlueParticipantIds(initialBlueIds);setYellowParticipantIds(initialYellowIds)},[item.id,career?.participation?.reviewedAt,initialBlueIds,initialYellowIds]);
+  useEffect(()=>{if(!isAdmin||!enabled||career)return;setDraftReady(false);fetch(`/api/career/draft?separationId=${encodeURIComponent(item.id)}`,{cache:'no-store'}).then(async response=>{const payload=await response.json();if(!response.ok)return;const cacheKey=`ppm.match-draft.${item.id}`;let local:any=null;try{local=JSON.parse(localStorage.getItem(cacheKey)||'null')}catch{local=null}const server=payload.draft||{},draft=local&&new Date(local.updatedAt||0).getTime()>new Date(server.updatedAt||0).getTime()?local:server;setSavedDraft(server);setEligiblePlayers(payload.eligiblePlayers||[...bluePlayers,...yellowPlayers]);setBlueScore(Number(draft.blueScore||0));setYellowScore(Number(draft.yellowScore||0));setContributions((draft.contributions||[]).map((goal:any)=>({...goal,assistPlayerId:goal.assistPlayerId||''})));const savedParticipation=draft.participation||payload.participation;if(savedParticipation){setBlueParticipantIds(savedParticipation.blueIds||initialBlueIds);setYellowParticipantIds(savedParticipation.yellowIds||initialYellowIds)}setDraftReady(true)}).catch(()=>setDraftStatus('Não foi possível carregar o rascunho salvo.'))},[item.id,isAdmin,enabled,career,bluePlayers,yellowPlayers,initialBlueIds,initialYellowIds]);
   useEffect(()=>{if(!trackContributions){setContributions([]);return}setContributions(current=>{const next:any[]=[];for(const [team,count] of [['BLUE',blueScore],['YELLOW',yellowScore]] as const){const existing=current.filter(goal=>goal.team===team);for(let index=0;index<count;index++)next.push(existing[index]||{team,scorerPlayerId:'',assistPlayerId:'',ownGoal:false})}return next})},[blueScore,yellowScore,trackContributions]);
   useEffect(()=>{if(!draftReady||career||!isAdmin||!enabled)return;const cacheKey=`ppm.match-draft.${item.id}`,snapshot={blueScore,yellowScore,contributions,participation:{blueIds:blueParticipantIds,yellowIds:yellowParticipantIds},updatedAt:new Date().toISOString()};try{localStorage.setItem(cacheKey,JSON.stringify(snapshot))}catch{}setDraftStatus('Alterações guardadas neste navegador.');const timer=window.setTimeout(()=>{setDraftStatus('Salvando rascunho…');fetch(`/api/career/draft?separationId=${encodeURIComponent(item.id)}`,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(snapshot)}).then(async response=>{const payload=await response.json();if(!response.ok)throw new Error(payload.error||'Não foi possível salvar o rascunho.');setSavedDraft(payload.draft);try{localStorage.setItem(cacheKey,JSON.stringify(payload.draft))}catch{}setDraftStatus('Rascunho salvo automaticamente no servidor.')}).catch((cause:any)=>setDraftStatus(`Cópia local preservada. ${cause.message}`))},700);return()=>window.clearTimeout(timer)},[draftReady,career,isAdmin,enabled,item.id,blueScore,yellowScore,contributions,blueParticipantIds,yellowParticipantIds]);
   const setContribution=(index:number,key:string,value:any)=>setContributions(current=>current.map((goal,goalIndex)=>{if(goalIndex!==index)return goal;if(key==='ownGoal')return {...goal,ownGoal:Boolean(value),scorerPlayerId:'',assistPlayerId:''};return {...goal,[key]:value,...(key==='scorerPlayerId'&&goal.assistPlayerId===value?{assistPlayerId:''}:{})}}));

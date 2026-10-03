@@ -591,3 +591,24 @@
 .finance-monthly-panel{scroll-margin-top:18px}
 .finance-monthly-panel:focus{outline:none}
 @media(max-width:560px){.finance-monthly-tabs{width:100%}.finance-monthly-tabs button{padding-inline:10px}}
+
+/* Access validation uses the active identity palette before protected content is shown. */
+.site-access-screen{--access-background:var(--management-background,#0f1612);--access-surface:var(--management-surface,#18211c);--access-text:var(--management-text,#f2f5f3);--access-muted:var(--management-muted,#98a69f);--access-accent:var(--management-button,#d3eb7a);--access-button-text:var(--management-button-text,#142017);position:relative;isolation:isolate;display:flex;min-height:100vh;min-height:100dvh;flex-direction:column;align-items:center;justify-content:center;gap:24px;overflow:hidden;padding:28px;background:radial-gradient(circle at 50% 44%,color-mix(in srgb,var(--access-accent) 12%,transparent) 0,transparent 34%),linear-gradient(145deg,color-mix(in srgb,var(--access-surface) 28%,var(--access-background)),var(--access-background) 68%);color:var(--access-text);text-align:center}
+.site-access-screen::before{content:"";position:absolute;z-index:-2;width:min(680px,98vw);height:min(680px,98vw);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--access-accent) 13%,transparent),transparent 66%);filter:blur(12px);animation:site-access-glow 3.2s ease-in-out infinite}
+.site-access-football{position:absolute;z-index:-1;width:min(580px,82vw);aspect-ratio:1;border-radius:50%;color:var(--access-accent);filter:drop-shadow(0 0 28px color-mix(in srgb,var(--access-accent) 28%,transparent));opacity:.4;animation:site-access-football-breathe 3.2s ease-in-out infinite}
+.site-access-football svg{display:block;width:100%;height:100%;animation:site-access-football-spin 14s linear infinite}
+.site-access-football-outline{fill:color-mix(in srgb,var(--access-surface) 42%,transparent);stroke:currentColor;stroke-width:.7}
+.site-access-football-panels{fill:color-mix(in srgb,var(--access-accent) 15%,transparent);stroke:currentColor;stroke-width:.8;stroke-linejoin:round}
+.site-access-football-seams{fill:none;stroke:currentColor;stroke-width:.65;stroke-linecap:round;opacity:.8}
+.site-access-loading{display:flex;width:min(220px,68vw);height:112px;align-items:center;justify-content:center;gap:clamp(7px,2vw,12px);filter:drop-shadow(0 0 20px color-mix(in srgb,var(--access-accent) 32%,transparent))}
+.site-access-loading span{display:block;width:clamp(8px,2.6vw,13px);height:100%;border-radius:4px;background:linear-gradient(180deg,color-mix(in srgb,var(--access-text) 22%,var(--access-accent)),var(--access-accent));transform-origin:center;animation:site-access-bar 1.35s cubic-bezier(.45,.05,.2,1) infinite}
+.site-access-loading span:nth-child(1),.site-access-loading span:nth-child(7){height:34%}.site-access-loading span:nth-child(2),.site-access-loading span:nth-child(6){height:54%}.site-access-loading span:nth-child(3),.site-access-loading span:nth-child(5){height:76%}.site-access-loading span:nth-child(1){animation-delay:-.18s}.site-access-loading span:nth-child(2){animation-delay:-.3s}.site-access-loading span:nth-child(3){animation-delay:-.42s}.site-access-loading span:nth-child(4){animation-delay:-.54s}.site-access-loading span:nth-child(5){animation-delay:-.66s}.site-access-loading span:nth-child(6){animation-delay:-.78s}.site-access-loading span:nth-child(7){animation-delay:-.9s}
+.site-access-loading-copy{display:flex;flex-direction:column;align-items:center;gap:9px;animation:site-access-copy 2.2s ease-in-out infinite}
+.site-access-loading-copy strong{font-size:clamp(14px,2vw,18px);font-weight:900;letter-spacing:.2em;text-transform:uppercase}.site-access-loading-copy small{color:var(--access-muted);font-size:10px;font-weight:750;letter-spacing:.16em;text-transform:uppercase}
+.site-access-failed span{font-weight:800}.site-access-failed .primary{background:var(--access-accent);color:var(--access-button-text);box-shadow:0 8px 24px color-mix(in srgb,var(--access-accent) 22%,transparent)}
+@keyframes site-access-bar{0%,100%{opacity:.3;transform:scaleY(.3)}48%{opacity:1;transform:scaleY(1)}72%{opacity:.58;transform:scaleY(.62)}}
+@keyframes site-access-copy{0%,100%{opacity:.72}50%{opacity:1}}
+@keyframes site-access-glow{0%,100%{opacity:.42;transform:scale(.92)}50%{opacity:.78;transform:scale(1.05)}}
+@keyframes site-access-football-spin{to{transform:rotate(360deg)}}
+@keyframes site-access-football-breathe{0%,100%{opacity:.27;transform:scale(.96)}50%{opacity:.46;transform:scale(1.02)}}
+@media(prefers-reduced-motion:reduce){.site-access-screen::before,.site-access-football,.site-access-football svg,.site-access-loading span,.site-access-loading-copy{animation:none}.site-access-loading span{opacity:1;transform:scaleY(.72)}}

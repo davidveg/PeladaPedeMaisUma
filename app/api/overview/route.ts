@@ -14,18 +14,18 @@ export async function GET(request: Request) {
   if (!account) return Response.json({ error: "Entre na sua conta para consultar a visão geral." }, { status: 401, headers });
 
   const now = new Date().toISOString(), year = now.slice(0, 4);
-  const [instanceRow, systemRow, careerRow, playerRow, careerStats, activePlayersRow, yearMatchesRow, recentRows, awardRow] = await Promise.all([
+  const [instanceRow, systemRow, careerRow, playerRow, careerStats, activePlayerRows, yearMatchesRow, recentRows, awardRows] = await Promise.all([
     db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first<any>(),
     db().prepare(`SELECT * FROM system_configuration WHERE id=1`).first<any>(),
     db().prepare(`SELECT * FROM career_configuration WHERE id=1`).first<any>(),
     account.playerId ? db().prepare(`SELECT * FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`).bind(account.playerId).first<any>() : null,
     loadPlayerCareerStats(),
-    db().prepare(`SELECT COUNT(*) total FROM players WHERE active=1 AND deleted_at IS NULL`).first<any>(),
+    db().prepare(`SELECT id FROM players WHERE active=1 AND deleted_at IS NULL`).all<any>(),
     db().prepare(`SELECT COUNT(*) total FROM career_matches c JOIN team_separations s ON s.id=c.separation_id WHERE s.deleted_at IS NULL AND substr(COALESCE(s.match_date,c.created_at),1,4)=?`).bind(year).first<any>(),
     db().prepare(`SELECT s.id separation_id,s.match_title title,s.match_date match_at,s.location,s.snapshot,s.balance_classification,c.blue_score,c.yellow_score,c.status voting_status,m.id match_id,m.status match_status
       FROM team_separations s LEFT JOIN career_matches c ON c.separation_id=s.id LEFT JOIN scheduled_matches m ON m.separation_id=s.id
       WHERE s.deleted_at IS NULL ORDER BY COALESCE(s.match_date,s.confirmed_at) DESC,s.confirmed_at DESC LIMIT 3`).all<any>(),
-    db().prepare(`SELECT snapshot FROM monthly_career_awards ORDER BY month DESC LIMIT 1`).first<any>(),
+    db().prepare(`SELECT snapshot FROM monthly_career_awards ORDER BY month DESC LIMIT 24`).all<any>(),
   ]);
   const instance = instanceConfigurationFromRow(instanceRow);
   const restrictedGuest = Boolean(instance.guestSelfConfirmationEnabled && playerRow?.type === "guest" && account.accountType !== "administrator" && account.role !== "moderator");
@@ -68,7 +68,8 @@ export async function GET(request: Request) {
   const latestMatch = recentMatches[0] || null;
   const latestRow: any = recentRows.results?.[0];
   const balance = latestRow ? balanceFromRow(latestRow) : null;
-  const highlight = highlightFromSnapshot(awardRow?.snapshot);
+  const activePlayerIds = new Set((activePlayerRows.results || []).map((row: any) => String(row.id)));
+  const highlight = (awardRows.results || []).map((row: any) => highlightFromSnapshot(row.snapshot)).find((entry: OverviewHighlight | null) => entry && activePlayerIds.has(entry.player.id)) || null;
   const participantCounts = (recentRows.results || []).map((row: any) => {
     const snapshot = parseJson(row.snapshot, {});
     return new Set([...(snapshot.blue || []), ...(snapshot.yellow || [])].map((entry: any) => String(entry.id))).size;
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
     highlight,
     summary: {
       matchesThisYear: Number(yearMatchesRow?.total || 0),
-      activePlayers: Number(activePlayersRow?.total || 0),
+      activePlayers: activePlayerIds.size,
       averageAttendance: participantCounts.length ? Math.round(participantCounts.reduce((sum: number, value: number) => sum + value, 0) / participantCounts.length * 10) / 10 : null,
     },
     viewer: { canManageMatches: account.accountType === "administrator" || permissions.includes("*") || permissions.includes("MATCHES_MANAGE") },

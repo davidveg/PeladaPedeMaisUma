@@ -22,8 +22,9 @@ export async function GET(request: Request) {
   const selectedYear = Number(to.slice(0, 4));
   const yearFrom = `${selectedYear}-01-01`, yearTo = `${selectedYear}-12-31`;
   const [playerRows, matchRows, contributionRows, yearMatchRows, careerRow] = await Promise.all([
-    // Jogadores excluídos logicamente continuam aqui para preservar rankings e confrontos históricos.
-    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players ORDER BY display_name`).all(),
+    // O histórico das partidas permanece nos snapshots, mas somente jogadores atuais
+    // podem aparecer em rankings, comparações e seletores.
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE active=1 AND deleted_at IS NULL ORDER BY display_name`).all(),
     db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
@@ -81,14 +82,15 @@ export async function GET(request: Request) {
     db().prepare(`SELECT snapshot FROM monthly_career_awards WHERE year=? ORDER BY month DESC`).bind(selectedYear).all(),
     db().prepare(`SELECT snapshot,ended_at,finalized_at FROM career_season_awards WHERE year=? ORDER BY season_number DESC LIMIT 1`).bind(selectedYear).first<any>(),
   ]);
+  const visiblePlayerIds = new Set(players.map(player => player.id));
   const finalizedAwards = (finalizedRows.results as Record<string, unknown>[]).flatMap(row => {
     const award = parseJson(row.snapshot, null) as MonthlyCareerAward | null;
-    return award?.month ? [award] : [];
+    return award?.month ? [visibleMonthlyAward(award, visiblePlayerIds)] : [];
   });
   const careerHighlights = buildMonthlyCareerHighlights(players, yearMatches, selectedYear, today, focusMonth, annualAwardsAvailableAt, finalizedAwards, monthlyFormation, monthlySelectionMinimumMatches);
   const seasonSnapshot = parseJson(seasonAwardRow?.snapshot, null);
   if (Array.isArray(seasonSnapshot?.annualMvp)) {
-    careerHighlights.annualMvp = seasonSnapshot.annualMvp;
+    careerHighlights.annualMvp = seasonSnapshot.annualMvp.filter((entry: any) => visiblePlayerIds.has(String(entry?.player?.id || "")));
     careerHighlights.annualMvpAvailable = true;
     careerHighlights.annualMvpAvailableAt = String(seasonAwardRow?.ended_at || seasonAwardRow?.finalized_at || annualAwardsAvailableAt).slice(0, 10);
   }
@@ -99,6 +101,13 @@ export async function GET(request: Request) {
 }
 
 function parseJson(value: unknown, fallback: any) { try { return value ? JSON.parse(String(value)) : fallback; } catch { return fallback; } }
+function visibleMonthlyAward(award: MonthlyCareerAward, visiblePlayerIds: Set<string>): MonthlyCareerAward {
+  return {
+    ...award,
+    playerOfMonth: award.playerOfMonth && visiblePlayerIds.has(award.playerOfMonth.player.id) ? award.playerOfMonth : null,
+    selection: award.selection.filter(entry => visiblePlayerIds.has(entry.player.id)),
+  };
+}
 function annualAwardsDate(year: number, nextSeasonResetAt: unknown) {
   const fallback = `${year}-12-31`, reset = new Date(String(nextSeasonResetAt || ""));
   if (!Number.isFinite(reset.getTime())) return fallback;
