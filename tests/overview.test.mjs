@@ -40,3 +40,19 @@ test("a visão geral reúne jogador, equilíbrio e histórico", async () => {
   assert.match(styles, /box-shadow:inset 0 -4px 0 var\(--score-team\)/);
   assert.match(styles, /@media\(max-width:560px\)/);
 });
+
+test("a saudação usa o instante do servidor e o fuso configurado durante a hidratação", async () => {
+  const [source, page, home] = await Promise.all([
+    readFile(new URL("../app/visao-geral/OverviewApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/visao-geral/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/HomeApp.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /<OverviewApp initialNow=\{new Date\(\)\.toISOString\(\)\}\/>/);
+  assert.match(home, /<OverviewApp initialNow=\{new Date\(\)\.toISOString\(\)\}\/>/);
+  assert.match(source, /OverviewApp\(\{ initialNow \}: \{ initialNow: string \}\)/);
+  assert.match(source, /config\.timezone\|\|"America\/Sao_Paulo"/);
+  assert.match(source, /hourCycle:"h23",timeZone/);
+  assert.match(source, /month:"long",timeZone/);
+  assert.doesNotMatch(source, /new Date\(\)\.getHours\(\)/);
+});

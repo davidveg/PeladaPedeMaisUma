@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "../components/SiteHeader";
+import { BrandedLoading } from "../components/BrandedLoading";
 import { accountSignInHref } from "../../lib/site-navigation";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { buildMonthlyPaymentsWhatsAppMessage } from "../../lib/finance-sharing";
@@ -39,7 +40,7 @@ export default function FinanceApp() {
       const result = await response.json(); if (!response.ok) throw new Error(result.error); setNotice(result.message); await load(); return result;
     } catch (cause: any) { setError(cause?.message || "Não foi possível concluir a operação financeira."); return null; } finally { setBusy(false); }
   }
-  if (!data) return <div className="finance-page"><SiteHeader active="finance"/><main className="finance-main"><div className="finance-loading">{error || "Carregando módulo financeiro…"}</div></main></div>;
+  if (!data) return <div className="finance-page"><SiteHeader active="finance"/><main className="finance-main">{error ? <div className="alert error">{error}</div> : <BrandedLoading message="Carregando módulo financeiro…"/>}</main></div>;
   if (!data.viewer.canManage) return <PlayerFinanceView data={data} competence={competence} setCompetence={setCompetence}/>;
   return <div className="finance-page"><SiteHeader active="finance"/><main className="finance-main">
     <header className="finance-head"><div><div className="eyebrow">GESTÃO FINANCEIRA</div><h1>Financeiro da pelada</h1><p>Caixa, mensalidades, receitas e despesas em uma visão única.</p></div><CompetencePicker value={competence} onChange={setCompetence}/></header>

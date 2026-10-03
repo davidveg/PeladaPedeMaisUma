@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { matchHubFilters, matchHubHref, matchHubStatusLabel, type MatchHubItem, type MatchHubPayload } from "../../lib/match-hub";
 import { accountSignInHref } from "../../lib/site-navigation";
 import { SiteHeader } from "../components/SiteHeader";
+import { BrandedLoading } from "../components/BrandedLoading";
 import { useInstanceBranding } from "../InstanceBranding";
 import { MatchesPanel, MatchEditor } from "../admin/MatchesPanel";
 import MatchesApp from "./MatchesApp";
@@ -80,7 +81,7 @@ export default function MatchHubApp() {
     <div className="match-hub-heading"><div><div className="eyebrow">AGENDA E HISTÓRICO DA PELADA</div><h1>Partidas</h1><p>Presenças, times, súmula e votação no mesmo lugar.</p></div>{allowed("MATCHES_MANAGE") && !detail && <button className="primary" onClick={() => setCreating(true)}>+ Criar partida</button>}</div>
     {error && !accessRequired && <div className="alert error" role="alert">{error}<button className="ghost" onClick={() => void load().then(() => setError("")).catch(cause => setError(cause.message))}>Tentar novamente</button></div>}
     {notice && <div className="alert" role="status">{notice}</div>}
-    {accessRequired ? <SignIn returnTo={returnTo}/> : loading || search === null ? <div className="empty" role="status">Carregando partidas…</div> : !data ? null : detail ? item ? <>
+    {accessRequired ? <SignIn returnTo={returnTo}/> : loading || search === null ? <BrandedLoading message="Carregando partidas…"/> : !data ? null : detail ? item ? <>
       <a className="match-hub-back" href={listHref(filter)}>← Todas as partidas</a>
       <section className="match-hub-detail-head"><div><span className={`match-state ${item.status.toLowerCase()}`}>{matchHubStatusLabel[item.status]}</span><h2>{item.title}</h2><p>{dateLabel(item.date)}{item.location ? ` · ${item.location}` : ""}</p></div>{item.blueScore !== null && <ScoreSummary item={item} blueName={brand.teamBlueName} yellowName={brand.teamYellowName}/>}</section>
       <RoundCenter item={item} onNavigate={nextTab=>navigate(matchHubHref(item,nextTab))}/>

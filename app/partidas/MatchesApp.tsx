@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { accountSignInHref } from "../../lib/site-navigation";
+import { BrandedLoading } from "../components/BrandedLoading";
 import { SiteHeader } from "../components/SiteHeader";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -74,7 +75,7 @@ export default function MatchesApp({ matchId }: { matchId?: string }) {
     }
     window.open(buildWhatsAppShareUrl(item.shareMessage), "_blank", "noopener,noreferrer");
   }
-  if (loading) return <div className="member-loading">Carregando partidas…</div>;
+  if (loading) return <BrandedLoading variant={matchId ? "inline" : "page"} message="Carregando partidas…"/>;
   if (unauthorized) {
     const returnTo = targetMatchId ? `/partidas?match=${encodeURIComponent(targetMatchId)}` : "/partidas";
     if (matchId) return <div className="member-access-card"><h2>Sua sessão expirou</h2><a className="primary" href={accountSignInHref(returnTo, true)}>Entrar na minha conta</a></div>;

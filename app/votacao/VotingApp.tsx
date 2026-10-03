@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useInstanceBranding } from "../InstanceBranding";
+import { BrandedLoading } from "../components/BrandedLoading";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 import { PlayerPhotoSelect } from "../components/PlayerPhotoSelect";
 
@@ -109,7 +110,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
   }
 
   if (accessRequired) return <Container className={embedded ? "vote-page match-vote-embedded" : "vote-page"}><section className="vote-card"><VoteLogin onDone={async () => { setError(""); await load(); }}/></section></Container>;
-  if (!data) return <Container className={embedded ? "vote-page match-vote-embedded" : "vote-page"}><div className="vote-card"><b>{error || "Carregando votação…"}</b></div></Container>;
+  if (!data) return <Container className={embedded ? "vote-page match-vote-embedded" : "vote-page"}>{error ? <div className="vote-card"><b>{error}</b></div> : <BrandedLoading variant={embedded ? "inline" : "panel"} message="Carregando votação…"/>}</Container>;
 
   const match = data.match;
   const closed = match.status === "CLOSED";

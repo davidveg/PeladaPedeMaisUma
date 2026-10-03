@@ -52,24 +52,52 @@ test("o login retorna ao menu protegido solicitado depois de renovar a sessão",
 });
 
 test("a verificação de acesso acompanha a identidade atual com loading acessível", async () => {
-  const [gate, styles] = await Promise.all([
+  const [gate, loading, styles] = await Promise.all([
     readFile(new URL("../app/components/SiteAccessGate.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/BrandedLoading.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(gate, /useInstanceBranding/);
-  assert.match(gate, /--access-background.*config\.managementBackgroundColor/);
-  assert.match(gate, /--access-surface.*config\.managementSurfaceColor/);
-  assert.match(gate, /--access-text.*config\.managementTextColor/);
-  assert.match(gate, /--access-accent.*config\.managementButtonColor/);
-  assert.match(gate, /role="status" aria-live="polite"/);
-  assert.match(gate, /className="site-access-football"/);
-  assert.match(gate, /site-access-football-panels/);
-  assert.match(gate, /className="site-access-loading"/);
-  assert.match(styles, /\.site-access-screen\{[^}]*background:radial-gradient\([^}]*var\(--access-background\)/);
-  assert.match(styles, /@keyframes site-access-bar/);
-  assert.match(styles, /@keyframes site-access-football-spin/);
+  assert.match(gate, /<BrandedLoading variant="page" message="Verificando seu acesso…"/);
+  assert.match(loading, /useInstanceBranding/);
+  assert.match(loading, /--access-background.*config\.managementBackgroundColor/);
+  assert.match(loading, /--access-surface.*config\.managementSurfaceColor/);
+  assert.match(loading, /--access-text.*config\.managementTextColor/);
+  assert.match(loading, /--access-accent.*config\.managementButtonColor/);
+  assert.match(loading, /role="status" aria-live="polite" aria-busy="true"/);
+  assert.match(loading, /className="branded-loading-spinner"/);
+  assert.match(loading, /<span\/><span\/><span\/><span\/><span\/><span\/><span\/><span\/>/);
+  assert.doesNotMatch(loading, /football|<svg/);
+  assert.match(styles, /\.site-access-screen\{[^}]*background:linear-gradient\([^}]*var\(--access-background\)/);
+  assert.match(styles, /\.branded-loading\{[^}]*var\(--access-surface/);
+  assert.match(styles, /\.branded-loading-panel\{/);
+  assert.match(styles, /\.branded-loading-inline\{/);
+  assert.match(styles, /\.branded-loading-spinner span:nth-child\(8\)/);
+  assert.match(styles, /@keyframes branded-loading-spin/);
+  assert.doesNotMatch(styles, /site-access-football|site-access-bar/);
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
+});
+
+test("as seções usam o loading compartilhado da identidade configurável", async () => {
+  const paths = [
+    "../app/HomeApp.tsx",
+    "../app/FootballApp.tsx",
+    "../app/conta/MemberApp.tsx",
+    "../app/notificacoes/NotificationsApp.tsx",
+    "../app/visao-geral/OverviewApp.tsx",
+    "../app/partidas/MatchHubApp.tsx",
+    "../app/partidas/MatchesApp.tsx",
+    "../app/estatisticas/StatisticsApp.tsx",
+    "../app/estatisticas/avancadas/AdvancedStatisticsApp.tsx",
+    "../app/financeiro/FinanceApp.tsx",
+    "../app/votacao/VotingApp.tsx",
+    "../app/sumula/MatchDraftApp.tsx",
+    "../app/admin/AdminApp.tsx",
+  ];
+  const sources = await Promise.all(paths.map(path => readFile(new URL(path, import.meta.url), "utf8")));
+
+  for (const source of sources) assert.match(source, /BrandedLoading/);
+  assert.doesNotMatch(sources.join("\n"), /className="(?:member|admin|statistics|advanced|finance)-loading"/);
 });
 
 test("a saída da sessão fica dentro de Minha conta e não no menu superior", async () => {

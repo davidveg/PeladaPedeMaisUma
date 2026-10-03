@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { accountSignInHref } from "../../lib/site-navigation";
+import { BrandedLoading } from "../components/BrandedLoading";
 import { SiteHeader } from "../components/SiteHeader";
 
 type Notice = { id: string; type: string; title: string; body: string; matchId?: string | null; actionUrl?: string | null; readAt?: string | null; createdAt: string };
@@ -60,7 +61,7 @@ export default function NotificationsApp() {
   const last = Math.min(data.total, data.page * data.pageSize);
   return <div className="member-page"><SiteHeader active="notifications" isAdmin={isAdmin}/><main className="member-main notification-site-main">
     <div className="member-account-head"><div><div className="eyebrow">ATUALIZAÇÕES DA PELADA</div><h1>Notificações</h1><p>{data.unread ? `${data.unread} não lida${data.unread === 1 ? "" : "s"}` : "Tudo em dia"}</p></div>{data.unread > 0 && <button className="ghost" onClick={() => read()}>Marcar todas como lidas</button>}</div>
-    {loading && !data.notifications.length ? <div className="member-loading">Carregando…</div> : unauthorized ? <div className="alert">Entre na sua conta para consultar as notificações. <a href="/conta?returnTo=/notificacoes">Entrar</a></div> : error ? <div className="alert error">{error}</div> : <>
+    {loading && !data.notifications.length ? <BrandedLoading message="Carregando notificações…"/> : unauthorized ? <div className="alert">Entre na sua conta para consultar as notificações. <a href="/conta?returnTo=/notificacoes">Entrar</a></div> : error ? <div className="alert error">{error}</div> : <>
       <div className="notification-site-toolbar"><span>{first}–{last} de {data.total}</span><label>Por página<select value={pageSize || data.pageSize} onChange={event => { setPage(1); setPageSize(Number(event.target.value)); }}><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label></div>
       <div className="notification-site-list">{data.notifications.length ? data.notifications.map(item => <button key={item.id} className={item.readAt ? "notification-site-item" : "notification-site-item unread"} onClick={() => read(item)}><span>{noticeIcon(item.type, item.title)}</span><div><b>{item.title}</b><p>{item.body}</p><small>{new Date(item.createdAt).toLocaleString("pt-BR")}</small></div>{(item.matchId || item.actionUrl) && <i>›</i>}</button>) : <div className="empty">Nenhuma notificação ainda.</div>}</div>
       {data.totalPages > 1 && <nav className="notification-pagination" aria-label="Paginação das notificações"><button className="ghost" disabled={!data.hasPrevious || loading} onClick={() => setPage(current => current - 1)}>← Anterior</button><span className="pagination-summary">Página {data.page} de {data.totalPages}</span><button className="ghost" disabled={!data.hasNext || loading} onClick={() => setPage(current => current + 1)}>Próxima →</button></nav>}

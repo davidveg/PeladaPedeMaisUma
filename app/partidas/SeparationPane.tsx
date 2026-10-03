@@ -10,6 +10,7 @@ import { teamColorMarker } from "../../lib/team-colors";
 import { buildWhatsAppRoundRecapMessage, buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { shareRecapFile } from "../recap-image-client";
 import { type Player } from "../../lib/football";
+import { BrandedLoading } from "../components/BrandedLoading";
 
 export async function hubApi(url: string, options?: RequestInit) {
   const response = await fetch(url, { cache: "no-store", ...options });
@@ -84,7 +85,7 @@ export default function SeparationPane({ id, section, permissions, onChanged }: 
       setNotice("Times copiados.");
     } catch { setError("Não foi possível copiar os times."); }
   }
-  if (loading) return <div className="empty" role="status">Carregando detalhes…</div>;
+  if (loading) return <BrandedLoading variant="inline" message="Carregando detalhes…"/>;
   if (!item) return <div className="alert">{error || "Esta escalação não está mais disponível."}</div>;
   return <div className="match-separation-pane">
     {error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="alert" role="status">{notice}</div>}

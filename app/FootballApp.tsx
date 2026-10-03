@@ -9,6 +9,7 @@ import {
   type Player,
 } from "../lib/football";
 import { PlayerPhoto } from "./components/PlayerPhoto";
+import { BrandedLoading } from "./components/BrandedLoading";
 import { PlayerPhotoSelect } from "./components/PlayerPhotoSelect";
 import { SiteHeader } from "./components/SiteHeader";
 import { WhatsAppIcon } from "./components/WhatsAppIcon";
@@ -264,7 +265,7 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
     setToast("Times copiados com sucesso.");
   }
 
-  if (isAdmin === undefined) return <div className="admin-loading">Carregando escalações…</div>;
+  if (isAdmin === undefined) return <BrandedLoading variant="page" message="Carregando escalações…"/>;
   const showPlayer = (player: Player, scoringConfig = config) => { setDetail(player); setDetailConfig(scoringConfig); };
   return <div className="app-shell">
     <SiteHeader active={stage === "players" ? "players" : stage === "history" ? "separations" : "home"} isAdmin={isAdmin}/>

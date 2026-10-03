@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BrandedLoading } from "../components/BrandedLoading";
 
 type Release = {
   latestVersion: string;
@@ -47,7 +48,7 @@ export function ReleasePanel({ api, setError, setNotice }: Props) {
       setRelease(result.release); setNotice(result.message || (publish ? "Versão publicada." : "Rascunho salvo."));
     } catch (error: unknown) { setError(errorMessage(error)); } finally { setBusy(""); }
   }
-  if (!release) return <div className="admin-card match-admin-empty">Carregando configuração das versões…</div>;
+  if (!release) return <BrandedLoading variant="inline" message="Carregando configuração das versões…"/>;
   return <div className="release-admin-layout">
     <section className="admin-card release-admin-intro"><div><small>VERSÃO ATIVA</small><h2>{release.latestVersion}</h2><p>{release.publishedAt ? `Publicada em ${new Date(release.publishedAt).toLocaleString("pt-BR")}` : "Ainda não publicada. Salve o rascunho e publique quando os arquivos estiverem disponíveis."}</p></div><a className="ghost" href="/baixar-app" target="_blank" rel="noreferrer">Ver página de download ↗</a></section>
     <section className="admin-card release-admin-form">

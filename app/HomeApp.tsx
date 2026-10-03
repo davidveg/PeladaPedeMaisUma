@@ -1,6 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import FootballApp from "./FootballApp";
+import { BrandedLoading } from "./components/BrandedLoading";
 import OverviewApp from "./visao-geral/OverviewApp";
 import "./visao-geral/overview.css";
 
@@ -15,6 +16,6 @@ function currentView() {
 }
 export default function HomeApp() {
   const view = useSyncExternalStore(subscribe, currentView, () => "loading");
-  if (view === "loading") return <div className="member-loading">Carregando partidas…</div>;
-  return view === "builder" ? <FootballApp/> : <OverviewApp/>;
+  if (view === "loading") return <BrandedLoading variant="page" message="Carregando partidas…"/>;
+  return view === "builder" ? <FootballApp/> : <OverviewApp initialNow={new Date().toISOString()}/>;
 }

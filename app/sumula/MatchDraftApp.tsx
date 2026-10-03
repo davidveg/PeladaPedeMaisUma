@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PlayerPhoto } from "../components/PlayerPhoto";
+import { BrandedLoading } from "../components/BrandedLoading";
 import { useInstanceBranding } from "../InstanceBranding";
 
 type Team = "BLUE" | "YELLOW";
@@ -20,7 +21,7 @@ export default function MatchDraftApp() {
   const snapshot=useMemo(()=>({contributions:goals,blueScore:scores.blue,yellowScore:scores.yellow,participation:{blueIds:data?.participation?.blueIds||[],yellowIds:data?.participation?.yellowIds||[]}}),[goals,scores.blue,scores.yellow,data?.participation?.blueIds,data?.participation?.yellowIds]);
   useEffect(()=>{if(!ready||!data?.enabled||!data?.trackContributions||data?.officialResultConfirmed)return;const local={...snapshot,updatedAt:new Date().toISOString()};try{localStorage.setItem(`ppm.match-draft.${separationId}`,JSON.stringify(local))}catch{}setAutoStatus("Alterações guardadas neste navegador.");const timer=window.setTimeout(async()=>{setAutoStatus("Salvando rascunho…");try{const response=await fetch(`/api/career/draft?separationId=${encodeURIComponent(separationId)}`,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(snapshot)}),payload=await response.json();if(!response.ok)throw new Error(payload.error||"Não foi possível salvar o rascunho.");setData((current:any)=>({...current,draft:payload.draft}));try{localStorage.setItem(`ppm.match-draft.${separationId}`,JSON.stringify(payload.draft))}catch{}setDirty(false);setAutoStatus("Rascunho salvo automaticamente no servidor.")}catch(cause:any){setAutoStatus(`Cópia local preservada. ${cause.message}`)}},700);return()=>window.clearTimeout(timer)},[ready,data?.enabled,data?.trackContributions,data?.officialResultConfirmed,separationId,snapshot]);
   async function save(){setBusy(true);setError("");setMessage("");try{const response=await fetch(`/api/career/draft?separationId=${encodeURIComponent(separationId)}`,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(snapshot)}),payload=await response.json();if(!response.ok)throw new Error(payload.error||"Não foi possível salvar o rascunho.");setGoals((payload.draft.contributions||[]).map((goal:any)=>({...goal,assistPlayerId:goal.assistPlayerId||""})));setData((current:any)=>({...current,draft:payload.draft}));try{localStorage.setItem(`ppm.match-draft.${separationId}`,JSON.stringify(payload.draft))}catch{}setDirty(false);setAutoStatus("Rascunho salvo no servidor.");setMessage(payload.message)}catch(error:any){setError(error.message)}finally{setBusy(false)}}
-  if(!data)return <main className="match-draft-page"><div className="match-draft-loading"><b>{error||"Carregando rascunho da partida…"}</b><a href="/">Voltar ao site</a></div></main>;
+  if(!data)return <main className="match-draft-page">{error?<div className="match-draft-loading"><b>{error}</b><a href="/">Voltar ao site</a></div>:<BrandedLoading variant="page" message="Carregando rascunho da partida…"/>}</main>;
   const backUrl=`/?view=history&separation=${encodeURIComponent(separationId)}`;
   return <main className="match-draft-page">
     <header className="match-draft-top"><a href={backUrl}>← Voltar para a escalação</a><span>⚽ {brand.siteName}</span></header>

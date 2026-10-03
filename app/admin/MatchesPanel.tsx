@@ -7,6 +7,7 @@ import { brazilianDateInput, brazilianDateTimeIso, brazilianDateTimeParts, brazi
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { WeatherPreview } from "../components/WeatherPreview";
+import { BrandedLoading } from "../components/BrandedLoading";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
 type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string; canConfigureDrafts?: boolean; onInstanceConfigSaved?(config: any): void };
@@ -90,7 +91,7 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
     } catch (cause: any) { setError(cause.message); }
   }
 
-  if (loading && !data.matches.length) return <div className="admin-card match-admin-empty">Carregando partidas…</div>;
+  if (loading && !data.matches.length) return <BrandedLoading variant="inline" message="Carregando partidas…"/>;
   return <section className="admin-matches match-admin-surface">
     {!matchId && <>{canConfigureDrafts&&instanceConfig&&<SeparationDraftSetting api={api} config={instanceConfig} setError={setError} setNotice={setNotice} onSaved={onInstanceConfigSaved}/>}<div className="match-admin-toolbar"><div><b>{data.matches.filter(item => item.status === "OPEN").length}</b><span>partidas abertas</span></div><p>A confirmação feita no site e no aplicativo usa a mesma contagem de remarcações.</p>{canManage&&<button className="primary" onClick={() => setEditing("new")}>+ Criar partida</button>}</div>
     <label className="match-list-filter admin-filter"><span><b>Somente abertas ou com times gerados</b><small>Desmarque para consultar canceladas e listas encerradas sem escalação.</small></span><input type="checkbox" checked={onlyActiveOrSeparated} onChange={event => { setOnlyActiveOrSeparated(event.target.checked); setPage(1); }}/></label></>}
