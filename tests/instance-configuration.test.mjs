@@ -543,6 +543,8 @@ test("tema moderno usa a paleta configurável nos blocos e no financeiro", async
   assert.match(theme, /\.member-page \.round-center > header \{[\s\S]*background:\s*transparent/);
   assert.match(theme, /body:has\(:is\([\s\S]*\.site-footer \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.app-download-badge \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.member-page :is\(\.download-platform, \.download-release-notes, \.download-app-help\) \{[\s\S]*var\(--management-surface[\s\S]*var\(--management-text/);
+  assert.match(theme, /\.member-page \.download-platform > span,[\s\S]*\.member-page \.download-platform > b \{[\s\S]*var\(--control-surface[\s\S]*var\(--control-text/);
   assert.match(theme, /\.statistics-page :is\(\.empty, \.statistics-loading, \.versus-empty\) \{[\s\S]*var\(--control-surface/);
   assert.match(theme, /\.statistics-page \.statistics-record-grid > article \{[\s\S]*var\(--management-surface/);
   assert.match(theme, /\.statistics-page \.streak-players > span \{[\s\S]*var\(--control-surface/);

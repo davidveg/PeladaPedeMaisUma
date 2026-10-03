@@ -3034,6 +3034,50 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--management-button-text, #172018);
 }
 
+/* The application download page is part of the authenticated/public workspace
+   and therefore reuses the configurable card and auxiliary-field palettes. */
+.member-page .download-app-hero > span {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page :is(.download-platform, .download-release-notes, .download-app-help) {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page .download-platform.available {
+  border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 46%, var(--management-line, #34433b));
+  box-shadow: 0 12px 35px color-mix(in srgb, var(--management-background, #0f1612) 52%, transparent);
+}
+
+.member-page .download-platform:not(.available) {
+  opacity: 1;
+  background: color-mix(in srgb, var(--management-surface, #18211d) 88%, var(--management-background, #0f1612));
+}
+
+.member-page .download-platform > span,
+.member-page .download-platform > b {
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.member-page .download-platform :is(h2, div),
+.member-page .download-app-help > b {
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page :is(.download-platform p, .download-platform em, .download-release-notes p, .download-app-help p) {
+  color: var(--management-muted, #98a69f);
+}
+
+.member-page :is(.download-platform small, .download-release-notes .eyebrow) {
+  color: var(--management-button, #d3eb7a);
+}
+
 @media (max-width: 900px) {
   body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advanced-statistics-page)) .site-footer {
     margin-left: 0;
