@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { registerHooks } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -61,6 +61,7 @@ test("administrador com troca pendente não acessa rotas privilegiadas antes do 
     assert.equal(login.status, 200);
     const setCookie = login.headers.get("set-cookie");
     assert.match(setCookie, /; Secure;/);
+    assert.match(setCookie, /Max-Age=2592000/);
     const rawToken = /ppm_session=([^;]+)/.exec(setCookie)?.[1];
     assert.ok(rawToken);
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM sessions WHERE id=?`).bind(rawToken).first("total"), 0);
@@ -78,6 +79,7 @@ test("sessão de membro usa cookie Secure e persiste apenas o hash do token", as
     assert.equal(registration.status, 201);
     const setCookie = registration.headers.get("set-cookie");
     assert.match(setCookie, /; Secure;/);
+    assert.match(setCookie, /Max-Age=2592000/);
     const rawToken = /ppm_member_session=([^;]+)/.exec(setCookie)?.[1];
     assert.ok(rawToken);
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM member_sessions WHERE id=?`).bind(rawToken).first("total"), 0);
@@ -140,6 +142,41 @@ test("logins web, membro e mobile são bloqueados após cinco falhas por conta",
       assert.ok(Number(blocked.headers.get("retry-after")) > 0);
     }
   });
+});
+
+test("renovação móvel tolera uma resposta perdida sem enfraquecer a detecção posterior", async () => {
+  await withDatabase("ppm-mobile-refresh-grace-", async () => {
+    const now = new Date().toISOString(), memberId = "mobile-refresh-member";
+    await db().prepare(`INSERT INTO member_accounts (id,email,password_hash,active,created_at,updated_at) VALUES (?,?,?,?,?,?)`)
+      .bind(memberId, "mobile-refresh@example.com", await hashPassword("senha-mobile-123"), 1, now, now).run();
+
+    const login = await mobileAuthRoute.POST(loginRequest("https://pelada.example/api/mobile/auth", "mobile-refresh@example.com", "senha-mobile-123", "198.51.100.50"));
+    assert.equal(login.status, 201);
+    const original = await login.json();
+    const firstRefresh = await mobileAuthRoute.PUT(jsonRequest("https://pelada.example/api/mobile/auth", { refreshToken: original.refreshToken }));
+    assert.equal(firstRefresh.status, 200);
+    const first = await firstRefresh.json();
+
+    const recoveredRefresh = await mobileAuthRoute.PUT(jsonRequest("https://pelada.example/api/mobile/auth", { refreshToken: original.refreshToken }));
+    assert.equal(recoveredRefresh.status, 200);
+    const recovered = await recoveredRefresh.json();
+    assert.notEqual(recovered.refreshToken, first.refreshToken);
+    const recoveryAudit = await db().prepare(`SELECT new_data FROM audit_logs WHERE action='MOBILE_SESSION_REFRESH' ORDER BY created_at DESC LIMIT 1`).first();
+    assert.equal(JSON.parse(recoveryAudit.new_data).graceRecovery, true);
+
+    await db().prepare(`UPDATE mobile_sessions SET previous_refresh_valid_until=? WHERE id=?`).bind("2000-01-01T00:00:00.000Z", recovered.id).run();
+    const suspiciousReuse = await mobileAuthRoute.PUT(jsonRequest("https://pelada.example/api/mobile/auth", { refreshToken: first.refreshToken }));
+    assert.equal(suspiciousReuse.status, 401);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM mobile_sessions WHERE account_id=? AND revoked_at IS NULL`).bind(memberId).first("total"), 0);
+  });
+});
+
+test("aplicativo conserva a sessão local em falhas transitórias de renovação", async () => {
+  const source = await readFile(new URL("../mobile/src/api.ts", import.meta.url), "utf8");
+  assert.match(source, /response\.status === 401 \|\| response\.status === 403/);
+  assert.match(source, /throw new ApiError\("Sem conexão com o servidor\.", 0, "network"\)/);
+  assert.match(source, /response\.status >= 500 \? "server" : "validation"/);
+  assert.doesNotMatch(source, /catch \{ await sessionStore\.clear\(\); return null; \}/);
 });
 
 test("conta comum não enumera nem reivindica jogador; administrador aprova o vínculo", async () => {

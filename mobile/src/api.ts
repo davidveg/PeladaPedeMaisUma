@@ -38,11 +38,14 @@ export async function login(email: string, password: string, deviceName: string)
 export async function refreshSession() {
   if (!refreshPromise) refreshPromise = (async () => {
     const current = await sessionStore.get(); if (!current?.refreshToken) return null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/mobile/auth`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ refreshToken: current.refreshToken }) });
-      const next = await response.json(); if (!response.ok) throw new Error();
-      await sessionStore.set(next); return next as Session;
-    } catch { await sessionStore.clear(); return null; }
+    let response: Response;
+    try { response = await fetch(`${API_BASE_URL}/api/mobile/auth`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ refreshToken: current.refreshToken }) }); }
+    catch { throw new ApiError("Sem conexão com o servidor.", 0, "network"); }
+    const next = await response.json().catch(() => ({}));
+    if (response.status === 401 || response.status === 403) { await sessionStore.clear(); return null; }
+    if (!response.ok) throw new ApiError(next.error || "Não foi possível renovar a sessão agora.", response.status, response.status >= 500 ? "server" : "validation");
+    if (!next.accessToken || !next.refreshToken || !next.account) throw new ApiError("O servidor retornou uma sessão inválida.", response.status, "server");
+    await sessionStore.set(next); return next as Session;
   })().finally(() => { refreshPromise = null; });
   return refreshPromise;
 }

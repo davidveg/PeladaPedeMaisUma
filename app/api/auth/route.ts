@@ -1,14 +1,20 @@
 /* The protected panel accepts full administrators and explicitly authorized moderators. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { audit, currentStaff, db, ensureDb, hashOpaqueToken, hashPassword, verifyPassword } from "../../../lib/database";
+import { audit, currentPlayerAccount, currentStaff, db, ensureDb, hashOpaqueToken, hashPassword, verifyPassword } from "../../../lib/database";
 import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../lib/login-rate-limit";
 import { normalizeEmail } from "../../../lib/email";
 import { isAuthenticationTransportAllowed, secureTransportRequiredResponse, sessionCookie } from "../../../lib/secure-transport";
+import { closeInvalidWebSessions, renewCurrentWebSession, WEB_SESSION_TTL_MS, WEB_SESSION_TTL_SECONDS } from "../../../lib/web-session";
 
 export async function GET(request:Request){
-  const staff:any=await currentStaff(request),headers=new Headers({"content-type":"application/json","cache-control":"no-store, max-age=0",pragma:"no-cache"});
-  if(!staff&&/(?:^|;\s*)ppm_session=/.test(request.headers.get("cookie")||""))headers.append("set-cookie",sessionCookie(request,"ppm_session","",0));
-  if(!staff&&/(?:^|;\s*)ppm_member_session=/.test(request.headers.get("cookie")||""))headers.append("set-cookie",sessionCookie(request,"ppm_member_session","",0));
+  const staff:any=await currentStaff(request),validPlayerAccount=staff?staff:await currentPlayerAccount(request),headers=new Headers({"content-type":"application/json","cache-control":"no-store, max-age=0",pragma:"no-cache"});
+  if(staff){const renewedCookie=await renewCurrentWebSession(request,staff);if(renewedCookie)headers.append("set-cookie",renewedCookie)}
+  else if(!validPlayerAccount&&/(?:^|;\s*)ppm_(?:member_)?session=/.test(request.headers.get("cookie")||"")){
+    await closeInvalidWebSessions(request,"protected");
+    headers.set("x-session-expired","1");
+    headers.append("set-cookie",sessionCookie(request,"ppm_session","",0));
+    headers.append("set-cookie",sessionCookie(request,"ppm_member_session","",0));
+  }
   return new Response(JSON.stringify({admin:staff}),{headers});
 }
 
@@ -21,7 +27,7 @@ export async function POST(request:Request){
   const account=administrator&&await verifyPassword(password,administrator.password_hash)?administrator:moderator&&await verifyPassword(password,moderator.password_hash)?moderator:null;
   if(!account){await recordLoginFailure(rateLimit);return Response.json({error:"Usuário ou senha inválidos."},{status:401})}
   await clearSuccessfulLogin(rateLimit);
-  const token=crypto.randomUUID(),now=new Date(),expires=new Date(now.getTime()+8*60*60*1000),isAdministrator=account.account_type==="administrator";
+  const token=crypto.randomUUID(),now=new Date(),expires=new Date(now.getTime()+WEB_SESSION_TTL_MS),isAdministrator=account.account_type==="administrator";
   if(isAdministrator){
     await db().batch([
       db().prepare(`INSERT INTO sessions VALUES (?,?,?,?)`).bind(await hashOpaqueToken(token),account.id,expires.toISOString(),now.toISOString()),
@@ -35,7 +41,7 @@ export async function POST(request:Request){
   }
   await audit(account.id,"LOGIN",isAdministrator?"administrator":"moderator",account.id,{panel:"protected"});
   const staff:any=await currentStaff(new Request(request.url,{headers:{cookie:`${isAdministrator?"ppm_session":"ppm_member_session"}=${token}`}}));
-  return new Response(JSON.stringify({admin:staff}),{headers:{"content-type":"application/json","set-cookie":sessionCookie(request,isAdministrator?"ppm_session":"ppm_member_session",token,28800)}});
+  return new Response(JSON.stringify({admin:staff}),{headers:{"content-type":"application/json","set-cookie":sessionCookie(request,isAdministrator?"ppm_session":"ppm_member_session",token,WEB_SESSION_TTL_SECONDS)}});
 }
 
 export async function PUT(request:Request){

@@ -2,13 +2,18 @@ import { audit, currentPlayerAccount, db, ensureDb, hashOpaqueToken, hashPasswor
 import { normalizeEmail } from "../../../lib/email";
 import { beginLoginAttempt, clearSuccessfulLogin, loginRateLimitResponse, recordLoginFailure } from "../../../lib/login-rate-limit";
 import { isAuthenticationTransportAllowed, secureTransportRequiredResponse, sessionCookie } from "../../../lib/secure-transport";
+import { closeInvalidWebSessions, renewCurrentWebSession, WEB_SESSION_TTL_MS, WEB_SESSION_TTL_SECONDS } from "../../../lib/web-session";
 
 const noStoreHeaders = () => new Headers({ "content-type": "application/json", "cache-control": "no-store, max-age=0", pragma: "no-cache" });
 
 export async function GET(request: Request) {
   const member = await currentPlayerAccount(request);
   const headers = noStoreHeaders();
-  if (!member && /(?:^|;\s*)ppm_(?:member_)?session=/.test(request.headers.get("cookie") || "")) {
+  if (member) {
+    const renewedCookie = await renewCurrentWebSession(request, member as any);
+    if (renewedCookie) headers.append("set-cookie", renewedCookie);
+  } else if (/(?:^|;\s*)ppm_(?:member_)?session=/.test(request.headers.get("cookie") || "")) {
+    await closeInvalidWebSessions(request, "player");
     headers.set("x-session-expired", "1");
     headers.append("set-cookie", sessionCookie(request, "ppm_member_session", "", 0));
     headers.append("set-cookie", sessionCookie(request, "ppm_session", "", 0));
@@ -30,7 +35,7 @@ export async function POST(request: Request) {
   if (!account) { await recordLoginFailure(rateLimit); return Response.json({ error: "E-mail ou senha inválidos." }, { status: 401 }); }
   await clearSuccessfulLogin(rateLimit);
   if (account.account_type === "administrator" && account.must_change_password) return Response.json({ error: "Conclua o primeiro acesso no painel administrativo antes de usar a área do jogador." }, { status: 403 });
-  const id = crypto.randomUUID(), now = new Date(), expires = new Date(now.getTime() + 30 * 24 * 60 * 60_000);
+  const id = crypto.randomUUID(), now = new Date(), expires = new Date(now.getTime() + WEB_SESSION_TTL_MS);
   const administrator = account.account_type === "administrator";
   await db().batch(administrator ? [
     db().prepare(`INSERT INTO sessions (id,administrator_id,expires_at,created_at) VALUES (?,?,?,?)`).bind(await hashOpaqueToken(id), account.id, expires.toISOString(), now.toISOString()),
@@ -40,7 +45,7 @@ export async function POST(request: Request) {
     db().prepare(`UPDATE member_accounts SET last_login_at=?,updated_at=? WHERE id=?`).bind(now.toISOString(), now.toISOString(), account.id),
   ]);
   await audit(administrator ? account.id : null, "MEMBER_LOGIN", administrator ? "administrator" : "member_account", account.id, { email, portal: "player" });
-  return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json", "set-cookie": sessionCookie(request, administrator ? "ppm_session" : "ppm_member_session", id, administrator ? 8 * 60 * 60 : 30 * 24 * 60 * 60) } });
+  return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json", "set-cookie": sessionCookie(request, administrator ? "ppm_session" : "ppm_member_session", id, WEB_SESSION_TTL_SECONDS) } });
 }
 
 export async function PUT(request: Request) {
@@ -52,7 +57,7 @@ export async function PUT(request: Request) {
   if (password.length < 8) return Response.json({ error: "A senha deve ter pelo menos 8 caracteres." }, { status: 400 });
   if (password !== confirmation) return Response.json({ error: "A confirmação da senha não corresponde." }, { status: 400 });
   if (await db().prepare(`SELECT id FROM administrators WHERE email=?`).bind(email).first()) return Response.json({ error: "Este e-mail já pertence a uma conta administrativa. Use a opção Entrar." }, { status: 409 });
-  const id = crypto.randomUUID(), sessionId = crypto.randomUUID(), now = new Date(), expires = new Date(now.getTime() + 30 * 24 * 60 * 60_000);
+  const id = crypto.randomUUID(), sessionId = crypto.randomUUID(), now = new Date(), expires = new Date(now.getTime() + WEB_SESSION_TTL_MS);
   try {
     await db().batch([
       db().prepare(`INSERT INTO member_accounts (id,email,password_hash,player_id,active,created_at,updated_at) VALUES (?,?,?,NULL,1,?,?)`).bind(id, email, await hashPassword(password), now.toISOString(), now.toISOString()),
@@ -63,7 +68,7 @@ export async function PUT(request: Request) {
     throw error;
   }
   await audit(null, "MEMBER_REGISTER", "member_account", id, { email });
-  return new Response(JSON.stringify({ ok: true }), { status: 201, headers: { "content-type": "application/json", "set-cookie": sessionCookie(request, "ppm_member_session", sessionId, 30 * 24 * 60 * 60) } });
+  return new Response(JSON.stringify({ ok: true }), { status: 201, headers: { "content-type": "application/json", "set-cookie": sessionCookie(request, "ppm_member_session", sessionId, WEB_SESSION_TTL_SECONDS) } });
 }
 
 export async function DELETE(request: Request) {

@@ -1,0 +1,5 @@
+ALTER TABLE mobile_sessions ADD COLUMN previous_refresh_token_hash TEXT;
+ALTER TABLE mobile_sessions ADD COLUMN previous_refresh_valid_until TEXT;
+
+CREATE INDEX IF NOT EXISTS mobile_sessions_previous_refresh_idx
+ON mobile_sessions(previous_refresh_token_hash,previous_refresh_valid_until);

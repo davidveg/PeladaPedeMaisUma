@@ -36,10 +36,14 @@ export function SiteAccessGate({ children, authenticated = false }: PropsWithChi
           setState("allowed");
           return;
         }
+        if (!response.ok && response.status !== 401) {
+          setState(current => current === "checking" ? "failed" : current);
+          return;
+        }
         const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
         window.location.replace(accountSignInHref(returnTo, response.headers.get("x-session-expired") === "1"));
       } catch {
-        if (active) setState("failed");
+        if (active) setState(current => current === "checking" ? "failed" : current);
       }
     };
 

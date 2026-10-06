@@ -42,6 +42,8 @@ test("o login retorna ao menu protegido solicitado depois de renovar a sessão",
   assert.match(gate, /fetch\("\/api\/member-auth"/);
   assert.match(gate, /window\.location\.replace\(accountSignInHref\(returnTo,/);
   assert.match(gate, /window\.setInterval\(validate, 60_000\)/);
+  assert.match(gate, /response\.status !== 401/);
+  assert.match(gate, /current === "checking" \? "failed" : current/);
   assert.match(gate, /visibilitychange/);
   assert.match(layout, /currentPlayerAccount/);
   assert.match(layout, /authenticated = Boolean\(await currentPlayerAccount/);

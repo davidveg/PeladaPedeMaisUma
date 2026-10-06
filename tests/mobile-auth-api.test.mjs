@@ -51,9 +51,16 @@ test("sessão mobile rotativa aplica papel administrativo no servidor", async ()
     assert.notEqual(rotated.refreshToken, adminSession.refreshToken);
 
     const reused = await mobileAuth.PUT(jsonRequest("https://pelada.example/api/mobile/auth", "PUT", { refreshToken: adminSession.refreshToken }));
-    assert.equal(reused.status, 401);
+    assert.equal(reused.status, 200);
+    const recovered = await reused.json();
     const revoked = await mobileConfig.GET(authorized("https://pelada.example/api/mobile/config", rotated.accessToken));
     assert.equal(revoked.status, 401);
+    assert.equal((await mobileConfig.GET(authorized("https://pelada.example/api/mobile/config", recovered.accessToken))).status, 200);
+
+    await db().prepare(`UPDATE mobile_sessions SET previous_refresh_valid_until=? WHERE id=?`).bind("2000-01-01T00:00:00.000Z", recovered.id).run();
+    const suspiciousReuse = await mobileAuth.PUT(jsonRequest("https://pelada.example/api/mobile/auth", "PUT", { refreshToken: rotated.refreshToken }));
+    assert.equal(suspiciousReuse.status, 401);
+    assert.equal((await mobileConfig.GET(authorized("https://pelada.example/api/mobile/config", recovered.accessToken))).status, 401);
   } finally {
     bindings.DB.close();
     setRuntimeBindings(undefined);

@@ -22,6 +22,21 @@ test("adaptador SQLite preserva a API D1 usada pela aplicação", async () => {
   }
 });
 
+test("migração adiciona tolerância controlada à renovação móvel", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-mobile-refresh-grace-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.prepare("CREATE TABLE mobile_sessions (id TEXT PRIMARY KEY)").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0058_mobile_refresh_grace.sql", import.meta.url), "utf8"));
+    const columns = await bindings.DB.prepare("PRAGMA table_info(mobile_sessions)").all();
+    assert.ok(columns.results.some(column => column.name === "previous_refresh_token_hash"));
+    assert.ok(columns.results.some(column => column.name === "previous_refresh_valid_until"));
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("migração adiciona configuração e eventos de gols com assistência opcional", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-goal-assists-"));
   const bindings = await createSelfhostBindings(directory);
