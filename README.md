@@ -79,6 +79,7 @@ Documentação complementar:
 - Bloqueio opcional de confirmação para jogadores com cobrança vencida e saldo pendente; administradores continuam podendo responder após regularização ou negociação.
 - Fechamento antecipado da lista e geração automática de uma separação equilibrada.
 - Cancelamento e edição de partidas com auditoria.
+- Após a publicação dos times, administradores ainda podem cancelar uma partida já ocorrida enquanto nenhum resultado oficial tiver sido confirmado; a escalação é preservada para auditoria e não entra em estatísticas, momentum ou premiações.
 - Previsão de tempo salva por partida, com localização padrão da instância e provedor secundário automático.
 - Central de notificações por conta, com paginação e marcação de itens lidos.
 - Preferências individuais para:
@@ -107,6 +108,8 @@ Documentação complementar:
 - As APIs antigas de criação avulsa retornam `410 Gone` com orientação para usar Partidas. A geração por `matchId`, os rascunhos e a publicação continuam usando as APIs existentes.
 - O campo legado `manualSeparationEnabled` permanece na configuração como `false`, inclusive se o banco antigo contiver `1` ou um cliente tentar reativá-lo. A coluna é mantida por compatibilidade; não há exclusão ou migração destrutiva de dados.
 - Propostas calculadas pelo algoritmo oficial do servidor.
+- Antes de montar os times, administradores podem escolher entre a distribuição automática e a escolha manual de cada jogador confirmado, tanto no site quanto no aplicativo.
+- Na escolha manual, todos os presentes precisam ser atribuídos uma única vez e os dois times precisam ter jogadores; ao concluir, os mesmos indicadores de equilíbrio são recalculados e salvos no snapshot histórico.
 - Rascunhos de Separação opcionais, desativados por padrão e configuráveis em **Painel administrativo → Separações**.
 - Quando ativados, a partida mantém o caminho direto **Fechar lista e gerar times** e ganha o caminho adicional **Criar/Editar rascunho de separação**. Site e aplicativo compartilham o mesmo rascunho.
 - Dentro do rascunho, o administrador pode apenas salvá-lo — mantendo a lista aberta e sem notificações — ou usar **Fechar lista e publicar**, que cria a separação oficial e notifica os jogadores.

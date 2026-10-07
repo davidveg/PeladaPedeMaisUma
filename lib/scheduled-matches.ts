@@ -14,10 +14,11 @@ export const DELINQUENCY_ATTENDANCE_MESSAGE = "Identificamos um pagamento em atr
 export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "", matchId = "") {
   await ensureDb();
   const [matchResult, totalActive, allPlayerResult, instanceRow] = await Promise.all([db().prepare(
-    `SELECT m.*,s.match_title separation_title,draft.id separation_draft_id,
+    `SELECT m.*,s.match_title separation_title,career.id career_match_id,draft.id separation_draft_id,
             draft.updated_at separation_draft_updated_at,draft.present_player_ids separation_draft_player_ids
      FROM scheduled_matches m
      LEFT JOIN team_separations s ON s.id=m.separation_id
+     LEFT JOIN career_matches career ON career.separation_id=s.id
      LEFT JOIN match_separation_drafts draft ON draft.match_id=m.id
      WHERE (?='' OR m.id=?)
      ORDER BY CASE m.status WHEN 'OPEN' THEN 0 ELSE 1 END,
@@ -300,7 +301,10 @@ export async function createMatchSeparationProposal(matchId: string, nonce = 0) 
     algorithmAttempts: Number(systemConfig?.algorithm_attempts ?? 2500),
   };
   const players = await attachHistoricalPerformance(presentRows.map(mapPlayer), Boolean(config.historicalLearningEnabled));
-  const result = balanceTeams(players, config, Math.max(0, Math.floor(Number(nonce) || 0)));
+  const result = {
+    ...balanceTeams(players, config, Math.max(0, Math.floor(Number(nonce) || 0))),
+    selectionMethod: "automatic" as const,
+  };
   return {
     match: {
       id: String(match.id), title: String(match.title), matchAt: String(match.match_at),
@@ -355,7 +359,7 @@ export async function saveMatchSeparationDraft(matchId: string, admin: any, inpu
        created_by_administrator_id=excluded.created_by_administrator_id,updated_at=excluded.updated_at`,
   ).bind(id, matchId, JSON.stringify(result), manuallyAdjusted ? 1 : 0, JSON.stringify(playerIds), proposalNumber, admin.id, now, now).run();
   await audit(admin.id, previous ? "MATCH_SEPARATION_DRAFT_UPDATED" : "MATCH_SEPARATION_DRAFT_CREATED", "separation_draft", matchId, {
-    presentPlayers: playerIds.length, proposal: proposalNumber, manuallyAdjusted,
+    presentPlayers: playerIds.length, proposal: proposalNumber, manuallyAdjusted, selectionMethod: result.selectionMethod,
   }, previous ? { proposal: Number(previous.proposal_number), manuallyAdjusted: Boolean(previous.manually_adjusted) } : undefined);
   return { result, draft: { exists: true, stale: false, manuallyAdjusted, updatedAt: now } };
 }
@@ -399,7 +403,7 @@ export async function createSeparationFromMatch(
   }
   await audit(admin.id, "MATCH_CLOSED_AND_SEPARATED", "scheduled_match", matchId, {
     separationId: id, presentPlayers: proposal.players.length, balanceClassification: result.rating,
-    proposal: result.proposal, manuallyAdjusted,
+    proposal: result.proposal, manuallyAdjusted, selectionMethod: result.selectionMethod,
   });
   return { match: { ...match, status: "CLOSED", separation_id: id }, separationId: id, result };
 }
@@ -419,10 +423,11 @@ function validateAndRebuildResult(input: any, players: Player[], config: Config,
   if (!manuallyAdjusted && (!sameTeam(blueIds, generated.blue) || !sameTeam(yellowIds, generated.yellow))) {
     throw statusError("A proposta enviada não corresponde à geração atual. Gere os times novamente.", 409);
   }
-  if (!manuallyAdjusted) return generated;
+  if (!manuallyAdjusted) return { ...generated, selectionMethod: "automatic" };
   const byId = new Map(players.map(player => [player.id, player]));
   const blue = blueIds.map((id:string) => byId.get(id)!), yellow = yellowIds.map((id:string) => byId.get(id)!);
-  return { ...generated, blue, yellow, ...recalculateTeamBalance(blue,yellow,config) };
+  const selectionMethod = input?.selectionMethod === "manual" ? "manual" : "automatic";
+  return { ...generated, blue, yellow, ...recalculateTeamBalance(blue,yellow,config), selectionMethod };
 }
 
 function publicMatch(
@@ -453,6 +458,10 @@ function publicMatch(
     maxChanges: Number(row.max_changes), status: String(row.status),
     acceptingResponses: row.status === "OPEN" && new Date(row.confirmation_deadline).getTime() >= Date.now() && guestViewerMayRespond,
     separationId: row.separation_id ? String(row.separation_id) : null,
+    canCancelAfterTeams: Boolean(
+      account?.accountType === "administrator" && row.status === "CLOSED" && row.separation_id && !row.career_match_id
+      && Number.isFinite(new Date(row.match_at).getTime()) && new Date(row.match_at).getTime() <= Date.now()
+    ),
     separationDraft: {
       enabled: instance.separationDraftsEnabled,
       exists: Boolean(row.separation_draft_id),

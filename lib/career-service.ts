@@ -20,8 +20,13 @@ export async function createCareerMatch(separationId: string, blueScore: number,
   if (!config.enabled) throw new Error("O Modo Carreira está desativado.");
   if (![blueScore,yellowScore].every(score=>Number.isInteger(score)&&score>=0&&score<=99)) throw new Error("Informe um placar válido entre 0 e 99 gols.");
   if (await db().prepare(`SELECT id FROM career_matches WHERE separation_id=?`).bind(separationId).first()) throw new Error("Esta partida já foi confirmada no Modo Carreira.");
-  const separation: any = await db().prepare(`SELECT snapshot FROM team_separations WHERE id=? AND deleted_at IS NULL`).bind(separationId).first();
+  const separation: any = await db().prepare(
+    `SELECT s.snapshot,m.status scheduled_match_status
+     FROM team_separations s LEFT JOIN scheduled_matches m ON m.separation_id=s.id
+     WHERE s.id=? AND s.deleted_at IS NULL`,
+  ).bind(separationId).first();
   if (!separation) throw new Error("Escalação não encontrada.");
+  if (separation.scheduled_match_status === "CANCELLED") throw new Error("Não é possível confirmar resultado de uma partida cancelada.");
   const snapshot = JSON.parse(separation.snapshot);
   if (!(snapshot.blue||[]).length || !(snapshot.yellow||[]).length) throw new Error("A escalação não possui dois times válidos.");
   const playerRows=(await db().prepare(`SELECT id,display_name,full_name,photo_url,primary_position,secondary_position,type FROM players`).all()).results as any[];

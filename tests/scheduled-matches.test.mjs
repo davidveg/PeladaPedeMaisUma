@@ -133,6 +133,7 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
 
     const adjusted = structuredClone(regenerated.result);
     [adjusted.blue[0], adjusted.yellow[0]] = [adjusted.yellow[0], adjusted.blue[0]];
+    adjusted.selectionMethod = "manual";
     const closed = await adminMatches.PATCH(jsonRequest("https://pelada.example/api/admin/matches", {
       action: "close", matchId, result: adjusted, manuallyAdjusted: true,
     }, "ppm_session=match-admin-session", "PATCH"));
@@ -144,6 +145,7 @@ test("presença é compartilhada entre site e mobile, limita remarcações e ger
     const savedSeparation = await db().prepare(`SELECT id,snapshot,manually_adjusted FROM team_separations WHERE id=?`).bind(closedPayload.separationId).first();
     assert.ok(savedSeparation);
     assert.equal(JSON.parse(savedSeparation.snapshot).proposal, 2);
+    assert.equal(JSON.parse(savedSeparation.snapshot).selectionMethod, "manual");
     assert.equal(savedSeparation.manually_adjusted, 1);
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM match_separation_drafts WHERE match_id=?`).bind(matchId).first().then(row => Number(row.total)), 0);
     const closedNotices = await notifications.GET(new Request("https://pelada.example/api/notifications", { headers: { cookie: "ppm_member_session=match-member-session" } }));

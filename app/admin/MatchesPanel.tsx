@@ -10,11 +10,12 @@ import { WeatherPreview } from "../components/WeatherPreview";
 import { BrandedLoading } from "../components/BrandedLoading";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
-type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string; canConfigureDrafts?: boolean; onInstanceConfigSaved?(config: any): void };
+type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string; canConfigureDrafts?: boolean; allowPostSeparationCancellation?: boolean; onInstanceConfigSaved?(config: any): void };
 type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "ABSENT"; changeCount: number };
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: string; separationId?: string | null;
+  canCancelAfterTeams?: boolean;
   counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: Attendance[];
   guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
   guestConfirmation?: { enabled: boolean; opensAt?: string | null; canSelfConfirm: boolean };
@@ -26,7 +27,7 @@ type Match = {
 };
 type Player = { id: string; displayName: string; type: string; primaryPosition: string };
 
-export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[], matchId, canConfigureDrafts=false, onInstanceConfigSaved }: Props) {
+export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[], matchId, canConfigureDrafts=false, allowPostSeparationCancellation=false, onInstanceConfigSaved }: Props) {
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -80,7 +81,11 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
     window.location.assign(`/?matchId=${encodeURIComponent(item.id)}`);
   }
   async function cancelMatch(item: Match) {
-    if (!confirm(`Cancelar ${item.title}? Todos os usuários serão notificados.`)) return;
+    const afterTeams = item.status === "CLOSED" && Boolean(item.separationId);
+    const warning = afterTeams
+      ? `Cancelar ${item.title} sem resultado? A partida ficará como cancelada e todos serão notificados. A escalação será preservada somente para histórico e auditoria.`
+      : `Cancelar ${item.title}? Todos os usuários serão notificados.`;
+    if (!confirm(warning)) return;
     setError("");
     try {
       const result = await api("/api/admin/matches", {
@@ -100,7 +105,7 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
     </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}{totalPages > 1 && <nav className="match-admin-pagination" aria-label="Paginação das partidas"><span className="pagination-summary"><span className="pagination-range">Exibindo <b>{pageStart + 1}–{pageEnd}</b> de <b>{visibleMatches.length}</b></span><small>Página {page} de {totalPages}</small></span><button type="button" className="ghost" disabled={page === 1} onClick={() => goToPage(page - 1)}>← Anterior</button><button type="button" className="ghost" disabled={page === totalPages} onClick={() => goToPage(page + 1)}>Próxima →</button></nav>}</div>}
-    <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
+    <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} allowPostSeparationCancellation={allowPostSeparationCancellation} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
     {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
 }
@@ -117,7 +122,7 @@ function SeparationDraftSetting({ api, config, setError, setNotice, onSaved }: {
   return <section className="admin-card separation-draft-setting match-draft-setting"><div><small>CONFIGURAÇÃO DAS PARTIDAS</small><h2>Rascunhos de Escalação</h2><p>Permite gerar, ajustar e salvar uma proposta privada a partir dos presentes de uma partida aberta. O rascunho não fecha a lista nem notifica jogadores até a publicação dos times.</p></div><div className="feature-switch"><button type="button" className={enabled?"ghost":"primary"} disabled={saving} aria-pressed={enabled} onClick={toggle}>{saving?"Salvando…":enabled?"Desativar":"Ativar"}</button><span className="help-tip"><button type="button" aria-label="Ver explicação sobre rascunhos de escalação" aria-describedby="help-match-separation-drafts">?</button><span id="help-match-separation-drafts" role="tooltip">Quando ativo, cada partida aberta com pelo menos quatro presentes oferece a opção de criar ou editar um rascunho. O histórico confirmado continua disponível dentro da própria partida.</span></span></div></section>;
 }
 
-function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, canSeparate, onAttendance, onGuestPreconfirmation, onEdit, onClose, onCancel }: any) {
+function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, canSeparate, allowPostSeparationCancellation, onAttendance, onGuestPreconfirmation, onEdit, onClose, onCancel }: any) {
   const byPlayer = useMemo(
     () => Object.fromEntries(match.attendance.map((item: Attendance) => [item.playerId, item])),
     [match.attendance],
@@ -154,7 +159,7 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
       </div>;
     })}</Fragment>)}</div>
     {match.status === "OPEN" && match.separationDraft?.enabled && match.separationDraft?.exists && <p className={match.separationDraft.stale ? "match-draft-status stale" : "match-draft-status"}>{match.separationDraft.stale ? "O rascunho ficou desatualizado porque a lista de presentes mudou. Ao abri-lo, uma nova proposta será iniciada." : `Rascunho salvo${match.separationDraft.updatedAt ? ` em ${dateTime(match.separationDraft.updatedAt)}` : ""}.`}</p>}
-    <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/partidas?match=${encodeURIComponent(match.id)}&tab=teams`}>Abrir times da partida ↗</a>}{match.status === "OPEN" && <>{canSeparate&&match.separationDraft?.enabled&&<a className="ghost" aria-disabled={match.counts.present<4} href={match.counts.present>=4?`/?matchId=${encodeURIComponent(match.id)}&draft=1`:undefined}>{match.separationDraft.exists&&!match.separationDraft.stale?'Editar rascunho de escalação':'Criar rascunho de escalação'}</a>}{canCancel&&<button className="danger" onClick={onCancel}>Cancelar partida</button>}{canSeparate&&<button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button>}</>}</div>
+    <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/partidas?match=${encodeURIComponent(match.id)}&tab=teams`}>Abrir times da partida ↗</a>}{match.status === "OPEN" && <>{canSeparate&&match.separationDraft?.enabled&&<a className="ghost" aria-disabled={match.counts.present<4} href={match.counts.present>=4?`/?matchId=${encodeURIComponent(match.id)}&draft=1`:undefined}>{match.separationDraft.exists&&!match.separationDraft.stale?'Editar rascunho de escalação':'Criar rascunho de escalação'}</a>}{canCancel&&<button className="danger" onClick={onCancel}>Cancelar partida</button>}{canSeparate&&<button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button>}</>}{allowPostSeparationCancellation&&match.canCancelAfterTeams&&<button className="danger" onClick={onCancel}>Cancelar partida sem resultado</button>}</div>
   </section>;
 }
 

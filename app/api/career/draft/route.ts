@@ -9,7 +9,7 @@ async function draftContext(request: Request) {
   if (!admin) return { error: Response.json({ error: "Não autorizado" }, { status: 401 }) };
   await ensureDb();
   const separationId = new URL(request.url).searchParams.get("separationId") || "";
-  const row: any = await db().prepare(`SELECT s.id,s.match_title,s.match_date,s.snapshot,s.match_draft,c.id career_id,c.participation_snapshot FROM team_separations s LEFT JOIN career_matches c ON c.separation_id=s.id WHERE s.id=? AND s.deleted_at IS NULL`).bind(separationId).first();
+  const row: any = await db().prepare(`SELECT s.id,s.match_title,s.match_date,s.snapshot,s.match_draft,c.id career_id,c.participation_snapshot,m.status scheduled_match_status FROM team_separations s LEFT JOIN career_matches c ON c.separation_id=s.id LEFT JOIN scheduled_matches m ON m.separation_id=s.id WHERE s.id=? AND s.deleted_at IS NULL`).bind(separationId).first();
   if (!row) return { error: Response.json({ error: "Escalação não encontrada." }, { status: 404 }) };
   const snapshot = JSON.parse(row.snapshot);
   return { admin, row, snapshot, separationId };
@@ -51,6 +51,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   const context: any = await draftContext(request);
   if (context.error) return context.error;
+  if (context.row.scheduled_match_status === "CANCELLED") return Response.json({ error: "Não é possível alterar a súmula de uma partida cancelada." }, { status: 409 });
   if (context.row.career_id) return Response.json({ error: "O resultado desta partida já foi confirmado." }, { status: 409 });
   const config = await getCareerConfig();
   if (!config.enabled) return Response.json({ error: "O Modo Carreira está desativado." }, { status: 409 });

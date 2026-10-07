@@ -17,7 +17,8 @@ export async function PATCH(request:Request){await ensureDb();const payload=awai
 if(payload.action==="correct-confirmed-teams"){
   try{const result=await correctConfirmedTeamAssignment({separationId:id,blue:payload.blue,yellow:payload.yellow,administratorId:String(admin.id)});return Response.json({ok:true,...result,manuallyAdjusted:true})}catch(error:any){return Response.json({error:error?.message||"Não foi possível corrigir a escalação."},{status:409})}
 }
-const row:any=await db().prepare(`SELECT snapshot,arrival_order,match_draft FROM team_separations WHERE id=? AND deleted_at IS NULL`).bind(id).first();if(!row)return Response.json({error:"Escalação não encontrada."},{status:404});
+const row:any=await db().prepare(`SELECT s.snapshot,s.arrival_order,s.match_draft,m.status scheduled_match_status FROM team_separations s LEFT JOIN scheduled_matches m ON m.separation_id=s.id WHERE s.id=? AND s.deleted_at IS NULL`).bind(id).first();if(!row)return Response.json({error:"Escalação não encontrada."},{status:404});
+if(row.scheduled_match_status==="CANCELLED")return Response.json({error:"A escalação de uma partida cancelada é preservada somente para consulta."},{status:409});
 if(payload.action==="teams"){
   if(await db().prepare(`SELECT id FROM career_matches WHERE separation_id=?`).bind(id).first())return Response.json({error:"Os times não podem mais ser alterados porque o resultado da partida já foi salvo."},{status:409});
   let snapshot:any;try{snapshot=rebuildEditedSeparation(JSON.parse(row.snapshot),payload.blue,payload.yellow)}catch(error:any){return Response.json({error:error?.message||"Edição de times inválida."},{status:400})}

@@ -32,6 +32,8 @@ export default function NewSeparation() {
   const [selected, setSelected] = useState<string[]>([]);
   const [nonce, setNonce] = useState(0);
   const [manual, setManual] = useState(false);
+  const [manualPicking, setManualPicking] = useState(false);
+  const [manualAssignments, setManualAssignments] = useState<Record<string, TeamKey>>({});
   const [swap, setSwap] = useState<{ team: TeamKey; id: string } | null>(null);
   const [title, setTitle] = useState("Pelada");
   const [date, setDate] = useState("");
@@ -83,7 +85,10 @@ export default function NewSeparation() {
       setDate(next.match?.date || "");
       setLocation(next.match?.location || "");
       setNonce(Math.max(0, Number(next.result?.proposal || 1) - 1));
-      setStep(2);
+      const validDraft=Boolean(next.draft?.exists&&!next.draft?.stale);
+      setManual(Boolean(validDraft&&next.draft?.manuallyAdjusted));
+      setManualPicking(false);
+      setStep(validDraft?3:2);
     }).catch(() => {
       loadedMatch.current = "";
     });
@@ -99,10 +104,33 @@ export default function NewSeparation() {
     if (!next) return;
     setSelected(next.players.map(player => player.id));
     setNonce(nextNonce);
-    setProposal(next);
-    setManual(Boolean(next.draft?.exists&&!next.draft?.stale&&next.draft?.manuallyAdjusted));
+    setProposal({...next,result:{...next.result,selectionMethod:"automatic"}});
+    setManual(false);
+    setManualPicking(false);
     setSwap(null);
     setStep(3);
+  };
+
+  const startManualSelection = () => {
+    setManualAssignments({});
+    setManual(true);
+    setManualPicking(true);
+    setSwap(null);
+    setStep(3);
+  };
+
+  const finishManualSelection = () => {
+    if (!proposal) return;
+    const blue=proposal.players.filter(player=>manualAssignments[player.id]==="blue");
+    const yellow=proposal.players.filter(player=>manualAssignments[player.id]==="yellow");
+    if(blue.length+yellow.length!==proposal.players.length||!blue.length||!yellow.length){
+      Alert.alert("Distribuição incompleta", "Escolha um time para cada jogador e mantenha pelo menos um jogador em cada equipe.");
+      return;
+    }
+    setProposal(current=>current?{...current,result:{...recalculateTeamResult(current.result,blue,yellow),selectionMethod:"manual"}}:current);
+    setManual(true);
+    setManualPicking(false);
+    setSwap(null);
   };
 
   const applyTeams = (blue: Player[], yellow: Player[]) => {
@@ -157,7 +185,7 @@ export default function NewSeparation() {
   </Screen>;
 
   return <Screen>
-    <Header eyebrow={`PARTIDA · ETAPA ${step - 1} DE 3`} title={step === 2 ? "Revisar presentes" : step === 3 ? "Ajuste fino dos times" : "Confirmar e salvar"}/>
+    <Header eyebrow={`PARTIDA · ETAPA ${step - 1} DE 3`} title={step === 2 ? "Escolher método" : step === 3 ? manualPicking?"Escolher jogadores":"Ajuste fino dos times" : "Confirmar e salvar"}/>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {step === 2 ? <>
         <Card>
@@ -169,11 +197,18 @@ export default function NewSeparation() {
           <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition} · Presença confirmada</Text></View>
           <Text style={styles.choiceMark}>✓</Text>
         </Card>)}
-        <Button title="Gerar times" busy={proposalMutation.isPending} disabled={selected.length < 4} onPress={() => generate()}/>
+        <Card style={styles.methodCard}>
+          <Text style={styles.sectionTitle}>Como deseja montar os times?</Text>
+          <Text style={styles.muted}>Use o equilíbrio automático ou escolha manualmente o time de cada jogador confirmado.</Text>
+          <Button title="Gerar times automaticamente" busy={proposalMutation.isPending} disabled={selected.length < 4} onPress={() => generate()}/>
+          <Button title="Escolher jogadores manualmente" variant="secondary" disabled={selected.length < 4} onPress={startManualSelection}/>
+        </Card>
         <Button title="Voltar à partida" variant="secondary" onPress={() => router.back()}/>
       </> : null}
 
-      {step === 3 && proposal ? <>
+      {step === 3 && proposal && manualPicking ? <ManualTeamPicker players={proposal.players} assignments={manualAssignments} onAssign={(id,team)=>setManualAssignments(current=>({...current,[id]:team}))} onFinish={finishManualSelection} onBack={()=>{setManualPicking(false);setManual(false);setStep(2)}} onAutomatic={()=>generate(false)}/> : null}
+
+      {step === 3 && proposal && !manualPicking ? <>
         <Card style={styles.instructions}>
           <Text style={styles.sectionTitle}>Como ajustar</Text>
           <Text style={styles.muted}>Toque em um jogador de cada equipe para trocá-los, ou use a seta para transferir apenas aquele jogador ao outro time.</Text>
@@ -184,6 +219,7 @@ export default function NewSeparation() {
         {(proposal.result.delta?.players || 0) > 1 ? <Card style={styles.warning}><Text style={styles.warningTitle}>Atenção à quantidade</Text><Text style={styles.muted}>Os times estão com diferença de {proposal.result.delta?.players} jogadores. O indicador abaixo considera essa diferença.</Text></Card> : null}
         <BalanceDetails result={proposal.result}/>
         <Button title="Continuar" onPress={() => setStep(4)}/>
+        <Button title="Refazer por escolha manual" variant="secondary" onPress={startManualSelection}/>
         {manual ? <Button title="Desfazer ajustes manuais" variant="secondary" busy={proposalMutation.isPending} onPress={() => generate(false)}/> : null}
         <Button title="Gerar outra proposta" variant="secondary" busy={proposalMutation.isPending} onPress={() => generate(true)}/>
       </> : null}
@@ -191,7 +227,7 @@ export default function NewSeparation() {
       {step === 4 && proposal ? <>
         <Card style={styles.gap}>
           <><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.muted}>{date}{location ? ` · ${location}` : ""}</Text><Text style={draftMode?styles.draft:styles.official}>{draftMode?"O rascunho será salvo sem encerrar a lista ou notificar os jogadores.":"A lista será fechada somente após esta confirmação."}</Text>{draftMode&&proposal.draft?.updatedAt?<Text style={styles.muted}>Último rascunho: {new Date(proposal.draft.updatedAt).toLocaleString("pt-BR")}</Text>:null}</>
-          <Text style={styles.muted}>{proposal.result.blue.length} no {brand.teamBlueName} · {proposal.result.yellow.length} no {brand.teamYellowName} · {manual ? "Ajuste manual" : "Proposta oficial"} · {proposal.result.rating}</Text>
+          <Text style={styles.muted}>{proposal.result.blue.length} no {brand.teamBlueName} · {proposal.result.yellow.length} no {brand.teamYellowName} · {proposal.result.selectionMethod==="manual" ? "Escolha manual" : manual ? "Proposta ajustada" : "Proposta automática"} · {proposal.result.rating}</Text>
         </Card>
         {draftMode?<Button title="Salvar rascunho" variant="secondary" busy={saveMutation.isPending} onPress={() => Alert.alert("Salvar rascunho?", "A proposta ficará disponível somente aos administradores. A lista continuará aberta e ninguém será notificado.", [{ text: "Cancelar", style: "cancel" }, { text: "Salvar", onPress: () => saveMutation.mutate("draft") }])}/>:null}
         <Button title={draftMode?"Fechar lista e publicar":"Fechar lista e salvar"} busy={saveMutation.isPending} onPress={() => Alert.alert(draftMode?"Fechar lista e publicar?":"Fechar lista e salvar?", "A lista da partida será encerrada, os times serão publicados e os jogadores serão notificados.", [{ text: "Cancelar", style: "cancel" }, { text: draftMode?"Publicar":"Salvar", onPress: () => saveMutation.mutate("publish") }])}/>
@@ -199,6 +235,32 @@ export default function NewSeparation() {
       </> : null}
     </ScrollView>
   </Screen>;
+}
+
+function ManualTeamPicker({players,assignments,onAssign,onFinish,onBack,onAutomatic}:{players:Player[];assignments:Record<string,TeamKey>;onAssign:(id:string,team:TeamKey)=>void;onFinish:()=>void;onBack:()=>void;onAutomatic:()=>void}){
+  const {config:brand,palette}=useMobileBranding();
+  const blue=players.filter(player=>assignments[player.id]==="blue").length,yellow=players.filter(player=>assignments[player.id]==="yellow").length,assigned=blue+yellow,remaining=players.length-assigned,complete=remaining===0&&blue>0&&yellow>0;
+  return <>
+    <Card style={styles.instructions}>
+      <Text style={styles.sectionTitle}>Distribuição manual</Text>
+      <Text style={styles.muted}>Escolha um time para cada jogador. Os indicadores de equilíbrio serão calculados quando a distribuição estiver completa.</Text>
+      <View style={styles.assignmentSummary}><Text style={[styles.assignmentCount,{color:palette.blue}]}>{blue} {brand.teamBlueName}</Text><Text style={styles.assignmentRemaining}>{remaining} sem time</Text><Text style={[styles.assignmentCount,{color:palette.yellow}]}>{yellow} {brand.teamYellowName}</Text></View>
+    </Card>
+    {players.map(player=>{
+      const selected=assignments[player.id];
+      return <Card key={player.id} style={[styles.manualPlayer,selected==="blue"&&{borderColor:palette.blue},selected==="yellow"&&{borderColor:palette.yellow}]}>
+        <View><Text style={styles.playerName}>{player.displayName}</Text><Text style={styles.muted}>{player.primaryPosition}{player.secondaryPosition?` / ${player.secondaryPosition}`:""}</Text></View>
+        <View style={styles.teamChoices}>
+          <Pressable accessibilityRole="button" accessibilityState={{selected:selected==="blue"}} onPress={()=>onAssign(player.id,"blue")} style={[styles.teamChoice,{borderColor:palette.blue},selected==="blue"&&{backgroundColor:palette.blue}]}><Text style={[styles.teamChoiceText,{color:selected==="blue"?contrastTextColor(palette.blue):palette.blue}]}>{brand.teamBlueName}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityState={{selected:selected==="yellow"}} onPress={()=>onAssign(player.id,"yellow")} style={[styles.teamChoice,{borderColor:palette.yellow},selected==="yellow"&&{backgroundColor:palette.yellow}]}><Text style={[styles.teamChoiceText,{color:selected==="yellow"?contrastTextColor(palette.yellow):palette.yellow}]}>{brand.teamYellowName}</Text></Pressable>
+        </View>
+      </Card>;
+    })}
+    {!remaining&&(!blue||!yellow)?<Card style={styles.warning}><Text style={styles.warningTitle}>Os dois times precisam ter jogadores.</Text></Card>:null}
+    <Button title={`Revisar times (${assigned}/${players.length})`} disabled={!complete} onPress={onFinish}/>
+    <Button title="Usar distribuição automática" variant="secondary" onPress={onAutomatic}/>
+    <Button title="Trocar método" variant="secondary" onPress={onBack}/>
+  </>;
 }
 
 function TeamEditor({ team, players, extraId, selectedId, onSelect, onMove }: { team: TeamKey; players: Player[]; extraId?:string; selectedId: string | null; onSelect: (id: string) => void; onMove: (id: string) => void }) {
@@ -233,6 +295,14 @@ const styles = StyleSheet.create({
   playerName: { color: colors.text, fontWeight: "800" },
   choiceMark: { fontSize: 22, color: colors.green, fontWeight: "900" },
   instructions: { gap: 7 },
+  methodCard: { gap: 12 },
+  assignmentSummary: { flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:6 },
+  assignmentCount: { fontWeight:"900",fontSize:12 },
+  assignmentRemaining: { color:colors.muted,fontWeight:"800",fontSize:12 },
+  manualPlayer: { gap:10 },
+  teamChoices: { flexDirection:"row",gap:8 },
+  teamChoice: { flex:1,borderWidth:1,borderRadius:10,paddingHorizontal:8,paddingVertical:10,alignItems:"center" },
+  teamChoiceText: { fontSize:12,fontWeight:"900" },
   official: { color: colors.blue, fontWeight: "800" },
   draft: { color: colors.yellow, fontWeight: "800" },
   manual: { color: colors.success, fontWeight: "800" },

@@ -96,8 +96,36 @@ export async function PATCH(request: Request) {
     if (action === "cancel") {
       const id = String(payload.matchId || ""), previous: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
       if (!previous) return Response.json({ error: "Partida não encontrada." }, { status: 404, headers: noStore });
-      if (previous.status !== "OPEN") return Response.json({ error: "Somente partidas abertas podem ser canceladas." }, { status: 409, headers: noStore });
       const now = new Date().toISOString();
+      const cancellationAfterTeams = previous.status === "CLOSED" && Boolean(previous.separation_id);
+      if (cancellationAfterTeams) {
+        if (admin.accountType !== "administrator") {
+          return Response.json({ error: "Somente administradores podem cancelar uma partida após a publicação dos times." }, { status: 403, headers: noStore });
+        }
+        if (!Number.isFinite(new Date(previous.match_at).getTime()) || new Date(previous.match_at).getTime() > Date.now()) {
+          return Response.json({ error: "A partida só pode ser cancelada após o horário programado." }, { status: 409, headers: noStore });
+        }
+        if (await db().prepare(`SELECT id FROM career_matches WHERE separation_id=?`).bind(previous.separation_id).first()) {
+          return Response.json({ error: "A partida não pode ser cancelada porque o resultado já foi confirmado." }, { status: 409, headers: noStore });
+        }
+        const cancelled = await db().prepare(
+          `UPDATE scheduled_matches SET status='CANCELLED',updated_at=?
+           WHERE id=? AND status='CLOSED' AND separation_id IS NOT NULL AND match_at<=?
+             AND NOT EXISTS (SELECT 1 FROM career_matches WHERE separation_id=scheduled_matches.separation_id)`,
+        ).bind(now, id, now).run();
+        if (Number(cancelled.meta?.changes || 0) !== 1) {
+          return Response.json({ error: "A partida foi alterada ou recebeu um resultado enquanto era cancelada. Atualize e tente novamente." }, { status: 409, headers: noStore });
+        }
+        await audit(admin.id, "MATCH_CANCELLED", "scheduled_match", id, {
+          status: "CANCELLED", cancellationType: "AFTER_TEAMS_WITHOUT_RESULT", separationId: String(previous.separation_id),
+        }, previous);
+        await broadcastAccountNotification({
+          type: "MATCH_CANCELLED", title: "Partida cancelada",
+          body: `${previous.title} foi cancelada após a publicação dos times.`, matchId: id,
+        });
+        return Response.json({ ok: true, message: "Partida cancelada. A escalação foi preservada no histórico para auditoria." }, { headers: noStore });
+      }
+      if (previous.status !== "OPEN") return Response.json({ error: "Somente partidas abertas ou partidas passadas sem resultado podem ser canceladas." }, { status: 409, headers: noStore });
       await db().batch([
         db().prepare(`UPDATE scheduled_matches SET status='CANCELLED',closed_at=?,updated_at=? WHERE id=?`).bind(now, now, id),
         db().prepare(`DELETE FROM match_separation_drafts WHERE match_id=?`).bind(id),
