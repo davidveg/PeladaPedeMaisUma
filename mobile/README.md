@@ -71,6 +71,14 @@ eas build --profile preview --platform all
 eas build --profile production --platform all
 ```
 
+Para publicar a OTA Android de homologação da Pelada Pede Mais Uma no macOS ou Linux, execute na raiz do repositório:
+
+```bash
+./update-pelada-pede-mais-uma.sh "Mensagem da atualização"
+```
+
+O script Bash usa o mesmo projeto EAS, canal `preview`, ambiente `preview` e identidade do aplicativo definidos pelo script PowerShell correspondente. Ele exige Bash, Node.js, `npx` e uma sessão válida no EAS CLI.
+
 ### Pelada do Agrião
 
 Os perfis do Agrião usam o package/bundle `br.com.peladadoagriao.app`, o projeto EAS `5c7cc851-84df-4e97-8405-35091dc56fa0`, o Firebase de `google-services-agriao.json` e a API `https://peladadoagriao.vegaalameda.com`. Eles não substituem nem recebem atualizações do aplicativo Pelada Pede Mais Uma.
@@ -79,6 +87,12 @@ Os perfis do Agrião usam o package/bundle `br.com.peladadoagriao.app`, o projet
 eas build --profile agriao-preview --platform android
 eas build --profile agriao-production --platform android
 eas build --profile agriao-production --platform ios
+```
+
+No macOS ou Linux, publique a OTA Android de homologação a partir da raiz do repositório com:
+
+```bash
+./update-pelada-do-agriao.sh "Mensagem da atualização"
 ```
 
 O EAS Update não recebe um perfil de build. Antes de publicar uma atualização OTA do Agrião no PowerShell, defina explicitamente a identidade do projeto para impedir que o update seja enviado ao aplicativo anterior:
@@ -118,6 +132,12 @@ Os perfis da Peladix usam o package/bundle `br.com.peladix.app`, o projeto EAS
 eas build --profile peladix-preview --platform android
 eas build --profile peladix-production --platform android
 eas build --profile peladix-production --platform ios
+```
+
+No macOS ou Linux, publique a OTA Android de homologação a partir da raiz do repositório com:
+
+```bash
+./update-pelada-peladix.sh "Mensagem da atualização"
 ```
 
 Troque os identificadores `br.com.peladapedemaisuma.app` antes da primeira publicação caso esse domínio não pertença ao projeto.

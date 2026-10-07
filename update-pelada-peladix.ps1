@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
@@ -34,7 +35,17 @@ $env:EXPO_ADAPTIVE_BACKGROUND_COLOR = "#FFFFFF"
 
 Push-Location -LiteralPath $mobilePath
 try {
-    & npx.cmd eas-cli@latest update `
+    $npxCommand = if (Get-Command npx.cmd -ErrorAction SilentlyContinue) {
+        "npx.cmd"
+    }
+    elseif (Get-Command npx -ErrorAction SilentlyContinue) {
+        "npx"
+    }
+    else {
+        throw "O npx não foi encontrado. Instale o Node.js e confirme que ele está disponível no PATH."
+    }
+
+    & $npxCommand eas-cli@latest update `
         --channel preview `
         --environment preview `
         --platform android `
