@@ -2,7 +2,7 @@
 /* The administrative API and existing panel shell intentionally use schema-flexible payloads. */
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { brazilianDateInput, brazilianDateTimeIso, brazilianDateTimeParts, brazilianTimeInput } from "../../lib/brazilian-date-time";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
@@ -10,12 +10,13 @@ import { WeatherPreview } from "../components/WeatherPreview";
 import { BrandedLoading } from "../components/BrandedLoading";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
-type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string; canConfigureDrafts?: boolean; allowPostSeparationCancellation?: boolean; onInstanceConfigSaved?(config: any): void };
+type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string; canConfigureDrafts?: boolean; allowPostSeparationCancellation?: boolean; allowPostSeparationReplacement?: boolean; onInstanceConfigSaved?(config: any): void };
 type Attendance = { playerId: string; playerName: string; status: "PRESENT" | "ABSENT"; changeCount: number };
 type Match = {
   id: string; title: string; matchAt: string; confirmationDeadline: string; location?: string | null;
   maxChanges: number; status: string; separationId?: string | null;
-  canCancelAfterTeams?: boolean;
+  canCancelAfterTeams?: boolean; canReplaceAfterTeams?: boolean;
+  lineup?: { blue: Player[]; yellow: Player[] } | null;
   counts: { present: number; absent: number; pending: number; preconfirmed?: number }; attendance: Attendance[];
   guestPreconfirmation?: { enabled: boolean; threshold: number; canApprove: boolean };
   guestConfirmation?: { enabled: boolean; opensAt?: string | null; canSelfConfirm: boolean };
@@ -25,9 +26,9 @@ type Match = {
   shareMessage?: string;
   weather?: any;
 };
-type Player = { id: string; displayName: string; type: string; primaryPosition: string };
+type Player = { id: string; displayName: string; type: string; primaryPosition: string; photoUrl?: string | null };
 
-export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[], matchId, canConfigureDrafts=false, allowPostSeparationCancellation=false, onInstanceConfigSaved }: Props) {
+export function MatchesPanel({ api, setError, setNotice, instanceConfig, permissions=[], matchId, canConfigureDrafts=false, allowPostSeparationCancellation=false, allowPostSeparationReplacement=false, onInstanceConfigSaved }: Props) {
   const [data, setData] = useState<{ matches: Match[]; players: Player[] }>({ matches: [], players: [] });
   const [editing, setEditing] = useState<Match | "new" | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -77,6 +78,16 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
       setNotice(result.message); await load();
     } catch (cause: any) { setError(cause.message); }
   }
+  async function replacePlayer(outgoingPlayerId: string, incomingPlayerId: string) {
+    setError("");
+    try {
+      const result = await api("/api/admin/matches", {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "replace-player", matchId: current?.id, outgoingPlayerId, incomingPlayerId }),
+      });
+      setNotice(`${result.message} Time ${result.teamName}. Equilíbrio atual: ${result.balanceClassification}.`); await load();
+    } catch (cause: any) { setError(cause.message); throw cause; }
+  }
   function closeMatch(item: Match) {
     window.location.assign(`/?matchId=${encodeURIComponent(item.id)}`);
   }
@@ -105,7 +116,7 @@ export function MatchesPanel({ api, setError, setNotice, instanceConfig, permiss
       <h3>{item.title}</h3><p>{dateTime(item.matchAt)}{item.location ? ` · ${item.location}` : ""}</p>
       <div><b className="present">{item.counts.present} presentes</b><b className="absent">{item.counts.absent} ausentes</b>{item.guestPreconfirmation?.enabled && <b>{item.counts.preconfirmed || 0} na espera</b>}<b>{item.counts.pending} pendentes</b></div>
     </button>) : <div className="admin-card match-admin-empty">Nenhuma partida criada.</div>}{totalPages > 1 && <nav className="match-admin-pagination" aria-label="Paginação das partidas"><span className="pagination-summary"><span className="pagination-range">Exibindo <b>{pageStart + 1}–{pageEnd}</b> de <b>{visibleMatches.length}</b></span><small>Página {page} de {totalPages}</small></span><button type="button" className="ghost" disabled={page === 1} onClick={() => goToPage(page - 1)}>← Anterior</button><button type="button" className="ghost" disabled={page === totalPages} onClick={() => goToPage(page + 1)}>Próxima →</button></nav>}</div>}
-    <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} allowPostSeparationCancellation={allowPostSeparationCancellation} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
+    <div>{current ? <MatchAdminDetail match={current} players={data.players} canManage={canManage} canAttend={canAttend} canCancel={canCancel} canSeparate={canSeparate} allowPostSeparationCancellation={allowPostSeparationCancellation} allowPostSeparationReplacement={allowPostSeparationReplacement} teamBlueName={instanceConfig?.teamBlueName || "Azul"} teamYellowName={instanceConfig?.teamYellowName || "Amarelo"} onAttendance={attendance} onGuestPreconfirmation={guestPreconfirmation} onReplace={replacePlayer} onEdit={() => setEditing(current)} onClose={() => closeMatch(current)} onCancel={() => cancelMatch(current)}/> : <div className="admin-card match-admin-empty">Selecione uma partida para gerenciar as presenças.</div>}</div></div>
     {editing && <MatchEditor match={editing === "new" ? null : editing} api={api} instanceConfig={instanceConfig} onClose={() => setEditing(null)} onSaved={async message => { setEditing(null); setNotice(message); await load(); }}/>}
   </section>;
 }
@@ -122,7 +133,7 @@ function SeparationDraftSetting({ api, config, setError, setNotice, onSaved }: {
   return <section className="admin-card separation-draft-setting match-draft-setting"><div><small>CONFIGURAÇÃO DAS PARTIDAS</small><h2>Rascunhos de Escalação</h2><p>Permite gerar, ajustar e salvar uma proposta privada a partir dos presentes de uma partida aberta. O rascunho não fecha a lista nem notifica jogadores até a publicação dos times.</p></div><div className="feature-switch"><button type="button" className={enabled?"ghost":"primary"} disabled={saving} aria-pressed={enabled} onClick={toggle}>{saving?"Salvando…":enabled?"Desativar":"Ativar"}</button><span className="help-tip"><button type="button" aria-label="Ver explicação sobre rascunhos de escalação" aria-describedby="help-match-separation-drafts">?</button><span id="help-match-separation-drafts" role="tooltip">Quando ativo, cada partida aberta com pelo menos quatro presentes oferece a opção de criar ou editar um rascunho. O histórico confirmado continua disponível dentro da própria partida.</span></span></div></section>;
 }
 
-function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, canSeparate, allowPostSeparationCancellation, onAttendance, onGuestPreconfirmation, onEdit, onClose, onCancel }: any) {
+function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, canSeparate, allowPostSeparationCancellation, allowPostSeparationReplacement, teamBlueName, teamYellowName, onAttendance, onGuestPreconfirmation, onReplace, onEdit, onClose, onCancel }: any) {
   const byPlayer = useMemo(
     () => Object.fromEntries(match.attendance.map((item: Attendance) => [item.playerId, item])),
     [match.attendance],
@@ -158,9 +169,35 @@ function MatchAdminDetail({ match, players, canManage, canAttend, canCancel, can
         <button className={answer?.status === "ABSENT" ? "attendance-absent on" : "attendance-absent"} onClick={() => onAttendance(player.id, "ABSENT")}>× Ausente</button></div>}
       </div>;
     })}</Fragment>)}</div>
+    {allowPostSeparationReplacement && match.canReplaceAfterTeams && <ClosedMatchReplacement match={match} players={players} teamBlueName={teamBlueName} teamYellowName={teamYellowName} onReplace={onReplace}/>}
     {match.status === "OPEN" && match.separationDraft?.enabled && match.separationDraft?.exists && <p className={match.separationDraft.stale ? "match-draft-status stale" : "match-draft-status"}>{match.separationDraft.stale ? "O rascunho ficou desatualizado porque a lista de presentes mudou. Ao abri-lo, uma nova proposta será iniciada." : `Rascunho salvo${match.separationDraft.updatedAt ? ` em ${dateTime(match.separationDraft.updatedAt)}` : ""}.`}</p>}
     <div className="match-admin-actions">{match.status === "OPEN" && match.shareMessage ? <button className="ghost whatsapp-button" onClick={share}><WhatsAppIcon/>Compartilhar parcial no WhatsApp</button> : null}{match.separationId && <a className="ghost" href={`/partidas?match=${encodeURIComponent(match.id)}&tab=teams`}>Abrir times da partida ↗</a>}{match.status === "OPEN" && <>{canSeparate&&match.separationDraft?.enabled&&<a className="ghost" aria-disabled={match.counts.present<4} href={match.counts.present>=4?`/?matchId=${encodeURIComponent(match.id)}&draft=1`:undefined}>{match.separationDraft.exists&&!match.separationDraft.stale?'Editar rascunho de escalação':'Criar rascunho de escalação'}</a>}{canCancel&&<button className="danger" onClick={onCancel}>Cancelar partida</button>}{canSeparate&&<button className="primary" disabled={match.counts.present < 4} onClick={onClose}>Fechar lista e gerar times</button>}</>}{allowPostSeparationCancellation&&match.canCancelAfterTeams&&<button className="danger" onClick={onCancel}>Cancelar partida sem resultado</button>}</div>
   </section>;
+}
+
+function ClosedMatchReplacement({ match, players, teamBlueName, teamYellowName, onReplace }: { match: Match; players: Player[]; teamBlueName: string; teamYellowName: string; onReplace(outgoingPlayerId: string, incomingPlayerId: string): Promise<void> }) {
+  const [outgoingPlayerId, setOutgoingPlayerId] = useState(""), [incomingPlayerId, setIncomingPlayerId] = useState(""), [busy, setBusy] = useState(false);
+  const blue = match.lineup?.blue || [], yellow = match.lineup?.yellow || [], lineupIds = new Set([...blue, ...yellow].map(player => player.id));
+  const available = players.filter(player => !lineupIds.has(player.id));
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const outgoing = [...blue, ...yellow].find(player => player.id === outgoingPlayerId), incoming = available.find(player => player.id === incomingPlayerId);
+    if (!outgoing || !incoming) return;
+    if (!confirm(`Confirmar a substituição de ${outgoing.displayName} por ${incoming.displayName}? ${incoming.displayName} entrará no mesmo time e a alteração será notificada.`)) return;
+    setBusy(true);
+    try { await onReplace(outgoingPlayerId, incomingPlayerId); setOutgoingPlayerId(""); setIncomingPlayerId(""); }
+    catch { /* O painel pai apresenta a mensagem da API sem apagar as escolhas. */ }
+    finally { setBusy(false); }
+  }
+  return <form className="match-player-replacement" onSubmit={submit}>
+    <div><small>AJUSTE APÓS O FECHAMENTO</small><h3>Substituição de última hora</h3><p>Troque um jogador sem redistribuir os times. O substituto entra na mesma equipe e a alteração fica registrada na auditoria.</p></div>
+    <div className="match-player-replacement-fields">
+      <label>Quem saiu<select value={outgoingPlayerId} onChange={event => setOutgoingPlayerId(event.target.value)} required disabled={busy}><option value="">Selecionar jogador…</option><optgroup label={`Time ${teamBlueName}`}>{blue.map(player => <option key={player.id} value={player.id}>{player.displayName} · {player.primaryPosition}</option>)}</optgroup><optgroup label={`Time ${teamYellowName}`}>{yellow.map(player => <option key={player.id} value={player.id}>{player.displayName} · {player.primaryPosition}</option>)}</optgroup></select></label>
+      <span aria-hidden="true">→</span>
+      <label>Quem entra<select value={incomingPlayerId} onChange={event => setIncomingPlayerId(event.target.value)} required disabled={busy || !available.length}><option value="">{available.length ? "Selecionar substituto…" : "Nenhum jogador disponível"}</option>{administrativePlayerGroups(available).map(group => <optgroup key={group.key} label={group.label}>{group.players.map(player => <option key={player.id} value={player.id}>{player.displayName} · {player.primaryPosition}</option>)}</optgroup>)}</select></label>
+      <button className="primary" disabled={busy || !outgoingPlayerId || !incomingPlayerId}>{busy ? "Substituindo…" : "Confirmar troca"}</button>
+    </div>
+  </form>;
 }
 
 export function MatchEditor({ match, api, instanceConfig, onClose, onSaved }: { match: Match | null; api: Api; instanceConfig?: any; onClose(): void; onSaved(message: string): Promise<void> }) {

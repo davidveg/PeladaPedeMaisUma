@@ -4120,6 +4120,32 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--control-text, #f2f5f3);
 }
 
+.match-admin-surface .match-player-replacement {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+}
+
+.match-admin-surface .match-player-replacement h3,
+.match-admin-surface .match-player-replacement-fields label {
+  color: var(--control-text, #f2f5f3);
+}
+
+.match-admin-surface .match-player-replacement p {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.match-admin-surface .match-player-replacement > div > small,
+.match-admin-surface .match-player-replacement-fields > span {
+  color: var(--management-accent-text, var(--management-button, #d3eb7a));
+}
+
+.match-admin-surface .match-player-replacement select {
+  border-color: var(--management-line, #34433b);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+}
+
 /* Restore the original information hierarchy of the player cards while
    keeping the newer metallic material and collision-safe sizing. */
 .player-card-modal {

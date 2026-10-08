@@ -14,7 +14,7 @@ export const DELINQUENCY_ATTENDANCE_MESSAGE = "Identificamos um pagamento em atr
 export async function loadScheduledMatches(account: any, includePlayers = false, publicBaseUrl = "", matchId = "") {
   await ensureDb();
   const [matchResult, totalActive, allPlayerResult, instanceRow] = await Promise.all([db().prepare(
-    `SELECT m.*,s.match_title separation_title,career.id career_match_id,draft.id separation_draft_id,
+    `SELECT m.*,s.match_title separation_title,s.snapshot separation_snapshot,career.id career_match_id,draft.id separation_draft_id,
             draft.updated_at separation_draft_updated_at,draft.present_player_ids separation_draft_player_ids
      FROM scheduled_matches m
      LEFT JOIN team_separations s ON s.id=m.separation_id
@@ -408,6 +408,96 @@ export async function createSeparationFromMatch(
   return { match: { ...match, status: "CLOSED", separation_id: id }, separationId: id, result };
 }
 
+export async function replaceClosedMatchPlayer(params: {
+  matchId: string;
+  outgoingPlayerId: string;
+  incomingPlayerId: string;
+  administratorId: string;
+}) {
+  await ensureDb();
+  const matchId = String(params.matchId || ""), outgoingPlayerId = String(params.outgoingPlayerId || ""), incomingPlayerId = String(params.incomingPlayerId || "");
+  if (!matchId || !outgoingPlayerId || !incomingPlayerId) throw statusError("Selecione quem saiu e quem ocupará a vaga.", 400);
+  if (outgoingPlayerId === incomingPlayerId) throw statusError("Escolha jogadores diferentes para realizar a substituição.", 400);
+  const match: any = await db().prepare(
+    `SELECT m.*,s.snapshot separation_snapshot,s.arrival_order separation_arrival_order,s.match_draft separation_match_draft
+     FROM scheduled_matches m
+     LEFT JOIN team_separations s ON s.id=m.separation_id AND s.deleted_at IS NULL
+     WHERE m.id=?`,
+  ).bind(matchId).first();
+  if (!match) throw statusError("Partida não encontrada.", 404);
+  if (match.status !== "CLOSED" || !match.separation_id || !match.separation_snapshot) {
+    throw statusError("A substituição está disponível somente depois da publicação dos times.", 409);
+  }
+  if (await db().prepare(`SELECT id FROM career_matches WHERE separation_id=?`).bind(match.separation_id).first()) {
+    throw statusError("A substituição não é mais permitida porque o resultado da partida já foi confirmado.", 409);
+  }
+  let snapshot: any;
+  try { snapshot = JSON.parse(String(match.separation_snapshot)); }
+  catch { throw statusError("A escalação salva não pôde ser lida.", 409); }
+  const blue = Array.isArray(snapshot.blue) ? snapshot.blue as Player[] : [], yellow = Array.isArray(snapshot.yellow) ? snapshot.yellow as Player[] : [];
+  const outgoingBlueIndex = blue.findIndex(player => String(player.id) === outgoingPlayerId);
+  const outgoingYellowIndex = yellow.findIndex(player => String(player.id) === outgoingPlayerId);
+  if (outgoingBlueIndex < 0 && outgoingYellowIndex < 0) throw statusError("O jogador que saiu não pertence à escalação publicada.", 409);
+  if ([...blue, ...yellow].some(player => String(player.id) === incomingPlayerId)) throw statusError("O substituto já pertence à escalação publicada.", 409);
+  const incomingRow: any = await db().prepare(`SELECT * FROM players WHERE id=? AND active=1 AND deleted_at IS NULL`).bind(incomingPlayerId).first();
+  if (!incomingRow) throw statusError("O substituto não foi encontrado ou está inativo.", 404);
+  const config: Config = { ...defaultConfig, ...snapshot };
+  const [incomingPlayer] = await attachHistoricalPerformance([mapPlayer(incomingRow)], Boolean(config.historicalLearningEnabled));
+  const nextBlue = [...blue], nextYellow = [...yellow];
+  const team = outgoingBlueIndex >= 0 ? "BLUE" : "YELLOW";
+  const outgoingPlayer = team === "BLUE" ? nextBlue[outgoingBlueIndex] : nextYellow[outgoingYellowIndex];
+  if (team === "BLUE") nextBlue[outgoingBlueIndex] = incomingPlayer;
+  else nextYellow[outgoingYellowIndex] = incomingPlayer;
+  const goalkeeperCount = [...nextBlue, ...nextYellow].filter(player => player.type === "goalkeeper" || player.primaryPosition === "Goleiro").length;
+  if (goalkeeperCount > 2) throw statusError("A substituição ultrapassaria o limite de 2 goleiros na partida.", 409);
+  const recalculated = recalculateTeamBalance(nextBlue, nextYellow, config);
+  const nextSnapshot = { ...snapshot, blue: nextBlue, yellow: nextYellow, ...recalculated, selectionMethod: "manual" };
+  const now = new Date().toISOString();
+  const updated = await db().prepare(
+    `UPDATE team_separations
+     SET snapshot=?,manually_adjusted=1,balance_score=?,balance_classification=?,arrival_order=NULL,match_draft=NULL,updated_at=?
+     WHERE id=? AND deleted_at IS NULL
+       AND EXISTS (SELECT 1 FROM scheduled_matches m WHERE m.id=? AND m.status='CLOSED' AND m.separation_id=team_separations.id)
+       AND NOT EXISTS (SELECT 1 FROM career_matches WHERE separation_id=team_separations.id)`,
+  ).bind(JSON.stringify(nextSnapshot), recalculated.cost, recalculated.rating, now, match.separation_id, matchId).run();
+  if (Number(updated.meta?.changes || 0) !== 1) {
+    throw statusError("A partida foi alterada ou recebeu um resultado enquanto a substituição era feita. Atualize e tente novamente.", 409);
+  }
+  const previousAttendance = (await db().prepare(
+    `SELECT player_id,status,change_count FROM match_attendance WHERE match_id=? AND player_id IN (?,?)`,
+  ).bind(matchId, outgoingPlayerId, incomingPlayerId).all()).results as any[];
+  await db().batch([
+    attendanceOverrideStatement(matchId, outgoingPlayerId, "ABSENT", params.administratorId, now),
+    attendanceOverrideStatement(matchId, incomingPlayerId, "PRESENT", params.administratorId, now),
+    db().prepare(`DELETE FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`).bind(matchId, incomingPlayerId),
+    db().prepare(`UPDATE scheduled_matches SET updated_at=? WHERE id=? AND status='CLOSED' AND separation_id=?`).bind(now, matchId, match.separation_id),
+  ]);
+  await audit(params.administratorId, "MATCH_PLAYER_REPLACED_AFTER_TEAMS", "scheduled_match", matchId, {
+    separationId: String(match.separation_id), team, outgoingPlayerId, outgoingPlayerName: String(outgoingPlayer.displayName),
+    incomingPlayerId, incomingPlayerName: String(incomingPlayer.displayName), balanceClassification: recalculated.rating,
+    arrivalOrderCleared: Boolean(match.separation_arrival_order), matchDraftCleared: Boolean(match.separation_match_draft),
+  }, {
+    attendance: previousAttendance, balanceClassification: String(snapshot.rating || ""),
+  });
+  return {
+    matchId, separationId: String(match.separation_id), team, outgoingPlayer, incomingPlayer,
+    balanceClassification: recalculated.rating,
+    message: `${incomingPlayer.displayName} substituiu ${outgoingPlayer.displayName} na mesma equipe.`,
+  };
+}
+
+function attendanceOverrideStatement(matchId: string, playerId: string, status: AttendanceStatus, administratorId: string, now: string) {
+  return db().prepare(
+    `INSERT INTO match_attendance
+     (id,match_id,player_id,status,change_count,responded_by_account_type,responded_by_account_id,updated_by_administrator_id,created_at,updated_at)
+     VALUES (?,?,?,?,0,'administrator',?,?,?,?)
+     ON CONFLICT(match_id,player_id) DO UPDATE SET
+       status=excluded.status,responded_by_account_type='administrator',responded_by_account_id=excluded.responded_by_account_id,
+       updated_by_administrator_id=excluded.updated_by_administrator_id,absence_period_id=NULL,absence_previous_status=NULL,
+       absence_previous_change_count=NULL,updated_at=excluded.updated_at`,
+  ).bind(crypto.randomUUID(), matchId, playerId, status, administratorId, administratorId, now, now);
+}
+
 export function statusError(message: string, status: number) {
   return Object.assign(new Error(message), { status });
 }
@@ -452,6 +542,11 @@ function publicMatch(
   const goalkeepersPresent = players.filter(item => presentPlayerIds.has(String(item.id)) && (item.type === "goalkeeper" || item.primary_position === "Goleiro")).length;
   const preconfirmedCount = instance.guestPreconfirmationEnabled ? guestPreconfirmations.length : 0;
   const presentCount = attendance.filter(item => item.status === "PRESENT").length;
+  const separationSnapshot = parseJsonObject(row.separation_snapshot);
+  const lineupPlayer = (player: any) => ({
+    id: String(player.id), displayName: String(player.displayName || player.fullName || "Jogador"), photoUrl: player.photoUrl || null,
+    type: String(player.type || "monthly"), primaryPosition: String(player.primaryPosition || ""),
+  });
   return {
     id: String(row.id), title: String(row.title), matchAt: String(row.match_at),
     confirmationDeadline: String(row.confirmation_deadline), location: row.location ? String(row.location) : null,
@@ -462,6 +557,11 @@ function publicMatch(
       account?.accountType === "administrator" && row.status === "CLOSED" && row.separation_id && !row.career_match_id
       && Number.isFinite(new Date(row.match_at).getTime()) && new Date(row.match_at).getTime() <= Date.now()
     ),
+    canReplaceAfterTeams: Boolean(account?.accountType === "administrator" && row.status === "CLOSED" && row.separation_id && !row.career_match_id),
+    lineup: row.separation_id ? {
+      blue: (Array.isArray(separationSnapshot.blue) ? separationSnapshot.blue : []).map(lineupPlayer),
+      yellow: (Array.isArray(separationSnapshot.yellow) ? separationSnapshot.yellow : []).map(lineupPlayer),
+    } : null,
     separationDraft: {
       enabled: instance.separationDraftsEnabled,
       exists: Boolean(row.separation_draft_id),
@@ -585,4 +685,9 @@ function mapPlayer(row: any): Player {
     resultMomentum: Number(row.result_momentum ?? 0), votingMomentum: Number(row.voting_momentum ?? 0), careerRatingAdjustment: Number(row.career_rating_adjustment ?? 0),
     photoUrl: row.photo_url, active: Boolean(row.active),
   };
+}
+
+function parseJsonObject(value: unknown): Record<string, any> {
+  try { const parsed = value ? JSON.parse(String(value)) : {}; return parsed && typeof parsed === "object" ? parsed : {}; }
+  catch { return {}; }
 }

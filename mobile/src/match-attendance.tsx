@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Alert, Pressable, SectionList, StyleSheet, Text, View } from "react-native";
@@ -9,11 +9,15 @@ import { colors } from "@/theme";
 import type { MatchListPayload, MatchPlayer, ScheduledMatch } from "@/types";
 import { shareText } from "@/sharing";
 import { hasAnyPermission, hasPermission, MODERATOR_PERMISSIONS } from "@/moderator-permissions";
+import { useMobileBranding } from "@/branding";
+import { Select } from "@/statistics-ui";
+import { replacementPlayerOptions } from "@/post-separation-replacement";
 
 type PlayerSection = { key: "goalkeepers" | "monthly" | "guests"; title: string; description: string; data: MatchPlayer[] };
 
 export default function MatchAttendance({ id, topContent }: { id: string; topContent?: ReactNode }) {
   const { account } = useAuth(), router = useRouter(), client = useQueryClient();
+  const { config } = useMobileBranding();
   const canManageMatches = hasPermission(account, MODERATOR_PERMISSIONS.MATCHES_MANAGE);
   const canManageAttendance = hasPermission(account, MODERATOR_PERMISSIONS.MATCH_ATTENDANCE_MANAGE);
   const canManageSeparations = hasPermission(account, MODERATOR_PERMISSIONS.SEPARATIONS_MANAGE);
@@ -76,8 +80,39 @@ export default function MatchAttendance({ id, topContent }: { id: string; topCon
         <Pressable style={[styles.smallButton, response?.status === "ABSENT" && styles.smallAbsent]} onPress={() => mutation.mutate({ playerId: player.id, status: "ABSENT" })}><Text style={response?.status === "ABSENT" ? styles.smallOnText : styles.smallAbsentText}>×</Text></Pressable>
       </View>;
     }}
-    ListFooterComponent={<View style={styles.footer}>{item.separationId ? <Button title="Abrir escalação gerada" variant="secondary" onPress={() => router.push({ pathname: "/separations/[id]", params: { id: item.separationId! } })}/> : null}{canManageSeparations && item.status === "OPEN" && item.separationDraft?.enabled ? <Card style={[styles.draftInfo,item.separationDraft.stale&&styles.draftInfoStale]}><Text style={styles.draftTitle}>{item.separationDraft.exists?item.separationDraft.stale?"Rascunho desatualizado":"Rascunho salvo":"Planeje antes de publicar"}</Text><Text style={styles.draftText}>{item.separationDraft.exists&&!item.separationDraft.stale&&item.separationDraft.updatedAt?`Atualizado em ${new Date(item.separationDraft.updatedAt).toLocaleString("pt-BR")}. A lista continua aberta.`:item.separationDraft.stale?"A lista de presentes mudou. Uma nova proposta será iniciada ao abrir.":"Crie uma proposta sem encerrar a lista ou notificar os participantes."}</Text><Button title={item.separationDraft.exists&&!item.separationDraft.stale?"Editar rascunho de escalação":"Criar rascunho de escalação"} variant="secondary" disabled={item.counts.present<4} onPress={()=>router.push({pathname:"/new-separation",params:{matchId:item.id,draft:"1"}} as never)}/></Card>:null}{canManageSeparations && item.status === "OPEN" ? <Button title="Fechar lista e gerar times" disabled={item.counts.present < 4} onPress={() => router.push({ pathname: "/new-separation", params: { matchId: item.id } } as never)}/> : null}</View>}
+    ListFooterComponent={<View style={styles.footer}>{account?.role === "admin" && item.canReplaceAfterTeams ? <ClosedMatchReplacement match={item} players={players} teamBlueName={config.teamBlueName} teamYellowName={config.teamYellowName} onChanged={async () => { await client.invalidateQueries({ queryKey: ["matches"] }); await client.invalidateQueries({ queryKey: ["match-hub"] }); await client.invalidateQueries({ queryKey: ["separations"] }); await client.invalidateQueries({ queryKey: ["notifications"] }); }}/> : null}{item.separationId ? <Button title="Abrir escalação gerada" variant="secondary" onPress={() => router.push({ pathname: "/separations/[id]", params: { id: item.separationId! } })}/> : null}{canManageSeparations && item.status === "OPEN" && item.separationDraft?.enabled ? <Card style={[styles.draftInfo,item.separationDraft.stale&&styles.draftInfoStale]}><Text style={styles.draftTitle}>{item.separationDraft.exists?item.separationDraft.stale?"Rascunho desatualizado":"Rascunho salvo":"Planeje antes de publicar"}</Text><Text style={styles.draftText}>{item.separationDraft.exists&&!item.separationDraft.stale&&item.separationDraft.updatedAt?`Atualizado em ${new Date(item.separationDraft.updatedAt).toLocaleString("pt-BR")}. A lista continua aberta.`:item.separationDraft.stale?"A lista de presentes mudou. Uma nova proposta será iniciada ao abrir.":"Crie uma proposta sem encerrar a lista ou notificar os participantes."}</Text><Button title={item.separationDraft.exists&&!item.separationDraft.stale?"Editar rascunho de escalação":"Criar rascunho de escalação"} variant="secondary" disabled={item.counts.present<4} onPress={()=>router.push({pathname:"/new-separation",params:{matchId:item.id,draft:"1"}} as never)}/></Card>:null}{canManageSeparations && item.status === "OPEN" ? <Button title="Fechar lista e gerar times" disabled={item.counts.present < 4} onPress={() => router.push({ pathname: "/new-separation", params: { matchId: item.id } } as never)}/> : null}</View>}
   /></Screen>;
+}
+function ClosedMatchReplacement({ match, players, teamBlueName, teamYellowName, onChanged }: { match: ScheduledMatch; players: MatchPlayer[]; teamBlueName: string; teamYellowName: string; onChanged(): Promise<void> }) {
+  const [outgoingPlayerId, setOutgoingPlayerId] = useState(""), [incomingPlayerId, setIncomingPlayerId] = useState("");
+  const options = replacementPlayerOptions(match, players, teamBlueName, teamYellowName);
+  const mutation = useMutation({
+    mutationFn: () => apiFetch<{ message: string; teamName: string; balanceClassification: string }>("/api/admin/matches", jsonMutation("PATCH", {
+      action: "replace-player", matchId: match.id, outgoingPlayerId, incomingPlayerId,
+    })),
+    onSuccess: async result => {
+      setOutgoingPlayerId(""); setIncomingPlayerId(""); await onChanged();
+      Alert.alert("Substituição concluída", `${result.message}\nTime ${result.teamName}. Equilíbrio atual: ${result.balanceClassification}.`);
+    },
+    onError: error => Alert.alert("Não foi possível substituir", (error as Error).message),
+  });
+  const confirm = () => {
+    const outgoing = options.outgoing.find(option => option.value === outgoingPlayerId), incoming = options.incoming.find(option => option.value === incomingPlayerId);
+    if (!outgoing || !incoming) return;
+    Alert.alert("Confirmar substituição?", `${incoming.player.displayName} entrará no mesmo time de ${outgoing.player.displayName}. Os jogadores serão notificados e a alteração ficará na auditoria.`, [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Confirmar troca", onPress: () => mutation.mutate() },
+    ]);
+  };
+  return <Card style={styles.replacement}>
+    <Text style={styles.replacementEyebrow}>AJUSTE APÓS O FECHAMENTO</Text>
+    <Text style={styles.replacementTitle}>Substituição de última hora</Text>
+    <Text style={styles.replacementHelp}>Troque um jogador sem redistribuir os times. O substituto entra na mesma equipe e o equilíbrio é recalculado.</Text>
+    <Select label="Quem saiu" value={outgoingPlayerId} options={options.outgoing} onChange={setOutgoingPlayerId}/>
+    <Select label="Quem entra" value={incomingPlayerId} options={options.incoming} onChange={setIncomingPlayerId}/>
+    {!options.incoming.length ? <Text style={styles.warning}>Nenhum jogador ativo está disponível para substituir.</Text> : null}
+    <Button title="Confirmar troca" busy={mutation.isPending} disabled={!outgoingPlayerId || !incomingPlayerId || !options.incoming.length} onPress={confirm}/>
+  </Card>;
 }
 function Count({ value, label, color }: { value: number; label: string; color: string }) { return <View style={styles.count}><Text style={[styles.countValue, { color }]}>{value}</Text><Text style={styles.countLabel}>{label}</Text></View>; }
 function Roster({ item }: { item: ScheduledMatch }) { return <Card style={styles.roster}><Text style={styles.rosterTitle}>Presentes</Text><Text style={styles.names}>{item.attendance.filter(row => row.status === "PRESENT").map(row => row.playerName).join(", ") || "Ninguém ainda"}</Text>{item.guestPreconfirmation?.enabled ? <><Text style={[styles.rosterTitle, styles.waitingTitle]}>Lista de espera</Text><Text style={styles.names}>{item.preconfirmedGuests?.map(row => row.playerName).join(", ") || "Ninguém aguardando"}</Text></> : null}<Text style={[styles.rosterTitle, { marginTop: 12 }]}>Ausentes</Text><Text style={styles.names}>{item.attendance.filter(row => row.status === "ABSENT").map(row => row.playerName).join(", ") || "Ninguém ainda"}</Text></Card>; }
@@ -113,4 +148,5 @@ const styles = StyleSheet.create({
   smallPresent: { backgroundColor: colors.success, borderColor: colors.success }, smallAbsent: { backgroundColor: colors.danger, borderColor: colors.danger }, smallWaiting: { backgroundColor: "#FFF7D6", borderColor: colors.yellow }, smallOnText: { color: "#fff", fontSize: 18, fontWeight: "900" }, smallPresentText: { color: colors.success, fontSize: 18, fontWeight: "900" }, smallAbsentText: { color: colors.danger, fontSize: 18, fontWeight: "900" }, smallWaitingText: { color: colors.yellow, fontSize: 16, fontWeight: "900" },
   footer: { gap: 10, marginTop: 8 }, matchActions: { gap: 12, marginVertical: 12 }, smallDisabled: { opacity: .35 },
   draftInfo: { gap: 8, backgroundColor: "#F2F7F4" }, draftInfoStale: { backgroundColor: colors.yellowSoft, borderColor: colors.yellow }, draftTitle: { color: colors.text, fontSize: 16, fontWeight: "900" }, draftText: { color: colors.muted, lineHeight: 19 },
+  replacement: { gap: 12, marginBottom: 4 }, replacementEyebrow: { color: colors.greenLight, fontSize: 11, fontWeight: "900", letterSpacing: 1 }, replacementTitle: { color: colors.text, fontSize: 20, fontWeight: "900" }, replacementHelp: { color: colors.muted, lineHeight: 20 },
 });

@@ -177,7 +177,7 @@ Access tokens duram 15 minutos. Refresh tokens duram 30 dias, são armazenados s
 
 1. Jogador: login, partidas, confirmação e remarcação de presença, notificações, separações, card associado e mensagem de conta sem associação.
 2. Autorização: chamar proposta, config, ordem, súmula e resultado com token de jogador e confirmar `401`.
-3. Administrador: abrir partida, revisar presentes, gerar novamente, trocar jogadores, salvar/reabrir rascunho e fechar a lista para publicar e notificar.
+3. Administrador: abrir partida, revisar presentes, gerar novamente, trocar jogadores, salvar/reabrir rascunho e fechar a lista para publicar e notificar. Depois da publicação e antes do resultado, também pode substituir um jogador de última hora mantendo o mesmo time.
 4. Ordem: arrastar em cada time, usar setas acessíveis, salvar, alterar e salvar novamente.
 5. Súmula: gol com/sem assistência; GC com adversário e sem assistência; salvar e reabrir rascunho.
 6. Resultado: confirmar explicitamente, validar placar, corrigir e conferir auditoria/estatísticas.

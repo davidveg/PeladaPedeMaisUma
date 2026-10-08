@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { audit, db, ensureDb, staffRequired, staffRequiredAny } from "../../../../lib/database";
 import { broadcastAccountNotification } from "../../../../lib/account-notifications";
-import { createSeparationFromMatch, loadScheduledMatches, setAttendance, setGuestPreconfirmation } from "../../../../lib/scheduled-matches";
+import { createSeparationFromMatch, loadScheduledMatches, replaceClosedMatchPlayer, setAttendance, setGuestPreconfirmation } from "../../../../lib/scheduled-matches";
 import { resolvePublicBaseUrl } from "../../../../lib/public-url";
 import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 import { instanceConfigurationFromRow } from "../../../../lib/instance-config";
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const payload = await request.json().catch(() => ({})) as any;
   const action = String(payload.action || "update");
-  const permission = action === "attendance" || action === "guest-preconfirmation" ? "MATCH_ATTENDANCE_MANAGE" : action === "cancel" ? "MATCHES_CANCEL" : action === "close" ? "SEPARATIONS_MANAGE" : "MATCHES_MANAGE";
+  const permission = action === "attendance" || action === "guest-preconfirmation" ? "MATCH_ATTENDANCE_MANAGE" : action === "cancel" ? "MATCHES_CANCEL" : action === "close" || action === "replace-player" ? "SEPARATIONS_MANAGE" : "MATCHES_MANAGE";
   const admin: any = await staffRequired(request,permission);
   if (!admin) return Response.json({ error: "Este perfil moderador não possui permissão para esta operação." }, { status: 403, headers: noStore });
   await ensureDb();
@@ -92,6 +92,23 @@ export async function PATCH(request: Request) {
         });
       }
       return Response.json({ ok: true, separationId: result.separationId, message: result.alreadyCreated ? "A escalação desta partida já havia sido criada." : "Lista fechada e escalação criada." }, { headers: noStore });
+    }
+    if (action === "replace-player") {
+      if (admin.accountType !== "administrator") {
+        return Response.json({ error: "Somente administradores podem substituir jogadores depois da publicação dos times." }, { status: 403, headers: noStore });
+      }
+      const result = await replaceClosedMatchPlayer({
+        matchId: String(payload.matchId || ""), outgoingPlayerId: String(payload.outgoingPlayerId || ""),
+        incomingPlayerId: String(payload.incomingPlayerId || ""), administratorId: String(admin.id),
+      });
+      const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+      const teamName = result.team === "BLUE" ? instance.teamBlueName : instance.teamYellowName;
+      await broadcastAccountNotification({
+        type: "MATCH_UPDATED", title: "Substituição nos times",
+        body: `${result.incomingPlayer.displayName} substituiu ${result.outgoingPlayer.displayName} no time ${teamName}.`,
+        matchId: result.matchId,
+      });
+      return Response.json({ ok: true, ...result, teamName }, { headers: noStore });
     }
     if (action === "cancel") {
       const id = String(payload.matchId || ""), previous: any = await db().prepare(`SELECT * FROM scheduled_matches WHERE id=?`).bind(id).first();
