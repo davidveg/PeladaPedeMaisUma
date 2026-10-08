@@ -436,7 +436,8 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
     readFile(new URL("../app/branding.css", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(branding, /--admin-sidebar.*adminSidebarColor/);
+  assert.match(branding, /effectiveAdminSidebar.*adminSidebarColor/);
+  assert.match(branding, /--admin-sidebar.*effectiveAdminSidebar/);
   assert.match(branding, /--admin-sidebar-contrast.*contrastTextColor/);
   assert.match(branding, /--management-background.*managementBackgroundColor/);
   assert.match(branding, /--management-surface.*managementSurfaceColor/);
@@ -458,6 +459,20 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(admin, /const teamSettings=\[\["teamBlueName","Nome da primeira equipe","teamBlueColor"\],\["teamYellowName","Nome da segunda equipe","teamYellowColor"\]\]/);
   assert.match(admin, /className="instance-team-grid"/);
   assert.match(styles, /\.instance-team-grid \{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test("login administrativo usa a paleta configurada da gestão", async () => {
+  const [branding, theme] = await Promise.all([
+    readFile(new URL("../app/InstanceBranding.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(branding, /--admin-sidebar-accent-text.*readableAccentTextColor/);
+  assert.match(theme, /\.login-page \{[\s\S]*var\(--management-background/);
+  assert.match(theme, /\.login-copy \{[\s\S]*var\(--admin-sidebar/);
+  assert.match(theme, /\.login-copy div span \{[\s\S]*var\(--admin-sidebar-accent-text/);
+  assert.match(theme, /\.login-card \{[\s\S]*var\(--management-surface/);
+  assert.match(theme, /\.login-card input \{[\s\S]*var\(--control-surface/);
+  assert.match(theme, /\.login-card > \.primary \{[\s\S]*var\(--management-button/);
 });
 
 test("navegação pública possui paleta própria com fallback retrocompatível", async () => {

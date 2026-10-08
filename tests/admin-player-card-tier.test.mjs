@@ -10,7 +10,7 @@ test("cartões administrativos móveis seguem o overall e a paleta configurável
 
   assert.match(admin, /import \{ playerCardTier \} from "\.\.\/\.\.\/lib\/player-card-tier"/);
   assert.match(admin, /PlayerTables players=\{filtered\} config=\{\{\.\.\.defaultConfig,\.\.\.config,\.\.\.\(career\?\.config\|\|\{\}\)\}\}/);
-  assert.match(admin, /tier-\$\{playerCardTier\(score\(player,config\),config\)\}/);
+  assert.match(admin, /config\.cardTiersEnabled\?`\$\{base\} tier-row tier-\$\{playerCardTier\(score\(player,config\),config\)\}`:base/);
   assert.match(styles, /\.player-table \.player-tr\.tier-bronze\{--admin-player-tier-accent:#c77d50\}/);
   assert.match(styles, /\.player-table \.player-tr\.tier-silver\{--admin-player-tier-accent:#a8b4b9\}/);
   assert.match(styles, /\.player-table \.player-tr\.tier-gold\{--admin-player-tier-accent:#d9b83f\}/);

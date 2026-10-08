@@ -43,12 +43,15 @@ test("formulários financeiros usam as superfícies configuráveis da identidade
 test("cabeçalho financeiro permanece no fluxo da página durante a navegação", async () => {
   const theme = await readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8");
   const header = theme.match(/\.finance-page \.finance-head \{([^}]+)\}/)?.[1] || "";
+  const title = theme.match(/\.finance-page \.finance-head h1 \{([^}]+)\}/)?.[1] || "";
 
   assert.match(header, /position:\s*static/);
   assert.match(header, /top:\s*auto/);
   assert.match(header, /z-index:\s*auto/);
   assert.match(header, /height:\s*auto/);
   assert.match(header, /backdrop-filter:\s*none/);
+  assert.match(title, /font:\s*700[^;]*Georgia, serif/);
+  assert.match(title, /2\.875rem/);
 });
 
 test("goleiros são opcionais por competência na geração de mensalidades", async () => {

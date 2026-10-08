@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import { accountSignInHref, isPublicSitePath } from "../../lib/site-navigation";
 import { useInstanceBranding } from "../InstanceBranding";
 import { BrandedLoading } from "./BrandedLoading";
@@ -10,14 +10,6 @@ type AccessState = "checking" | "allowed" | "failed";
 export function SiteAccessGate({ children, authenticated = false }: PropsWithChildren<{ authenticated?: boolean }>) {
   const { config } = useInstanceBranding();
   const [state, setState] = useState<AccessState>(authenticated ? "allowed" : "checking");
-  const accessScreenStyle = {
-    "--access-background": config.managementBackgroundColor,
-    "--access-surface": config.managementSurfaceColor,
-    "--access-text": config.managementTextColor,
-    "--access-muted": config.managementMutedColor,
-    "--access-accent": config.managementButtonColor,
-    "--access-button-text": config.managementButtonTextColor,
-  } as CSSProperties;
 
   useEffect(() => {
     let active = true;
@@ -61,6 +53,6 @@ export function SiteAccessGate({ children, authenticated = false }: PropsWithChi
   }, [authenticated]);
 
   if (state === "checking") return <BrandedLoading variant="page" message="Verificando seu acesso…" detail={`Preparando ${config.siteShortName}`}/>;
-  if (state === "failed") return <div className="site-access-screen site-access-failed" style={accessScreenStyle}><span>Não foi possível validar seu acesso.</span><button className="primary" type="button" onClick={() => window.location.reload()}>Tentar novamente</button></div>;
+  if (state === "failed") return <div className="site-access-screen site-access-failed"><span>Não foi possível validar seu acesso.</span><button className="primary" type="button" onClick={() => window.location.reload()}>Tentar novamente</button></div>;
   return children;
 }

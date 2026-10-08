@@ -38,13 +38,8 @@ test("edição da súmula reutiliza a seleção de jogadores com foto da votaç�
   assert.match(football, /<PlayerPhotoSelect[\s\S]*players=\{scorerPlayers\}/);
   assert.match(football, /<PlayerPhotoSelect[\s\S]*players=\{goal\.ownGoal\?\[\]:assistPlayers\}/);
   assert.match(photoSelect, /<PlayerPhoto[\s\S]*player\.photoUrl/);
-  assert.match(photoSelect, /useInstanceBranding\(\)/);
-  assert.match(photoSelect, /--player-select-surface.*brand\.controlSurfaceColor/);
-  assert.match(photoSelect, /textColor = contrastTextColor\(brand\.controlSurfaceColor\)/);
-  assert.match(photoSelect, /--player-select-text.*textColor/);
-  assert.match(photoSelect, /--control-text.*textColor/);
-  assert.match(photoSelect, /--player-select-accent.*brand\.managementButtonColor/);
-  assert.match(photoSelect, /<b style=\{textStyle\}>\{player\.displayName\}<\/b>/);
+  assert.doesNotMatch(photoSelect, /style=\{theme\}|textStyle|controlSurfaceColor/);
+  assert.match(photoSelect, /<b>\{player\.displayName\}<\/b>/);
   assert.match(theme, /\.player-photo-select \.vote-player-trigger,[\s\S]*\.player-photo-select \.vote-player-options > button \{[\s\S]*var\(--player-select-surface[\s\S]*var\(--player-select-text/);
   assert.match(theme, /\.player-photo-select \.vote-player-trigger :is\(b, i\),[\s\S]*\.player-photo-select \.vote-player-options > button b \{[\s\S]*var\(--player-select-text/);
   assert.match(theme, /:is\(\.app-shell, \.member-page, \.vote-page\) \.contribution-field/);

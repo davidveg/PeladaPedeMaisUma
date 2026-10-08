@@ -10,14 +10,52 @@
   --line: #d7ddd8;
   --cream: #eef1ed;
   --green: #153f33;
+  --accent-text: var(--green);
+  --management-accent-text: var(--management-button, #d3eb7a);
   --lime: #cde85d;
   --white: #fff;
-  --modern-canvas: #eef1ed;
-  --modern-panel: rgba(255, 255, 255, .9);
-  --modern-panel-strong: #fff;
-  --modern-dark: #101713;
-  --modern-dark-soft: #18231e;
+  --modern-canvas: var(--management-background, #0f1612);
+  --modern-panel: var(--management-surface, #18211d);
+  --modern-panel-strong: var(--management-surface, #18211d);
+  --modern-dark: var(--management-background, #0f1612);
+  --modern-dark-soft: var(--management-surface, #18211d);
   --modern-shadow: 0 18px 55px rgba(16, 32, 25, .09);
+}
+
+html[data-color-scheme="dark"] {
+  color-scheme: dark;
+}
+
+/* Valores de primeira pintura. Após a hidratação, a identidade configurada
+   pela pelada gera automaticamente a versão clara equivalente. */
+html[data-color-scheme="light"] {
+  color-scheme: light;
+  --ink: #17221d;
+  --muted: #7a837f;
+  --cream: #edf0ee;
+  --white: #f9faf9;
+  --management-background: #edf0ee;
+  --management-surface: #f9faf9;
+  --management-text: #17221d;
+  --management-muted: #7a837f;
+  --management-line: rgba(23, 34, 29, .16);
+  --control-surface: #ecefed;
+  --control-text: #17221d;
+  --control-line: rgba(23, 34, 29, .16);
+  --admin-sidebar: #e3e8e5;
+  --admin-sidebar-contrast: #17221d;
+  --admin-sidebar-muted: rgba(23, 34, 29, .72);
+  --admin-sidebar-border: rgba(23, 34, 29, .2);
+  --public-sidebar: #e3e8e5;
+  --public-sidebar-contrast: #17221d;
+  --public-sidebar-muted: rgba(23, 34, 29, .72);
+  --public-sidebar-border: rgba(23, 34, 29, .16);
+  --public-topbar: #f1f3f2;
+  --public-topbar-contrast: #17221d;
+  --public-topbar-muted: rgba(23, 34, 29, .62);
+  --public-topbar-border: rgba(23, 34, 29, .1);
+  --accent-text: #174d3b;
+  --management-accent-text: #59652f;
 }
 
 html {
@@ -165,6 +203,7 @@ body {
 }
 
 .site-season-card strong {
+  color: var(--public-sidebar-contrast, #fff);
   font-size: 12px;
   text-transform: capitalize;
 }
@@ -222,6 +261,103 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.color-scheme-toggle {
+  --scheme-toggle-surface: var(--management-surface, #18211d);
+  --scheme-toggle-text: var(--management-text, #f2f5f3);
+  --scheme-toggle-line: var(--management-line, rgba(255, 255, 255, .12));
+  --scheme-toggle-accent: var(--management-button, #d3eb7a);
+  --scheme-toggle-accent-text: var(--management-button-contrast, #172018);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(32px, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--scheme-toggle-line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--scheme-toggle-surface) 78%, transparent);
+}
+
+.site-topbar .color-scheme-toggle {
+  --scheme-toggle-surface: var(--public-topbar, #0f1612);
+  --scheme-toggle-text: var(--public-topbar-contrast, #fff);
+  --scheme-toggle-line: var(--public-topbar-border, rgba(255, 255, 255, .1));
+  --scheme-toggle-accent: var(--public-sidebar-highlight, #d3eb7a);
+  --scheme-toggle-accent-text: var(--public-sidebar-highlight-contrast, #172018);
+}
+
+.color-scheme-toggle button {
+  display: inline-flex;
+  min-width: 32px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: color-mix(in srgb, var(--scheme-toggle-text) 64%, transparent);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.color-scheme-toggle button:hover {
+  background: color-mix(in srgb, var(--scheme-toggle-text) 7%, transparent);
+  color: var(--scheme-toggle-text);
+}
+
+.color-scheme-toggle button.active {
+  background: var(--scheme-toggle-accent);
+  color: var(--scheme-toggle-accent-text);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--scheme-toggle-accent) 22%, transparent);
+}
+
+.color-scheme-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.color-scheme-toggle--labels {
+  grid-template-columns: repeat(2, minmax(104px, 1fr));
+}
+
+.color-scheme-toggle--labels button {
+  height: 40px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.instance-theme-presentation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.instance-theme-presentation > div:first-child {
+  display: grid;
+  gap: 6px;
+}
+
+.instance-theme-presentation :is(h2, p) {
+  margin: 0;
+}
+
+.instance-theme-presentation > div:first-child > small {
+  color: var(--management-button, #d3eb7a);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.instance-theme-presentation p {
+  max-width: 720px;
 }
 
 .site-topbar-actions a {
@@ -359,7 +495,7 @@ body {
 .finance-head h1,
 .statistics-head h1,
 .advanced-statistics-head h1 {
-  color: #f6f8f6;
+  color: var(--management-text, #f2f5f3);
 }
 
 .member-page .member-access-card h2 {
@@ -1069,53 +1205,96 @@ body {
 /* Administrative workspace: the same football-management language, with all
    instance branding and existing administration flows preserved. */
 .admin-loading {
-  background: #0f1612;
-  color: #98a69f;
+  background: var(--management-background, #0f1612);
+  color: var(--management-muted, #98a69f);
 }
 
 .login-page {
-  background: #0f1612;
-  color: #eef2ef;
+  background:
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--management-button, #d3eb7a) 6%, transparent), transparent 28rem),
+    var(--management-background, #0f1612);
+  color: var(--management-text, #eef2ef);
 }
 
 .login-copy {
-  border-right: 1px solid rgba(255, 255, 255, .08);
+  border-right: 1px solid var(--admin-sidebar-border, rgba(255, 255, 255, .08));
   background:
-    radial-gradient(circle at 78% 90%, rgba(207, 232, 115, .1), transparent 25rem),
-    linear-gradient(145deg, #20392f, #12271f);
+    radial-gradient(circle at 78% 90%, color-mix(in srgb, var(--management-button, #d3eb7a) 12%, transparent), transparent 25rem),
+    var(--admin-sidebar, #133f31);
+  color: var(--admin-sidebar-contrast, #fff);
+}
+
+.login-copy > a {
+  color: var(--admin-sidebar-contrast, #fff);
+}
+
+.login-copy div span {
+  color: var(--admin-sidebar-accent-text, var(--management-button, #d3eb7a));
+}
+
+.login-copy h1 {
+  color: inherit;
+}
+
+.login-copy p,
+.login-copy > small {
+  color: var(--admin-sidebar-muted, rgba(255, 255, 255, .72));
 }
 
 .login-card {
   padding: 34px;
-  border: 1px solid #34433b;
+  border: 1px solid var(--management-line, #34433b);
   border-radius: 22px;
-  background: #18211d;
-  box-shadow: 0 22px 65px rgba(0, 0, 0, .24);
+  background: var(--management-surface, #18211d);
+  color: var(--management-text, #f2f5f3);
+  box-shadow: 0 22px 65px color-mix(in srgb, var(--management-background, #0f1612) 62%, transparent);
 }
 
 .login-card h2 {
-  color: #f6f8f6;
+  color: var(--management-text, #f6f8f6);
 }
 
 .login-card > p,
 .login-card > a,
 .login-card label small {
-  color: #98a69f;
+  color: var(--management-muted, #98a69f);
+}
+
+.login-card label {
+  color: var(--management-text, #f2f5f3);
 }
 
 .login-card .ball {
-  background: #26362e;
+  border: 1px solid var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
 }
 
 .login-card input {
-  border-color: #3b4a42;
-  background: #111a15;
-  color: #eef2ef;
-  color-scheme: dark;
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #eef2ef);
+  color-scheme: inherit;
+}
+
+.login-card input:focus {
+  border-color: var(--management-button, #d3eb7a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--management-button, #d3eb7a) 18%, transparent);
 }
 
 .login-card .forgot {
-  color: #cfe873;
+  color: var(--management-accent-text, var(--management-button, #d3eb7a));
+}
+
+.login-card > .primary {
+  border-color: var(--management-button, #d3eb7a);
+  background: var(--management-button, #d3eb7a);
+  color: var(--management-button-text, #172018);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--management-button, #d3eb7a) 18%, transparent);
+}
+
+.login-card > .primary:hover {
+  background: color-mix(in srgb, var(--management-button, #d3eb7a) 92%, var(--management-button-text, #172018) 8%);
 }
 
 .member-access {
@@ -1351,7 +1530,11 @@ body {
 .admin-shell .admin-user-avatar,
 .admin-shell .mobile-profile {
   background: color-mix(in srgb, var(--admin-sidebar, #133f31) 45%, #e2efbd);
-  color: #fff;
+  color: var(--admin-sidebar-contrast, #fff);
+}
+
+html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
+  color: var(--admin-sidebar-contrast, #17221d);
 }
 
 .admin-topbar {
@@ -1398,10 +1581,10 @@ body {
   height: 40px;
   place-items: center;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, .1);
+  border: 1px solid var(--management-line, rgba(255, 255, 255, .1));
   border-radius: 12px;
-  background: rgba(255, 255, 255, .035);
-  color: #e7ece9;
+  background: color-mix(in srgb, var(--management-text, #e7ece9) 4%, transparent);
+  color: var(--management-text, #e7ece9);
   font-size: 10px;
   font-weight: 850;
   text-decoration: none;
@@ -1409,8 +1592,8 @@ body {
 
 .admin-topbar-actions > a:hover,
 .admin-topbar-actions > button:hover {
-  border-color: rgba(207, 232, 115, .3);
-  background: rgba(207, 232, 115, .08);
+  border-color: color-mix(in srgb, var(--management-button, #cfe873) 30%, transparent);
+  background: color-mix(in srgb, var(--management-button, #cfe873) 8%, transparent);
 }
 
 .admin-topbar-actions > .mobile-profile {
@@ -1418,7 +1601,8 @@ body {
   width: 40px;
   padding: 0;
   border-color: transparent;
-  background: #31483e;
+  background: var(--control-surface, #31483e);
+  color: var(--control-text, #fff);
 }
 
 .admin-topbar-actions > a[href="/notificacoes"] {
@@ -1752,6 +1936,38 @@ body {
 .login-page {
   background: var(--management-background, #0f1612);
   color: var(--management-text, #f2f5f3);
+  color-scheme: inherit;
+}
+
+@media (max-width: 600px) {
+  .instance-theme-presentation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .instance-theme-presentation .color-scheme-toggle--labels {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .site-topbar .color-scheme-toggle {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .site-topbar .color-scheme-toggle button {
+    min-width: 28px;
+    height: 30px;
+    padding: 0 6px;
+  }
+
+  .admin-topbar > div:first-child {
+    min-width: 0;
+  }
+
+  .admin-topbar > div:first-child strong {
+    max-width: 80px;
+  }
 }
 
 .login-card,
@@ -1801,9 +2017,10 @@ body {
 }
 
 .admin-shell :is(input:not([type="range"]), select, textarea) {
-  border-color: var(--management-line, #34433b);
-  background: color-mix(in srgb, var(--management-background, #0f1612) 86%, #000 14%);
-  color: var(--management-text, #f2f5f3);
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-text, #f2f5f3);
+  color-scheme: inherit;
 }
 
 .admin-shell .tr,
@@ -2342,11 +2559,10 @@ body {
 
 .finance-page .finance-head h1 {
   max-width: 780px;
-  margin: 8px 0 9px;
+  margin: 8px 0;
   color: var(--ink, #f2f5f3);
-  font-size: clamp(2.5rem, 4vw, 3.75rem);
-  line-height: .93;
-  letter-spacing: -.045em;
+  font: 700 clamp(2.5rem, 3.4vw, 2.875rem)/1 Georgia, serif;
+  letter-spacing: -.025em;
 }
 
 .finance-page .finance-head p,
@@ -2575,7 +2791,7 @@ body {
   }
 
   .finance-page .finance-head h1 {
-    font-size: clamp(2.35rem, 12vw, 3.5rem);
+    font-size: clamp(2.25rem, 10vw, 2.375rem);
   }
 
   .finance-page .finance-tabs {
@@ -3669,6 +3885,29 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   color: var(--management-text, #f2f5f3);
 }
 
+.app-shell .public-player-table button.public-player-tr:not(.tier-row):hover,
+.app-shell .public-player-table button.public-player-tr:not(.tier-row):focus-visible {
+  background: color-mix(in srgb, var(--management-surface, #18211d) 90%, var(--management-text, #f2f5f3) 10%);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .player-table button.player-tr:not(.tier-row):hover,
+.admin-shell .player-table button.player-tr:not(.tier-row):focus-visible {
+  background: color-mix(in srgb, var(--management-surface, #18211d) 90%, var(--management-text, #f2f5f3) 10%);
+  color: var(--management-text, #f2f5f3);
+}
+
+.admin-shell .player-table .player-tr.tier-bronze { --admin-roster-tier-accent: #c77d50; }
+.admin-shell .player-table .player-tr.tier-silver { --admin-roster-tier-accent: #a8b4b9; }
+.admin-shell .player-table .player-tr.tier-gold { --admin-roster-tier-accent: #d9b83f; }
+.admin-shell .player-table .player-tr.tier-legendary { --admin-roster-tier-accent: #8061c8; }
+
+.admin-shell .player-table button.player-tr.tier-row:hover,
+.admin-shell .player-table button.player-tr.tier-row:focus-visible {
+  background: color-mix(in srgb, var(--management-surface, #18211d) 84%, var(--admin-roster-tier-accent, var(--management-line, #34433b)) 16%);
+  color: var(--management-text, #f2f5f3);
+}
+
 .app-shell .public-player-tr.th {
   background: color-mix(in srgb, var(--management-background, #0f1612) 74%, var(--management-surface, #18211d));
   color: var(--management-muted, #98a69f);
@@ -4527,4 +4766,26 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   border-color: var(--control-line, #415148);
   background: var(--management-background, #0f1612);
   color: var(--management-text, #f2f5f3);
+}
+
+/* Cores vivas continuam sendo usadas em botões, barras e bordas. Em textos,
+   estas variáveis recebem uma versão com contraste AA calculada pelo tema. */
+.overview-feature-copy > small,
+.overview-highlight > strong,
+.overview-highlight > a,
+.overview-highlight-empty span,
+.overview-player header small,
+.overview-panel-links a,
+.overview-balance > a,
+.overview-recents header a,
+.overview-balance header > span,
+.match-hub-card-action > span,
+.match-hub-back,
+.statistics-page :is(.statistics-summary small, .statistics-title small, .statistics-record-grid > article > div > small, .statistics-record-grid > article > strong) {
+  color: var(--accent-text, var(--green));
+}
+
+.admin-shell :is(.stat b, .overview-metric b, .match-admin-toolbar > div b, .overview-card-head > span),
+.admin-shell .instance-theme-presentation > div:first-child > small {
+  color: var(--management-accent-text, var(--management-button, #d3eb7a));
 }

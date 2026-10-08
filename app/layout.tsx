@@ -11,6 +11,8 @@ import "./globals.css";
 import "./branding.css";
 import "./experimental-modern-theme.css";
 
+const colorSchemeScript = `(function(){var value="dark";try{value=localStorage.getItem("pelada-pede-mais-uma:color-scheme")==="light"?"light":"dark"}catch(error){}document.documentElement.dataset.colorScheme=value;document.documentElement.style.colorScheme=value})();`;
+
 const siteIcons: Metadata["icons"] = {
   icon: [
     { url: "/favicon.ico", sizes: "64x64", type: "image/x-icon" },
@@ -71,7 +73,8 @@ export default async function RootLayout({
     // O provedor mantém os padrões durante builds sem acesso ao banco.
   }
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-color-scheme="dark" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: colorSchemeScript }}/></head>
       <body><InstanceBrandingProvider initialConfig={instance}><SiteAccessGate authenticated={authenticated}>{children}<SiteFooter/></SiteAccessGate></InstanceBrandingProvider></body>
     </html>
   );

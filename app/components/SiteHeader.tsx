@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { BrandIdentity, useInstanceBranding } from "../InstanceBranding";
 import { NotificationBell } from "./NotificationBell";
+import { ColorSchemeToggle } from "./ColorSchemeToggle";
 import { NavigationIcon, type NavigationIconName } from "./NavigationIcon";
 
 type SiteSection = "home" | "overview" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
@@ -108,6 +109,7 @@ export function SiteHeader({
       <div className="site-topbar">
         <div><small>Centro de gestão</small><strong>{config.siteName}</strong></div>
         <div className="site-topbar-actions">
+          <ColorSchemeToggle/>
           <NotificationBell unread={unreadNotifications} onClick={(event) => navigateWithDocument(event, "/notificacoes")}/>
           <a className="site-viewer" href="/conta" aria-label="Abrir minha conta" onClick={(event) => navigateWithDocument(event, "/conta")}>{viewerInitials}</a>
         </div>

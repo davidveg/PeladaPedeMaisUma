@@ -62,10 +62,7 @@ test("a verificação de acesso acompanha a identidade atual com loading acessí
 
   assert.match(gate, /<BrandedLoading variant="page" message="Verificando seu acesso…"/);
   assert.match(loading, /useInstanceBranding/);
-  assert.match(loading, /--access-background.*config\.managementBackgroundColor/);
-  assert.match(loading, /--access-surface.*config\.managementSurfaceColor/);
-  assert.match(loading, /--access-text.*config\.managementTextColor/);
-  assert.match(loading, /--access-accent.*config\.managementButtonColor/);
+  assert.doesNotMatch(loading, /managementBackgroundColor|managementSurfaceColor|style=\{style\}/);
   assert.match(loading, /role="status" aria-live="polite" aria-busy="true"/);
   assert.match(loading, /className="branded-loading-spinner"/);
   assert.match(loading, /<span\/><span\/><span\/><span\/><span\/><span\/><span\/><span\/>/);
@@ -201,6 +198,7 @@ test("menu lateral mostra o mês atual calculado e o andamento da temporada", as
   assert.match(header, /width: `\$\{calendarMonth \/ 12 \* 100\}%`/);
   assert.match(theme, /\.site-season-progress \{[\s\S]*height:\s*5px/);
   assert.match(theme, /\.site-season-progress > span \{[\s\S]*var\(--public-sidebar-highlight/);
+  assert.match(theme, /\.site-season-card strong \{[\s\S]*color:\s*var\(--public-sidebar-contrast/);
   assert.match(branding, /season: PublicCareerSeason \| null/);
   assert.match(publicConfig, /season_duration_months/);
   assert.match(publicConfig, /instance, season/);
