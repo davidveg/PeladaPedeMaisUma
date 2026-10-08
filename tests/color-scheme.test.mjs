@@ -11,10 +11,15 @@ test("modo escuro preserva exatamente a identidade configurada", () => {
   assert.equal(appearance.publicSidebar, DEFAULT_INSTANCE_CONFIGURATION.publicSidebarColor);
 });
 
-test("modo claro deriva superfícies claras sem alterar a configuração salva", () => {
+test("modo claro usa a paleta clássica e deriva os elementos sem versão clara", () => {
   const original = structuredClone(DEFAULT_INSTANCE_CONFIGURATION);
   const appearance = siteAppearance(original, "light");
-  assert.equal(appearance.background, mixHexColors(original.managementBackgroundColor, "#FFFFFF", .92));
+  assert.equal(appearance.background, original.backgroundColor);
+  assert.equal(appearance.surface, original.surfaceColor);
+  assert.equal(appearance.text, original.textColor);
+  assert.equal(appearance.muted, original.mutedColor);
+  assert.equal(appearance.controlSurface, mixHexColors(original.controlSurfaceColor, original.surfaceColor, .92));
+  assert.equal(appearance.adminSidebar, mixHexColors(original.adminSidebarColor, original.backgroundColor, .87));
   assert.match(appearance.background, /^#[0-9A-F]{6}$/);
   assert.notEqual(appearance.background, original.managementBackgroundColor);
   assert.ok(contrastRatio(appearance.accentText, appearance.surface) >= 4.5);

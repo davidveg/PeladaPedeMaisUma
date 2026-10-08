@@ -67,8 +67,9 @@ export type SiteAppearance = {
 };
 
 /**
- * O tema claro nasce da identidade escura configurada pela pelada. Assim as
- * cores da marca continuam reconhecíveis sem duplicar todos os campos no banco.
+ * O tema claro reaproveita a paleta do tema clássico, que já oferece fundo,
+ * cards e textos claros configuráveis. Menus e campos, que só possuem uma
+ * versão escura própria, ganham variações claras derivadas dessa mesma paleta.
  */
 export function siteAppearance(config: InstanceConfiguration, scheme: SiteColorScheme): SiteAppearance {
   if (scheme === "dark") {
@@ -87,20 +88,20 @@ export function siteAppearance(config: InstanceConfiguration, scheme: SiteColorS
     };
   }
 
-  const background = mixHexColors(config.managementBackgroundColor, "#FFFFFF", .92);
-  const surface = mixHexColors(config.managementSurfaceColor, "#FFFFFF", .975);
-  const text = "#17221D";
+  const background = config.backgroundColor;
+  const surface = config.surfaceColor;
+  const text = config.textColor;
   return {
     background,
     surface,
     text,
-    muted: mixHexColors(text, background, .48),
-    controlSurface: mixHexColors(config.controlSurfaceColor, "#FFFFFF", .92),
+    muted: config.mutedColor,
+    controlSurface: mixHexColors(config.controlSurfaceColor, surface, .92),
     controlText: text,
     accentText: readableAccentTextColor(config.primaryColor, surface),
     managementAccentText: readableAccentTextColor(config.managementButtonColor, surface),
-    adminSidebar: mixHexColors(config.adminSidebarColor, "#FFFFFF", .87),
-    publicSidebar: mixHexColors(config.publicSidebarColor, "#FFFFFF", .87),
-    publicTopbar: mixHexColors(config.publicTopbarColor, "#FFFFFF", .94),
+    adminSidebar: mixHexColors(config.adminSidebarColor, background, .87),
+    publicSidebar: mixHexColors(config.publicSidebarColor, background, .87),
+    publicTopbar: mixHexColors(config.publicTopbarColor, background, .94),
   };
 }
