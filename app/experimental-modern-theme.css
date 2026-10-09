@@ -628,7 +628,7 @@ body {
 .ghost {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #e6ece8);
+  color: var(--control-contrast, var(--control-text, #e6ece8));
 }
 
 .member-page + footer,
@@ -1602,7 +1602,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
   padding: 0;
   border-color: transparent;
   background: var(--control-surface, #31483e);
-  color: var(--control-text, #fff);
+  color: var(--control-contrast, var(--control-text, #fff));
 }
 
 .admin-topbar-actions > a[href="/notificacoes"] {
@@ -1758,9 +1758,9 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 }
 
 .admin-shell :is(.ghost, .attendance-present, .attendance-absent, .manual-participant button) {
-  border-color: #415148;
-  background: #202b26;
-  color: #e7ede9;
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+  color: var(--control-contrast, var(--control-text, #e7ede9));
 }
 
 .admin-shell .primary {
@@ -2170,7 +2170,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 .admin-shell .moderator-editor .danger {
   border: 1px solid var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .admin-shell .moderator-candidates .promote-account {
@@ -2598,7 +2598,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 
 .finance-page .finance-tabs button.active {
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   box-shadow: inset 0 0 0 1px var(--control-line, #4a5851), 0 8px 18px rgba(0, 0, 0, .16);
 }
 
@@ -2613,7 +2613,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 
 .finance-page .finance-monthly-tabs button.active {
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   box-shadow: inset 0 0 0 1px var(--control-line, #4a5851), 0 8px 18px rgba(0, 0, 0, .16);
 }
 
@@ -2667,7 +2667,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 .finance-page .finance-dialog .ghost {
   border-color: var(--control-line, #4a5851);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .finance-page :is(
@@ -2710,7 +2710,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 .finance-page :is(.finance-row-actions button, .finance-reverse) {
   border-color: var(--control-line, #4a5851);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .finance-page .finance-row-actions button.danger,
@@ -2874,6 +2874,13 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
   color: var(--control-text, #f2f5f3);
 }
 
+/* Interactive auxiliary controls derive their foreground from the configured
+   container color. Informational surfaces keep their explicit text setting. */
+.member-page .match-hub-tabs button:not(.on),
+:is(.member-page, .app-shell) .arrival-order-card li > div button {
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
+}
+
 .member-page :is(
   .round-center-grid > article,
   .match-list-filter,
@@ -3002,7 +3009,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 .app-shell .manual-player-list article > div:last-child button {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .app-shell .manual-player-list .manual-blue {
@@ -3062,7 +3069,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 .app-shell .result-actions .ghost {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   box-shadow: none;
 }
 
@@ -3070,7 +3077,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 .app-shell .result-actions .ghost:focus-visible {
   border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 48%, var(--control-line, #415148));
   background: color-mix(in srgb, var(--management-button, #d3eb7a) 7%, var(--control-surface, #202b26));
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .member-page :is(.match-hub-tabs button.on, .match-state),
@@ -3717,7 +3724,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .member-page .notification-pagination .ghost {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   box-shadow: none;
 }
 
@@ -3824,7 +3831,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   white-space: nowrap;
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   box-shadow: none;
 }
 
@@ -3836,7 +3843,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .match-admin-surface .match-admin-pagination .ghost:focus-visible {
   border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 48%, var(--control-line, #415148));
   background: color-mix(in srgb, var(--management-button, #d3eb7a) 7%, var(--control-surface, #202b26));
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .member-page :is(.match-hub-pagination, .notification-pagination) .ghost:disabled,
@@ -3844,7 +3851,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .match-admin-surface .match-admin-pagination .ghost:disabled {
   border-color: color-mix(in srgb, var(--control-line, #415148) 58%, transparent);
   background: color-mix(in srgb, var(--control-surface, #202b26) 58%, var(--management-background, #0f1612));
-  color: color-mix(in srgb, var(--control-text, #f2f5f3) 48%, transparent);
+  color: color-mix(in srgb, var(--control-contrast, var(--control-text, #f2f5f3)) 48%, transparent);
   opacity: 1;
 }
 
@@ -4083,7 +4090,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .match-admin-surface .match-admin-actions .ghost {
   border-color: var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 .match-admin-surface .match-player-admin-list .attendance-present.on {
@@ -4411,7 +4418,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .modal-back .player-card-modal > button.close {
   border: 1px solid var(--control-line, #415148);
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   font-weight: 900;
   line-height: 1;
   box-shadow: 0 6px 16px color-mix(in srgb, var(--management-background, #0f1612) 34%, transparent);
@@ -4422,7 +4429,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .modal-back button.close:focus-visible {
   border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 34%, var(--control-line, #415148));
   background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--management-button, #d3eb7a) 12%);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   box-shadow: 0 8px 20px color-mix(in srgb, var(--management-background, #0f1612) 42%, transparent);
   transform: scale(1.06);
 }
@@ -4443,7 +4450,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   border: 1px solid var(--control-line, #415148);
   border-radius: 999px;
   background: var(--control-surface, #202b26);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
   font-size: 18px;
   font-weight: 900;
   line-height: 1;
@@ -4452,7 +4459,7 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .admin-notice > button[aria-label^="Fechar"]:hover {
   border-color: color-mix(in srgb, var(--management-button, #d3eb7a) 34%, var(--control-line, #415148));
   background: color-mix(in srgb, var(--control-surface, #202b26) 88%, var(--management-button, #d3eb7a) 12%);
-  color: var(--control-text, #f2f5f3);
+  color: var(--control-contrast, var(--control-text, #f2f5f3));
 }
 
 /* Match reports and the historical Momentum explanation use the functional
@@ -4814,4 +4821,25 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .admin-shell :is(.stat b, .overview-metric b, .match-admin-toolbar > div b, .overview-card-head > span),
 .admin-shell .instance-theme-presentation > div:first-child > small {
   color: var(--management-accent-text, var(--management-button, #d3eb7a));
+}
+
+/* Ações secundárias compartilham uma cor própria em todas as áreas do site.
+   O contraste é calculado em InstanceBranding para continuar legível em
+   qualquer cor escolhida na identidade. */
+.ghost {
+  border-color: color-mix(in srgb, var(--secondary-button, var(--management-button, #d3eb7a)) 72%, var(--control-line, #415148)) !important;
+  background: var(--secondary-button, var(--management-button, #d3eb7a)) !important;
+  color: var(--secondary-button-contrast, #172018) !important;
+}
+
+.ghost:hover:not(:disabled),
+.ghost:focus-visible {
+  border-color: color-mix(in srgb, var(--secondary-button, var(--management-button, #d3eb7a)) 82%, white) !important;
+  background: color-mix(in srgb, var(--secondary-button, var(--management-button, #d3eb7a)) 88%, var(--secondary-button-contrast, #172018) 12%) !important;
+  color: var(--secondary-button-contrast, #172018) !important;
+}
+
+.ghost:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--secondary-button, var(--management-button, #d3eb7a)) 30%, transparent);
+  outline-offset: 2px;
 }

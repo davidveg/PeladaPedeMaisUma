@@ -22,6 +22,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.confirmationLeadMinutes, 60);
   assert.equal(config.teamBlueName, "Azul");
   assert.equal(config.teamYellowName, "Amarelo");
+  assert.deepEqual(config.tacticalFormations, [{ defenders: 2, midfielders: 3, attackers: 1 }, { defenders: 2, midfielders: 2, attackers: 2 }]);
   assert.equal(config.manualSeparationEnabled, false);
   assert.equal(config.separationDraftsEnabled, false);
   assert.equal(config.guestPreconfirmationEnabled, false);
@@ -42,6 +43,7 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.managementMutedColor, "#98A69F");
   assert.equal(config.managementButtonColor, "#D3EB7A");
   assert.equal(config.managementButtonTextColor, "#172018");
+  assert.equal(config.secondaryButtonColor, config.managementButtonColor);
   assert.equal(config.controlSurfaceColor, "#202B26");
   assert.equal(config.controlTextColor, "#F2F5F3");
   assert.equal(config.publicLogoSize, 44);
@@ -63,6 +65,15 @@ test("normaliza tamanhos antigos para não quebrar os cabeçalhos", () => {
   assert.equal(config.adminLogoSize, 88);
 });
 
+test("valida formações táticas configuráveis e mantém Fut7 como padrão", () => {
+  const custom = validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, tacticalFormations: [{ defenders: 3, midfielders: 3, attackers: 2 }] });
+  assert.deepEqual(custom.config?.tacticalFormations, [{ defenders: 3, midfielders: 3, attackers: 2 }]);
+  assert.equal(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, tacticalFormations: [] }).error?.includes("formações"), true);
+  assert.equal(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, tacticalFormations: [{ defenders: 12, midfielders: 0, attackers: 0 }] }).error?.includes("formações"), true);
+  assert.equal(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, tacticalFormations: [{ defenders: 12, midfielders: 0, attackers: 0 }, { defenders: -1, midfielders: 3, attackers: 1 }] }).error?.includes("formações"), true);
+  assert.equal(validateInstanceConfiguration({ ...DEFAULT_INSTANCE_CONFIGURATION, tacticalFormations: [{ defenders: 2, midfielders: 3, attackers: 1 }, { defenders: 2, midfielders: 3, attackers: 1 }] }).error?.includes("formações"), true);
+});
+
 test("aceita identidade, cores e dia da semana personalizados", () => {
   const result = validateInstanceConfiguration({
     ...DEFAULT_INSTANCE_CONFIGURATION,
@@ -79,6 +90,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
     managementMutedColor: "#9CA3AF",
     managementButtonColor: "#38BDF8",
     managementButtonTextColor: "#082F49",
+    secondaryButtonColor: "#FB7185",
     controlSurfaceColor: "#253147",
     controlTextColor: "#F8FAFC",
     publicLogoSize: 58,
@@ -116,6 +128,7 @@ test("aceita identidade, cores e dia da semana personalizados", () => {
   assert.equal(result.config.managementMutedColor, "#9CA3AF");
   assert.equal(result.config.managementButtonColor, "#38BDF8");
   assert.equal(result.config.managementButtonTextColor, "#082F49");
+  assert.equal(result.config.secondaryButtonColor, "#FB7185");
   assert.equal(result.config.controlSurfaceColor, "#253147");
   assert.equal(result.config.controlTextColor, "#F8FAFC");
   assert.equal(result.config.publicLogoSize, 58);
@@ -413,6 +426,22 @@ test("migração adiciona cores independentes para os botões da gestão", async
   }
 });
 
+test("migração inicializa o botão secundário com a cor principal já configurada", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-secondary-button-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0050_management_button_palette.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE instance_configuration SET management_button_color='#FB4F20'").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0060_secondary_button_color.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT management_button_color,secondary_button_color FROM instance_configuration WHERE id=1").first();
+    assert.deepEqual({ ...row }, { management_button_color: "#FB4F20", secondary_button_color: "#FB4F20" });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("migração adiciona a paleta dos blocos e controles", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pelada-control-surfaces-"));
   const bindings = await createSelfhostBindings(directory);
@@ -443,6 +472,8 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(branding, /--management-surface.*managementSurfaceColor/);
   assert.match(branding, /--management-button.*managementButtonColor/);
   assert.match(branding, /--management-button-text.*managementButtonTextColor/);
+  assert.match(branding, /--secondary-button.*secondaryButtonColor/);
+  assert.match(branding, /--secondary-button-contrast.*contrastTextColor\(config\.secondaryButtonColor\)/);
   assert.match(branding, /--management-button-contrast.*contrastTextColor\(config\.managementButtonColor\)/);
   assert.match(branding, /--control-surface.*controlSurfaceColor/);
   assert.match(branding, /--control-text.*controlTextColor/);
@@ -453,6 +484,7 @@ test("menu administrativo aplica a cor configurada com contraste derivado", asyn
   assert.match(admin, /Destaques do tema clássico/);
   assert.match(admin, /Cartões da gestão e do site atual/);
   assert.match(admin, /Botões principais da gestão e do site/);
+  assert.match(admin, /Botões secundários da gestão e do site/);
   assert.match(admin, /Texto dos botões da gestão e do site/);
   assert.match(admin, /Containers auxiliares e campos/);
   assert.match(admin, /Texto dos containers auxiliares/);
@@ -635,6 +667,25 @@ test("migração adiciona a apresentação dos logotipos sem ocultar a identidad
     await bindings.DB.exec(await readFile(new URL("../drizzle/0048_brand_presentation.sql", import.meta.url), "utf8"));
     const row = await bindings.DB.prepare("SELECT site_name,public_logo_size,admin_logo_size,show_public_brand_text,show_admin_brand_text FROM instance_configuration WHERE id=1").first();
     assert.deepEqual({ ...row }, { site_name: "Peladix", public_logo_size: 44, admin_logo_size: 54, show_public_brand_text: 1, show_admin_brand_text: 1 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração adiciona as formações Fut7 padrão sem alterar a identidade existente", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-tactical-formations-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0019_instance_configuration.sql", import.meta.url), "utf8"));
+    await bindings.DB.prepare("UPDATE instance_configuration SET site_name='Peladix'").run();
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0059_tactical_formations.sql", import.meta.url), "utf8"));
+    const row = await bindings.DB.prepare("SELECT site_name,tactical_formations FROM instance_configuration WHERE id=1").first();
+    assert.equal(row.site_name, "Peladix");
+    assert.deepEqual(JSON.parse(row.tactical_formations), [
+      { defenders: 2, midfielders: 3, attackers: 1 },
+      { defenders: 2, midfielders: 2, attackers: 2 },
+    ]);
   } finally {
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });

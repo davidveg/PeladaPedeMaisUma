@@ -72,6 +72,8 @@ export function InstanceBrandingProvider({ children, initialConfig = DEFAULT_INS
       "--management-button": config.managementButtonColor,
       "--management-button-text": config.managementButtonTextColor,
       "--management-button-contrast": contrastTextColor(config.managementButtonColor),
+      "--secondary-button": config.secondaryButtonColor,
+      "--secondary-button-contrast": contrastTextColor(config.secondaryButtonColor),
       "--management-accent-text": appearance.managementAccentText,
       "--management-line": colorWithOpacity(appearance.text, .16),
       "--control-surface": selectedScheme === "dark" ? config.controlSurfaceColor : appearance.controlSurface,

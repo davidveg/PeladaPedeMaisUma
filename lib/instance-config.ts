@@ -1,3 +1,5 @@
+import { DEFAULT_TACTICAL_FORMATIONS, normalizeTacticalFormations, type TacticalFormationOption } from "./tactical-lineup.ts";
+
 export type InstanceConfiguration = {
   siteName: string;
   siteShortName: string;
@@ -25,12 +27,14 @@ export type InstanceConfiguration = {
   managementMutedColor: string;
   managementButtonColor: string;
   managementButtonTextColor: string;
+  secondaryButtonColor: string;
   controlSurfaceColor: string;
   controlTextColor: string;
   teamBlueColor: string;
   teamYellowColor: string;
   teamBlueName: string;
   teamYellowName: string;
+  tacticalFormations: TacticalFormationOption[];
   appName: string;
   appTagline: string;
   appPrimaryColor: string;
@@ -83,12 +87,14 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   managementMutedColor: "#98A69F",
   managementButtonColor: "#D3EB7A",
   managementButtonTextColor: "#172018",
+  secondaryButtonColor: "#D3EB7A",
   controlSurfaceColor: "#202B26",
   controlTextColor: "#F2F5F3",
   teamBlueColor: "#1768E5",
   teamYellowColor: "#F4BF20",
   teamBlueName: "Azul",
   teamYellowName: "Amarelo",
+  tacticalFormations: DEFAULT_TACTICAL_FORMATIONS.map(formation => ({ ...formation })),
   appName: "Pelada Pede Mais Uma",
   appTagline: "Entre para a partida",
   appPrimaryColor: "#0B3D2E",
@@ -121,6 +127,13 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     const parsed = Number(row[key] ?? fallback);
     return Number.isFinite(parsed) ? Math.min(maximum, Math.max(minimum, Math.round(parsed))) : fallback;
   };
+  const tacticalFormations = (() => {
+    try {
+      return normalizeTacticalFormations(JSON.parse(value("tactical_formations", JSON.stringify(DEFAULT_TACTICAL_FORMATIONS))));
+    } catch {
+      return DEFAULT_TACTICAL_FORMATIONS.map(formation => ({ ...formation }));
+    }
+  })();
   return {
     siteName: value("site_name", DEFAULT_INSTANCE_CONFIGURATION.siteName),
     siteShortName: value("site_short_name", DEFAULT_INSTANCE_CONFIGURATION.siteShortName),
@@ -148,12 +161,14 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     managementMutedColor: value("management_muted_color", DEFAULT_INSTANCE_CONFIGURATION.managementMutedColor),
     managementButtonColor: value("management_button_color", DEFAULT_INSTANCE_CONFIGURATION.managementButtonColor),
     managementButtonTextColor: value("management_button_text_color", DEFAULT_INSTANCE_CONFIGURATION.managementButtonTextColor),
+    secondaryButtonColor: value("secondary_button_color", value("management_button_color", DEFAULT_INSTANCE_CONFIGURATION.secondaryButtonColor)),
     controlSurfaceColor: value("control_surface_color", DEFAULT_INSTANCE_CONFIGURATION.controlSurfaceColor),
     controlTextColor: value("control_text_color", DEFAULT_INSTANCE_CONFIGURATION.controlTextColor),
     teamBlueColor: value("team_blue_color", DEFAULT_INSTANCE_CONFIGURATION.teamBlueColor),
     teamYellowColor: value("team_yellow_color", DEFAULT_INSTANCE_CONFIGURATION.teamYellowColor),
     teamBlueName: value("team_blue_name", DEFAULT_INSTANCE_CONFIGURATION.teamBlueName),
     teamYellowName: value("team_yellow_name", DEFAULT_INSTANCE_CONFIGURATION.teamYellowName),
+    tacticalFormations,
     appName: value("app_name", DEFAULT_INSTANCE_CONFIGURATION.appName),
     appTagline: value("app_tagline", DEFAULT_INSTANCE_CONFIGURATION.appTagline),
     appPrimaryColor: value("app_primary_color", DEFAULT_INSTANCE_CONFIGURATION.appPrimaryColor),
@@ -188,6 +203,22 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     String(source[key] ?? fallback).trim().slice(0, maximum);
   const color = (key: keyof InstanceConfiguration, fallback: string) =>
     String(source[key] ?? fallback).trim().toUpperCase();
+  const tacticalFormationInput = source.tacticalFormations ?? DEFAULT_TACTICAL_FORMATIONS;
+  const tacticalFormations = normalizeTacticalFormations(tacticalFormationInput);
+  const tacticalFormationInputIsValid = Array.isArray(tacticalFormationInput)
+    && tacticalFormationInput.length >= 1
+    && tacticalFormationInput.length <= 6
+    && tacticalFormationInput.every(value => {
+      if (!value || typeof value !== "object") return false;
+      const formation = value as Record<string, unknown>;
+      const counts = [Number(formation.defenders), Number(formation.midfielders), Number(formation.attackers)];
+      const outfield = counts.reduce((sum, count) => sum + count, 0);
+      return counts.every(count => Number.isInteger(count) && count >= 0 && count <= 10) && outfield >= 1 && outfield <= 14;
+    })
+    && new Set(tacticalFormationInput.map(value => {
+      const formation = value as Record<string, unknown>;
+      return `${Number(formation.defenders)}-${Number(formation.midfielders)}-${Number(formation.attackers)}`;
+    })).size === tacticalFormationInput.length;
 
   const config: InstanceConfiguration = {
     siteName: text("siteName", 120, DEFAULT_INSTANCE_CONFIGURATION.siteName),
@@ -216,12 +247,14 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     managementMutedColor: color("managementMutedColor", DEFAULT_INSTANCE_CONFIGURATION.managementMutedColor),
     managementButtonColor: color("managementButtonColor", DEFAULT_INSTANCE_CONFIGURATION.managementButtonColor),
     managementButtonTextColor: color("managementButtonTextColor", DEFAULT_INSTANCE_CONFIGURATION.managementButtonTextColor),
+    secondaryButtonColor: color("secondaryButtonColor", String(source.managementButtonColor ?? DEFAULT_INSTANCE_CONFIGURATION.secondaryButtonColor)),
     controlSurfaceColor: color("controlSurfaceColor", DEFAULT_INSTANCE_CONFIGURATION.controlSurfaceColor),
     controlTextColor: color("controlTextColor", DEFAULT_INSTANCE_CONFIGURATION.controlTextColor),
     teamBlueColor: color("teamBlueColor", DEFAULT_INSTANCE_CONFIGURATION.teamBlueColor),
     teamYellowColor: color("teamYellowColor", DEFAULT_INSTANCE_CONFIGURATION.teamYellowColor),
     teamBlueName: text("teamBlueName", 40, DEFAULT_INSTANCE_CONFIGURATION.teamBlueName),
     teamYellowName: text("teamYellowName", 40, DEFAULT_INSTANCE_CONFIGURATION.teamYellowName),
+    tacticalFormations,
     appName: text("appName", 120, DEFAULT_INSTANCE_CONFIGURATION.appName),
     appTagline: text("appTagline", 180, DEFAULT_INSTANCE_CONFIGURATION.appTagline),
     appPrimaryColor: color("appPrimaryColor", DEFAULT_INSTANCE_CONFIGURATION.appPrimaryColor),
@@ -257,7 +290,7 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   if (config.teamBlueName.toLocaleLowerCase("pt-BR") === config.teamYellowName.toLocaleLowerCase("pt-BR")) return { error: "As duas equipes precisam ter nomes diferentes." };
   const colorKeys = [
     "primaryColor", "adminSidebarColor", "publicSidebarColor", "publicTopbarColor", "secondaryColor", "backgroundColor", "surfaceColor", "textColor", "mutedColor",
-    "managementBackgroundColor", "managementSurfaceColor", "managementTextColor", "managementMutedColor", "managementButtonColor", "managementButtonTextColor",
+    "managementBackgroundColor", "managementSurfaceColor", "managementTextColor", "managementMutedColor", "managementButtonColor", "managementButtonTextColor", "secondaryButtonColor",
     "controlSurfaceColor", "controlTextColor",
     "teamBlueColor", "teamYellowColor", "appPrimaryColor", "appSecondaryColor", "appBackgroundColor", "appTextColor",
   ] as const;
@@ -274,6 +307,9 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   }
   if (!Number.isInteger(config.guestSelfConfirmationLeadHours) || config.guestSelfConfirmationLeadHours < 1 || config.guestSelfConfirmationLeadHours > 720) {
     return { error: "A antecedência dos convidados deve ficar entre 1 e 720 horas." };
+  }
+  if (!tacticalFormationInputIsValid) {
+    return { error: "Cadastre entre uma e seis formações únicas, usando de 0 a 10 jogadores por posição e no máximo 14 jogadores de linha." };
   }
   try {
     new Intl.DateTimeFormat("pt-BR", { timeZone: config.timezone }).format(new Date());
@@ -296,9 +332,9 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "site_name", "site_short_name", "site_tagline", "footer_text", "logo_url", "favicon_url", "share_image_url",
   "public_logo_size", "admin_logo_size", "show_public_brand_text", "show_admin_brand_text",
   "primary_color", "admin_sidebar_color", "public_sidebar_color", "public_topbar_color", "secondary_color", "background_color", "surface_color", "text_color", "muted_color",
-  "management_background_color", "management_surface_color", "management_text_color", "management_muted_color", "management_button_color", "management_button_text_color",
+  "management_background_color", "management_surface_color", "management_text_color", "management_muted_color", "management_button_color", "management_button_text_color", "secondary_button_color",
   "control_surface_color", "control_text_color",
-  "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "app_name", "app_tagline", "app_primary_color",
+  "team_blue_color", "team_yellow_color", "team_blue_name", "team_yellow_name", "tactical_formations", "app_name", "app_tagline", "app_primary_color",
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
   "separation_drafts_enabled",
@@ -311,8 +347,8 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.publicLogoSize, config.adminLogoSize, Number(config.showPublicBrandText), Number(config.showAdminBrandText),
     config.primaryColor, config.adminSidebarColor, config.publicSidebarColor, config.publicTopbarColor, config.secondaryColor, config.backgroundColor, config.surfaceColor, config.textColor,
     config.mutedColor, config.managementBackgroundColor, config.managementSurfaceColor, config.managementTextColor, config.managementMutedColor,
-    config.managementButtonColor, config.managementButtonTextColor, config.controlSurfaceColor, config.controlTextColor,
-    config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, config.appName, config.appTagline,
+    config.managementButtonColor, config.managementButtonTextColor, config.secondaryButtonColor, config.controlSurfaceColor, config.controlTextColor,
+    config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, JSON.stringify(config.tacticalFormations), config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
     0, Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.guestSelfConfirmationEnabled), config.guestSelfConfirmationLeadHours, Number(config.financeEnabled), Number(config.delinquencyAttendanceBlockEnabled), Number(config.allowInsecureLocalNetworkAuth),

@@ -437,6 +437,44 @@
   gap: 10px;
 }
 
+.tactical-formation-settings > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.tactical-formation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tactical-formation-list > section {
+  display: grid;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid var(--control-line, var(--line));
+  border-radius: 12px;
+  background: var(--control-surface, #fafbf9);
+  color: var(--control-text, var(--ink));
+}
+
+.tactical-formation-heading,
+.tactical-formation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tactical-formation-heading b { font: 800 20px Georgia, serif; }
+.tactical-formation-heading span { color: var(--management-muted, var(--muted)); font-size: 10px; font-weight: 800; }
+.tactical-formation-list > section > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tactical-formation-list label { margin: 0; }
+.tactical-formation-list input { min-width: 0; }
+.tactical-formation-list .danger { justify-self: end; }
+.tactical-formation-actions { justify-content: flex-start; flex-wrap: wrap; }
+
 .instance-feature-settings {
   align-content: start;
   order: 3;
@@ -503,6 +541,9 @@
   .instance-team-grid {
     grid-template-columns: 1fr;
   }
+
+  .tactical-formation-list > section > div { grid-template-columns: 1fr; }
+  .tactical-formation-actions { align-items: stretch; flex-direction: column; }
 
   .instance-logo-preview {
     align-items: flex-start;

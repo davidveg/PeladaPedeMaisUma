@@ -15,6 +15,7 @@ export type MobileInstanceConfiguration = {
   teamYellowName: string;
   teamBlueColor: string;
   teamYellowColor: string;
+  tacticalFormations: Array<{ defenders: number; midfielders: number; attackers: number }>;
   logoUrl?: string | null;
   defaultMatchTitle: string;
   defaultMatchWeekday: number;
@@ -44,6 +45,7 @@ const defaultConfiguration: MobileInstanceConfiguration = {
   teamYellowName: "Amarelo",
   teamBlueColor: defaults.blue,
   teamYellowColor: defaults.yellow,
+  tacticalFormations: [{ defenders: 2, midfielders: 3, attackers: 1 }, { defenders: 2, midfielders: 2, attackers: 2 }],
   logoUrl: null,
   defaultMatchTitle: "Pelada",
   defaultMatchWeekday: 0,
