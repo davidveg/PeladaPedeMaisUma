@@ -59,6 +59,7 @@ function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }
     await navigator.clipboard.writeText(`${season.shareText}\n\n${window.location.href}`); setCopied(true); window.setTimeout(() => setCopied(false), 2500);
   }
   return <div className="player-engagement-layout">
+    <PassportPreview passport={engagement.passport}/>
     <section className="player-achievements"><div className="engagement-panel-head"><div><div className="eyebrow">CONQUISTAS</div><h2>Minha coleção</h2><p>Marcos liberados automaticamente pelos resultados oficiais da pelada.</p></div><strong>{engagement.achievements.unlocked.length}<small>desbloqueadas</small></strong></div>
       {engagement.achievements.unlocked.length ? <div className="achievement-grid">{engagement.achievements.unlocked.map(item=><article key={item.id}><i aria-hidden="true">{item.icon}</i><div><b>{item.title}</b><p>{item.description}</p><small>{new Date(`${item.achievedAt.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR")}</small>{item.matchId&&<a href={`/separacoes-salvas?separation=${encodeURIComponent(item.matchId)}`}>Ver partida →</a>}</div></article>)}</div> : <div className="engagement-empty">A primeira conquista aparecerá após um resultado oficial.</div>}
       {engagement.achievements.next.length>0&&<div className="achievement-progress"><h3>Próximos objetivos</h3>{engagement.achievements.next.map(item=><article key={item.id}><span><b>{item.label}</b><small>{item.current} de {item.target}</small></span><div><i style={{width:`${item.percent}%`}}/></div></article>)}</div>}
@@ -69,6 +70,17 @@ function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }
     </section>
   </div>;
 }
+
+function PassportPreview({ passport }: { passport: PlayerEngagement["passport"] }) {
+  const summary = passport.summary;
+  return <section className="season-passport-preview">
+    <div className="engagement-panel-head"><div><div className="eyebrow">PASSAPORTE DA TEMPORADA</div><h2>Sua trajetória, rodada por rodada</h2><p>{summary.appearances} de {summary.totalMatches} partidas · {summary.attendanceRate}% de assiduidade · sequência atual de {summary.currentAttendanceStreak}</p></div><a className="primary passport-open" href="/conta/passaporte">Ver passaporte completo →</a></div>
+    <div className="passport-perfect-progress"><span><b>Temporada perfeita</b><small>Meta de {summary.perfectSeasonTarget}% de assiduidade</small></span><div role="progressbar" aria-label="Progresso para temporada perfeita" aria-valuemin={0} aria-valuemax={100} aria-valuenow={summary.perfectSeasonProgress}><i style={{width:`${summary.perfectSeasonProgress}%`}}/></div><strong>{summary.attendanceRate}%</strong></div>
+    {passport.recentStamps.length ? <div className="passport-stamp-grid compact">{passport.recentStamps.map(stamp=><a href={`/partidas?separation=${encodeURIComponent(stamp.separationId)}&tab=result`} className={`passport-stamp ${stamp.result.toLowerCase()} team-${String(stamp.team||"none").toLowerCase()}`} key={stamp.id}><small>ROD. {stamp.round}</small><b>{passportResultLabel(stamp.result)}</b><i aria-hidden="true">{stamp.primaryIcon}</i><span>{new Date(`${stamp.date.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}</span></a>)}</div> : <div className="engagement-empty">Os carimbos aparecerão após o primeiro resultado oficial da temporada.</div>}
+  </section>;
+}
+
+function passportResultLabel(result: "WIN"|"DRAW"|"LOSS"|"ABSENT") { return result === "WIN" ? "V" : result === "DRAW" ? "E" : result === "LOSS" ? "D" : "—"; }
 
 function PlayerAbsenceCard() {
   const [absence, setAbsence] = useState<PlayerAbsence | null>(null);

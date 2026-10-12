@@ -1,4 +1,5 @@
 /* Pure engagement projections built from the official career history. */
+import { buildSeasonPassport, seasonPassportPreview, type SeasonPassport } from "./season-passport.ts";
 
 export type EngagementPlayer = { id: string; displayName: string };
 export type EngagementContribution = { scorerPlayerId: string; assistPlayerId?: string | null; ownGoal?: boolean };
@@ -65,6 +66,7 @@ type Totals = {
 
 export type PlayerEngagement = {
   achievements: { unlocked: CareerAchievement[]; next: AchievementProgress[] };
+  passport: SeasonPassport;
   retrospective: {
     seasonNumber: number;
     title: string;
@@ -129,8 +131,10 @@ export function buildPlayerEngagement(params: {
   const totals = scan.totals.get(params.player.id) || emptyTotals();
   const seasonMatches = ordered.filter(match => match.seasonNumber === params.currentSeasonNumber && participantTeam(match, params.player.id));
   const season = summarizeSeason(params.player, seasonMatches, params.monthlyAwards || [], unlocked, params.currentSeasonNumber, params.seasonStartedAt, params.nextSeasonResetAt);
+  const passport = seasonPassportPreview(buildSeasonPassport({ player: params.player, matches: ordered, seasonNumber: params.currentSeasonNumber, achievements: unlocked }));
   return {
     achievements: { unlocked, next: nextProgress(totals) },
+    passport,
     retrospective: season,
   };
 }

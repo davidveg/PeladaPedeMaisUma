@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildPlayerEngagement, buildRoundRecaps } from "../lib/player-engagement.ts";
+import { buildSeasonPassport, seasonPassportPreview } from "../lib/season-passport.ts";
 
 const players = {
   ana: { id: "ana", displayName: "Ana" },
@@ -133,4 +134,27 @@ test("temporada perfeita exige pelo menos 95% de assiduidade e temporada encerra
   assert.equal(below.achievements.unlocked.some(item => item.id === "perfect_season_4"), false);
   const open = buildPlayerEngagement({ player: players.ana, matches: season.slice(0, 19), currentSeasonNumber: 4, seasonAwards: [] });
   assert.equal(open.achievements.unlocked.some(item => item.id === "perfect_season_4"), false);
+});
+
+test("passaporte mantém temporadas longas agrupadas por mês e limita a prévia", () => {
+  const start = Date.UTC(2026, 0, 3);
+  const season = Array.from({ length: 40 }, (_, index) => {
+    const date = new Date(start + index * 7 * 86_400_000).toISOString().slice(0, 10);
+    const item = { ...match(`passport-${index + 1}`, date, index % 3 === 0 ? "YELLOW" : "BLUE", index === 39 ? [{ scorerPlayerId: "ana", assistPlayerId: "bia" }] : []), seasonNumber: 8 };
+    if (index === 5 || index === 27) item.blue = item.blue.filter(player => player.id !== "ana");
+    return item;
+  });
+  const full = buildSeasonPassport({ player: players.ana, matches: season, seasonNumber: 8, achievements: [{ id: "last", title: "Marca final", description: "", icon: "🏁", achievedAt: season[39].date, matchId: season[39].separationId }] });
+  const preview = seasonPassportPreview(full);
+  assert.equal(full.summary.totalMatches, 40);
+  assert.equal(full.summary.appearances, 38);
+  assert.equal(full.summary.attendanceRate, 95);
+  assert.equal(full.summary.perfectSeasonProgress, 100);
+  assert.ok(full.months.length >= 9);
+  assert.equal(full.stamps[5].result, "ABSENT");
+  assert.equal(full.stamps[39].round, 40);
+  assert.equal(full.stamps[39].goals, 1);
+  assert.equal(full.stamps[39].achievements[0].title, "Marca final");
+  assert.equal(preview.recentStamps.length, 8);
+  assert.equal(preview.recentStamps[0].round, 40);
 });

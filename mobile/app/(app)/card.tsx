@@ -258,8 +258,14 @@ export default function MyCard() {
 }
 
 function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
-  const season = engagement.retrospective;
+  const season = engagement.retrospective, passport = engagement.passport, router = useRouter();
   return <View style={styles.engagementStack}>
+    <Card style={styles.engagementCard}>
+      <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>PASSAPORTE DA TEMPORADA</Text><Text style={styles.profileTitle}>Sua trajetória</Text><Text style={styles.profileDescription}>{passport.summary.appearances} de {passport.summary.totalMatches} partidas · {passport.summary.attendanceRate}% de assiduidade</Text></View><View style={styles.passportRate}><Text style={styles.passportRateValue}>{passport.summary.attendanceRate}%</Text><Text style={styles.achievementCountLabel}>PRESENÇA</Text></View></View>
+      <View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${passport.summary.perfectSeasonProgress}%`}]}/></View><Text style={styles.passportProgressHelp}>Meta de {passport.summary.perfectSeasonTarget}% para a conquista Temporada perfeita</Text>
+      {passport.recentStamps.length ? <View style={styles.passportStampGrid}>{passport.recentStamps.map(stamp=><View key={stamp.id} style={[styles.passportStamp,stamp.result==="ABSENT"&&styles.passportStampAbsent,{borderTopColor:stamp.team==="BLUE"?colors.blue:stamp.team==="YELLOW"?colors.yellow:colors.muted}]}><Text style={styles.passportStampRound}>ROD. {stamp.round}</Text><Text style={styles.passportStampResult}>{stamp.result==="WIN"?"V":stamp.result==="DRAW"?"E":stamp.result==="LOSS"?"D":"—"}</Text><Text style={styles.passportStampIcon}>{stamp.primaryIcon}</Text></View>)}</View> : <Text style={styles.profileDescription}>Os carimbos aparecerão após o primeiro resultado oficial.</Text>}
+      <Button title="Ver passaporte completo" variant="secondary" onPress={()=>router.push("/passport" as never)}/>
+    </Card>
     <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>CONQUISTAS</Text><Text style={styles.profileTitle}>Minha coleção</Text><Text style={styles.profileDescription}>Marcos liberados pelos resultados oficiais.</Text></View><View style={styles.achievementCount}><Text style={styles.achievementCountValue}>{engagement.achievements.unlocked.length}</Text><Text style={styles.achievementCountLabel}>LIBERADAS</Text></View></View>
       {engagement.achievements.unlocked.length ? <View style={styles.mobileAchievementGrid}>{engagement.achievements.unlocked.map(item=><View key={item.id} style={styles.mobileAchievement}><Text style={styles.achievementIcon}>{item.icon}</Text><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text></View></View>)}</View> : <Text style={styles.profileDescription}>A primeira conquista aparecerá após um resultado oficial.</Text>}
@@ -373,6 +379,17 @@ const styles = StyleSheet.create({
   engagementStack: { gap: 16 },
   engagementCard: { gap: 14 },
   engagementHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  passportRate: { minWidth: 72, alignItems: "center", borderRadius: 13, backgroundColor: "#E9F4ED", padding: 10 },
+  passportRateValue: { color: colors.green, fontSize: 21, fontWeight: "900" },
+  passportProgress: { height: 8, overflow: "hidden", borderRadius: 99, backgroundColor: "#E7EDE9" },
+  passportProgressValue: { height: "100%", borderRadius: 99, backgroundColor: colors.greenLight },
+  passportProgressHelp: { color: colors.muted, fontSize: 10, lineHeight: 14 },
+  passportStampGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  passportStamp: { width: "22%", flexGrow: 1, minHeight: 82, alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderTopWidth: 4, borderColor: colors.border, borderRadius: 11, backgroundColor: "#F8FAF8", padding: 7 },
+  passportStampAbsent: { opacity: .5 },
+  passportStampRound: { color: colors.muted, fontSize: 7, fontWeight: "900", letterSpacing: .5 },
+  passportStampResult: { alignSelf: "flex-start", color: colors.green, fontSize: 15, fontWeight: "900" },
+  passportStampIcon: { fontSize: 20 },
   achievementCount: { minWidth: 72, alignItems: "center", borderRadius: 14, padding: 10, backgroundColor: "#E7F3EB" },
   achievementCountValue: { color: colors.green, fontSize: 25, lineHeight: 28, fontWeight: "900" },
   achievementCountLabel: { color: colors.muted, fontSize: 8, fontWeight: "900", letterSpacing: .6 },

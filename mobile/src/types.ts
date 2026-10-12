@@ -8,8 +8,14 @@ export type CareerResultEntry = { playerId: string; place: number; points: numbe
 export type CareerRecognitionEntry = { playerId: string; place: number; votes: number; momentum: number };
 export type CareerVotingResults = { voteCount: number; motm: CareerResultEntry[]; dotm: CareerResultEntry[]; partner?: CareerRecognitionEntry[]; fairPlay?: CareerRecognitionEntry[]; defense?: CareerRecognitionEntry[] };
 export type CareerAchievement = { id: string; title: string; description: string; icon: string; achievedAt: string; matchId?: string; playerId?: string; playerName?: string };
+export type SeasonPassportStamp = { id:string;separationId:string;title:string;date:string;month:string;round:number;participated:boolean;team:"BLUE"|"YELLOW"|null;result:"WIN"|"DRAW"|"LOSS"|"ABSENT";blueScore:number;yellowScore:number;goals:number;assists:number;motm:boolean;recognitions:Array<"PARTNER"|"FAIR_PLAY"|"DEFENSE">;achievements:Array<{id:string;title:string;icon:string}>;primaryIcon:string };
+export type SeasonPassportMonth = { month:string;totalMatches:number;appearances:number;wins:number;goals:number;assists:number };
+export type SeasonPassportSummary = { seasonNumber:number;totalMatches:number;appearances:number;attendanceRate:number;perfectSeasonTarget:number;perfectSeasonProgress:number;currentAttendanceStreak:number;bestAttendanceStreak:number;wins:number;draws:number;losses:number;goals:number;assists:number;motmAwards:number;recognitionAwards:number };
+export type SeasonPassport = { summary:SeasonPassportSummary;months:SeasonPassportMonth[];recentStamps:SeasonPassportStamp[] };
+export type SeasonPassportDetails = SeasonPassport & { availableSeasons:number[];selectedMonth:string|null;stamps:SeasonPassportStamp[] };
 export type PlayerEngagement = {
   achievements: { unlocked: CareerAchievement[]; next: Array<{ id: string; label: string; current: number; target: number; percent: number }> };
+  passport: SeasonPassport;
   retrospective: { seasonNumber: number; title: string; summary: string; games: number; wins: number; draws: number; losses: number; goals: number; assists: number; winRate: number; bestWinningStreak: number; bestGoalsInMatch: number; bestAssistsInMatch: number; motmAwards: number; partnerAwards: number; fairPlayAwards: number; defenseAwards: number; playerOfMonthAwards: number; monthlySelections: number; topPartner: { id: string; displayName: string; games: number } | null; highlights: CareerAchievement[]; shareText: string };
 };
 export type RoundRecap = { date?: string; title: string; headline: string; deck?: string; highlights: string[]; stories?: Array<{ kind: "goals" | "assists" | "motm" | "recognition" | "record" | "achievement"; label: string; text: string; icon: string }>; records?: string[]; result?: { blueScore: number; yellowScore: number; winnerTeam: "BLUE" | "YELLOW" | "DRAW"; winnerLabel: string; totalGoals: number; goalDifference: number }; milestones: CareerAchievement[]; shareText: string };

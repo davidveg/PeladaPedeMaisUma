@@ -34,6 +34,12 @@ Os próximos objetivos de jogos, vitórias, gols e assistências mostram o progr
 
 A retrospectiva considera somente a temporada corrente armazenada no snapshot das partidas. Ela apresenta jogos, vitórias, empates, derrotas, aproveitamento, gols, assistências, melhor sequência de vitórias, reconhecimentos e parceria mais frequente. O resumo pode ser compartilhado pelo site ou pelo aplicativo.
 
+## Passaporte da temporada
+
+O perfil mostra uma prévia com os oito carimbos mais recentes e o progresso de assiduidade. A tela completa organiza as partidas oficiais por temporada e por mês, com quatro carimbos por linha no aplicativo e até oito no site. Cada carimbo informa participação, equipe, resultado e o principal feito da rodada; ao abri-lo, o jogador consulta placar, contribuições, reconhecimentos, conquistas e o acesso à resenha.
+
+Para manter a navegação rápida em temporadas longas, a API entrega o resumo anual e somente os carimbos do mês selecionado. A assiduidade considera todas as partidas oficiais da temporada, inclusive as rodadas em que o jogador não participou, e exibe o progresso até os 95% exigidos pela conquista Temporada perfeita.
+
 ## Central da rodada
 
 Os detalhes de cada partida no site e no aplicativo começam com uma central compacta. Ela reúne o prazo e o estado da presença, local e previsão disponível, publicação dos times, situação da votação e o próximo passo recomendado. Depois da partida, a central aponta o resultado, a resenha e os reconhecimentos recebidos pelo jogador.

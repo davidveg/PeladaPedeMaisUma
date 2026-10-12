@@ -1,0 +1,63 @@
+import { useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { apiFetch } from "@/api";
+import { Button, Card, EmptyState, ErrorState, Header, Screen } from "@/components";
+import { useMobileBranding } from "@/branding";
+import { colors } from "@/theme";
+import type { SeasonPassportDetails, SeasonPassportStamp } from "@/types";
+
+export default function SeasonPassportScreen() {
+  const router = useRouter(), { palette, config } = useMobileBranding();
+  const [season, setSeason] = useState<number | null>(null), [month, setMonth] = useState<string | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["season-passport", season, month],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (season) params.set("season", String(season));
+      if (month) params.set("month", month);
+      return apiFetch<SeasonPassportDetails>(`/api/member-profile/passport?${params}`);
+    },
+  });
+  if (query.isError && !query.data) return <Screen><Header title="Passaporte da temporada"/><ErrorState message={(query.error as Error).message} retry={()=>query.refetch()}/></Screen>;
+  if (!query.data) return <Screen><Header eyebrow="SUA TRAJETÓRIA" title="Passaporte da temporada"/><ActivityIndicator color={palette.green}/></Screen>;
+  const data = query.data, summary = data.summary, selected = data.stamps.find(stamp=>stamp.id===selectedId) || null;
+  const currentMonth = data.months.find(item=>item.month===data.selectedMonth);
+  return <Screen><ScrollView contentContainerStyle={styles.content}>
+    <Pressable accessibilityRole="button" onPress={()=>router.back()} style={styles.back}><Ionicons name="arrow-back" size={18} color={palette.green}/><Text style={[styles.backText,{color:palette.green}]}>Voltar ao Meu card</Text></Pressable>
+    <Header eyebrow="PASSAPORTE DA TEMPORADA" title="Sua história em cada rodada"/>
+    <Text style={styles.intro}>Navegue por um mês de cada vez. Mesmo temporadas longas continuam rápidas e organizadas.</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seasonOptions}>{data.availableSeasons.map(value=><Pressable key={value} accessibilityRole="button" accessibilityState={{selected:value===summary.seasonNumber}} onPress={()=>{setSeason(value);setMonth(null);setSelectedId(null)}} style={[styles.seasonButton,value===summary.seasonNumber&&{backgroundColor:palette.green,borderColor:palette.green}]}><Text style={[styles.seasonButtonText,value===summary.seasonNumber&&styles.seasonButtonTextOn]}>Temporada {value}</Text></Pressable>)}</ScrollView>
+    <View style={styles.summaryGrid}><Summary value={`${summary.appearances}/${summary.totalMatches}`} label="Participações"/><Summary value={`${summary.attendanceRate}%`} label="Assiduidade"/><Summary value={summary.currentAttendanceStreak} label="Sequência atual"/><Summary value={summary.wins} label="Vitórias"/><Summary value={summary.goals} label="Gols"/><Summary value={summary.assists} label="Assistências"/></View>
+    <Card style={styles.progressCard}><View style={styles.progressHeading}><View><Text style={styles.sectionTitle}>Temporada perfeita</Text><Text style={styles.help}>Meta de {summary.perfectSeasonTarget}% de assiduidade</Text></View><Text style={[styles.progressRate,{color:palette.green}]}>{summary.attendanceRate}%</Text></View><View style={styles.progressTrack}><View style={[styles.progressValue,{backgroundColor:palette.greenLight,width:`${summary.perfectSeasonProgress}%`}]}/></View><Text style={styles.help}>Melhor sequência: {summary.bestAttendanceStreak} partidas · {summary.motmAwards}× craque · {summary.recognitionAwards} reconhecimentos</Text></Card>
+    <Card style={styles.passportPage}><View style={styles.monthHeading}><View style={{flex:1}}><Text style={[styles.eyebrow,{color:palette.greenLight}]}>PÁGINA DO PASSAPORTE</Text><Text style={styles.monthTitle}>{data.selectedMonth?formatMonth(data.selectedMonth):"Temporada sem partidas"}</Text><Text style={styles.help}>{currentMonth?`${currentMonth.totalMatches} partidas · ${currentMonth.appearances} participações · ${currentMonth.wins} vitórias`:"Os carimbos aparecerão depois do primeiro resultado oficial."}</Text></View>{query.isFetching?<ActivityIndicator color={palette.green}/>:null}</View>
+      {data.months.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthOptions}>{data.months.map(item=><Pressable key={item.month} accessibilityRole="button" accessibilityState={{selected:item.month===data.selectedMonth}} onPress={()=>{setMonth(item.month);setSelectedId(null)}} style={[styles.monthButton,item.month===data.selectedMonth&&{backgroundColor:palette.green,borderColor:palette.green}]}><Text style={[styles.monthButtonText,item.month===data.selectedMonth&&styles.monthButtonTextOn]}>{shortMonth(item.month)}</Text></Pressable>)}</ScrollView> : null}
+      {data.stamps.length ? <View style={styles.stampGrid}>{data.stamps.map(stamp=><PassportStamp key={stamp.id} stamp={stamp} selected={selectedId===stamp.id} onPress={()=>setSelectedId(current=>current===stamp.id?null:stamp.id)}/>)}</View> : <EmptyState title="Sem carimbos" message="Nenhuma partida oficial foi registrada nesta página."/>}
+      {selected?<StampDetails stamp={selected} blueName={config.teamBlueName} yellowName={config.teamYellowName} onOpen={()=>router.push({pathname:"/separations/[id]" as never,params:{id:selected.separationId,tab:"result"}})}/>:null}
+    </Card>
+  </ScrollView></Screen>;
+}
+
+function Summary({value,label}:{value:string|number;label:string}){return <View style={styles.summary}><Text style={styles.summaryValue}>{value}</Text><Text numberOfLines={1} style={styles.summaryLabel}>{label}</Text></View>}
+
+function PassportStamp({stamp,selected,onPress}:{stamp:SeasonPassportStamp;selected:boolean;onPress():void}){
+  const borderTopColor=stamp.team==="BLUE"?colors.blue:stamp.team==="YELLOW"?colors.yellow:colors.muted;
+  return <Pressable accessibilityRole="button" accessibilityState={{selected}} onPress={onPress} style={[styles.stamp,{borderTopColor},stamp.result==="ABSENT"&&styles.stampAbsent,selected&&styles.stampSelected]}><Text style={styles.stampRound}>ROD. {stamp.round}</Text><Text style={styles.stampResult}>{resultLabel(stamp.result)}</Text><Text style={styles.stampIcon}>{stamp.primaryIcon}</Text><Text style={styles.stampDate}>{formatDate(stamp.date)}</Text></Pressable>;
+}
+
+function StampDetails({stamp,blueName,yellowName,onOpen}:{stamp:SeasonPassportStamp;blueName:string;yellowName:string;onOpen():void}){
+  const recognition=stamp.recognitions.map(value=>value==="PARTNER"?"Parceiro":value==="FAIR_PLAY"?"Fair Play":"Defesa").join(" · ");
+  return <View style={styles.details}><View style={styles.detailsHeading}><View style={{flex:1}}><Text style={styles.stampRound}>RODADA {stamp.round} · {formatDate(stamp.date)}</Text><Text style={styles.detailsTitle}>{stamp.title}</Text></View><Text style={styles.score}>{stamp.blueScore} × {stamp.yellowScore}</Text></View><Fact label="Situação" value={stamp.participated?`${resultName(stamp.result)} · ${stamp.team==="BLUE"?blueName:yellowName}`:"Não participou"}/><Fact label="Contribuições" value={`${stamp.goals} gols · ${stamp.assists} assistências`}/><Fact label="Destaques" value={[stamp.motm?"Craque da rodada":"",recognition].filter(Boolean).join(" · ")||"Nenhum nesta rodada"}/><Fact label="Conquistas" value={stamp.achievements.map(item=>`${item.icon} ${item.title}`).join(" · ")||"Nenhuma nesta rodada"}/><Button title="Ver partida e resenha" onPress={onOpen}/></View>;
+}
+function Fact({label,value}:{label:string;value:string}){return <View style={styles.fact}><Text style={styles.factLabel}>{label}</Text><Text style={styles.factValue}>{value}</Text></View>}
+function formatMonth(value:string){return new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(`${value}-15T12:00:00Z`)).replace(/^./,letter=>letter.toUpperCase())}
+function shortMonth(value:string){return new Intl.DateTimeFormat("pt-BR",{month:"short",year:"2-digit",timeZone:"UTC"}).format(new Date(`${value}-15T12:00:00Z`)).replace(".","")}
+function formatDate(value:string){return new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit",timeZone:"UTC"}).format(new Date(`${value.slice(0,10)}T12:00:00Z`))}
+function resultLabel(value:SeasonPassportStamp["result"]){return value==="WIN"?"V":value==="DRAW"?"E":value==="LOSS"?"D":"—"}
+function resultName(value:SeasonPassportStamp["result"]){return value==="WIN"?"Vitória":value==="DRAW"?"Empate":value==="LOSS"?"Derrota":"Ausente"}
+
+const styles=StyleSheet.create({
+  content:{padding:20,paddingTop:8,paddingBottom:32,gap:14},back:{minHeight:42,flexDirection:"row",alignItems:"center",gap:7},backText:{fontWeight:"800"},intro:{marginTop:-16,color:colors.muted,lineHeight:20},seasonOptions:{gap:8,paddingVertical:2},seasonButton:{minHeight:40,justifyContent:"center",borderWidth:1,borderColor:colors.border,borderRadius:12,backgroundColor:"#fff",paddingHorizontal:14},seasonButtonText:{color:colors.text,fontWeight:"800",fontSize:12},seasonButtonTextOn:{color:"#fff"},summaryGrid:{flexDirection:"row",flexWrap:"wrap",gap:8},summary:{width:"30%",flexGrow:1,minHeight:72,justifyContent:"center",borderWidth:1,borderColor:colors.border,borderRadius:13,backgroundColor:"#fff",padding:11},summaryValue:{color:colors.green,fontSize:22,fontWeight:"900"},summaryLabel:{marginTop:3,color:colors.muted,fontSize:8,fontWeight:"900",textTransform:"uppercase"},progressCard:{gap:10},progressHeading:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12},sectionTitle:{color:colors.text,fontSize:17,fontWeight:"900"},help:{color:colors.muted,fontSize:11,lineHeight:16},progressRate:{fontSize:23,fontWeight:"900"},progressTrack:{height:9,overflow:"hidden",borderRadius:99,backgroundColor:"#E7EDE9"},progressValue:{height:"100%",borderRadius:99},passportPage:{gap:14},monthHeading:{flexDirection:"row",alignItems:"center",gap:12},eyebrow:{fontSize:9,fontWeight:"900",letterSpacing:1.1},monthTitle:{marginVertical:4,color:colors.text,fontSize:24,fontWeight:"900"},monthOptions:{gap:7},monthButton:{minHeight:38,justifyContent:"center",borderWidth:1,borderColor:colors.border,borderRadius:11,backgroundColor:"#fff",paddingHorizontal:12},monthButtonText:{color:colors.text,fontSize:11,fontWeight:"800",textTransform:"capitalize"},monthButtonTextOn:{color:"#fff"},stampGrid:{flexDirection:"row",flexWrap:"wrap",gap:7},stamp:{width:"22%",flexGrow:1,minHeight:96,alignItems:"center",justifyContent:"space-between",borderWidth:1,borderTopWidth:4,borderColor:colors.border,borderRadius:12,backgroundColor:"#F8FAF8",padding:8},stampAbsent:{opacity:.5},stampSelected:{borderColor:colors.green,backgroundColor:"#EDF7F1"},stampRound:{color:colors.muted,fontSize:7,fontWeight:"900",letterSpacing:.6},stampResult:{alignSelf:"flex-start",color:colors.green,fontSize:17,fontWeight:"900"},stampIcon:{fontSize:23},stampDate:{color:colors.muted,fontSize:8,fontWeight:"800"},details:{gap:9,borderTopWidth:1,borderTopColor:colors.border,paddingTop:15},detailsHeading:{flexDirection:"row",alignItems:"center",gap:12},detailsTitle:{marginTop:4,color:colors.text,fontSize:19,fontWeight:"900"},score:{color:colors.green,fontSize:25,fontWeight:"900"},fact:{borderRadius:11,backgroundColor:"#F3F7F4",padding:11},factLabel:{color:colors.muted,fontSize:8,fontWeight:"900",textTransform:"uppercase"},factValue:{marginTop:4,color:colors.text,fontSize:11,fontWeight:"800",lineHeight:16},
+});

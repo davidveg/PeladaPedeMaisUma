@@ -3478,6 +3478,8 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page :is(
   .member-profile-actions,
+  .season-passport-preview,
+  .season-passport-page,
   .player-achievements,
   .season-retrospective,
   .notification-preferences-card,
@@ -3604,6 +3606,8 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page :is(
   .member-profile-actions,
+  .season-passport-preview,
+  .season-passport-page,
   .player-achievements,
   .season-retrospective,
   .notification-preferences-card,
@@ -3616,6 +3620,8 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page :is(
   .member-profile-actions,
+  .season-passport-preview,
+  .season-passport-page,
   .player-achievements,
   .season-retrospective,
   .notification-preferences-card,
@@ -3628,6 +3634,12 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page :is(
   .player-achievements .engagement-panel-head > strong,
+  .passport-summary > div,
+  .passport-stamp,
+  .passport-stamp-detail,
+  .passport-detail-facts > span,
+  .passport-hero select,
+  .passport-month-head select,
   .achievement-grid article,
   .engagement-empty,
   .retrospective-numbers,
@@ -3649,6 +3661,10 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page :is(
   .player-achievements .engagement-panel-head > strong,
+  .passport-summary > div,
+  .passport-stamp,
+  .passport-stamp-detail,
+  .passport-detail-facts > span,
   .achievement-grid article,
   .retrospective-numbers span,
   .retrospective-stories article,
@@ -3661,6 +3677,9 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page :is(
   .achievement-grid article,
+  .passport-stamp,
+  .passport-stamp-detail,
+  .passport-detail-facts > span,
   .retrospective-stories article,
   .notification-preference-row,
   .finance-player-status span
@@ -3669,6 +3688,9 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 }
 
 .member-page .player-achievements .engagement-panel-head > strong,
+.member-page .passport-summary strong,
+.member-page .passport-stamp > b,
+.member-page .passport-stamp-detail header > strong,
 .member-page .retrospective-numbers b,
 .member-page .achievement-grid a,
 .member-page .member-advanced-statistics-link {
@@ -3677,6 +3699,26 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 
 .member-page .player-achievements .engagement-panel-head > strong small {
   color: color-mix(in srgb, var(--control-text, #f2f5f3) 68%, transparent);
+}
+
+.member-page .passport-perfect-progress > div {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--management-background, #0f1612) 22%);
+}
+
+.member-page .passport-perfect-progress > div > i {
+  background: linear-gradient(90deg, var(--management-button, #d3eb7a), color-mix(in srgb, var(--management-button, #d3eb7a) 62%, #5f9f70));
+}
+
+.member-page .passport-stamp.win {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, #3f8958 12%);
+}
+
+.member-page .passport-stamp.loss {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, #9f5748 12%);
+}
+
+.member-page .passport-stamp.draw {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 88%, #a68935 12%);
 }
 
 .member-page .achievement-grid article > i {

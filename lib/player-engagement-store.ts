@@ -9,6 +9,7 @@ import {
   type MonthlyAwardSnapshot,
   type SeasonAwardSnapshot,
 } from "./player-engagement";
+import { buildSeasonPassport, seasonPassportPreview, type SeasonPassportDetails } from "./season-passport";
 
 export async function loadPlayerEngagement(player: EngagementPlayer) {
   const history = await loadEngagementHistory();
@@ -31,6 +32,33 @@ export async function loadRoundRecaps() {
     teamBlueName: history.teamBlueName,
     teamYellowName: history.teamYellowName,
   });
+}
+
+export async function loadPlayerSeasonPassport(player: EngagementPlayer, requestedSeason?: number, requestedMonth?: string | null): Promise<SeasonPassportDetails> {
+  const history = await loadEngagementHistory();
+  const availableSeasons = [...new Set(history.matches.map(match => match.seasonNumber))].sort((a, b) => b - a);
+  const seasonNumber = requestedSeason && availableSeasons.includes(requestedSeason) ? requestedSeason : history.currentSeasonNumber;
+  if (!availableSeasons.includes(seasonNumber)) availableSeasons.unshift(seasonNumber);
+  const engagement = buildPlayerEngagement({
+    player,
+    matches: history.matches,
+    currentSeasonNumber: history.currentSeasonNumber,
+    seasonStartedAt: history.seasonStartedAt,
+    nextSeasonResetAt: history.nextSeasonResetAt,
+    monthlyAwards: history.monthlyAwards,
+    seasonAwards: history.seasonAwards,
+  });
+  const full = buildSeasonPassport({ player, matches: history.matches, seasonNumber, achievements: engagement.achievements.unlocked });
+  const preview = seasonPassportPreview(full);
+  const selectedMonth = requestedMonth && full.months.some(item => item.month === requestedMonth)
+    ? requestedMonth
+    : full.months[0]?.month || null;
+  return {
+    ...preview,
+    availableSeasons,
+    selectedMonth,
+    stamps: selectedMonth ? full.stamps.filter(stamp => stamp.month === selectedMonth) : [],
+  };
 }
 
 async function loadEngagementHistory() {

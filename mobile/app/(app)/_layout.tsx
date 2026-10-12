@@ -87,6 +87,7 @@ export default function AppLayout() {
       tabBarIcon: ({ focused, color }) => <TabIcon focused={focused} color={color} active="id-card" inactive="id-card-outline"/>,
     }}/>
     <Tabs.Screen name="advanced-statistics" options={{ href: null, title: "Estatísticas avançadas" }}/>
+    <Tabs.Screen name="passport" options={{ href: null, title: "Passaporte da temporada" }}/>
     <Tabs.Screen name="statistics" options={{ href: null, title: "Estatísticas" }}/>
     <Tabs.Screen name="finance" options={{
       title: "Financeiro",
