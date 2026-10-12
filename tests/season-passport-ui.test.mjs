@@ -23,3 +23,24 @@ test("prévia limita carimbos e a tela completa recebe somente o mês selecionad
   assert.match(passport, /stamps\.slice\(-8\)\.reverse\(\)/);
   assert.match(source, /full\.stamps\.filter\(stamp => stamp\.month === selectedMonth\)/);
 });
+
+test("carimbos distinguem vitória, derrota, empate e ausência no site e no aplicativo", async () => {
+  const [css, darkTheme, mobilePalette, mobilePreview, mobilePassport] = await Promise.all([
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/experimental-modern-theme.css", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/src/passport-style.ts", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/app/(app)/card.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/app/(app)/passport.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(css, /\.passport-stamp\.win\{--passport-result:#1f7a4c/);
+  assert.match(css, /\.passport-stamp\.loss\{--passport-result:#b64036/);
+  assert.match(css, /\.passport-stamp\.draw\{--passport-result:#987006/);
+  assert.match(darkTheme, /--passport-result: #69d99a/);
+  assert.match(darkTheme, /--passport-result: #ff8b80/);
+  assert.match(darkTheme, /\.passport-stamp\.team-blue[\s\S]*border-top-color: var\(--blue\)/);
+  assert.match(darkTheme, /\.passport-stamp\.team-yellow[\s\S]*border-top-color: var\(--yellow\)/);
+  assert.match(mobilePalette, /WIN:[\s\S]*textColor: "#176A40"/);
+  assert.match(mobilePalette, /LOSS:[\s\S]*textColor: "#A83229"/);
+  assert.match(mobilePreview, /passportResultPalette\[stamp\.result\]/);
+  assert.match(mobilePassport, /passportResultPalette\[stamp\.result\]/);
+});

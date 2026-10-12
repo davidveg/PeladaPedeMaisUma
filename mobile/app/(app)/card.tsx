@@ -8,6 +8,7 @@ import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform,
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, API_BASE_URL } from "@/api";
 import { useMobileBranding } from "@/branding";
+import { passportResultPalette } from "@/passport-style";
 import { Button, Card, EmptyState, ErrorState, Field, Header, Screen, UpdatedAt } from "@/components";
 import {
   playerAttributes,
@@ -268,7 +269,7 @@ function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
     <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>PASSAPORTE DA TEMPORADA</Text><Text style={styles.profileTitle}>Sua trajetória</Text><Text style={styles.profileDescription}>{passport.summary.appearances} de {passport.summary.totalMatches} partidas · {passport.summary.attendanceRate}% de assiduidade</Text></View><View style={styles.passportRate}><Text style={styles.passportRateValue}>{passport.summary.attendanceRate}%</Text><Text style={styles.achievementCountLabel}>PRESENÇA</Text></View></View>
       <View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${passport.summary.perfectSeasonProgress}%`}]}/></View><Text style={styles.passportProgressHelp}>Meta de {passport.summary.perfectSeasonTarget}% para a conquista Temporada perfeita</Text>
-      {passport.recentStamps.length ? <View style={styles.passportStampGrid}>{passport.recentStamps.map(stamp=><View key={stamp.id} style={[styles.passportStamp,stamp.result==="ABSENT"&&styles.passportStampAbsent,{borderTopColor:stamp.team==="BLUE"?colors.blue:stamp.team==="YELLOW"?colors.yellow:colors.muted}]}><Text style={styles.passportStampRound}>ROD. {stamp.round}</Text><Text style={styles.passportStampResult}>{stamp.result==="WIN"?"V":stamp.result==="DRAW"?"E":stamp.result==="LOSS"?"D":"—"}</Text><Text style={styles.passportStampIcon}>{stamp.primaryIcon}</Text></View>)}</View> : <Text style={styles.profileDescription}>Os carimbos aparecerão após o primeiro resultado oficial.</Text>}
+      {passport.recentStamps.length ? <View style={styles.passportStampGrid}>{passport.recentStamps.map(stamp=>{const resultStyle=passportResultPalette[stamp.result];return <View key={stamp.id} style={[styles.passportStamp,{backgroundColor:resultStyle.backgroundColor,borderColor:resultStyle.borderColor,borderTopColor:stamp.team==="BLUE"?colors.blue:stamp.team==="YELLOW"?colors.yellow:colors.muted},stamp.result==="ABSENT"&&styles.passportStampAbsent]}><Text style={styles.passportStampRound}>ROD. {stamp.round}</Text><Text style={[styles.passportStampResult,{color:resultStyle.textColor,backgroundColor:resultStyle.badgeBackgroundColor,borderColor:resultStyle.borderColor}]}>{stamp.result==="WIN"?"V":stamp.result==="DRAW"?"E":stamp.result==="LOSS"?"D":"—"}</Text><Text style={styles.passportStampIcon}>{stamp.primaryIcon}</Text></View>})}</View> : <Text style={styles.profileDescription}>Os carimbos aparecerão após o primeiro resultado oficial.</Text>}
       <Button title="Ver passaporte completo" variant="secondary" onPress={()=>router.push("/passport" as never)}/>
     </Card>
     <Card style={styles.engagementCard}>
@@ -394,9 +395,9 @@ const styles = StyleSheet.create({
   passportProgressHelp: { color: colors.muted, fontSize: 10, lineHeight: 14 },
   passportStampGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   passportStamp: { width: "22%", flexGrow: 1, minHeight: 82, alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderTopWidth: 4, borderColor: colors.border, borderRadius: 11, backgroundColor: "#F8FAF8", padding: 7 },
-  passportStampAbsent: { opacity: .5 },
+  passportStampAbsent: { opacity: .68 },
   passportStampRound: { color: colors.muted, fontSize: 7, fontWeight: "900", letterSpacing: .5 },
-  passportStampResult: { alignSelf: "flex-start", color: colors.green, fontSize: 15, fontWeight: "900" },
+  passportStampResult: { alignSelf: "flex-start", minWidth: 26, height: 26, textAlign: "center", textAlignVertical: "center", overflow: "hidden", borderWidth: 1, borderRadius: 8, fontSize: 14, lineHeight: 24, fontWeight: "900" },
   passportStampIcon: { fontSize: 20 },
   achievementCount: { minWidth: 72, alignItems: "center", borderRadius: 14, padding: 10, backgroundColor: "#E7F3EB" },
   achievementCountValue: { color: colors.green, fontSize: 25, lineHeight: 28, fontWeight: "900" },
