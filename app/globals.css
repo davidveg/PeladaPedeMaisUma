@@ -231,6 +231,7 @@
 .expanded-weights .weight-number input{width:100%;min-width:0;border:0;background:transparent;padding:8px 3px 8px 8px;text-align:right;font-family:inherit;font-size:13px;font-weight:850;line-height:1;color:var(--ink);outline:none;appearance:textfield}
 .expanded-weights .weight-number input::-webkit-inner-spin-button,.expanded-weights .weight-number input::-webkit-outer-spin-button{margin:0;appearance:none}
 .expanded-weights .weight-number span{padding:0;font-size:12px;font-weight:850;line-height:1;color:var(--muted);white-space:nowrap}
+.expanded-weights .settings-actions{align-items:center;gap:14px}
 .expanded-weights .weight-save-status{margin-right:auto;font-size:11px;font-weight:750}
 .expanded-weights .weight-save-status.valid{color:#28724d}
 .expanded-weights .weight-save-status.invalid{color:#a83c2f}
@@ -622,3 +623,6 @@
 
 /* Identificação das posições nas opções do quadro tático. */
 .tactical-team>footer button{max-width:210px}.tactical-team>footer button>.tactical-reserve-details{display:flex;min-width:0;max-width:132px;flex-direction:column;align-items:flex-start;gap:1px;overflow:hidden;white-space:nowrap}.tactical-team>footer button>.tactical-reserve-details>span,.tactical-team>footer button>.tactical-reserve-details>small{max-width:100%;overflow:hidden;text-overflow:ellipsis}.tactical-team>footer button>.tactical-reserve-details>small{color:var(--control-text,var(--management-text,var(--ink)));font-size:8px;opacity:.72}
+
+/* Seletor único de jogadores: votação, súmula e substituição administrativa. */
+.player-photo-select-copy{display:flex;min-width:0;flex-direction:column;gap:2px}.player-photo-select-copy b,.player-photo-select-copy small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.player-photo-select-copy small{color:var(--muted);font-size:9px;font-weight:700}.player-photo-option-group{position:sticky;top:-6px;z-index:1;margin:4px -1px 3px;padding:7px 8px 5px;background:#fff;color:#56806e;font-size:8px;font-weight:900;letter-spacing:1px;text-transform:uppercase}.match-player-replacement-field,.match-draft-player-field{display:grid;min-width:0;gap:6px}.match-player-replacement-field>span,.match-draft-player-field>span{font-size:9px;font-weight:900}.match-player-replacement-field .vote-player-trigger,.match-draft-player-field .vote-player-trigger{min-height:58px}.match-draft-player-field .vote-player-options{z-index:60}

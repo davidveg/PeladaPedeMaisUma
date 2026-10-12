@@ -8,6 +8,7 @@ import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { WeatherPreview } from "../components/WeatherPreview";
 import { BrandedLoading } from "../components/BrandedLoading";
+import { PlayerPhotoSelect, type PlayerPhotoOption } from "../components/PlayerPhotoSelect";
 
 type Api = (url: string, options?: RequestInit) => Promise<any>;
 type Props = { api: Api; setError(value: string): void; setNotice(value: string): void; instanceConfig?: any; permissions?: string[]; matchId?: string; canConfigureDrafts?: boolean; allowPostSeparationCancellation?: boolean; allowPostSeparationReplacement?: boolean; onInstanceConfigSaved?(config: any): void };
@@ -179,6 +180,11 @@ function ClosedMatchReplacement({ match, players, teamBlueName, teamYellowName, 
   const [outgoingPlayerId, setOutgoingPlayerId] = useState(""), [incomingPlayerId, setIncomingPlayerId] = useState(""), [busy, setBusy] = useState(false);
   const blue = match.lineup?.blue || [], yellow = match.lineup?.yellow || [], lineupIds = new Set([...blue, ...yellow].map(player => player.id));
   const available = players.filter(player => !lineupIds.has(player.id));
+  const outgoingOptions: PlayerPhotoOption[] = [
+    ...blue.map(player => ({ ...player, description: player.primaryPosition, group: `Time ${teamBlueName}` })),
+    ...yellow.map(player => ({ ...player, description: player.primaryPosition, group: `Time ${teamYellowName}` })),
+  ];
+  const incomingOptions: PlayerPhotoOption[] = administrativePlayerGroups(available).flatMap(group => group.players.map(player => ({ ...player, description: player.primaryPosition, group: group.label })));
   async function submit(event: FormEvent) {
     event.preventDefault();
     const outgoing = [...blue, ...yellow].find(player => player.id === outgoingPlayerId), incoming = available.find(player => player.id === incomingPlayerId);
@@ -192,9 +198,9 @@ function ClosedMatchReplacement({ match, players, teamBlueName, teamYellowName, 
   return <form className="match-player-replacement" onSubmit={submit}>
     <div><small>AJUSTE APÓS O FECHAMENTO</small><h3>Substituição de última hora</h3><p>Troque um jogador sem redistribuir os times. O substituto entra na mesma equipe e a alteração fica registrada na auditoria.</p></div>
     <div className="match-player-replacement-fields">
-      <label>Quem saiu<select value={outgoingPlayerId} onChange={event => setOutgoingPlayerId(event.target.value)} required disabled={busy}><option value="">Selecionar jogador…</option><optgroup label={`Time ${teamBlueName}`}>{blue.map(player => <option key={player.id} value={player.id}>{player.displayName} · {player.primaryPosition}</option>)}</optgroup><optgroup label={`Time ${teamYellowName}`}>{yellow.map(player => <option key={player.id} value={player.id}>{player.displayName} · {player.primaryPosition}</option>)}</optgroup></select></label>
+      <div className="match-player-replacement-field"><span>Quem saiu</span><PlayerPhotoSelect label="Quem saiu" value={outgoingPlayerId} players={outgoingOptions} onChange={setOutgoingPlayerId} emptyLabel="Selecionar jogador…" disabled={busy}/></div>
       <span aria-hidden="true">→</span>
-      <label>Quem entra<select value={incomingPlayerId} onChange={event => setIncomingPlayerId(event.target.value)} required disabled={busy || !available.length}><option value="">{available.length ? "Selecionar substituto…" : "Nenhum jogador disponível"}</option>{administrativePlayerGroups(available).map(group => <optgroup key={group.key} label={group.label}>{group.players.map(player => <option key={player.id} value={player.id}>{player.displayName} · {player.primaryPosition}</option>)}</optgroup>)}</select></label>
+      <div className="match-player-replacement-field"><span>Quem entra</span><PlayerPhotoSelect label="Quem entra" value={incomingPlayerId} players={incomingOptions} onChange={setIncomingPlayerId} emptyLabel={available.length ? "Selecionar substituto…" : "Nenhum jogador disponível"} disabled={busy || !available.length}/></div>
       <button className="primary" disabled={busy || !outgoingPlayerId || !incomingPlayerId}>{busy ? "Substituindo…" : "Confirmar troca"}</button>
     </div>
   </form>;

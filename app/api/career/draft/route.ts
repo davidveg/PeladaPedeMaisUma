@@ -15,7 +15,7 @@ async function draftContext(request: Request) {
   return { admin, row, snapshot, separationId };
 }
 
-function publicDraft(row: any, snapshot: any, eligiblePlayers: any[]) {
+function publicDraft(row: any, snapshot: any, eligiblePlayers: any[], currentPhotos: ReadonlyMap<string, string | null>) {
   const stored = row.match_draft ? JSON.parse(row.match_draft) : { contributions: [], updatedAt: null };
   const contributions = Array.isArray(stored.contributions) ? stored.contributions : [];
   const current = effectiveParticipation({ ...row, snapshot });
@@ -28,8 +28,8 @@ function publicDraft(row: any, snapshot: any, eligiblePlayers: any[]) {
     matchDate: row.match_date,
     officialResultConfirmed: Boolean(row.career_id),
     players: {
-      blue: (snapshot.blue || []).map((player: any) => ({ id: player.id, displayName: player.displayName, photoUrl: player.photoUrl, primaryPosition: player.primaryPosition })),
-      yellow: (snapshot.yellow || []).map((player: any) => ({ id: player.id, displayName: player.displayName, photoUrl: player.photoUrl, primaryPosition: player.primaryPosition })),
+      blue: (snapshot.blue || []).map((player: any) => ({ id: player.id, displayName: player.displayName, photoUrl: currentPhotos.has(String(player.id)) ? currentPhotos.get(String(player.id)) ?? null : player.photoUrl ?? null, primaryPosition: player.primaryPosition })),
+      yellow: (snapshot.yellow || []).map((player: any) => ({ id: player.id, displayName: player.displayName, photoUrl: currentPhotos.has(String(player.id)) ? currentPhotos.get(String(player.id)) ?? null : player.photoUrl ?? null, primaryPosition: player.primaryPosition })),
     },
     participation: { reviewed: Boolean(participation.reviewed || row.participation_snapshot), blueIds: participation.blueIds, yellowIds: participation.yellowIds },
     eligiblePlayers,
@@ -41,11 +41,15 @@ export async function GET(request: Request) {
   const context: any = await draftContext(request);
   if (context.error) return context.error;
   const config = await getCareerConfig();
-  const players=(await db().prepare(`SELECT id,display_name,photo_url,primary_position,secondary_position,type FROM players WHERE deleted_at IS NULL AND active=1 ORDER BY display_name`).all()).results as any[];
-  const activePlayers=players.map(player=>({id:String(player.id),displayName:String(player.display_name),photoUrl:player.photo_url||null,primaryPosition:player.primary_position||null,secondaryPosition:player.secondary_position||null,type:player.type||null}));
+  const players=(await db().prepare(`SELECT id,display_name,photo_url,primary_position,secondary_position,type,active FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all()).results as any[];
+  const registeredPlayers=players.map(player=>({id:String(player.id),displayName:String(player.display_name),photoUrl:player.photo_url||null,primaryPosition:player.primary_position||null,secondaryPosition:player.secondary_position||null,type:player.type||null,active:Boolean(player.active)}));
+  const activePlayers=registeredPlayers.filter(player=>player.active);
+  const registeredById=new Map(registeredPlayers.map(player=>[player.id,player]));
+  const currentPhotos=new Map(registeredPlayers.map(player=>[player.id,player.photoUrl]));
   const current=effectiveParticipation({ ...context.row, snapshot: context.snapshot });
-  const eligiblePlayers=Array.from(new Map([...activePlayers,...current.blue,...current.yellow].map((player:any)=>[String(player.id),player])).values()).sort((left:any,right:any)=>String(left.displayName).localeCompare(String(right.displayName),"pt-BR"));
-  return Response.json({ ...publicDraft(context.row, context.snapshot, eligiblePlayers), enabled: config.enabled, trackContributions: config.trackContributions }, { headers: { "cache-control": "no-store, max-age=0" } });
+  const currentPlayers=[...current.blue,...current.yellow].map((player:any)=>registeredById.get(String(player.id))||player);
+  const eligiblePlayers=Array.from(new Map([...activePlayers,...currentPlayers].map((player:any)=>[String(player.id),player])).values()).sort((left:any,right:any)=>String(left.displayName).localeCompare(String(right.displayName),"pt-BR"));
+  return Response.json({ ...publicDraft(context.row, context.snapshot, eligiblePlayers, currentPhotos), enabled: config.enabled, trackContributions: config.trackContributions }, { headers: { "cache-control": "no-store, max-age=0" } });
 }
 
 export async function PUT(request: Request) {

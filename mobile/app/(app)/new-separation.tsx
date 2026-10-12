@@ -10,6 +10,7 @@ import { colors } from "@/theme";
 import { contrastTextColor, useMobileBranding } from "@/branding";
 import { useAuth } from "@/auth";
 import { separationBuilderAllowed } from "@/separation-access";
+import { TacticalLineups } from "@/tactical-lineups";
 import type { Player, TeamResult } from "@/types";
 
 type TeamKey = "blue" | "yellow";
@@ -214,6 +215,7 @@ export default function NewSeparation() {
           <Text style={styles.muted}>Toque em um jogador de cada equipe para trocá-los, ou use a seta para transferir apenas aquele jogador ao outro time.</Text>
           {manual ? <Text style={styles.manual}>✓ Indicadores recalculados após ajuste manual.</Text> : <Text style={styles.official}>Proposta oficial do algoritmo.</Text>}
         </Card>
+        <TacticalLineups result={proposal.result}/>
         <TeamEditor team="blue" players={proposal.result.blue} extraId={proposal.result.extraId} selectedId={swap?.team === "blue" ? swap.id : null} onSelect={id => chooseSwap("blue", id)} onMove={id => movePlayer("blue", id)}/>
         <TeamEditor team="yellow" players={proposal.result.yellow} extraId={proposal.result.extraId} selectedId={swap?.team === "yellow" ? swap.id : null} onSelect={id => chooseSwap("yellow", id)} onMove={id => movePlayer("yellow", id)}/>
         {(proposal.result.delta?.players || 0) > 1 ? <Card style={styles.warning}><Text style={styles.warningTitle}>Atenção à quantidade</Text><Text style={styles.muted}>Os times estão com diferença de {proposal.result.delta?.players} jogadores. O indicador abaixo considera essa diferença.</Text></Card> : null}

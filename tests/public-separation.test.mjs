@@ -42,3 +42,30 @@ test("snapshot público preserva times e regras sem expor a lista original", () 
   assert.equal(result.career.config.votingDays, 5);
   assert.equal(result.career.recap.shareText, "Texto completo");
 });
+
+test("histórico usa a foto atual do cadastro sem alterar os demais dados do snapshot", () => {
+  const result = publicSeparation({
+    id: "historical-match",
+    match_title: "Pelada antiga",
+    snapshot: JSON.stringify({
+      blue: [{ id: "blue-player", displayName: "Nome histórico", photoUrl: "/uploads/foto-antiga.jpg", speed: 4 }],
+      yellow: [{ id: "removed-player", displayName: "Sem cadastro atual", photoUrl: "/uploads/foto-preservada.jpg" }],
+    }),
+    confirmed_at: "2026-01-10T12:00:00.000Z",
+    career_id: "career-historical",
+    career_participation_snapshot: JSON.stringify({
+      blue: [{ id: "blue-player", displayName: "Nome histórico", photoUrl: "/uploads/foto-antiga.jpg" }],
+      yellow: [{ id: "without-photo", displayName: "Foto removida", photoUrl: "/uploads/tambem-antiga.jpg" }],
+    }),
+  }, {}, [], null, new Map([
+    ["blue-player", "/uploads/foto-atual.jpg"],
+    ["without-photo", null],
+  ]));
+
+  assert.equal(result.snapshot.blue[0].photoUrl, "/uploads/foto-atual.jpg");
+  assert.equal(result.snapshot.blue[0].displayName, "Nome histórico");
+  assert.equal(result.snapshot.blue[0].speed, 4);
+  assert.equal(result.snapshot.yellow[0].photoUrl, "/uploads/foto-preservada.jpg");
+  assert.equal(result.career.participation.blue[0].photoUrl, "/uploads/foto-atual.jpg");
+  assert.equal(result.career.participation.yellow[0].photoUrl, null);
+});

@@ -73,7 +73,7 @@ test("site e aplicativo respeitam as mesmas opções personalizadas", () => {
 test("gramados usam faixas horizontais e containers ligados às cores da identidade", async () => {
   const [css, mobile] = await Promise.all([
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
-    readFile(new URL("../mobile/src/separation-detail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/src/tactical-lineups.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(css, /\.tactical-field\{background:linear-gradient\(180deg/);
   assert.match(css, /\.tactical-team\{[^}]*var\(--control-surface/);
@@ -86,7 +86,7 @@ test("gramados usam faixas horizontais e containers ligados às cores da identid
 test("opções exibem posição principal e secundária no site e no aplicativo", async () => {
   const [site, mobile, css] = await Promise.all([
     readFile(new URL("../app/FootballApp.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../mobile/src/separation-detail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/src/tactical-lineups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(site, /Principal: \$\{player\.primaryPosition/);
@@ -96,4 +96,16 @@ test("opções exibem posição principal e secundária no site e no aplicativo"
   assert.match(mobile, /Secundária: \$\{player\.secondaryPosition/);
   assert.match(mobile, /tacticalReservePosition/);
   assert.match(css, /\.tactical-reserve-details>small/);
+});
+
+test("quadro tático também acompanha a montagem e os ajustes dos times", async () => {
+  const [site, mobileBuilder, mobileDetail] = await Promise.all([
+    readFile(new URL("../app/FootballApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/app/(app)/new-separation.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../mobile/src/separation-detail.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(site, /<TacticalLineups result=\{result\} onPlayer=\{onPlayer\}\/><TeamGrid result=\{result\}/);
+  assert.match(mobileBuilder, /<TacticalLineups result=\{proposal\.result\}\/>/);
+  assert.match(mobileBuilder, /import \{ TacticalLineups \} from "@\/tactical-lineups"/);
+  assert.match(mobileDetail, /import \{ TacticalLineups \} from "@\/tactical-lineups"/);
 });

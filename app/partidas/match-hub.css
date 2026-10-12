@@ -77,3 +77,21 @@
   .match-separation-pane .result-actions>button{white-space:normal;flex:1 1 160px}
 }
 @media(max-width:480px){.round-center-grid{grid-template-columns:1fr}}
+
+/* O destaque pessoal precisa definir sua própria superfície e cor de texto.
+   Antes, o fundo claro fixo combinava com o texto herdado do modo escuro. */
+.round-center-personal {
+  border: 1px solid var(--control-line, #d9e4dd);
+  background: var(--control-surface, #fff);
+  background: color-mix(in srgb, var(--yellow, #f4bf20) 10%, var(--control-surface, #fff));
+  color: var(--control-text, #17221d);
+}
+
+.round-center-personal > b {
+  color: var(--control-text, #17221d);
+}
+
+.round-center-personal > span {
+  color: var(--control-text, #17221d);
+  opacity: .78;
+}

@@ -4134,7 +4134,8 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 }
 
 .match-admin-surface .match-player-replacement h3,
-.match-admin-surface .match-player-replacement-fields label {
+.match-admin-surface .match-player-replacement-fields label,
+.match-admin-surface .match-player-replacement-field > span {
   color: var(--control-text, #f2f5f3);
 }
 
@@ -4680,6 +4681,15 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .player-photo-select .vote-player-trigger :is(b, i),
 .player-photo-select .vote-player-options > button b {
   color: var(--player-select-text, var(--control-text, #f2f5f3));
+}
+
+.player-photo-select .player-photo-select-copy small {
+  color: color-mix(in srgb, var(--player-select-text, var(--control-text, #f2f5f3)) 68%, transparent);
+}
+
+.player-photo-select .player-photo-option-group {
+  background: var(--player-select-surface, var(--control-surface, #202b26));
+  color: var(--management-accent-text, var(--management-button, #d3eb7a));
 }
 
 .player-photo-select .vote-empty-photo {

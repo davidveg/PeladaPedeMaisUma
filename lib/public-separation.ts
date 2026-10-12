@@ -1,8 +1,13 @@
 type PublicPlayerCareerStats = { games: number; wins: number; losses: number; goals?: number; assists?: number };
+type CurrentPlayerPhotos = ReadonlyMap<string, string | null>;
 
-export function publicSeparation(row: any, careerStats: Record<string, PublicPlayerCareerStats> = {}, contributions: any[] = [], recap: any = null) {
+export function publicSeparation(row: any, careerStats: Record<string, PublicPlayerCareerStats> = {}, contributions: any[] = [], recap: any = null, currentPlayerPhotos: CurrentPlayerPhotos = new Map()) {
   const snapshot = typeof row.snapshot === "string" ? JSON.parse(row.snapshot) : row.snapshot;
-  const withStats = (player: any) => ({ ...player, careerStats: careerStats[player.id] ?? { games: 0, wins: 0, losses: 0 } });
+  const withCurrentPhoto = (player: any) => {
+    const id = String(player.id);
+    return { ...player, photoUrl: currentPlayerPhotos.has(id) ? currentPlayerPhotos.get(id) ?? null : player.photoUrl ?? null };
+  };
+  const withStats = (player: any) => ({ ...withCurrentPhoto(player), careerStats: careerStats[player.id] ?? { games: 0, wins: 0, losses: 0 } });
   snapshot.blue = (snapshot.blue || []).map(withStats);
   snapshot.yellow = (snapshot.yellow || []).map(withStats);
   const separation:any = {
@@ -19,6 +24,7 @@ export function publicSeparation(row: any, careerStats: Record<string, PublicPla
   };
   if(row.career_id) {
     const participation=row.career_participation_snapshot?JSON.parse(row.career_participation_snapshot):null;
+    if(participation){participation.blue=(participation.blue||[]).map(withCurrentPhoto);participation.yellow=(participation.yellow||[]).map(withCurrentPhoto)}
     const actualPlayers=participation?[...(participation.blue||[]),...(participation.yellow||[])]:[...(snapshot.blue||[]),...(snapshot.yellow||[])];
     const names=Object.fromEntries(actualPlayers.map((player:any)=>[player.id,player.displayName]));
     separation.career={id:row.career_id,blueScore:Number(row.career_blue_score),yellowScore:Number(row.career_yellow_score),winnerTeam:row.career_winner_team,votingToken:row.career_voting_token,status:row.career_status,closesAt:row.career_closes_at,closedAt:row.career_closed_at,config:row.career_config_snapshot?JSON.parse(row.career_config_snapshot):null,results:row.career_results_snapshot?JSON.parse(row.career_results_snapshot):null,participation,contributions:contributions.map(goal=>({team:goal.team,scorerPlayerId:goal.scorer_player_id,scorerName:names[goal.scorer_player_id]||"Jogador",assistPlayerId:goal.assist_player_id||null,assistName:goal.assist_player_id?names[goal.assist_player_id]||"Jogador":null,ownGoal:Boolean(goal.is_own_goal)})),...(recap?{recap}:{})};
