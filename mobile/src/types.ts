@@ -17,7 +17,7 @@ export type HallPlayer = { id:string;displayName:string;photoUrl?:string|null;pr
 export type HallTotals = { games:number;wins:number;goals:number;assists:number;motmAwards:number;socialAwards:number };
 export type HallOfFame = {
   summary:{seasons:number;inductedPlayers:number;officialMatches:number;records:number};
-  featured:Array<{player:HallPlayer;title:"Ídolo da Pelada"|"Lenda da Temporada";reason:string;inductedSeason:number;totals:HallTotals;badges:string[]}>;
+  featured:Array<{id:string;player:HallPlayer;title:string;reason:string;inductedSeason:number;totals:HallTotals;badges:string[]}>;
   classes:Array<{seasonNumber:number;endedAt:string;members:Array<{place:number;medal:string;title:string;player:HallPlayer;totals:HallTotals}>}>;
   records:Array<{id:keyof HallTotals;icon:string;title:string;value:number;unit:string;players:HallPlayer[]}>;
   moments:Array<{id:string;icon:string;title:string;description:string;achievedAt:string;matchId?:string;player:HallPlayer}>;

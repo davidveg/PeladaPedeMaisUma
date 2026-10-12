@@ -37,7 +37,10 @@ export async function loadRoundRecaps() {
 
 export async function loadHallOfFame() {
   const history = await loadEngagementHistory();
-  const rows = await db().prepare(`SELECT id,display_name,photo_url,primary_position,active FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all();
+  const [rows, honorRows] = await Promise.all([
+    db().prepare(`SELECT id,display_name,photo_url,primary_position,active FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all(),
+    db().prepare(`SELECT id,player_id,title,reason,season_number,created_at FROM hall_of_fame_honors ORDER BY season_number DESC,created_at DESC`).all(),
+  ]);
   const players = new Map<string, HallPlayer>((rows.results as any[]).map(row => [String(row.id), {
     id: String(row.id), displayName: String(row.display_name), photoUrl: row.photo_url || null,
     primaryPosition: row.primary_position || null, active: Boolean(row.active),
@@ -54,7 +57,8 @@ export async function loadHallOfFame() {
     monthlyAwards: history.monthlyAwards,
     seasonAwards: history.seasonAwards,
   }).achievements.unlocked.map(achievement => ({ ...achievement, playerId: player.id, playerName: player.displayName })));
-  return buildHallOfFame({ players: [...players.values()], matches: history.matches, seasonAwards: history.seasonAwards, achievements });
+  const manualHonors = (honorRows.results as any[]).map(row => ({ id: String(row.id), playerId: String(row.player_id), title: String(row.title), reason: String(row.reason), seasonNumber: Number(row.season_number), createdAt: String(row.created_at) }));
+  return buildHallOfFame({ players: [...players.values()], matches: history.matches, seasonAwards: history.seasonAwards, achievements, manualHonors });
 }
 
 export async function loadPlayerSeasonPassport(player: EngagementPlayer, requestedSeason?: number, requestedMonth?: string | null): Promise<SeasonPassportDetails> {

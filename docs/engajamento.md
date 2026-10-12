@@ -42,7 +42,7 @@ Para manter a navegação rápida em temporadas longas, a API entrega o resumo a
 
 ## Hall da Fama
 
-O Hall da Fama é uma projeção coletiva do histórico oficial. Ele reúne os jogadores que alcançaram dez reconhecimentos sociais, os pódios das temporadas encerradas, os recordistas gerais e uma seleção recente de conquistas raras. As classes anuais usam os snapshots congelados no encerramento da temporada, enquanto os recordes acompanham os resultados confirmados.
+O Hall da Fama é uma projeção coletiva do histórico oficial. Ele reúne os jogadores que alcançaram dez reconhecimentos sociais, os pódios das temporadas encerradas, os recordistas gerais e uma seleção recente de conquistas raras. As classes anuais usam os snapshots congelados no encerramento da temporada, enquanto os recordes acompanham os resultados confirmados. Administradores também podem cadastrar homenagens especiais no painel do Modo Carreira para reconhecer fundadores, organizadores ou outras pessoas importantes para a história do grupo.
 
 No site, a área fica em `/hall-da-fama` e usa a paleta configurável nos temas claro e escuro. No aplicativo, o acesso parte de Meu card e abre uma rota interna sem ocupar uma nova aba inferior. As duas interfaces limitam destaques e momentos, filtram as classes por temporada e reorganizam as grades em telas estreitas.
 

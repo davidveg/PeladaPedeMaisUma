@@ -18,8 +18,9 @@ export type HallTotals = {
 };
 
 export type HallFeaturedEntry = {
+  id: string;
   player: HallPlayer;
-  title: "Ídolo da Pelada" | "Lenda da Temporada";
+  title: string;
   reason: string;
   inductedSeason: number;
   totals: HallTotals;
@@ -68,6 +69,8 @@ export type HallOfFame = {
   availableSeasons: number[];
 };
 
+export type HallManualHonor = { id: string; playerId: string; title: string; reason: string; seasonNumber: number; createdAt: string };
+
 const rareAchievements = new Set([
   "motm_in_defeat", "social_sweep", "manita", "complete_show", "owned_attack",
   "attendance_10", "unbeaten_10", "motm_5", "social_10", "perfect_season",
@@ -87,6 +90,7 @@ export function buildHallOfFame(params: {
   matches: EngagementMatch[];
   seasonAwards: SeasonAwardSnapshot[];
   achievements?: CareerAchievement[];
+  manualHonors?: HallManualHonor[];
 }): HallOfFame {
   const playerMap = new Map(params.players.map(player => [player.id, player]));
   for (const match of params.matches) {
@@ -144,7 +148,7 @@ export function buildHallOfFame(params: {
   }
   const seasonForMatch = new Map(matches.map(match => [match.separationId, match.seasonNumber]));
   const featuredIds = new Set([...idolAchievement.keys(), ...championSeason.keys()]);
-  const featured = [...featuredIds].flatMap(id => {
+  const featured: HallFeaturedEntry[] = [...featuredIds].flatMap((id): HallFeaturedEntry[] => {
     const player = playerMap.get(id);
     if (!player) return [];
     const value = totals.get(id) || emptyTotals();
@@ -152,6 +156,7 @@ export function buildHallOfFame(params: {
     const inductedSeason = idol ? seasonForMatch.get(idol.matchId || "") || championSeason.get(id) || 1 : championSeason.get(id) || 1;
     const badges = [value.motmAwards ? `${value.motmAwards}× craque` : "", value.socialAwards ? `${value.socialAwards}× reconhecido` : "", championSeason.has(id) ? "Campeão anual" : ""].filter(Boolean);
     return [{
+      id: `automatic:${id}`,
       player,
       title: idol ? "Ídolo da Pelada" as const : "Lenda da Temporada" as const,
       reason: idol ? "Entrou para a história ao alcançar dez reconhecimentos sociais da comunidade." : `Liderou a premiação anual da temporada ${championSeason.get(id)}.`,
@@ -159,7 +164,13 @@ export function buildHallOfFame(params: {
       totals: value,
       badges,
     }];
-  }).sort((a, b) => Number(b.title === "Ídolo da Pelada") - Number(a.title === "Ídolo da Pelada") || b.inductedSeason - a.inductedSeason || b.totals.games - a.totals.games).slice(0, 8);
+  });
+  for (const honor of params.manualHonors || []) {
+    const player = playerMap.get(honor.playerId);
+    if (!player) continue;
+    featured.push({ id: `manual:${honor.id}`, player, title: honor.title, reason: honor.reason, inductedSeason: honor.seasonNumber, totals: totals.get(player.id) || emptyTotals(), badges: ["Homenagem especial"] });
+  }
+  featured.sort((a, b) => Number(b.title === "Ídolo da Pelada") - Number(a.title === "Ídolo da Pelada") || b.inductedSeason - a.inductedSeason || b.totals.games - a.totals.games).splice(8);
 
   const records = recordDefinitions.flatMap(definition => {
     const value = Math.max(0, ...[...totals.values()].map(item => item[definition.id]));

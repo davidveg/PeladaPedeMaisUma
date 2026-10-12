@@ -20,6 +20,7 @@ test("monta ídolos, classes, recordes e momentos a partir do histórico oficial
       { id: "social_10", playerId: "ana", title: "Ídolo da pelada", description: "Dez reconhecimentos.", icon: "💎", achievedAt: "2026-10-10", matchId: "match-10" },
       { id: "motm_in_defeat", playerId: "bia", title: "Craque até na derrota", description: "Eleita craque na derrota.", icon: "🦁", achievedAt: "2026-10-10", matchId: "match-10" },
     ],
+    manualHonors: [{ id: "special-bia", playerId: "bia", title: "Fundadora da pelada", reason: "Ajudou a construir a história do grupo.", seasonNumber: 1, createdAt: "2026-12-31" }],
   });
   assert.equal(hall.featured[0].title, "Ídolo da Pelada");
   assert.equal(hall.featured[0].player.id, "ana");
@@ -28,13 +29,16 @@ test("monta ídolos, classes, recordes e momentos a partir do histórico oficial
   assert.equal(hall.records.find(item => item.id === "socialAwards")?.players[0].id, "ana");
   assert.equal(hall.moments[0].player.id, "ana");
   assert.equal(hall.summary.inductedPlayers, 2);
+  assert.equal(hall.featured.some(item => item.id === "manual:special-bia" && item.title === "Fundadora da pelada"), true);
 });
 
 test("layouts do Hall usam a paleta configurável e reduzem colunas no celular", async () => {
-  const [css, site, mobile] = await Promise.all([
+  const [css, site, mobile, admin, adminApi] = await Promise.all([
     readFile(new URL("../app/hall-da-fama/hall-of-fame.css", import.meta.url), "utf8"),
     readFile(new URL("../app/hall-da-fama/HallOfFameApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../mobile/app/(app)/hall-of-fame.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/hall-of-fame/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(css, /var\(--management-background\)/);
   assert.match(css, /var\(--management-surface\)/);
@@ -44,4 +48,6 @@ test("layouts do Hall usam a paleta configurável e reduzem colunas no celular",
   assert.match(site, /hall\.availableSeasons/);
   assert.match(mobile, /useMobileBranding/);
   assert.match(mobile, /flexBasis:"46%"/);
+  assert.match(admin, /Homenagens especiais/);
+  assert.match(adminApi, /HALL_OF_FAME_HONOR_CREATED/);
 });
