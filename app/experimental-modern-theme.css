@@ -3162,6 +3162,7 @@ html[data-color-scheme="light"] .admin-shell aside > button.on .admin-nav-icon {
 }
 
 .statistics-page .versus-picker label,
+.statistics-page .versus-player-select > span,
 .statistics-page .versus-picker > b,
 .statistics-page .versus-score :is(small, span),
 .statistics-page .versus-matches > a small,

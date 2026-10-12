@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "../components/SiteHeader";
 import { BrandedLoading } from "../components/BrandedLoading";
 import { PlayerPhoto } from "../components/PlayerPhoto";
+import { PlayerPhotoSelect } from "../components/PlayerPhotoSelect";
 import { WhatsAppIcon } from "../components/WhatsAppIcon";
 import { buildWhatsAppShareUrl } from "../../lib/career-sharing";
 import { renderRecapPng, shareRecapFile } from "../recap-image-client";
@@ -148,7 +149,15 @@ function signed(value:number){return `${value>0?"+":""}${value.toLocaleString("p
 function monthLabel(month:string){const [year,value]=month.split("-").map(Number);return new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric"}).format(new Date(year,value-1,1)).replace(/^./,letter=>letter.toUpperCase())}
 function dateLabel(value:string){const [year,month,day]=value.split("-").map(Number);return new Intl.DateTimeFormat("pt-BR").format(new Date(year,month-1,day))}
 
-function PlayerSelect({label,value,players,blocked,onChange}:{label:string;value:string;players:Player[];blocked:string;onChange(value:string):void}){return <label>{label}<select value={value} onChange={event=>onChange(event.target.value)}><option value="">Selecione</option>{players.filter(player=>player.id!==blocked).map(player=><option value={player.id} key={player.id}>{player.displayName}</option>)}</select></label>}
+function PlayerSelect({label,value,players,blocked,onChange}:{label:string;value:string;players:Player[];blocked:string;onChange(value:string):void}){
+  const options=players.filter(player=>player.id!==blocked).map(player=>({
+    id:player.id,
+    displayName:player.displayName,
+    photoUrl:player.photoUrl,
+    description:player.primaryPosition||"Posição não informada",
+  }));
+  return <div className="versus-player-select"><span>{label}</span><PlayerPhotoSelect label={label} value={value} players={options} onChange={onChange} emptyLabel="Selecione"/></div>;
+}
 function PlayerSide({player,wins}:{player:Player;wins:number}){return <div className="versus-player"><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName}/><b>{player.displayName}</b><span>{wins} {wins===1?"vitória":"vitórias"}</span></div>}
 
 function AttendanceRanking({entries,totalMatches}:{entries:Payload["attendance"];totalMatches:number}){

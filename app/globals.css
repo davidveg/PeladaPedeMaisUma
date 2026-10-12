@@ -235,6 +235,7 @@
 .expanded-weights .weight-save-status{margin-right:auto;font-size:11px;font-weight:750}
 .expanded-weights .weight-save-status.valid{color:#28724d}
 .expanded-weights .weight-save-status.invalid{color:#a83c2f}
+.participation-team:has(.participant-add .player-photo-select.open){position:relative;z-index:45;overflow:visible}.participant-add .vote-player-options{z-index:70}
 @media(max-width:600px){.expanded-weights .settings-actions{align-items:stretch;flex-direction:column!important}.expanded-weights .weight-save-status{margin:0 0 3px}.expanded-weights .settings-actions button{width:100%}.expanded-weights .weight-editor{grid-template-columns:minmax(0,1fr) 74px;gap:10px}.expanded-weights .weight-number{width:74px}}
 .team-player.additional{background:#f3f8e8;border-left:4px solid var(--lime)}
 .team-player.additional small{color:var(--green);font-weight:800}
