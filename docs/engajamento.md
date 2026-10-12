@@ -40,6 +40,12 @@ O perfil mostra uma prévia com os oito carimbos mais recentes e o progresso de 
 
 Para manter a navegação rápida em temporadas longas, a API entrega o resumo anual e somente os carimbos do mês selecionado. A assiduidade considera todas as partidas oficiais da temporada, inclusive as rodadas em que o jogador não participou, e exibe o progresso até os 95% exigidos pela conquista Temporada perfeita.
 
+## Hall da Fama
+
+O Hall da Fama é uma projeção coletiva do histórico oficial. Ele reúne os jogadores que alcançaram dez reconhecimentos sociais, os pódios das temporadas encerradas, os recordistas gerais e uma seleção recente de conquistas raras. As classes anuais usam os snapshots congelados no encerramento da temporada, enquanto os recordes acompanham os resultados confirmados.
+
+No site, a área fica em `/hall-da-fama` e usa a paleta configurável nos temas claro e escuro. No aplicativo, o acesso parte de Meu card e abre uma rota interna sem ocupar uma nova aba inferior. As duas interfaces limitam destaques e momentos, filtram as classes por temporada e reorganizam as grades em telas estreitas.
+
 ## Central da rodada
 
 Os detalhes de cada partida no site e no aplicativo começam com uma central compacta. Ela reúne o prazo e o estado da presença, local e previsão disponível, publicação dos times, situação da votação e o próximo passo recomendado. Depois da partida, a central aponta o resultado, a resenha e os reconhecimentos recebidos pelo jogador.

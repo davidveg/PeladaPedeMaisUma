@@ -13,6 +13,16 @@ export type SeasonPassportMonth = { month:string;totalMatches:number;appearances
 export type SeasonPassportSummary = { seasonNumber:number;totalMatches:number;appearances:number;attendanceRate:number;perfectSeasonTarget:number;perfectSeasonProgress:number;currentAttendanceStreak:number;bestAttendanceStreak:number;wins:number;draws:number;losses:number;goals:number;assists:number;motmAwards:number;recognitionAwards:number };
 export type SeasonPassport = { summary:SeasonPassportSummary;months:SeasonPassportMonth[];recentStamps:SeasonPassportStamp[] };
 export type SeasonPassportDetails = SeasonPassport & { availableSeasons:number[];selectedMonth:string|null;stamps:SeasonPassportStamp[] };
+export type HallPlayer = { id:string;displayName:string;photoUrl?:string|null;primaryPosition?:string|null;active?:boolean };
+export type HallTotals = { games:number;wins:number;goals:number;assists:number;motmAwards:number;socialAwards:number };
+export type HallOfFame = {
+  summary:{seasons:number;inductedPlayers:number;officialMatches:number;records:number};
+  featured:Array<{player:HallPlayer;title:"Ídolo da Pelada"|"Lenda da Temporada";reason:string;inductedSeason:number;totals:HallTotals;badges:string[]}>;
+  classes:Array<{seasonNumber:number;endedAt:string;members:Array<{place:number;medal:string;title:string;player:HallPlayer;totals:HallTotals}>}>;
+  records:Array<{id:keyof HallTotals;icon:string;title:string;value:number;unit:string;players:HallPlayer[]}>;
+  moments:Array<{id:string;icon:string;title:string;description:string;achievedAt:string;matchId?:string;player:HallPlayer}>;
+  availableSeasons:number[];
+};
 export type PlayerEngagement = {
   achievements: { unlocked: CareerAchievement[]; next: Array<{ id: string; label: string; current: number; target: number; percent: number }> };
   passport: SeasonPassport;

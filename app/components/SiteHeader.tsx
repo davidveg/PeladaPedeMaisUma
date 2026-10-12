@@ -6,7 +6,7 @@ import { NotificationBell } from "./NotificationBell";
 import { ColorSchemeToggle } from "./ColorSchemeToggle";
 import { NavigationIcon, type NavigationIconName } from "./NavigationIcon";
 
-type SiteSection = "home" | "overview" | "players" | "statistics" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
+type SiteSection = "home" | "overview" | "players" | "statistics" | "hall" | "separations" | "matches" | "finance" | "notifications" | "account" | "admin";
 
 function navigateWithDocument(event: MouseEvent<HTMLAnchorElement>, href: string) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -74,7 +74,7 @@ export function SiteHeader({
     const value = Number(new Intl.DateTimeFormat("en-US", { month: "numeric", timeZone: config.timezone || "America/Sao_Paulo" }).format(new Date()));
     return Number.isFinite(value) && value >= 1 && value <= 12 ? value : new Date().getMonth() + 1;
   }, [config.timezone]);
-  const navigationIcons: Partial<Record<SiteSection, NavigationIconName>> = { overview: "dashboard", matches: "calendar", players: "players", statistics: "statistics", finance: "finance", account: "account", admin: "settings" };
+  const navigationIcons: Partial<Record<SiteSection, NavigationIconName>> = { overview: "dashboard", matches: "calendar", players: "players", statistics: "statistics", hall: "career", finance: "finance", account: "account", admin: "settings" };
   const link = (section: SiteSection, href: string, label: string) => (
     <a ref={currentSection === section ? activeLink : undefined} className={currentSection === section ? "active" : undefined} aria-current={currentSection === section ? "page" : undefined} href={href} onClick={(event) => navigateWithDocument(event, href)}>
       <span className="site-nav-icon" aria-hidden="true"><NavigationIcon name={navigationIcons[section] || "dashboard"}/></span><span>{label}</span>
@@ -93,6 +93,7 @@ export function SiteHeader({
           {link("matches", "/partidas", "Partidas")}
           {link("players", "/jogadores", "Jogadores")}
           {link("statistics", "/estatisticas", "Estatísticas")}
+          {link("hall", "/hall-da-fama", "Hall da Fama")}
           <span className="site-nav-group">OPERAÇÃO</span>
           {config.financeEnabled && link("finance", "/financeiro", "Financeiro")}
           {link("account", "/conta", "Minha conta")}

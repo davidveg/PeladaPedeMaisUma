@@ -88,6 +88,7 @@ export default function AppLayout() {
     }}/>
     <Tabs.Screen name="advanced-statistics" options={{ href: null, title: "Estatísticas avançadas" }}/>
     <Tabs.Screen name="passport" options={{ href: null, title: "Passaporte da temporada" }}/>
+    <Tabs.Screen name="hall-of-fame" options={{ href: null, title: "Hall da Fama" }}/>
     <Tabs.Screen name="statistics" options={{ href: null, title: "Estatísticas" }}/>
     <Tabs.Screen name="finance" options={{
       title: "Financeiro",

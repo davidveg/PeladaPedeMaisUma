@@ -1,0 +1,36 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { HallOfFame } from "../../lib/hall-of-fame";
+import { BrandedLoading } from "../components/BrandedLoading";
+import { PlayerPhoto } from "../components/PlayerPhoto";
+import { SiteHeader } from "../components/SiteHeader";
+
+export default function HallOfFameApp() {
+  const [hall, setHall] = useState<HallOfFame | null>(null), [season, setSeason] = useState<number | "all">("all"), [error, setError] = useState("");
+  useEffect(() => { const controller = new AbortController(); fetch("/api/hall-of-fame", { signal: controller.signal }).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error || "Não foi possível carregar o Hall da Fama."); setHall(body); }).catch(cause => { if (cause?.name !== "AbortError") setError(cause?.message || "Não foi possível carregar o Hall da Fama."); }); return () => controller.abort(); }, []);
+  const classes = useMemo(() => season === "all" ? hall?.classes || [] : hall?.classes.filter(item => item.seasonNumber === season) || [], [hall?.classes, season]);
+  return <div className="statistics-page hall-page"><SiteHeader active="hall"/><main className="statistics-main hall-main">
+    <section className="hall-hero"><div className="hall-hero-copy"><div className="eyebrow">MEMÓRIA DA PELADA</div><h1>Hall da Fama</h1><p>Os nomes, recordes e atuações que construíram a nossa história. A galeria é atualizada pelos resultados oficiais e preserva cada classe encerrada.</p></div><div className="hall-emblem" aria-hidden="true"><span>★</span><b>HALL</b><small>DA FAMA</small></div></section>
+    {error ? <div className="alert error">{error}</div> : !hall ? <BrandedLoading message="Abrindo as portas do Hall…" detail="Organizando classes, recordes e momentos históricos"/> : <>
+      <section className="hall-summary" aria-label="Resumo do Hall da Fama"><Metric value={hall.summary.seasons} label="Temporadas"/><Metric value={hall.summary.inductedPlayers} label="Homenageados"/><Metric value={hall.summary.officialMatches} label="Partidas oficiais"/><Metric value={hall.summary.records} label="Recordes ativos"/></section>
+      <section className="hall-section"><SectionTitle eyebrow="GALERIA PRINCIPAL" title="Nomes eternizados" description="Jogadores que alcançaram o reconhecimento de Ídolo da Pelada ou lideraram uma temporada anual."/>
+        {hall.featured.length ? <div className="hall-featured-grid">{hall.featured.map((entry, index) => <article className={`hall-featured-card${index === 0 ? " principal" : ""}`} key={entry.player.id}><div className="hall-featured-shine"/><span className="hall-class-seal">CLASSE {entry.inductedSeason}</span><PlayerPhoto photoUrl={entry.player.photoUrl} name={entry.player.displayName} large/><div className="hall-featured-copy"><small>{entry.title.toUpperCase()}</small><h2>{entry.player.displayName}</h2><p>{entry.reason}</p><div className="hall-badges">{entry.badges.map(badge => <span key={badge}>{badge}</span>)}</div></div><dl><div><dt>Jogos</dt><dd>{entry.totals.games}</dd></div><div><dt>Vitórias</dt><dd>{entry.totals.wins}</dd></div><div><dt>Gols</dt><dd>{entry.totals.goals}</dd></div><div><dt>Assist.</dt><dd>{entry.totals.assists}</dd></div></dl><a href={`/estatisticas/avancadas?player=${encodeURIComponent(entry.player.id)}`}>Ver trajetória →</a></article>)}</div> : <Empty text="Os primeiros nomes serão eternizados após o encerramento de uma temporada ou ao alcançar dez reconhecimentos sociais."/>}
+      </section>
+      <section className="hall-section"><div className="hall-title-row"><SectionTitle eyebrow="CLASSES ANUAIS" title="A história por temporada" description="Os pódios encerrados ficam congelados para preservar quem marcou cada época."/>{hall.availableSeasons.length ? <label className="hall-season-filter">Temporada<select value={season} onChange={event => setSeason(event.target.value === "all" ? "all" : Number(event.target.value))}><option value="all">Todas as classes</option>{hall.availableSeasons.map(value => <option key={value} value={value}>Temporada {value}</option>)}</select></label> : null}</div>
+        {classes.length ? <div className="hall-class-list">{classes.map(item => <article className="hall-class" key={item.seasonNumber}><header><span>CLASSE</span><strong>{item.seasonNumber}</strong><small>Encerrada em {dateLabel(item.endedAt)}</small></header><div>{item.members.map(member => <section key={`${item.seasonNumber}:${member.player.id}`}><em>{member.medal}</em><PlayerPhoto photoUrl={member.player.photoUrl} name={member.player.displayName}/><span><small>{member.title}</small><b>{member.player.displayName}</b><i>{member.totals.games} jogos · {member.totals.wins} vitórias</i></span></section>)}</div></article>)}</div> : <Empty text={season === "all" ? "A primeira classe aparecerá quando uma temporada for encerrada." : "Esta temporada ainda não possui uma classe encerrada."}/>} 
+      </section>
+      <section className="hall-section"><SectionTitle eyebrow="ALA DOS RECORDES" title="Donos das maiores marcas" description="As placas acompanham o histórico oficial e mudam quando uma marca é igualada ou superada."/>
+        {hall.records.length ? <div className="hall-record-grid">{hall.records.map(record => <article key={record.id}><i>{record.icon}</i><small>{record.title}</small><strong>{record.value}</strong><em>{record.unit}</em><div>{record.players.slice(0, 3).map(player => <span key={player.id}><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName}/><b>{player.displayName}</b></span>)}{record.players.length > 3 ? <small>+{record.players.length - 3} empatados</small> : null}</div></article>)}</div> : <Empty text="Os recordes aparecerão depois dos primeiros resultados oficiais."/>}
+      </section>
+      <section className="hall-section"><SectionTitle eyebrow="MOMENTOS ETERNOS" title="Feitos que viraram história" description="Conquistas raras preservadas com o jogador e a partida em que aconteceram."/>
+        {hall.moments.length ? <div className="hall-moment-grid">{hall.moments.map(moment => <article key={moment.id}><i>{moment.icon}</i><div><small>{dateLabel(moment.achievedAt)}</small><h3>{moment.title}</h3><b>{moment.player.displayName}</b><p>{moment.description}</p>{moment.matchId ? <a href={`/partidas?separation=${encodeURIComponent(moment.matchId)}&tab=result`}>Rever partida →</a> : null}</div></article>)}</div> : <Empty text="Os feitos raros aparecerão aqui conforme forem conquistados."/>}
+      </section>
+    </>}
+  </main></div>;
+}
+
+function Metric({ value, label }: { value: number; label: string }) { return <div><strong>{value}</strong><span>{label}</span></div>; }
+function SectionTitle({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) { return <div className="hall-section-title"><div className="eyebrow">{eyebrow}</div><h2>{title}</h2><p>{description}</p></div>; }
+function Empty({ text }: { text: string }) { return <div className="hall-empty"><span>☆</span><p>{text}</p></div>; }
+function dateLabel(value: string) { const date = new Date(`${value.slice(0, 10)}T12:00:00`); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("pt-BR"); }

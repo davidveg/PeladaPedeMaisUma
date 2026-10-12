@@ -10,6 +10,7 @@ import {
   type SeasonAwardSnapshot,
 } from "./player-engagement";
 import { buildSeasonPassport, seasonPassportPreview, type SeasonPassportDetails } from "./season-passport";
+import { buildHallOfFame, type HallPlayer } from "./hall-of-fame";
 
 export async function loadPlayerEngagement(player: EngagementPlayer) {
   const history = await loadEngagementHistory();
@@ -32,6 +33,28 @@ export async function loadRoundRecaps() {
     teamBlueName: history.teamBlueName,
     teamYellowName: history.teamYellowName,
   });
+}
+
+export async function loadHallOfFame() {
+  const history = await loadEngagementHistory();
+  const rows = await db().prepare(`SELECT id,display_name,photo_url,primary_position,active FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all();
+  const players = new Map<string, HallPlayer>((rows.results as any[]).map(row => [String(row.id), {
+    id: String(row.id), displayName: String(row.display_name), photoUrl: row.photo_url || null,
+    primaryPosition: row.primary_position || null, active: Boolean(row.active),
+  }]));
+  for (const match of history.matches) for (const player of [...match.blue, ...match.yellow]) {
+    if (!players.has(player.id)) players.set(player.id, { ...player, photoUrl: null, active: false });
+  }
+  const achievements = [...players.values()].flatMap(player => buildPlayerEngagement({
+    player,
+    matches: history.matches,
+    currentSeasonNumber: history.currentSeasonNumber,
+    seasonStartedAt: history.seasonStartedAt,
+    nextSeasonResetAt: history.nextSeasonResetAt,
+    monthlyAwards: history.monthlyAwards,
+    seasonAwards: history.seasonAwards,
+  }).achievements.unlocked.map(achievement => ({ ...achievement, playerId: player.id, playerName: player.displayName })));
+  return buildHallOfFame({ players: [...players.values()], matches: history.matches, seasonAwards: history.seasonAwards, achievements });
 }
 
 export async function loadPlayerSeasonPassport(player: EngagementPlayer, requestedSeason?: number, requestedMonth?: string | null): Promise<SeasonPassportDetails> {

@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, API_BASE_URL } from "@/api";
+import { useMobileBranding } from "@/branding";
 import { Button, Card, EmptyState, ErrorState, Field, Header, Screen, UpdatedAt } from "@/components";
 import {
   playerAttributes,
@@ -258,8 +259,12 @@ export default function MyCard() {
 }
 
 function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
-  const season = engagement.retrospective, passport = engagement.passport, router = useRouter();
+  const season = engagement.retrospective, passport = engagement.passport, router = useRouter(), { palette } = useMobileBranding();
   return <View style={styles.engagementStack}>
+    <Card style={styles.engagementCard}>
+      <View style={styles.hallEntry}><View style={[styles.hallEntryIcon,{borderColor:palette.green,backgroundColor:`${palette.green}12`}]}><Text style={[styles.hallEntryStar,{color:palette.green}]}>★</Text></View><View style={{flex:1,gap:4}}><Text style={[styles.profileEyebrow,{color:palette.green}]}>MEMÓRIA DA PELADA</Text><Text style={styles.profileTitle}>Hall da Fama</Text><Text style={styles.profileDescription}>Ídolos, classes anuais, recordistas e feitos que ficaram para a história.</Text></View></View>
+      <Button title="Conhecer o Hall da Fama" icon="trophy" variant="secondary" onPress={()=>router.push("/hall-of-fame" as never)}/>
+    </Card>
     <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>PASSAPORTE DA TEMPORADA</Text><Text style={styles.profileTitle}>Sua trajetória</Text><Text style={styles.profileDescription}>{passport.summary.appearances} de {passport.summary.totalMatches} partidas · {passport.summary.attendanceRate}% de assiduidade</Text></View><View style={styles.passportRate}><Text style={styles.passportRateValue}>{passport.summary.attendanceRate}%</Text><Text style={styles.achievementCountLabel}>PRESENÇA</Text></View></View>
       <View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${passport.summary.perfectSeasonProgress}%`}]}/></View><Text style={styles.passportProgressHelp}>Meta de {passport.summary.perfectSeasonTarget}% para a conquista Temporada perfeita</Text>
@@ -379,6 +384,9 @@ const styles = StyleSheet.create({
   engagementStack: { gap: 16 },
   engagementCard: { gap: 14 },
   engagementHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  hallEntry: { flexDirection: "row", alignItems: "center", gap: 13 },
+  hallEntryIcon: { width: 58, height: 58, alignItems: "center", justifyContent: "center", borderRadius: 29, borderWidth: 1 },
+  hallEntryStar: { fontSize: 27, fontWeight: "900" },
   passportRate: { minWidth: 72, alignItems: "center", borderRadius: 13, backgroundColor: "#E9F4ED", padding: 10 },
   passportRateValue: { color: colors.green, fontSize: 21, fontWeight: "900" },
   passportProgress: { height: 8, overflow: "hidden", borderRadius: 99, backgroundColor: "#E7EDE9" },
