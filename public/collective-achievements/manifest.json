@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "style": "Medalhas 3D em esmalte verde e metal dourado, com fundo transparente e sem texto.",
+  "badges": {
+    "matches": "Estádio e bola no círculo central",
+    "goals": "Bola entrando na rede com rastro dourado",
+    "players": "Comunidade de jogadores reunida ao redor da bola",
+    "attendance": "Torcida e catracas representando recorde de presença",
+    "season": "Calendário, bola e arco de progresso",
+    "anniversary": "Bolo em formato de campo e vela comemorativa"
+  }
+}

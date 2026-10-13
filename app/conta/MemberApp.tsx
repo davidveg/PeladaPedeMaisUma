@@ -15,6 +15,7 @@ import { PlayerFinancialHistory } from "../components/PlayerFinancialHistory";
 import type { PlayerEngagement } from "../../lib/player-engagement";
 import { uploadBrowserImage } from "../../lib/browser-image-upload";
 import { AchievementBadge } from "../components/AchievementBadge";
+import { CollectiveBadge } from "../components/CollectiveBadge";
 import { AchievementShareCard } from "../components/AchievementShareCard";
 
 async function api(url: string, options?: RequestInit) {
@@ -78,7 +79,7 @@ function PlayerEngagementPanels({ engagement, player }: { engagement: PlayerEnga
 function CollectiveProgressPanel({ collective }: { collective: PlayerEngagement["collective"] }) {
   return <section className="collective-progress-panel">
     <div className="engagement-panel-head"><div><div className="eyebrow">META DA COMUNIDADE</div><h2>A pelada está chegando lá</h2><p>{collective.summary.officialMatches} partidas · {collective.summary.totalGoals} gols · {collective.summary.differentPlayers} jogadores já fizeram parte da história.</p></div><a className="ghost collective-history-link" href="/hall-da-fama#marcos-coletivos">Ver marcos históricos →</a></div>
-    <div className="collective-progress-grid">{collective.progress.map(item=><article key={item.id}><i aria-hidden="true">{item.icon}</i><span><small>{item.scope === "SEASON" ? "TEMPORADA" : "HISTÓRICO"}</small><b>{item.title}</b><em>{item.description}</em></span><strong>{item.percent}%</strong><div role="progressbar" aria-label={item.title} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.percent}><i style={{width:`${item.percent}%`}}/></div><small>{item.current} de {item.target}</small></article>)}</div>
+    <div className="collective-progress-grid">{collective.progress.map(item=><article key={item.id}><CollectiveBadge kind={item.kind} icon={item.icon} title={item.title}/><span><small>{item.scope === "SEASON" ? "TEMPORADA" : "HISTÓRICO"}</small><b>{item.title}</b><em>{item.description}</em></span><strong>{item.percent}%</strong><div role="progressbar" aria-label={item.title} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.percent}><i style={{width:`${item.percent}%`}}/></div><small>{item.current} de {item.target}</small></article>)}</div>
   </section>;
 }
 

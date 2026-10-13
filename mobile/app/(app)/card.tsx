@@ -23,6 +23,7 @@ import {
 } from "@/player-card";
 import { colors } from "@/theme";
 import { AchievementBadge } from "@/achievement-badge";
+import { CollectiveBadge } from "@/collective-badge";
 import type { AchievementRarity, CareerAchievement, Player, PlayerEngagement, ProfilePayload } from "@/types";
 
 const achievementRarityPalette: Record<AchievementRarity, { label: string; color: string; background: string }> = {
@@ -280,7 +281,7 @@ function MobileEngagement({ engagement, player }: { engagement: PlayerEngagement
     </Card>
     {engagement.collective ? <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={[styles.profileEyebrow,{color:palette.green}]}>META DA COMUNIDADE</Text><Text style={styles.profileTitle}>A pelada está chegando lá</Text><Text style={styles.profileDescription}>{engagement.collective.summary.officialMatches} partidas · {engagement.collective.summary.totalGoals} gols · {engagement.collective.summary.differentPlayers} jogadores na história.</Text></View><Text style={styles.collectiveTrophy}>🏟️</Text></View>
-      <View style={styles.collectiveProgressList}>{engagement.collective.progress.map(item=><View style={styles.collectiveProgressItem} key={item.id}><View style={styles.collectiveProgressHead}><Text style={styles.collectiveIcon}>{item.icon}</Text><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text></View><Text style={[styles.collectivePercent,{color:palette.green}]}>{item.percent}%</Text></View><View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${item.percent}%`,backgroundColor:palette.greenLight}]}/></View><Text style={styles.collectiveCount}>{item.current} de {item.target}</Text></View>)}</View>
+      <View style={styles.collectiveProgressList}>{engagement.collective.progress.map(item=><View style={styles.collectiveProgressItem} key={item.id}><View style={styles.collectiveProgressHead}><CollectiveBadge kind={item.kind} icon={item.icon} title={item.title} size={46}/><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text></View><Text style={[styles.collectivePercent,{color:palette.green}]}>{item.percent}%</Text></View><View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${item.percent}%`,backgroundColor:palette.greenLight}]}/></View><Text style={styles.collectiveCount}>{item.current} de {item.target}</Text></View>)}</View>
     </Card> : null}
     <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>PASSAPORTE DA TEMPORADA</Text><Text style={styles.profileTitle}>Sua trajetória</Text><Text style={styles.profileDescription}>{passport.summary.appearances} de {passport.summary.totalMatches} partidas · {passport.summary.attendanceRate}% de assiduidade</Text></View><View style={styles.passportRate}><Text style={styles.passportRateValue}>{passport.summary.attendanceRate}%</Text><Text style={styles.achievementCountLabel}>PRESENÇA</Text></View></View>
