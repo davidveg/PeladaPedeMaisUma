@@ -1,5 +1,6 @@
 /* Pure engagement projections built from the official career history. */
 import { buildSeasonPassport, seasonPassportPreview, type SeasonPassport } from "./season-passport.ts";
+import { buildCollectiveEngagement, type CollectiveEngagement, type CollectiveMilestone } from "./collective-engagement.ts";
 
 export type EngagementPlayer = { id: string; displayName: string };
 export type EngagementContribution = { scorerPlayerId: string; assistPlayerId?: string | null; ownGoal?: boolean };
@@ -76,6 +77,7 @@ type Totals = {
 };
 
 export type PlayerEngagement = {
+  collective: CollectiveEngagement;
   achievements: { unlocked: CareerAchievement[]; next: AchievementProgress[] };
   passport: SeasonPassport;
   retrospective: {
@@ -110,10 +112,11 @@ export type RoundRecap = {
   headline: string;
   deck: string;
   highlights: string[];
-  stories: Array<{ kind: "goals" | "assists" | "motm" | "recognition" | "record" | "achievement"; label: string; text: string; icon: string }>;
+  stories: Array<{ kind: "goals" | "assists" | "motm" | "recognition" | "record" | "achievement" | "collective"; label: string; text: string; icon: string }>;
   records: string[];
   result: { blueScore: number; yellowScore: number; winnerTeam: "BLUE" | "YELLOW" | "DRAW"; winnerLabel: string; totalGoals: number; goalDifference: number };
   milestones: CareerAchievement[];
+  collectiveMilestones: CollectiveMilestone[];
   shareText: string;
 };
 
@@ -142,6 +145,7 @@ export function buildPlayerEngagement(params: {
   const season = summarizeSeason(params.player, seasonMatches, params.monthlyAwards || [], unlocked, params.currentSeasonNumber, params.seasonStartedAt, params.nextSeasonResetAt);
   const passport = seasonPassportPreview(buildSeasonPassport({ player: params.player, matches: ordered, seasonNumber: params.currentSeasonNumber, achievements: unlocked }));
   return {
+    collective: buildCollectiveEngagement(ordered, params.currentSeasonNumber),
     achievements: { unlocked, next: nextProgress(totals) },
     passport,
     retrospective: season,
@@ -192,6 +196,12 @@ export function buildRoundRecaps(params: {
   teamYellowName?: string;
 }): Record<string, RoundRecap> {
   const ordered = orderMatches(params.matches), scan = scanCareer(ordered), recaps: Record<string, RoundRecap> = {};
+  const collective = buildCollectiveEngagement(ordered, Math.max(1, ...ordered.map(match => match.seasonNumber)));
+  const collectiveByMatch = new Map<string, CollectiveMilestone[]>();
+  for (const milestone of collective.milestones) if (milestone.separationId) {
+    const values = collectiveByMatch.get(milestone.separationId) || [];
+    values.push(milestone); collectiveByMatch.set(milestone.separationId, values);
+  }
   let recordGoals = -1, recordMargin = -1;
   for (const match of ordered) {
     const names = playerNames(match);
@@ -223,6 +233,11 @@ export function buildRoundRecaps(params: {
     if (recordGoals >= 0 && totalGoals > recordGoals) records.push(`Novo recorde de gols: ${totalGoals} em uma única partida.`);
     if (recordMargin >= 0 && match.winnerTeam !== "DRAW" && goalDifference > recordMargin) records.push(`Maior diferença no placar até aqui: ${goalDifference} ${goalDifference === 1 ? "gol" : "gols"}.`);
     for (const text of records) { highlights.push(text); stories.push({ kind: "record", label: "Recorde quebrado", text, icon: "📈" }); }
+    const collectiveMilestones = collectiveByMatch.get(match.separationId) || [];
+    for (const milestone of collectiveMilestones) {
+      const text = `${milestone.title}: ${milestone.description}`;
+      highlights.push(text); stories.push({ kind: "collective", label: "Marco da pelada", text, icon: milestone.icon });
+    }
     recordGoals = Math.max(recordGoals, totalGoals);
     recordMargin = Math.max(recordMargin, goalDifference);
     const milestones = (scan.matchAchievements.get(match.separationId) || [])
@@ -235,7 +250,7 @@ export function buildRoundRecaps(params: {
     const deck = match.winnerTeam === "DRAW"
       ? `Uma partida equilibrada terminou com ${totalGoals} ${totalGoals === 1 ? "gol" : "gols"} e ninguém conseguiu abrir vantagem no placar.`
       : `${winner} comandou o placar em uma rodada com ${totalGoals} ${totalGoals === 1 ? "gol" : "gols"} e ${goalDifference} de diferença.`;
-    const recap = { date: match.date, title, headline, deck, highlights: visible, stories: stories.slice(0, 6), records, result: { blueScore: match.blueScore, yellowScore: match.yellowScore, winnerTeam: match.winnerTeam, winnerLabel: winner, totalGoals, goalDifference }, milestones, shareText };
+    const recap = { date: match.date, title, headline, deck, highlights: visible, stories: stories.slice(0, 6), records, result: { blueScore: match.blueScore, yellowScore: match.yellowScore, winnerTeam: match.winnerTeam, winnerLabel: winner, totalGoals, goalDifference }, milestones, collectiveMilestones, shareText };
     recaps[match.id] = recap;
     recaps[match.separationId] = recap;
   }

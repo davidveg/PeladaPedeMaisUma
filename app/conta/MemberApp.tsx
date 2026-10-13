@@ -62,6 +62,7 @@ function PlayerEngagementPanels({ engagement, player }: { engagement: PlayerEnga
     await navigator.clipboard.writeText(`${season.shareText}\n\n${window.location.href}`); setCopied(true); window.setTimeout(() => setCopied(false), 2500);
   }
   return <div className="player-engagement-layout">
+    <CollectiveProgressPanel collective={engagement.collective}/>
     <PassportPreview passport={engagement.passport}/>
     <section className="player-achievements"><div className="engagement-panel-head"><div><div className="eyebrow">CONQUISTAS</div><h2>Minha coleção</h2><p>Marcos liberados automaticamente pelos resultados oficiais da pelada.</p></div><strong>{engagement.achievements.unlocked.length}<small>desbloqueadas</small></strong></div>
       {engagement.achievements.unlocked.length ? <div className="achievement-grid">{engagement.achievements.unlocked.map(item=><article key={item.id} className={item.rarity ? `rarity-${item.rarity.tier}` : undefined}><AchievementBadge id={item.id} icon={item.icon} title={item.title}/><div><b>{item.title}</b><p>{item.description}</p>{item.rarity&&<div className="achievement-rarity"><span>{achievementRarityLabel(item.rarity.tier)}</span><small>{item.rarity.holders} de {item.rarity.eligiblePlayers} {item.rarity.eligiblePlayers===1?"jogador":"jogadores"} · {item.rarity.percentage}%</small></div>}<small>{new Date(`${item.achievedAt.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR")}</small>{item.matchId&&<a href={`/separacoes-salvas?separation=${encodeURIComponent(item.matchId)}`}>Ver partida →</a>}<AchievementShareCard achievement={item} player={player} brand={brand}/></div></article>)}</div> : <div className="engagement-empty">A primeira conquista aparecerá após um resultado oficial.</div>}
@@ -72,6 +73,13 @@ function PlayerEngagementPanels({ engagement, player }: { engagement: PlayerEnga
       <div className="retrospective-stories"><article><i>🔥</i><span><small>MELHOR SEQUÊNCIA</small><b>{season.bestWinningStreak} {season.bestWinningStreak===1?"vitória":"vitórias"}</b></span></article><article><i>🤝</i><span><small>PARCERIA MAIS FREQUENTE</small><b>{season.topPartner?`${season.topPartner.displayName} · ${season.topPartner.games} jogos`:"Ainda sem dados"}</b></span></article><article><i>⭐</i><span><small>RECONHECIMENTOS</small><b>{season.motmAwards}× craque · {season.partnerAwards}× parceiro · {season.fairPlayAwards}× Fair Play · {season.defenseAwards}× defesa</b></span></article><article><i>🏅</i><span><small>SELEÇÕES DO MÊS</small><b>{season.monthlySelections} · {season.playerOfMonthAwards}× jogador do mês</b></span></article></div>
     </section>
   </div>;
+}
+
+function CollectiveProgressPanel({ collective }: { collective: PlayerEngagement["collective"] }) {
+  return <section className="collective-progress-panel">
+    <div className="engagement-panel-head"><div><div className="eyebrow">META DA COMUNIDADE</div><h2>A pelada está chegando lá</h2><p>{collective.summary.officialMatches} partidas · {collective.summary.totalGoals} gols · {collective.summary.differentPlayers} jogadores já fizeram parte da história.</p></div><a className="ghost collective-history-link" href="/hall-da-fama#marcos-coletivos">Ver marcos históricos →</a></div>
+    <div className="collective-progress-grid">{collective.progress.map(item=><article key={item.id}><i aria-hidden="true">{item.icon}</i><span><small>{item.scope === "SEASON" ? "TEMPORADA" : "HISTÓRICO"}</small><b>{item.title}</b><em>{item.description}</em></span><strong>{item.percent}%</strong><div role="progressbar" aria-label={item.title} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.percent}><i style={{width:`${item.percent}%`}}/></div><small>{item.current} de {item.target}</small></article>)}</div>
+  </section>;
 }
 
 function achievementRarityLabel(tier: "common"|"rare"|"epic"|"legendary") {

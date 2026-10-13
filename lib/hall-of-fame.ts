@@ -1,4 +1,5 @@
 import type { CareerAchievement, EngagementMatch, SeasonAwardSnapshot } from "./player-engagement";
+import { buildCollectiveEngagement, type CollectiveMilestone, type CollectiveProgress } from "./collective-engagement.ts";
 
 export type HallPlayer = {
   id: string;
@@ -66,6 +67,8 @@ export type HallOfFame = {
   classes: HallClass[];
   records: HallRecord[];
   moments: HallMoment[];
+  collectiveMilestones: CollectiveMilestone[];
+  collectiveProgress: CollectiveProgress[];
   availableSeasons: number[];
 };
 
@@ -186,7 +189,8 @@ export function buildHallOfFame(params: {
     .map(item => ({ id: `${item.id}:${item.playerId}`, icon: item.icon, title: item.title, description: item.description, achievedAt: item.achievedAt, matchId: item.matchId, player: playerMap.get(item.playerId!)! }));
   const availableSeasons = [...new Set(matches.map(match => match.seasonNumber))].sort((a, b) => b - a);
   const inductedPlayers = new Set([...featured.map(item => item.player.id), ...classes.flatMap(item => item.members.map(member => member.player.id))]).size;
-  return { summary: { seasons: availableSeasons.length, inductedPlayers, officialMatches: matches.length, records: records.length }, featured, classes, records, moments, availableSeasons };
+  const collective = buildCollectiveEngagement(matches, availableSeasons[0] || 1);
+  return { summary: { seasons: availableSeasons.length, inductedPlayers, officialMatches: matches.length, records: records.length }, featured, classes, records, moments, collectiveMilestones: collective.milestones.slice().reverse().slice(0, 16), collectiveProgress: collective.progress, availableSeasons };
 }
 
 function emptyTotals(): HallTotals { return { games: 0, wins: 0, goals: 0, assists: 0, motmAwards: 0, socialAwards: 0 }; }

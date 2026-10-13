@@ -278,6 +278,10 @@ function MobileEngagement({ engagement, player }: { engagement: PlayerEngagement
       <View style={styles.hallEntry}><View style={[styles.hallEntryIcon,{borderColor:palette.green,backgroundColor:`${palette.green}12`}]}><Text style={[styles.hallEntryStar,{color:palette.green}]}>★</Text></View><View style={{flex:1,gap:4}}><Text style={[styles.profileEyebrow,{color:palette.green}]}>MEMÓRIA DA PELADA</Text><Text style={styles.profileTitle}>Hall da Fama</Text><Text style={styles.profileDescription}>Ídolos, classes anuais, recordistas e feitos que ficaram para a história.</Text></View></View>
       <Button title="Conhecer o Hall da Fama" icon="trophy" variant="secondary" onPress={()=>router.push("/hall-of-fame" as never)}/>
     </Card>
+    {engagement.collective ? <Card style={styles.engagementCard}>
+      <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={[styles.profileEyebrow,{color:palette.green}]}>META DA COMUNIDADE</Text><Text style={styles.profileTitle}>A pelada está chegando lá</Text><Text style={styles.profileDescription}>{engagement.collective.summary.officialMatches} partidas · {engagement.collective.summary.totalGoals} gols · {engagement.collective.summary.differentPlayers} jogadores na história.</Text></View><Text style={styles.collectiveTrophy}>🏟️</Text></View>
+      <View style={styles.collectiveProgressList}>{engagement.collective.progress.map(item=><View style={styles.collectiveProgressItem} key={item.id}><View style={styles.collectiveProgressHead}><Text style={styles.collectiveIcon}>{item.icon}</Text><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text></View><Text style={[styles.collectivePercent,{color:palette.green}]}>{item.percent}%</Text></View><View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${item.percent}%`,backgroundColor:palette.greenLight}]}/></View><Text style={styles.collectiveCount}>{item.current} de {item.target}</Text></View>)}</View>
+    </Card> : null}
     <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>PASSAPORTE DA TEMPORADA</Text><Text style={styles.profileTitle}>Sua trajetória</Text><Text style={styles.profileDescription}>{passport.summary.appearances} de {passport.summary.totalMatches} partidas · {passport.summary.attendanceRate}% de assiduidade</Text></View><View style={styles.passportRate}><Text style={styles.passportRateValue}>{passport.summary.attendanceRate}%</Text><Text style={styles.achievementCountLabel}>PRESENÇA</Text></View></View>
       <View style={styles.passportProgress}><View style={[styles.passportProgressValue,{width:`${passport.summary.perfectSeasonProgress}%`}]}/></View><Text style={styles.passportProgressHelp}>Meta de {passport.summary.perfectSeasonTarget}% para a conquista Temporada perfeita</Text>
@@ -409,6 +413,13 @@ const styles = StyleSheet.create({
   hallEntry: { flexDirection: "row", alignItems: "center", gap: 13 },
   hallEntryIcon: { width: 58, height: 58, alignItems: "center", justifyContent: "center", borderRadius: 29, borderWidth: 1 },
   hallEntryStar: { fontSize: 27, fontWeight: "900" },
+  collectiveTrophy: { fontSize: 30 },
+  collectiveProgressList: { gap: 9 },
+  collectiveProgressItem: { gap: 7, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: "#F7FAF8", padding: 11 },
+  collectiveProgressHead: { flexDirection: "row", alignItems: "center", gap: 9 },
+  collectiveIcon: { fontSize: 22 },
+  collectivePercent: { fontSize: 16, fontWeight: "900" },
+  collectiveCount: { color: colors.muted, fontSize: 8, fontWeight: "800", textAlign: "right" },
   passportRate: { minWidth: 72, alignItems: "center", borderRadius: 13, backgroundColor: "#E9F4ED", padding: 10 },
   passportRateValue: { color: colors.green, fontSize: 21, fontWeight: "900" },
   passportProgress: { height: 8, overflow: "hidden", borderRadius: 99, backgroundColor: "#E7EDE9" },

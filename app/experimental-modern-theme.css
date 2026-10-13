@@ -3709,6 +3709,35 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   background: linear-gradient(90deg, var(--management-button, #d3eb7a), color-mix(in srgb, var(--management-button, #d3eb7a) 62%, #5f9f70));
 }
 
+.member-page .collective-progress-panel {
+  border-color: var(--control-line, #415148);
+  background: radial-gradient(circle at 8% 0, color-mix(in srgb, var(--management-button, #d3eb7a) 12%, transparent), transparent 34%), var(--management-surface, #17211c);
+  color: var(--management-text, #f2f5f3);
+}
+
+.member-page .collective-progress-grid > article {
+  border-color: var(--control-line, #415148);
+  background: var(--control-surface, #202b26);
+}
+
+.member-page .collective-progress-grid span > small,
+.member-page .collective-progress-grid > article > strong {
+  color: var(--management-button, #d3eb7a);
+}
+
+.member-page .collective-progress-grid span > em,
+.member-page .collective-progress-grid > article > small {
+  color: color-mix(in srgb, var(--control-text, #f2f5f3) 66%, transparent);
+}
+
+.member-page .collective-progress-grid > article > div {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 76%, var(--management-background, #0f1612) 24%);
+}
+
+.member-page .collective-progress-grid > article > div > i {
+  background: linear-gradient(90deg, var(--management-button, #d3eb7a), color-mix(in srgb, var(--management-button, #d3eb7a) 62%, #5f9f70));
+}
+
 .member-page .passport-stamp.win {
   --passport-result: #69d99a;
   --passport-result-soft: color-mix(in srgb, var(--control-surface, #202b26) 79%, #277a4a 21%);

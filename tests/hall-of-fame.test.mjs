@@ -30,6 +30,8 @@ test("monta ídolos, classes, recordes e momentos a partir do histórico oficial
   assert.equal(hall.moments[0].player.id, "ana");
   assert.equal(hall.summary.inductedPlayers, 2);
   assert.equal(hall.featured.some(item => item.id === "manual:special-bia" && item.title === "Fundadora da pelada"), true);
+  assert.equal(hall.collectiveMilestones.some(item => item.id === "collective-matches-10"), true);
+  assert.equal(hall.collectiveProgress.length, 3);
 });
 
 test("layouts do Hall usam a paleta configurável e reduzem colunas no celular", async () => {
@@ -48,6 +50,8 @@ test("layouts do Hall usam a paleta configurável e reduzem colunas no celular",
   assert.match(site, /hall\.availableSeasons/);
   assert.match(mobile, /useMobileBranding/);
   assert.match(mobile, /flexBasis:"46%"/);
+  assert.match(site, /hall\.collectiveMilestones/);
+  assert.match(mobile, /collectiveProgress/);
   assert.match(admin, /Homenagens especiais/);
   assert.match(adminApi, /HALL_OF_FAME_HONOR_CREATED/);
 });

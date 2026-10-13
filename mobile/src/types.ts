@@ -13,6 +13,9 @@ export type SeasonPassportStamp = { id:string;separationId:string;title:string;d
 export type SeasonPassportMonth = { month:string;totalMatches:number;appearances:number;wins:number;goals:number;assists:number };
 export type SeasonPassportSummary = { seasonNumber:number;totalMatches:number;appearances:number;attendanceRate:number;perfectSeasonTarget:number;perfectSeasonProgress:number;currentAttendanceStreak:number;bestAttendanceStreak:number;wins:number;draws:number;losses:number;goals:number;assists:number;motmAwards:number;recognitionAwards:number };
 export type SeasonPassport = { summary:SeasonPassportSummary;months:SeasonPassportMonth[];recentStamps:SeasonPassportStamp[] };
+export type CollectiveMilestone = { id:string;kind:"matches"|"goals"|"players"|"attendance"|"season"|"anniversary";icon:string;title:string;description:string;achievedAt:string;value:number;seasonNumber?:number;separationId?:string };
+export type CollectiveProgress = { id:string;kind:"matches"|"goals"|"players"|"season";icon:string;title:string;description:string;current:number;target:number;remaining:number;percent:number;scope:"HISTORICAL"|"SEASON" };
+export type CollectiveEngagement = { summary:{officialMatches:number;totalGoals:number;differentPlayers:number;attendanceRecord:number;seasonMatches:number};progress:CollectiveProgress[];milestones:CollectiveMilestone[] };
 export type SeasonPassportDetails = SeasonPassport & { availableSeasons:number[];selectedMonth:string|null;stamps:SeasonPassportStamp[] };
 export type HallPlayer = { id:string;displayName:string;photoUrl?:string|null;primaryPosition?:string|null;active?:boolean };
 export type HallTotals = { games:number;wins:number;goals:number;assists:number;motmAwards:number;socialAwards:number };
@@ -22,14 +25,17 @@ export type HallOfFame = {
   classes:Array<{seasonNumber:number;endedAt:string;members:Array<{place:number;medal:string;title:string;player:HallPlayer;totals:HallTotals}>}>;
   records:Array<{id:keyof HallTotals;icon:string;title:string;value:number;unit:string;players:HallPlayer[]}>;
   moments:Array<{id:string;icon:string;title:string;description:string;achievedAt:string;matchId?:string;player:HallPlayer}>;
+  collectiveMilestones:CollectiveMilestone[];
+  collectiveProgress:CollectiveProgress[];
   availableSeasons:number[];
 };
 export type PlayerEngagement = {
+  collective?: CollectiveEngagement;
   achievements: { unlocked: CareerAchievement[]; next: Array<{ id: string; label: string; current: number; target: number; percent: number }> };
   passport: SeasonPassport;
   retrospective: { seasonNumber: number; title: string; summary: string; games: number; wins: number; draws: number; losses: number; goals: number; assists: number; winRate: number; bestWinningStreak: number; bestGoalsInMatch: number; bestAssistsInMatch: number; motmAwards: number; partnerAwards: number; fairPlayAwards: number; defenseAwards: number; playerOfMonthAwards: number; monthlySelections: number; topPartner: { id: string; displayName: string; games: number } | null; highlights: CareerAchievement[]; shareText: string };
 };
-export type RoundRecap = { date?: string; title: string; headline: string; deck?: string; highlights: string[]; stories?: Array<{ kind: "goals" | "assists" | "motm" | "recognition" | "record" | "achievement"; label: string; text: string; icon: string }>; records?: string[]; result?: { blueScore: number; yellowScore: number; winnerTeam: "BLUE" | "YELLOW" | "DRAW"; winnerLabel: string; totalGoals: number; goalDifference: number }; milestones: CareerAchievement[]; shareText: string };
+export type RoundRecap = { date?: string; title: string; headline: string; deck?: string; highlights: string[]; stories?: Array<{ kind: "goals" | "assists" | "motm" | "recognition" | "record" | "achievement" | "collective"; label: string; text: string; icon: string }>; records?: string[]; result?: { blueScore: number; yellowScore: number; winnerTeam: "BLUE" | "YELLOW" | "DRAW"; winnerLabel: string; totalGoals: number; goalDifference: number }; milestones: CareerAchievement[]; collectiveMilestones?:CollectiveMilestone[]; shareText: string };
 export type TeamAdvantage = "BLUE" | "YELLOW" | "EVEN";
 export type TeamMetrics = { count: number; positions: { Defesa: number; "Meio-campo": number; Ataque: number; Goleiro: number }; midfieldProfiles?: { defensive: number; central: number; offensive: number }; speed: number; skill: number; marking: number; tacticalIntelligence:number; competitiveness:number; momentum: number; historicalLearning?: number; total: number; balancingTotal?: number; speedAvg: number; skillAvg: number; markingAvg: number; tacticalIntelligenceAvg:number; competitivenessAvg:number; momentumAvg: number; historicalLearningAvg?: number; scoreAvg: number; balancingScoreAvg?: number };
 export type TeamDelta = { players: number; defenders: number; midfielders: number; attackers: number; defensiveMidfielders?: number; centralMidfielders?: number; offensiveMidfielders?: number; speed: number; skill: number; marking: number; tacticalIntelligence:number; competitiveness:number; momentum: number; historicalLearning?: number; score: number; balancingScore?: number; baseTeams?: boolean; advantage?: Partial<Record<"players"|"defenders"|"midfielders"|"attackers"|"defensiveMidfielders"|"centralMidfielders"|"offensiveMidfielders"|"speed"|"skill"|"marking"|"tacticalIntelligence"|"competitiveness"|"momentum"|"historicalLearning"|"score", TeamAdvantage>> };

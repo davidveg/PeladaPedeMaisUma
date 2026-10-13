@@ -63,6 +63,8 @@ test("gera conquistas permanentes e progresso a partir do histórico oficial", (
   assert.ok(ids.includes("player_of_month_first"));
   assert.equal(result.achievements.unlocked.find(item => item.id === "hat_trick")?.matchTitle, "Rodada one");
   assert.equal(result.achievements.next.find(item => item.id === "games")?.target, 10);
+  assert.equal(result.collective.summary.officialMatches, 3);
+  assert.equal(result.collective.progress.length, 3);
 });
 
 test("resume a temporada pessoal com parceria, votação e números esportivos", () => {
