@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildPlayerEngagement, buildRoundRecaps } from "../lib/player-engagement.ts";
+import { achievementRarityKey, buildAchievementRarityIndex, buildPlayerEngagement, buildRoundRecaps, classifyAchievementRarity } from "../lib/player-engagement.ts";
 import { buildSeasonPassport, seasonPassportPreview } from "../lib/season-passport.ts";
 
 const players = {
@@ -29,6 +29,22 @@ const history = [
   match("three", "2026-01-24", "BLUE", [{ scorerPlayerId: "ana" }]),
 ];
 
+test("classifica a raridade pela prevalência entre jogadores que já participaram", () => {
+  assert.equal(classifyAchievementRarity(1, 20), "legendary");
+  assert.equal(classifyAchievementRarity(2, 20), "epic");
+  assert.equal(classifyAchievementRarity(4, 20), "rare");
+  assert.equal(classifyAchievementRarity(9, 20), "common");
+});
+
+test("calcula donos distintos e normaliza conquistas equivalentes entre temporadas", () => {
+  const rarities = buildAchievementRarityIndex({ matches: history });
+  assert.deepEqual(rarities.games_1, { tier: "common", holders: 4, eligiblePlayers: 4, percentage: 100 });
+  assert.deepEqual(rarities.hat_trick, { tier: "legendary", holders: 1, eligiblePlayers: 4, percentage: 25 });
+  assert.equal(achievementRarityKey("perfect_season_8"), "perfect_season");
+  const ana = buildPlayerEngagement({ player: players.ana, matches: history, currentSeasonNumber: 2, achievementRarities: rarities });
+  assert.deepEqual(ana.achievements.unlocked.find(item => item.id === "hat_trick")?.rarity, rarities.hat_trick);
+});
+
 test("gera conquistas permanentes e progresso a partir do histórico oficial", () => {
   const result = buildPlayerEngagement({
     player: players.ana,
@@ -45,6 +61,7 @@ test("gera conquistas permanentes e progresso a partir do histórico oficial", (
   assert.ok(ids.includes("hat_trick"));
   assert.ok(ids.includes("winning_streak_3"));
   assert.ok(ids.includes("player_of_month_first"));
+  assert.equal(result.achievements.unlocked.find(item => item.id === "hat_trick")?.matchTitle, "Rodada one");
   assert.equal(result.achievements.next.find(item => item.id === "games")?.target, 10);
 });
 

@@ -14,6 +14,8 @@ import { playerTypeLabel } from "../../lib/player-types";
 import { PlayerFinancialHistory } from "../components/PlayerFinancialHistory";
 import type { PlayerEngagement } from "../../lib/player-engagement";
 import { uploadBrowserImage } from "../../lib/browser-image-upload";
+import { AchievementBadge } from "../components/AchievementBadge";
+import { AchievementShareCard } from "../components/AchievementShareCard";
 
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options), text = await response.text();
@@ -49,10 +51,11 @@ export default function MemberApp() {
   if (member === undefined) return <BrandedLoading variant="page" message="Carregando sua conta…"/>;
   if (memberResetToken()) return <MemberAccess onDone={load} />;
   if (!member) return <MemberAccess onDone={load} />;
-  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associação pendente"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <section className="association-picker"><div className="association-warning"><b>Aguardando aprovação</b><p>Por segurança, somente um administrador pode associar sua conta a um jogador. Solicite a aprovação e atualize esta página depois da confirmação.</p></div></section> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && engagement && <PlayerEngagementPanels engagement={engagement}/>} {player && <PlayerAbsenceCard/>}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
+  return <div className="member-page"><SiteHeader active="account" isAdmin={member.accountType === "administrator" || member.role === "moderator"}/><main className="member-main"><div className="member-account-head member-account-actions"><div><div className="eyebrow">MINHA CONTA</div><h1>{player ? `Olá, ${player.displayName}` : "Associação pendente"}</h1><p>{member.email}{member.accountType === "administrator" ? " · Administrador" : member.role === "moderator" ? " · Moderador" : ""}</p></div><button className="ghost member-logout" type="button" onClick={logout}>Sair da conta</button></div>{error && <div className="alert error" role="alert">{error}</div>}{notice && <div className="admin-notice" role="status"><span>✓</span><b>{notice}</b><button onClick={() => setNotice("")} aria-label="Fechar mensagem">×</button></div>}{!player ? <section className="association-picker"><div className="association-warning"><b>Aguardando aprovação</b><p>Por segurança, somente um administrador pode associar sua conta a um jogador. Solicite a aprovação e atualize esta página depois da confirmação.</p></div></section> : <MemberProfile player={player} config={config} onEdit={() => setEditing(true)} />}{player && engagement && <PlayerEngagementPanels engagement={engagement} player={player}/>} {player && <PlayerAbsenceCard/>}{player && instance.financeEnabled && <PlayerFinancialHistory/>}<NotificationPreferencesCard /></main>{editing && player && <MemberProfileForm player={player} onClose={() => setEditing(false)} onSaved={async message => { setEditing(false); setNotice(message); await load(); }} />}</div>;
 }
 
-function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }) {
+function PlayerEngagementPanels({ engagement, player }: { engagement: PlayerEngagement; player: Player }) {
+  const { config: brand } = useInstanceBranding();
   const [copied, setCopied] = useState(false), season = engagement.retrospective;
   async function share() {
     if (navigator.share) { try { await navigator.share({ title: season.title, text: season.shareText, url: window.location.href }); return; } catch (error: any) { if (error?.name === "AbortError") return; } }
@@ -61,7 +64,7 @@ function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }
   return <div className="player-engagement-layout">
     <PassportPreview passport={engagement.passport}/>
     <section className="player-achievements"><div className="engagement-panel-head"><div><div className="eyebrow">CONQUISTAS</div><h2>Minha coleção</h2><p>Marcos liberados automaticamente pelos resultados oficiais da pelada.</p></div><strong>{engagement.achievements.unlocked.length}<small>desbloqueadas</small></strong></div>
-      {engagement.achievements.unlocked.length ? <div className="achievement-grid">{engagement.achievements.unlocked.map(item=><article key={item.id}><i aria-hidden="true">{item.icon}</i><div><b>{item.title}</b><p>{item.description}</p><small>{new Date(`${item.achievedAt.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR")}</small>{item.matchId&&<a href={`/separacoes-salvas?separation=${encodeURIComponent(item.matchId)}`}>Ver partida →</a>}</div></article>)}</div> : <div className="engagement-empty">A primeira conquista aparecerá após um resultado oficial.</div>}
+      {engagement.achievements.unlocked.length ? <div className="achievement-grid">{engagement.achievements.unlocked.map(item=><article key={item.id} className={item.rarity ? `rarity-${item.rarity.tier}` : undefined}><AchievementBadge id={item.id} icon={item.icon} title={item.title}/><div><b>{item.title}</b><p>{item.description}</p>{item.rarity&&<div className="achievement-rarity"><span>{achievementRarityLabel(item.rarity.tier)}</span><small>{item.rarity.holders} de {item.rarity.eligiblePlayers} {item.rarity.eligiblePlayers===1?"jogador":"jogadores"} · {item.rarity.percentage}%</small></div>}<small>{new Date(`${item.achievedAt.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR")}</small>{item.matchId&&<a href={`/separacoes-salvas?separation=${encodeURIComponent(item.matchId)}`}>Ver partida →</a>}<AchievementShareCard achievement={item} player={player} brand={brand}/></div></article>)}</div> : <div className="engagement-empty">A primeira conquista aparecerá após um resultado oficial.</div>}
       {engagement.achievements.next.length>0&&<div className="achievement-progress"><h3>Próximos objetivos</h3>{engagement.achievements.next.map(item=><article key={item.id}><span><b>{item.label}</b><small>{item.current} de {item.target}</small></span><div><i style={{width:`${item.percent}%`}}/></div></article>)}</div>}
     </section>
     <section className="season-retrospective"><div className="engagement-panel-head"><div><div className="eyebrow">RETROSPECTIVA PESSOAL</div><h2>{season.title}</h2><p>{season.summary}</p></div><button className="primary" type="button" onClick={share}>{copied?"Resumo copiado ✓":"Compartilhar resumo"}</button></div>
@@ -69,6 +72,10 @@ function PlayerEngagementPanels({ engagement }: { engagement: PlayerEngagement }
       <div className="retrospective-stories"><article><i>🔥</i><span><small>MELHOR SEQUÊNCIA</small><b>{season.bestWinningStreak} {season.bestWinningStreak===1?"vitória":"vitórias"}</b></span></article><article><i>🤝</i><span><small>PARCERIA MAIS FREQUENTE</small><b>{season.topPartner?`${season.topPartner.displayName} · ${season.topPartner.games} jogos`:"Ainda sem dados"}</b></span></article><article><i>⭐</i><span><small>RECONHECIMENTOS</small><b>{season.motmAwards}× craque · {season.partnerAwards}× parceiro · {season.fairPlayAwards}× Fair Play · {season.defenseAwards}× defesa</b></span></article><article><i>🏅</i><span><small>SELEÇÕES DO MÊS</small><b>{season.monthlySelections} · {season.playerOfMonthAwards}× jogador do mês</b></span></article></div>
     </section>
   </div>;
+}
+
+function achievementRarityLabel(tier: "common"|"rare"|"epic"|"legendary") {
+  return tier === "legendary" ? "LENDÁRIA" : tier === "epic" ? "ÉPICA" : tier === "rare" ? "RARA" : "COMUM";
 }
 
 function PassportPreview({ passport }: { passport: PlayerEngagement["passport"] }) {

@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import * as Clipboard from "expo-clipboard";
+import * as Sharing from "expo-sharing";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { captureRef, releaseCapture } from "react-native-view-shot";
 import { apiFetch, API_BASE_URL } from "@/api";
 import { useMobileBranding } from "@/branding";
 import { passportResultPalette } from "@/passport-style";
@@ -19,7 +22,15 @@ import {
   type PlayerCardTier,
 } from "@/player-card";
 import { colors } from "@/theme";
-import type { Player, PlayerEngagement, ProfilePayload } from "@/types";
+import { AchievementBadge } from "@/achievement-badge";
+import type { AchievementRarity, CareerAchievement, Player, PlayerEngagement, ProfilePayload } from "@/types";
+
+const achievementRarityPalette: Record<AchievementRarity, { label: string; color: string; background: string }> = {
+  common: { label: "COMUM", color: "#52675D", background: "#EDF2EF" },
+  rare: { label: "RARA", color: "#1769AA", background: "#E8F3FB" },
+  epic: { label: "ÉPICA", color: "#7436A5", background: "#F2EAFB" },
+  legendary: { label: "LENDÁRIA", color: "#946500", background: "#FFF3C9" },
+};
 
 const palettes = {
   default: {
@@ -238,7 +249,7 @@ export default function MyCard() {
         </View>
       </LinearGradient>
       <Button title="Ver estatísticas avançadas" icon="line-chart" variant="secondary" onPress={() => router.push({ pathname: "/advanced-statistics" as never, params: { player: player.id } })}/>
-      {query.data?.engagement ? <MobileEngagement engagement={query.data.engagement}/> : null}
+      {query.data?.engagement ? <MobileEngagement engagement={query.data.engagement} player={player}/> : null}
       <Card style={styles.profileCard}>
         <View style={styles.profileHeading}>
           <Text style={styles.profileEyebrow}>MEU PERFIL</Text>
@@ -259,8 +270,9 @@ export default function MyCard() {
   </Screen>;
 }
 
-function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
+function MobileEngagement({ engagement, player }: { engagement: PlayerEngagement; player: Player }) {
   const season = engagement.retrospective, passport = engagement.passport, router = useRouter(), { palette } = useMobileBranding();
+  const [sharedAchievement,setSharedAchievement]=useState<CareerAchievement|null>(null);
   return <View style={styles.engagementStack}>
     <Card style={styles.engagementCard}>
       <View style={styles.hallEntry}><View style={[styles.hallEntryIcon,{borderColor:palette.green,backgroundColor:`${palette.green}12`}]}><Text style={[styles.hallEntryStar,{color:palette.green}]}>★</Text></View><View style={{flex:1,gap:4}}><Text style={[styles.profileEyebrow,{color:palette.green}]}>MEMÓRIA DA PELADA</Text><Text style={styles.profileTitle}>Hall da Fama</Text><Text style={styles.profileDescription}>Ídolos, classes anuais, recordistas e feitos que ficaram para a história.</Text></View></View>
@@ -274,9 +286,10 @@ function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
     </Card>
     <Card style={styles.engagementCard}>
       <View style={styles.engagementHeader}><View style={{flex:1,gap:4}}><Text style={styles.profileEyebrow}>CONQUISTAS</Text><Text style={styles.profileTitle}>Minha coleção</Text><Text style={styles.profileDescription}>Marcos liberados pelos resultados oficiais.</Text></View><View style={styles.achievementCount}><Text style={styles.achievementCountValue}>{engagement.achievements.unlocked.length}</Text><Text style={styles.achievementCountLabel}>LIBERADAS</Text></View></View>
-      {engagement.achievements.unlocked.length ? <View style={styles.mobileAchievementGrid}>{engagement.achievements.unlocked.map(item=><View key={item.id} style={styles.mobileAchievement}><Text style={styles.achievementIcon}>{item.icon}</Text><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text></View></View>)}</View> : <Text style={styles.profileDescription}>A primeira conquista aparecerá após um resultado oficial.</Text>}
+      {engagement.achievements.unlocked.length ? <View style={styles.mobileAchievementGrid}>{engagement.achievements.unlocked.map(item=>{const rarity=item.rarity?achievementRarityPalette[item.rarity.tier]:null;return <View key={item.id} style={[styles.mobileAchievement,rarity&&{borderLeftColor:rarity.color,borderLeftWidth:4}]}><AchievementBadge id={item.id} icon={item.icon} title={item.title} size={58}/><View style={{flex:1}}><Text style={styles.achievementTitle}>{item.title}</Text><Text style={styles.achievementDescription}>{item.description}</Text>{rarity&&item.rarity?<View style={styles.mobileAchievementRarity}><Text style={[styles.mobileAchievementRarityBadge,{color:rarity.color,backgroundColor:rarity.background}]}>{rarity.label}</Text><Text style={[styles.mobileAchievementRarityCount,{color:rarity.color}]}>{item.rarity.holders} de {item.rarity.eligiblePlayers} jogadores · {item.rarity.percentage}%</Text></View>:null}<Pressable accessibilityRole="button" accessibilityLabel={`Compartilhar conquista ${item.title}`} onPress={()=>setSharedAchievement(item)} style={styles.mobileAchievementShare}><Ionicons name="share-social-outline" size={15} color={palette.green}/><Text style={[styles.mobileAchievementShareText,{color:palette.green}]}>Compartilhar conquista</Text></Pressable></View></View>})}</View> : <Text style={styles.profileDescription}>A primeira conquista aparecerá após um resultado oficial.</Text>}
       {engagement.achievements.next.slice(0,3).map(item=><View key={item.id} style={styles.mobileProgress}><View style={styles.mobileProgressLabel}><Text style={styles.achievementTitle}>{item.label}</Text><Text style={styles.achievementDescription}>{item.current} de {item.target}</Text></View><View style={styles.mobileProgressTrack}><View style={[styles.mobileProgressValue,{width:`${item.percent}%`}]}/></View></View>)}
     </Card>
+    {sharedAchievement?<AchievementShareModal achievement={sharedAchievement} player={player} onClose={()=>setSharedAchievement(null)}/>:null}
     <Card style={styles.engagementCard}>
       <Text style={styles.profileEyebrow}>RETROSPECTIVA PESSOAL</Text><Text style={styles.profileTitle}>{season.title}</Text><Text style={styles.profileDescription}>{season.summary}</Text>
       <View style={styles.seasonNumbers}>{[[season.games,"Jogos"],[season.wins,"Vitórias"],[season.draws,"Empates"],[season.goals,"Gols"],[season.assists,"Assist."],[`${season.winRate}%`,"Aproveit."]].map(([value,label])=><View key={String(label)} style={styles.seasonNumber}><Text style={styles.seasonNumberValue}>{value}</Text><Text style={styles.seasonNumberLabel}>{label}</Text></View>)}</View>
@@ -285,6 +298,14 @@ function MobileEngagement({ engagement }: { engagement: PlayerEngagement }) {
     </Card>
   </View>;
 }
+
+function AchievementShareModal({achievement,player,onClose}:{achievement:CareerAchievement;player:Player;onClose():void}){
+  const {config:brand}=useMobileBranding(),cardRef=useRef<View>(null),[sharing,setSharing]=useState(false),rarity=achievement.rarity?achievementRarityPalette[achievement.rarity.tier]:achievementRarityPalette.common,date=achievementDate(achievement.achievedAt);
+  const share=async()=>{let uri="";setSharing(true);try{if(!await Sharing.isAvailableAsync())throw new Error("O compartilhamento de arquivos não está disponível neste aparelho.");uri=await captureRef(cardRef,{format:"png",quality:1,result:"tmpfile"});const link=achievement.matchId&&API_BASE_URL?`${API_BASE_URL.replace(/\/$/,"")}/separacoes-salvas?separation=${encodeURIComponent(achievement.matchId)}`:"";const message=[`🏆 *${player.displayName} desbloqueou ${achievement.title}*`,achievement.description,`📅 ${date}`,`⚽ ${achievement.matchTitle||"Premiação oficial da pelada"}`,link].filter(Boolean).join("\n");await Clipboard.setStringAsync(message);await Sharing.shareAsync(uri,{dialogTitle:`${achievement.title} · ${player.displayName}`,mimeType:"image/png",UTI:"public.png"});Alert.alert("Legenda copiada","A legenda e o link estão na área de transferência. Cole-os após enviar a imagem.")}catch(error:any){Alert.alert("Compartilhamento indisponível",error?.message||"Não foi possível gerar o cartão da conquista.")}finally{if(uri)releaseCapture(uri);setSharing(false)}};
+  return <Modal transparent animationType="fade" onRequestClose={onClose}><View style={styles.achievementModalBackdrop}><View style={styles.achievementModalContent}><View ref={cardRef} collapsable={false} style={[styles.achievementShareCard,{borderColor:rarity.color}]}><View style={styles.achievementShareBrand}><Text style={styles.achievementShareBrandIcon}>⚽</Text><Text numberOfLines={1} style={styles.achievementShareBrandName}>{brand.appName}</Text><Text style={[styles.achievementShareEyebrow,{color:rarity.color}]}>CONQUISTA</Text></View><View style={styles.achievementShareMain}><View style={[styles.achievementShareBadge,{borderColor:rarity.color}]}><AchievementBadge id={achievement.id} icon={achievement.icon} title={achievement.title} size={112}/></View><Text style={[styles.achievementShareRarity,{color:rarity.color,borderColor:rarity.color}]}>{rarity.label}</Text><Text style={styles.achievementShareTitle}>{achievement.title}</Text><Text style={styles.achievementShareDescription}>{achievement.description}</Text><View style={styles.achievementSharePlayer}>{player.photoUrl?<Image source={{uri:player.photoUrl}} style={[styles.achievementSharePhoto,{borderColor:rarity.color}]}/>:<View style={[styles.achievementSharePhotoPlaceholder,{borderColor:rarity.color}]}><Text style={{fontSize:25}}>👤</Text></View>}<View><Text style={styles.achievementSharePlayerLabel}>CONQUISTA DE</Text><Text style={styles.achievementSharePlayerName}>{player.displayName}</Text></View></View></View><View style={styles.achievementShareFooter}><View><Text style={styles.achievementShareFooterLabel}>DATA</Text><Text style={styles.achievementShareFooterValue}>{date}</Text></View><View style={{flex:1}}><Text style={styles.achievementShareFooterLabel}>PARTIDA</Text><Text style={styles.achievementShareFooterValue}>{achievement.matchTitle||"Premiação oficial da pelada"}</Text></View></View></View><View style={styles.achievementModalActions}><Button title="Cancelar" variant="secondary" disabled={sharing} onPress={onClose}/><Button title="Compartilhar imagem" icon="share-alt" busy={sharing} onPress={share}/></View></View></View></Modal>;
+}
+
+function achievementDate(value:string){return new Date(`${value.slice(0,10)}T12:00:00`).toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}
 
 function ProfileInfo({ label, value }: { label: string; value: string }) {
   return <View style={styles.profileInfo}><Text style={styles.profileInfoLabel}>{label}</Text><Text style={styles.profileInfoValue}>{value}</Text></View>;
@@ -404,9 +425,34 @@ const styles = StyleSheet.create({
   achievementCountLabel: { color: colors.muted, fontSize: 8, fontWeight: "900", letterSpacing: .6 },
   mobileAchievementGrid: { gap: 8 },
   mobileAchievement: { flexDirection: "row", alignItems: "center", gap: 10, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: "#FBFCFB" },
-  achievementIcon: { width: 38, textAlign: "center", fontSize: 22 },
   achievementTitle: { color: colors.text, fontSize: 13, fontWeight: "900" },
   achievementDescription: { marginTop: 2, color: colors.muted, fontSize: 11, lineHeight: 15 },
+  mobileAchievementRarity: { marginTop: 7, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
+  mobileAchievementRarityBadge: { overflow: "hidden", borderRadius: 99, paddingHorizontal: 7, paddingVertical: 4, fontSize: 8, fontWeight: "900", letterSpacing: .5 },
+  mobileAchievementRarityCount: { fontSize: 9, fontWeight: "800" },
+  mobileAchievementShare: { minHeight: 34, flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 5, marginTop: 6 },
+  mobileAchievementShareText: { fontSize: 10, fontWeight: "900" },
+  achievementModalBackdrop: { flex: 1, alignItems: "center", justifyContent: "center", padding: 18, backgroundColor: "rgba(3,14,11,.82)" },
+  achievementModalContent: { width: "100%", maxWidth: 380, gap: 13 },
+  achievementShareCard: { width: "100%", aspectRatio: .8, overflow: "hidden", borderWidth: 2, borderRadius: 18, backgroundColor: "#123F31" },
+  achievementShareBrand: { height: 54, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,.18)" },
+  achievementShareBrandIcon: { fontSize: 20 },
+  achievementShareBrandName: { flex: 1, color: "#FFFFFF", fontSize: 12, fontWeight: "900" },
+  achievementShareEyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  achievementShareMain: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 30 },
+  achievementShareBadge: { width: 132, height: 132, alignItems: "center", justifyContent: "center", borderWidth: 2, borderRadius: 66, backgroundColor: "rgba(255,255,255,.07)" },
+  achievementShareRarity: { marginTop: 15, overflow: "hidden", borderWidth: 1, borderRadius: 99, paddingHorizontal: 9, paddingVertical: 4, fontSize: 8, fontWeight: "900", letterSpacing: .8 },
+  achievementShareTitle: { marginTop: 9, color: "#FFFFFF", fontFamily: "serif", fontSize: 29, lineHeight: 33, fontWeight: "900", textAlign: "center" },
+  achievementShareDescription: { marginTop: 5, color: "#D8E7E0", fontFamily: "serif", fontSize: 12, lineHeight: 17, textAlign: "center" },
+  achievementSharePlayer: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 15 },
+  achievementSharePhoto: { width: 46, height: 46, borderWidth: 2, borderRadius: 23 },
+  achievementSharePhotoPlaceholder: { width: 46, height: 46, alignItems: "center", justifyContent: "center", borderWidth: 2, borderRadius: 23, backgroundColor: "#DCE8E2" },
+  achievementSharePlayerLabel: { color: "#A9C4B9", fontSize: 7, fontWeight: "900", letterSpacing: .8 },
+  achievementSharePlayerName: { maxWidth: 210, marginTop: 2, color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
+  achievementShareFooter: { minHeight: 67, flexDirection: "row", gap: 18, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,.18)", backgroundColor: "rgba(3,20,15,.42)" },
+  achievementShareFooterLabel: { color: "#A9C4B9", fontSize: 7, fontWeight: "900", letterSpacing: .8 },
+  achievementShareFooterValue: { marginTop: 4, color: "#FFFFFF", fontSize: 10, lineHeight: 13, fontWeight: "800" },
+  achievementModalActions: { flexDirection: "row", gap: 9 },
   mobileProgress: { gap: 6 },
   mobileProgressLabel: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   mobileProgressTrack: { height: 8, overflow: "hidden", borderRadius: 99, backgroundColor: "#E6EDE8" },

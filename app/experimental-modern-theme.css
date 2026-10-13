@@ -3753,6 +3753,22 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   background: color-mix(in srgb, var(--control-surface, #202b26) 76%, var(--management-button, #d3eb7a) 24%);
 }
 
+.member-page .achievement-grid article[class*="rarity-"] {
+  border-color: color-mix(in srgb, var(--rarity-color) 48%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--control-surface, #202b26) 92%, var(--rarity-color) 8%);
+  box-shadow: inset 3px 0 0 var(--rarity-color);
+}
+
+.member-page .achievement-grid article[class*="rarity-"] > i,
+.member-page .achievement-grid article[class*="rarity-"] .achievement-rarity > span {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--rarity-color) 22%);
+}
+
+.member-page .achievement-grid .achievement-rarity > span,
+.member-page .achievement-grid .achievement-rarity > small {
+  color: color-mix(in srgb, var(--rarity-color) 78%, var(--control-text, #f2f5f3)) !important;
+}
+
 .member-page .achievement-progress article > div {
   background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--management-background, #0f1612) 22%);
 }
@@ -4923,4 +4939,11 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 .ghost:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--secondary-button, var(--management-button, #d3eb7a)) 30%, transparent);
   outline-offset: 2px;
+}
+.member-page .achievement-grid article > .achievement-badge > span {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-green) 22%, white), color-mix(in srgb, var(--brand-yellow) 17%, white));
+}
+
+.member-page .achievement-grid article[class*="rarity-"] > .achievement-badge > span {
+  background: var(--rarity-soft);
 }

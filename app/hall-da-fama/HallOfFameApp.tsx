@@ -5,6 +5,7 @@ import type { HallOfFame } from "../../lib/hall-of-fame";
 import { BrandedLoading } from "../components/BrandedLoading";
 import { PlayerPhoto } from "../components/PlayerPhoto";
 import { SiteHeader } from "../components/SiteHeader";
+import { AchievementBadge } from "../components/AchievementBadge";
 
 export default function HallOfFameApp() {
   const [hall, setHall] = useState<HallOfFame | null>(null), [season, setSeason] = useState<number | "all">("all"), [error, setError] = useState("");
@@ -24,7 +25,7 @@ export default function HallOfFameApp() {
         {hall.records.length ? <div className="hall-record-grid">{hall.records.map(record => <article key={record.id}><i>{record.icon}</i><small>{record.title}</small><strong>{record.value}</strong><em>{record.unit}</em><div>{record.players.slice(0, 3).map(player => <span key={player.id}><PlayerPhoto photoUrl={player.photoUrl} name={player.displayName}/><b>{player.displayName}</b></span>)}{record.players.length > 3 ? <small>+{record.players.length - 3} empatados</small> : null}</div></article>)}</div> : <Empty text="Os recordes aparecerão depois dos primeiros resultados oficiais."/>}
       </section>
       <section className="hall-section"><SectionTitle eyebrow="MOMENTOS ETERNOS" title="Feitos que viraram história" description="Conquistas raras preservadas com o jogador e a partida em que aconteceram."/>
-        {hall.moments.length ? <div className="hall-moment-grid">{hall.moments.map(moment => <article key={moment.id}><i>{moment.icon}</i><div><small>{dateLabel(moment.achievedAt)}</small><h3>{moment.title}</h3><b>{moment.player.displayName}</b><p>{moment.description}</p>{moment.matchId ? <a href={`/partidas?separation=${encodeURIComponent(moment.matchId)}&tab=result`}>Rever partida →</a> : null}</div></article>)}</div> : <Empty text="Os feitos raros aparecerão aqui conforme forem conquistados."/>}
+        {hall.moments.length ? <div className="hall-moment-grid">{hall.moments.map(moment => <article key={moment.id}><AchievementBadge id={moment.id} icon={moment.icon} title={moment.title}/><div><small>{dateLabel(moment.achievedAt)}</small><h3>{moment.title}</h3><b>{moment.player.displayName}</b><p>{moment.description}</p>{moment.matchId ? <a href={`/partidas?separation=${encodeURIComponent(moment.matchId)}&tab=result`}>Rever partida →</a> : null}</div></article>)}</div> : <Empty text="Os feitos raros aparecerão aqui conforme forem conquistados."/>}
       </section>
     </>}
   </main></div>;

@@ -26,9 +26,20 @@ export type CareerAchievement = {
   icon: string;
   achievedAt: string;
   matchId?: string;
+  matchTitle?: string;
   playerId?: string;
   playerName?: string;
+  rarity?: AchievementRarityInfo;
 };
+
+export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
+export type AchievementRarityInfo = {
+  tier: AchievementRarity;
+  holders: number;
+  eligiblePlayers: number;
+  percentage: number;
+};
+export type AchievementRarityIndex = Record<string, AchievementRarityInfo>;
 
 export type AchievementProgress = {
   id: "games" | "wins" | "goals" | "assists";
@@ -119,14 +130,12 @@ export function buildPlayerEngagement(params: {
   nextSeasonResetAt?: string | null;
   monthlyAwards?: MonthlyAwardSnapshot[];
   seasonAwards?: SeasonAwardSnapshot[];
+  achievementRarities?: AchievementRarityIndex;
 }): PlayerEngagement {
   const ordered = orderMatches(params.matches);
   const scan = scanCareer(ordered);
-  const awardAchievements = [
-    ...achievementsFromAwards(params.player.id, params.monthlyAwards || [], params.seasonAwards || []),
-    ...achievementsFromSeasonAttendance(params.player.id, ordered, params.seasonAwards || []),
-  ];
-  const unlocked = uniqueAchievements([...(scan.achievements.get(params.player.id) || []), ...awardAchievements])
+  const unlocked = unlockedAchievements(params.player.id, ordered, scan, params.monthlyAwards || [], params.seasonAwards || [])
+    .map(item => ({ ...item, rarity: params.achievementRarities?.[achievementRarityKey(item.id)] }))
     .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt) || a.title.localeCompare(b.title, "pt-BR"));
   const totals = scan.totals.get(params.player.id) || emptyTotals();
   const seasonMatches = ordered.filter(match => match.seasonNumber === params.currentSeasonNumber && participantTeam(match, params.player.id));
@@ -137,6 +146,43 @@ export function buildPlayerEngagement(params: {
     passport,
     retrospective: season,
   };
+}
+
+export function buildAchievementRarityIndex(params: {
+  matches: EngagementMatch[];
+  monthlyAwards?: MonthlyAwardSnapshot[];
+  seasonAwards?: SeasonAwardSnapshot[];
+}): AchievementRarityIndex {
+  const ordered = orderMatches(params.matches);
+  const scan = scanCareer(ordered);
+  const eligiblePlayerIds = new Set(ordered.flatMap(match => [...match.blue, ...match.yellow].map(player => player.id)));
+  const holdersByAchievement = new Map<string, Set<string>>();
+  for (const playerId of eligiblePlayerIds) {
+    const keys = new Set(unlockedAchievements(playerId, ordered, scan, params.monthlyAwards || [], params.seasonAwards || []).map(item => achievementRarityKey(item.id)));
+    for (const key of keys) {
+      const holders = holdersByAchievement.get(key) || new Set<string>();
+      holders.add(playerId);
+      holdersByAchievement.set(key, holders);
+    }
+  }
+  const eligiblePlayers = eligiblePlayerIds.size;
+  return Object.fromEntries([...holdersByAchievement].map(([key, holders]) => {
+    const percentage = eligiblePlayers ? Math.round((holders.size / eligiblePlayers) * 100) : 0;
+    return [key, { tier: classifyAchievementRarity(holders.size, eligiblePlayers), holders: holders.size, eligiblePlayers, percentage }];
+  }));
+}
+
+export function classifyAchievementRarity(holders: number, eligiblePlayers: number): AchievementRarity {
+  if (holders <= 0 || eligiblePlayers <= 0) return "common";
+  if (holders === 1) return "legendary";
+  const percentage = eligiblePlayers ? (holders / eligiblePlayers) * 100 : 0;
+  if (percentage <= 15) return "epic";
+  if (percentage <= 40) return "rare";
+  return "common";
+}
+
+export function achievementRarityKey(id: string) {
+  return /^perfect_season_\d+$/.test(id) ? "perfect_season" : id;
 }
 
 export function buildRoundRecaps(params: {
@@ -336,6 +382,14 @@ function achievementsFromAwards(playerId: string, monthly: MonthlyAwardSnapshot[
   return result;
 }
 
+function unlockedAchievements(playerId: string, matches: EngagementMatch[], scan: ReturnType<typeof scanCareer>, monthly: MonthlyAwardSnapshot[], seasons: SeasonAwardSnapshot[]) {
+  return uniqueAchievements([
+    ...(scan.achievements.get(playerId) || []),
+    ...achievementsFromAwards(playerId, monthly, seasons),
+    ...achievementsFromSeasonAttendance(playerId, matches, seasons),
+  ]);
+}
+
 function milestone(levels: number[], previous: number, current: number, kind: "games" | "wins" | "goals" | "assists", match: EngagementMatch, playerId: string, add: (playerId: string, achievement: CareerAchievement) => void) {
   const reached = levels.filter(level => previous < level && current >= level);
   for (const level of reached) {
@@ -347,7 +401,7 @@ function milestone(levels: number[], previous: number, current: number, kind: "g
   }
 }
 
-function achievement(id: string, title: string, description: string, icon: string, match: EngagementMatch): CareerAchievement { return { id, title, description, icon, achievedAt: match.date, matchId: match.separationId }; }
+function achievement(id: string, title: string, description: string, icon: string, match: EngagementMatch): CareerAchievement { return { id, title, description, icon, achievedAt: match.date, matchId: match.separationId, matchTitle: match.title }; }
 function emptyTotals(): Totals { return { games: 0, wins: 0, losses: 0, goals: 0, assists: 0, winningStreak: 0, unbeatenStreak: 0, losingStreak: 0, attendanceStreak: 0, motmAwards: 0, socialAwards: 0 }; }
 function orderMatches(matches: EngagementMatch[]) { return [...matches].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)); }
 function participantTeam(match: EngagementMatch, playerId: string) { return match.blue.some(player => player.id === playerId) ? "BLUE" as const : match.yellow.some(player => player.id === playerId) ? "YELLOW" as const : null; }

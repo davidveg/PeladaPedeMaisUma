@@ -30,6 +30,8 @@ O perfil do jogador exibe uma coleção calculada sobre todo o histórico:
 
 Os próximos objetivos de jogos, vitórias, gols e assistências mostram o progresso atual. Correções no histórico são refletidas no próximo carregamento, mantendo as conquistas coerentes com os registros oficiais.
 
+Cada conquista desbloqueada também pode ser compartilhada como um cartão vertical 4:5. A arte usa a identidade da pelada e reúne emblema, raridade, jogador, descrição, data e partida de origem. No site, o navegador abre o compartilhamento nativo quando disponível e baixa o PNG como alternativa; no aplicativo, uma prévia é exibida antes de compartilhar, com legenda e link copiados para a área de transferência.
+
 ## Retrospectiva pessoal
 
 A retrospectiva considera somente a temporada corrente armazenada no snapshot das partidas. Ela apresenta jogos, vitórias, empates, derrotas, aproveitamento, gols, assistências, melhor sequência de vitórias, reconhecimentos e parceria mais frequente. O resumo pode ser compartilhado pelo site ou pelo aplicativo.

@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db, ensureDb } from "./database";
 import {
+  buildAchievementRarityIndex,
   buildPlayerEngagement,
   buildRoundRecaps,
   type EngagementMatch,
@@ -14,6 +15,11 @@ import { buildHallOfFame, type HallPlayer } from "./hall-of-fame";
 
 export async function loadPlayerEngagement(player: EngagementPlayer) {
   const history = await loadEngagementHistory();
+  const achievementRarities = buildAchievementRarityIndex({
+    matches: history.matches,
+    monthlyAwards: history.monthlyAwards,
+    seasonAwards: history.seasonAwards,
+  });
   return buildPlayerEngagement({
     player,
     matches: history.matches,
@@ -22,6 +28,7 @@ export async function loadPlayerEngagement(player: EngagementPlayer) {
     nextSeasonResetAt: history.nextSeasonResetAt,
     monthlyAwards: history.monthlyAwards,
     seasonAwards: history.seasonAwards,
+    achievementRarities,
   });
 }
 

@@ -5,6 +5,7 @@ import type { SeasonPassportDetails, SeasonPassportStamp } from "../../../lib/se
 import { BrandedLoading } from "../../components/BrandedLoading";
 import { SiteHeader } from "../../components/SiteHeader";
 import { useInstanceBranding } from "../../InstanceBranding";
+import { AchievementBadge } from "../../components/AchievementBadge";
 
 export default function SeasonPassportApp() {
   const { config } = useInstanceBranding();
@@ -47,7 +48,7 @@ export default function SeasonPassportApp() {
 
 function StampDetails({ stamp, blueName, yellowName }: { stamp: SeasonPassportStamp; blueName: string; yellowName: string }) {
   const recognitions = stamp.recognitions.map(value=>value==="PARTNER"?"Parceiro da rodada":value==="FAIR_PLAY"?"Fair Play":"Defesa da rodada");
-  return <article className="passport-stamp-detail"><header><div><small>RODADA {stamp.round} · {formatDate(stamp.date)}</small><h3>{stamp.title}</h3></div><strong>{stamp.blueScore} × {stamp.yellowScore}</strong></header><div className="passport-detail-facts"><span><small>SITUAÇÃO</small><b>{stamp.participated?`${resultName(stamp.result)} · ${stamp.team==="BLUE"?blueName:yellowName}`:"Não participou"}</b></span><span><small>CONTRIBUIÇÕES</small><b>{stamp.goals} gols · {stamp.assists} assistências</b></span><span><small>DESTAQUES</small><b>{[stamp.motm?"Craque da rodada":"",...recognitions].filter(Boolean).join(" · ")||"Nenhum nesta rodada"}</b></span><span><small>CONQUISTAS</small><b>{stamp.achievements.map(value=>`${value.icon} ${value.title}`).join(" · ")||"Nenhuma nesta rodada"}</b></span></div><a className="primary" href={`/partidas?separation=${encodeURIComponent(stamp.separationId)}&tab=result`}>Ver partida e resenha →</a></article>;
+  return <article className="passport-stamp-detail"><header><div><small>RODADA {stamp.round} · {formatDate(stamp.date)}</small><h3>{stamp.title}</h3></div><strong>{stamp.blueScore} × {stamp.yellowScore}</strong></header><div className="passport-detail-facts"><span><small>SITUAÇÃO</small><b>{stamp.participated?`${resultName(stamp.result)} · ${stamp.team==="BLUE"?blueName:yellowName}`:"Não participou"}</b></span><span><small>CONTRIBUIÇÕES</small><b>{stamp.goals} gols · {stamp.assists} assistências</b></span><span><small>DESTAQUES</small><b>{[stamp.motm?"Craque da rodada":"",...recognitions].filter(Boolean).join(" · ")||"Nenhum nesta rodada"}</b></span><span><small>CONQUISTAS</small>{stamp.achievements.length?<span className="passport-achievement-list">{stamp.achievements.map(value=><span key={value.id}><AchievementBadge id={value.id} icon={value.icon} title={value.title}/><b>{value.title}</b></span>)}</span>:<b>Nenhuma nesta rodada</b>}</span></div><a className="primary" href={`/partidas?separation=${encodeURIComponent(stamp.separationId)}&tab=result`}>Ver partida e resenha →</a></article>;
 }
 
 function formatMonth(value:string){return new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(`${value}-15T12:00:00Z`)).replace(/^./,letter=>letter.toUpperCase());}
