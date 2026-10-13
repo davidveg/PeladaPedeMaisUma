@@ -15,6 +15,8 @@ test("site gera e compartilha um cartão 4:5 para cada conquista", async () => {
   assert.match(card, /shareRecapFile\(image, title, message\)/);
   assert.match(card, /achievement\.matchTitle/);
   assert.match(css, /\.achievement-share-card\{[^}]*width:540px;height:675px/);
+  assert.match(css, /\.achievement-share-card\.achievement-share-card>header\{[^}]*background:linear-gradient\([^}]+#f8df82/);
+  assert.match(css, /\.achievement-share-card \.achievement-share-brand>b\{[^}]*color:#171208/);
 });
 
 test("aplicativo mostra a prévia, captura o cartão e copia a legenda", async () => {
@@ -24,4 +26,6 @@ test("aplicativo mostra a prévia, captura o cartão e copia a legenda", async (
   assert.match(mobile, /Clipboard\.setStringAsync\(message\)/);
   assert.match(mobile, /Sharing\.shareAsync\(uri,\{[\s\S]+mimeType:"image\/png"/);
   assert.match(mobile, /releaseCapture\(uri\)/);
+  assert.match(mobile, /colors=\{\["#F8DF82","#C38D1E","#F1CE62","#B87912"\]\}/);
+  assert.match(mobile, /achievementShareBrandName: \{[^}]*color: "#171208"/);
 });
