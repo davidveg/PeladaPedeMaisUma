@@ -3749,8 +3749,8 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
 }
 
 .member-page .passport-stamp.draw {
-  --passport-result: #f0c958;
-  --passport-result-soft: color-mix(in srgb, var(--control-surface, #202b26) 79%, #80651d 21%);
+  --passport-result: #aab5af;
+  --passport-result-soft: color-mix(in srgb, var(--control-surface, #202b26) 76%, #89958f 24%);
 }
 
 .member-page .passport-stamp.absent {
@@ -3776,6 +3776,56 @@ body:has(:is(.member-page, .app-shell, .finance-page, .statistics-page, .advance
   border-color: color-mix(in srgb, var(--passport-result) 48%, transparent);
   background: color-mix(in srgb, var(--passport-result) 17%, var(--control-surface, #202b26));
   color: var(--passport-result);
+}
+
+.member-page .passport-stamp-detail.result-win {
+  --passport-result: #69d99a;
+  --passport-result-soft: color-mix(in srgb, var(--management-surface, #17211c) 70%, #277a4a 30%);
+}
+
+.member-page .passport-stamp-detail.result-loss {
+  --passport-result: #ff8b80;
+  --passport-result-soft: color-mix(in srgb, var(--management-surface, #17211c) 70%, #8f392f 30%);
+}
+
+.member-page .passport-stamp-detail.result-draw {
+  --passport-result: #aab5af;
+  --passport-result-soft: color-mix(in srgb, var(--management-surface, #17211c) 74%, #89958f 26%);
+}
+
+.member-page .passport-stamp-detail.result-absent {
+  --passport-result: #9aa9a1;
+  --passport-result-soft: color-mix(in srgb, var(--management-surface, #17211c) 90%, #819087 10%);
+}
+
+.member-page .passport-stamp-detail[class*="result-"] {
+  border-color: color-mix(in srgb, var(--passport-result) 42%, var(--control-line, #415148));
+  background: linear-gradient(135deg, var(--passport-result-soft), color-mix(in srgb, var(--passport-result-soft) 72%, var(--management-surface, #17211c)));
+  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--passport-result) 78%, transparent);
+}
+
+.member-page .passport-stamp-detail[class*="result-"] > header {
+  border-bottom-color: color-mix(in srgb, var(--passport-result) 30%, var(--control-line, #415148));
+}
+
+.member-page .passport-stamp-detail header > strong {
+  color: var(--passport-result);
+}
+
+.member-page .passport-detail-facts > span.passport-detail-situation {
+  border-color: color-mix(in srgb, var(--passport-result) 30%, var(--control-line, #415148));
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--passport-result) 22%);
+}
+
+.member-page .passport-result-name {
+  border-color: color-mix(in srgb, var(--passport-result) 44%, transparent);
+  background: color-mix(in srgb, var(--passport-result) 18%, var(--control-surface, #202b26));
+  color: var(--passport-result);
+}
+
+.member-page .passport-team-name {
+  background: color-mix(in srgb, var(--control-surface, #202b26) 78%, var(--passport-team) 22%);
+  color: color-mix(in srgb, var(--passport-team) 72%, var(--control-text, #f2f5f3) 28%);
 }
 
 .member-page .achievement-grid article > i {
