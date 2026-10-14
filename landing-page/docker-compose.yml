@@ -1,0 +1,36 @@
+name: ${COMPOSE_PROJECT_NAME:-pelada-pede-mais-uma-landing}
+
+services:
+  landing:
+    image: ${LANDING_IMAGE:-pelada-pede-mais-uma-landing:latest}
+    container_name: ${CONTAINER_NAME:-pelada-pede-mais-uma-landing}
+    build:
+      # O contexto é a raiz do repositório para reutilizar os ativos oficiais da marca.
+      context: ..
+      dockerfile: landing-page/Dockerfile
+    ports:
+      - "${HOST_PORT:-8088}:8080"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/cache/nginx:size=16m,mode=0755
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz | grep -q '^ok$'"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      logging: "promtail"
+      logging_jobname: "${LOGGING_JOB_NAME:-pelada-pede-mais-uma-landing}"
