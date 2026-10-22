@@ -50,7 +50,7 @@ const podiums: { title: string; description: string; tone: string; fields: { fie
     fields: [{ field: "motmFirstId", place: "1º lugar" }, { field: "motmSecondId", place: "2º lugar" }, { field: "motmThirdId", place: "3º lugar" }],
   },
   {
-    title: "Deception of the Match", description: "Escolha quem teve o desempenho mais abaixo.", tone: colors.danger,
+    title: "Flop of the Match", description: "Escolha quem teve o desempenho mais abaixo.", tone: colors.danger,
     fields: [{ field: "dotmFirstId", place: "1º lugar" }, { field: "dotmSecondId", place: "2º lugar" }, { field: "dotmThirdId", place: "3º lugar" }],
   },
 ];

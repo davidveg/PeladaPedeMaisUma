@@ -16,9 +16,12 @@ export function careerResultsMessage(item: Separation, publicBaseUrl: string, br
   const medals = [0x1f947, 0x1f948, 0x1f949].map(code => String.fromCodePoint(code));
   const signed = (value: number) => `${value > 0 ? "+" : ""}${Number(value).toFixed(1)}`;
   const podium = (entries = results?.motm || []) => entries.map((entry, index) => `${medals[index] || `${entry.place}º`} ${names[entry.playerId] || "Jogador"} (${signed(entry.momentum)})`).join("\n");
+  const recognition = (icon: string, label: string, entries = results?.partner || []) => entries[0]
+    ? `\n\n${icon} *${label}*\n${names[entries[0].playerId] || "Jogador"} (${signed(entries[0].momentum)})`
+    : "";
   const voteCount = Number(results?.voteCount || 0);
   const details = voteCount
-    ? `${String.fromCodePoint(0x1f3c6)} *Man of the Match*\n${podium(results?.motm)}\n\n${String.fromCodePoint(0x26a0, 0xfe0f)} *Deception of the Match*\n${podium(results?.dotm)}`
+    ? `${String.fromCodePoint(0x1f3c6)} *Man of the Match*\n${podium(results?.motm)}\n\n${String.fromCodePoint(0x26a0, 0xfe0f)} *Flop of the Match*\n${podium(results?.dotm)}${recognition("🤝", "Parceiro da rodada", results?.partner)}${recognition("🟢", "Fair Play", results?.fairPlay)}${recognition("🧤", "Defesa da rodada", results?.defense)}`
     : "Votação encerrada sem votos válidos.";
   const url = publicSeparationUrl(publicBaseUrl, item.id);
   const siteName = branding.siteName || "Pelada Pede Mais Uma", teamBlueName = branding.teamBlueName || "Azul", teamYellowName = branding.teamYellowName || "Amarelo";

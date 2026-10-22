@@ -3,7 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { apiFetch } from "@/api";
+import { API_BASE_URL, apiFetch } from "@/api";
 import { useMobileBranding } from "@/branding";
 import { Button, EmptyState, ErrorState, Header, Screen } from "@/components";
 import { colors, shadow } from "@/theme";
@@ -41,7 +41,12 @@ export default function HallOfFameScreen() {
 
 function Section({eyebrow,title,description,color}:{eyebrow:string;title:string;description:string;color:string}) { return <View style={styles.sectionTitle}><Text style={[styles.eyebrow,{color}]}>{eyebrow}</Text><Text style={styles.title}>{title}</Text><Text style={styles.description}>{description}</Text></View>; }
 function Filter({active,label,onPress,color}:{active:boolean;label:string;onPress():void;color:string}) { return <Pressable accessibilityRole="button" accessibilityState={{selected:active}} onPress={onPress} style={[styles.filter,active&&{backgroundColor:color,borderColor:color}]}><Text style={[styles.filterText,active&&styles.filterTextActive]}>{label}</Text></Pressable>; }
-function Avatar({player,size}:{player:HallPlayer;size:number}) { return player.photoUrl?<Image source={{uri:player.photoUrl}} style={[styles.avatar,{width:size,height:size,borderRadius:size/2}]}/>:<View style={[styles.avatar,styles.avatarFallback,{width:size,height:size,borderRadius:size/2}]}><Ionicons name="person" size={size*.46} color={colors.muted}/></View>; }
+function Avatar({player,size}:{player:HallPlayer;size:number}) {
+  const [failedUri,setFailedUri]=useState<string|null>(null);
+  const uri=player.photoUrl?( /^https?:\/\//i.test(player.photoUrl)?player.photoUrl:`${API_BASE_URL}${player.photoUrl.startsWith("/")?"":"/"}${player.photoUrl}` ):null;
+  const dimensions={width:size,height:size,borderRadius:size/2};
+  return uri&&uri!==failedUri?<Image source={{uri}} accessibilityLabel={`Foto de ${player.displayName}`} resizeMode="cover" onError={()=>setFailedUri(uri)} style={[styles.avatar,dimensions]}/>:<View accessible accessibilityLabel={player.displayName} style={[styles.avatar,dimensions,styles.avatarFallback]}><Ionicons name="person" size={size*.46} color={colors.muted}/></View>;
+}
 function dateLabel(value:string){const date=new Date(`${value.slice(0,10)}T12:00:00`);return Number.isNaN(date.getTime())?value:date.toLocaleDateString("pt-BR")}
 
 const styles=StyleSheet.create({

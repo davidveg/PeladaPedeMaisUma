@@ -15,7 +15,7 @@ export function CareerVotingResults({ item }: { item: Separation }) {
     </View>
     {voteCount ? <>
       <ResultPodium title="Man of the Match" entries={results?.motm || []} names={names} positive/>
-      <ResultPodium title="Deception of the Match" entries={results?.dotm || []} names={names}/>
+      <ResultPodium title="Flop of the Match" entries={results?.dotm || []} names={names}/>
       <RecognitionResult icon="🤝" title="Parceiro da rodada" entry={results?.partner?.[0]} names={names}/>
       <RecognitionResult icon="🟢" title="Fair Play" entry={results?.fairPlay?.[0]} names={names}/>
       <RecognitionResult icon="🧤" title="Defesa da rodada" entry={results?.defense?.[0]} names={names}/>

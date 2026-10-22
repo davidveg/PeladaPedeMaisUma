@@ -54,7 +54,10 @@ test("monta uma mensagem legível com o resultado final da votação",()=>{
   assert.match(message,/Azul 4 × 3 Amarelo/);
   assert.match(message,/🥇 David \(\+0\.3\)/);
   assert.match(message,/João \(-0\.3\)/);
+  assert.match(message,/Flop of the Match/);
+  assert.equal(message.includes("Deception of the Match"),false);
   assert.match(message,/Parceiro da rodada[\s\S]*Marcio \(\+0\.1\)/);
+  assert.match(message,/Fair Play[\s\S]*David \(\+0\.1\)/);
   assert.match(message,/Defesa da rodada[\s\S]*João \(\+0\.2\)/);
   assert.ok(message.endsWith("https://pelada.example.com/?separation=abc"));
   assert.equal(message.includes("�"),false);

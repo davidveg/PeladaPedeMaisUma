@@ -56,7 +56,7 @@ Os detalhes de cada partida no site e no aplicativo começam com uma central com
 
 Cada participante escolhe um jogador para Parceiro da rodada, Fair Play e Defesa da rodada, sem poder votar em si mesmo. Todos os votos de cada categoria têm o mesmo peso. O painel do Modo Carreira permite definir separadamente o Momentum entregue ao vencedor de cada reconhecimento; os três valores usam o multiplicador normal do Momentum das votações.
 
-Clientes atualizados exigem as três escolhas. Votos enviados por versões antigas do aplicativo, que ainda não possuem essas categorias, continuam aceitos e participam normalmente dos pódios de Man of the Match e Deception of the Match.
+Clientes atualizados exigem as três escolhas. Votos enviados por versões antigas do aplicativo, que ainda não possuem essas categorias, continuam aceitos e participam normalmente dos pódios de Man of the Match e Flop of the Match.
 
 Jogadores sem partidas na temporada recebem um estado vazio informativo. Métricas dependentes da súmula ou das votações permanecem zeradas quando esses módulos não produziram dados oficiais.
 

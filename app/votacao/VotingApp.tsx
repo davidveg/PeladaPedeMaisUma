@@ -160,7 +160,7 @@ export default function VotingApp({ votingToken, embedded = false }: { votingTok
               <form className="career-vote-form" onSubmit={submit}>
                 <VoteIdentity player={viewer.player} onLogout={logout} busy={busy} />
                 <Podium title="Man of the Match" subtitle="Os três melhores da partida" tone="best" fields={fields.slice(0, 3) as Field[]} votes={votes} setVotes={setVotes} options={options} />
-                <Podium title="Deception of the Match" subtitle="Os três desempenhos abaixo do esperado" tone="worst" fields={fields.slice(3, 6) as Field[]} votes={votes} setVotes={setVotes} options={options} />
+                <Podium title="Flop of the Match" subtitle="Os três desempenhos abaixo do esperado" tone="worst" fields={fields.slice(3, 6) as Field[]} votes={votes} setVotes={setVotes} options={options} />
                 <RecognitionVotes votes={votes} setVotes={setVotes} options={options}/>
                 <button className="primary vote-submit" disabled={busy || !viewer.canVote}>{busy ? "Enviando…" : "Confirmar meus votos"}</button>
               </form>
@@ -255,7 +255,7 @@ function RecognitionVotes({ votes, setVotes, options }: any) {
 
 function ClosedResults({ match, names }: any) {
   const results = match.results;
-  return <div className="vote-closed"><span>✓ VOTAÇÃO ENCERRADA</span><h2>Resultado final</h2><p>Os votos são finais e o momentum já foi aplicado aos jogadores.</p>{!results?.voteCount ? <div className="empty">A votação foi encerrada sem votos válidos.</div> : <><div className="career-results"><ResultPodium title="Man of the Match" entries={results.motm} names={names} /><ResultPodium title="Deception of the Match" entries={results.dotm} names={names} /></div><div className="recognition-results"><RecognitionResult icon="🤝" title="Parceiro da rodada" entries={results.partner} names={names}/><RecognitionResult icon="🟢" title="Fair Play" entries={results.fairPlay} names={names}/><RecognitionResult icon="🧤" title="Defesa da rodada" entries={results.defense} names={names}/></div></>}</div>;
+  return <div className="vote-closed"><span>✓ VOTAÇÃO ENCERRADA</span><h2>Resultado final</h2><p>Os votos são finais e o momentum já foi aplicado aos jogadores.</p>{!results?.voteCount ? <div className="empty">A votação foi encerrada sem votos válidos.</div> : <><div className="career-results"><ResultPodium title="Man of the Match" entries={results.motm} names={names} /><ResultPodium title="Flop of the Match" entries={results.dotm} names={names} /></div><div className="recognition-results"><RecognitionResult icon="🤝" title="Parceiro da rodada" entries={results.partner} names={names}/><RecognitionResult icon="🟢" title="Fair Play" entries={results.fairPlay} names={names}/><RecognitionResult icon="🧤" title="Defesa da rodada" entries={results.defense} names={names}/></div></>}</div>;
 }
 
 function ResultPodium({ title, entries, names }: any) {

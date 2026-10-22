@@ -144,7 +144,7 @@ Após a confirmação do placar, o sistema gera:
 - QR Code para acesso rápido.
 - Compartilhamento formatado pelo WhatsApp.
 - Votação para os três melhores em **Man of the Match**.
-- Votação para os três destaques negativos em **Deception of the Match**.
+- Votação para os três destaques negativos em **Flop of the Match**.
 
 Regras da votação:
 
