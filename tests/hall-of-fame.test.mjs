@@ -48,6 +48,8 @@ test("layouts do Hall usam a paleta configurável e reduzem colunas no celular",
   assert.match(css, /@media\(max-width:620px\)/);
   assert.match(css, /@media\(max-width:390px\)/);
   assert.match(site, /SiteHeader active="hall"/);
+  assert.match(site, /<PlayerPhoto[^>]*large hoverPreview previewSize=\{360\}/);
+  assert.match(css, /\.hall-featured-card>\.player-avatar-wrap\.has-preview\{[^}]*cursor:zoom-in/);
   assert.match(site, /hall\.availableSeasons/);
   assert.match(mobile, /useMobileBranding/);
   assert.match(mobile, /flexBasis:"46%"/);

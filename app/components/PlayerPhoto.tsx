@@ -5,11 +5,12 @@ import { createPortal } from "react-dom";
 
 type PreviewPosition = { left: number; top: number };
 
-export function PlayerPhoto({ photoUrl, name, large = false, className = "", previewSize = 220 }: { photoUrl?: string | null; name: string; large?: boolean; className?: string; previewSize?: number }) {
+export function PlayerPhoto({ photoUrl, name, large = false, className = "", previewSize = 220, hoverPreview }: { photoUrl?: string | null; name: string; large?: boolean; className?: string; previewSize?: number; hoverPreview?: boolean }) {
   const [preview, setPreview] = useState<PreviewPosition | null>(null);
+  const canPreview = Boolean(photoUrl) && (hoverPreview ?? !large);
 
   function showPreview(target: HTMLElement) {
-    if (!photoUrl || large) return;
+    if (!canPreview) return;
     const rect = target.getBoundingClientRect();
     const size = previewSize, margin = 12;
     const left = Math.max(margin, Math.min(window.innerWidth - size - margin, rect.left + rect.width / 2 - size / 2));
@@ -18,7 +19,7 @@ export function PlayerPhoto({ photoUrl, name, large = false, className = "", pre
     setPreview({ left, top });
   }
 
-  return <span className={`player-avatar-wrap ${large ? "is-large" : ""} ${photoUrl && !large ? "has-preview" : ""}`} title={photoUrl && !large ? `Ampliar foto de ${name}` : undefined} onMouseEnter={(event) => showPreview(event.currentTarget)} onMouseLeave={() => setPreview(null)}>
+  return <span className={`player-avatar-wrap ${large ? "is-large" : ""} ${canPreview ? "has-preview" : ""}`} title={canPreview ? `Ampliar foto de ${name}` : undefined} onMouseEnter={(event) => showPreview(event.currentTarget)} onMouseLeave={() => setPreview(null)}>
     <span className={`player-photo ${large ? "large-player-photo" : ""} ${className}`}>
       {photoUrl ? <img src={photoUrl} alt={`Foto de ${name}`} /> : <span className="player-placeholder" role="img" aria-label={`Foto padrão de ${name}`}>👤</span>}
     </span>
