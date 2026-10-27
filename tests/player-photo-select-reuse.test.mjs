@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("substituição, votação e súmula reutilizam o mesmo seletor de jogadores com foto", async () => {
-  const [component, matches, draft, voting] = await Promise.all([
+test("substituição, votação, súmula e Hall reutilizam o mesmo seletor de jogadores com foto", async () => {
+  const [component, matches, draft, voting, admin] = await Promise.all([
     readFile(new URL("../app/components/PlayerPhotoSelect.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/MatchesPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/sumula/MatchDraftApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/votacao/VotingApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(component, /photoUrl\?: string \| null/);
@@ -25,4 +26,9 @@ test("substituição, votação e súmula reutilizam o mesmo seletor de jogadore
   assert.equal((draft.match(/<PlayerPhotoSelect/g) || []).length, 2);
   assert.doesNotMatch(draft, /<select value=\{goal\.(?:scorerPlayerId|assistPlayerId)\}/);
   assert.match(voting, /import \{ PlayerPhotoSelect \}/);
+  const hall = admin.slice(admin.indexOf("function HallOfFameAdmin"), admin.indexOf("function CareerVoteManagement"));
+  assert.match(admin, /import \{ PlayerPhotoSelect \}/);
+  assert.match(hall, /<PlayerPhotoSelect/);
+  assert.doesNotMatch(hall, /<select value=\{form\.playerId\}/);
+  assert.match(hall, /player\.active\?'Jogadores ativos':'Jogadores inativos'/);
 });

@@ -35,12 +35,13 @@ test("monta ídolos, classes, recordes e momentos a partir do histórico oficial
 });
 
 test("layouts do Hall usam a paleta configurável e reduzem colunas no celular", async () => {
-  const [css, site, mobile, admin, adminApi] = await Promise.all([
+  const [css, site, mobile, admin, adminApi, globals] = await Promise.all([
     readFile(new URL("../app/hall-da-fama/hall-of-fame.css", import.meta.url), "utf8"),
     readFile(new URL("../app/hall-da-fama/HallOfFameApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../mobile/app/(app)/hall-of-fame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/AdminApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/admin/hall-of-fame/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(css, /var\(--management-background\)/);
   assert.match(css, /var\(--management-surface\)/);
@@ -57,5 +58,9 @@ test("layouts do Hall usam a paleta configurável e reduzem colunas no celular",
   assert.match(site, /hall\.collectiveMilestones/);
   assert.match(mobile, /collectiveProgress/);
   assert.match(admin, /Homenagens especiais/);
+  assert.match(admin, /className="wide hall-admin-reason"/);
+  assert.equal((admin.match(/className="hall-admin-main-field"/g) || []).length, 2);
+  assert.match(globals, /\.hall-admin-main-field input\{[^}]*min-height:58px[^}]*border:1px solid[^}]*font-size:12px[^}]*font-weight:700/);
+  assert.match(globals, /\.hall-admin-reason textarea\{[^}]*border:1px solid[^}]*border-radius:10px[^}]*padding:13px/);
   assert.match(adminApi, /HALL_OF_FAME_HONOR_CREATED/);
 });
