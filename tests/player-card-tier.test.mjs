@@ -56,13 +56,16 @@ test("cards preservam a textura metálica com a hierarquia textual clássica", a
  assert.match(mobileCard,/accessibilityLabel=\{`Ver explicação de \$\{label\}`\}[\s\S]*Alert\.alert\(label,help\)/);
  assert.match(mobileCard,/styles\.topMetrics[\s\S]*styles\.featuredRating[\s\S]*Alert\.alert\("Evolução",PLAYER_RATING_HELP\.evolution\)/);
  assert.match(mobileCard,/backgroundColor: palette\.stats, borderColor: palette\.statsBorder/);
- assert.match(mobileCard,/label==="Momentum"\?PLAYER_RATING_HELP\.momentum[\s\S]*label === "Momentum" \? momentumColor/);
+ assert.match(mobileCard,/momentumAttribute=label==="Momentum",help=momentumAttribute\?PLAYER_RATING_HELP\.momentum[\s\S]*momentumAttribute \? momentumColor/);
+ assert.match(mobileCard,/playerRatingBreakdown[\s\S]*styles\.momentumImpact[\s\S]*NO OVR[\s\S]*OverallBreakdownSheet/);
+ assert.match(publicCard,/MomentumImpactTrigger[\s\S]*OverallBreakdown/);
+ assert.match(memberCard,/MomentumImpactTrigger[\s\S]*OverallBreakdown/);
  assert.match(mobileCard,/momentum > 0[\s\S]*#155E3D[\s\S]*momentum < 0[\s\S]*#8F3028/);
  for(const text of [/Ajuste permanente somado ao overall/,/Ajuste temporário somado ao overall/]){
   assert.match(ratingHelp,text);
   assert.match(mobileRatingHelp,text);
  }
- assert.doesNotMatch(globalStyles,/\.card-stats>\.momentum-stat/);
+ assert.match(globalStyles,/\.card-stats>\.momentum-stat[\s\S]*\.momentum-impact-trigger/);
  assert.match(theme,/\.card-stats > \.momentum-stat\.positive > b \{[\s\S]*color:\s*#155e3d/);
  assert.match(theme,/\.card-stats > \.momentum-stat\.negative > b \{[\s\S]*color:\s*#8f3028/);
 });

@@ -20,13 +20,25 @@ export function playerAttributes(player: Player): [string, number][] {
     : [["Físico",player.speed],["Técnica",player.skill],["Marcação",player.marking??3],["Inteligência Tática",player.tacticalIntelligence??3],["Competitividade",player.competitiveness??3],["Momentum",player.momentum??0]];
 }
 
-export function playerOverall(player: Player, config: CardConfig) {
+function playerBaseRating(player: Player, config: CardConfig) {
   const goalkeeper=isKeeper(player),speed=goalkeeper?player.goalkeeperPositioning??player.speed:player.speed,marking=goalkeeper?player.goalExit??player.marking??3:player.marking??3;
   const modern=config?.ratingSystemVersion===2||config?.tacticalIntelligenceWeight!=null;
-  const base=!modern?speed*(config?.speedWeight??.48)+player.skill*(config?.skillWeight??.32)+marking*(config?.markingWeight??.2):goalkeeper
+  return !modern?speed*(config?.speedWeight??.48)+player.skill*(config?.skillWeight??.32)+marking*(config?.markingWeight??.2):goalkeeper
     ?player.skill*(config?.goalkeeperDefensesWeight??.4)+speed*(config?.goalkeeperPositioningWeight??.25)+(player.goalkeeperSafety??3)*(config?.goalkeeperSafetyWeight??.2)+marking*(config?.goalkeeperFootworkWeight??.1)+(player.goalkeeperLeadership??3)*(config?.goalkeeperLeadershipWeight??.05)
     :speed*(config?.speedWeight??.35)+player.skill*(config?.skillWeight??.25)+marking*(config?.markingWeight??.15)+(player.tacticalIntelligence??3)*(config?.tacticalIntelligenceWeight??.2)+(player.competitiveness??3)*(config?.competitivenessWeight??.05);
-  const raw=base+(player.careerRatingAdjustment??0)+playerMomentumContribution(player,config?.momentumMultiplier??1,config?.resultMomentumMultiplier??1);
+}
+
+export function playerRatingBreakdown(player: Player, config: CardConfig) {
+  const base=playerBaseRating(player,config),evolution=Number(player.careerRatingAdjustment??0),separated=player.resultMomentum!=null||player.votingMomentum!=null;
+  const resultMomentum=separated?Number(player.resultMomentum??0):0,votingMomentum=separated?Number(player.votingMomentum??0):Number(player.momentum??0);
+  const resultMultiplier=Number(config?.resultMomentumMultiplier??1),votingMultiplier=Number(config?.momentumMultiplier??1);
+  const resultImpact=resultMomentum*resultMultiplier,votingImpact=votingMomentum*votingMultiplier,momentumImpact=resultImpact+votingImpact;
+  const calculatedOverall=base+evolution+momentumImpact,limitedOverall=Math.max(1,Math.min(5,calculatedOverall)),displayedOverall=Math.round(limitedOverall*10)/10;
+  return {base,evolution,resultMomentum,votingMomentum,resultMultiplier,votingMultiplier,resultImpact,votingImpact,accumulatedMomentum:separated?resultMomentum+votingMomentum:Number(player.momentum??0),momentumImpact,calculatedOverall,limitedOverall,displayedOverall,limited:Math.abs(limitedOverall-calculatedOverall)>.0001,rounded:Math.abs(displayedOverall-limitedOverall)>.0001};
+}
+
+export function playerOverall(player: Player, config: CardConfig) {
+  const raw=playerBaseRating(player,config)+(player.careerRatingAdjustment??0)+playerMomentumContribution(player,config?.momentumMultiplier??1,config?.resultMomentumMultiplier??1);
   return Math.round(Math.max(1,Math.min(5,raw))*10)/10;
 }
 

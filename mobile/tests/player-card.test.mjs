@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { playerCardTier, playerOverall } from "../src/player-card.ts";
+import { playerCardTier, playerOverall, playerRatingBreakdown } from "../src/player-card.ts";
 
 const config = {
   speedWeight: 0.48,
@@ -43,4 +43,14 @@ test("permite configurar separadamente o momentum de vitórias e derrotas", () =
   assert.equal(playerOverall(player, { ...config, resultMomentumMultiplier: 0, momentumMultiplier: 1 }), 4.3);
   assert.equal(playerOverall(player, { ...config, resultMomentumMultiplier: 0.5, momentumMultiplier: 1 }), 4.4);
   assert.equal(playerOverall(player, { ...config, resultMomentumMultiplier: 2, momentumMultiplier: 0.5 }), 4.6);
+});
+
+test("detalha o impacto real do momentum mostrado no card", () => {
+  const player = { id: "4", displayName: "Detalhado", type: "monthly", primaryPosition: "Defesa", speed: 4, skill: 4, marking: 4, momentum: 0.5, resultMomentum: 0.2, votingMomentum: 0.3 };
+  const result = playerRatingBreakdown(player, { ...config, resultMomentumMultiplier: 0.5, momentumMultiplier: 0.5 });
+  assert.equal(result.accumulatedMomentum, 0.5);
+  assert.equal(result.resultImpact, 0.1);
+  assert.equal(result.votingImpact, 0.15);
+  assert.equal(result.momentumImpact, 0.25);
+  assert.equal(result.displayedOverall, playerOverall(player, { ...config, resultMomentumMultiplier: 0.5, momentumMultiplier: 0.5 }));
 });

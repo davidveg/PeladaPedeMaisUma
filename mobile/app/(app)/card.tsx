@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { captureRef, releaseCapture } from "react-native-view-shot";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiFetch, API_BASE_URL } from "@/api";
 import { useMobileBranding } from "@/branding";
 import { passportResultPalette } from "@/passport-style";
@@ -18,6 +19,7 @@ import {
   playerCardTier,
   playerCardTierLabel,
   playerOverall,
+  playerRatingBreakdown,
   PLAYER_RATING_HELP,
   type PlayerCardTier,
 } from "@/player-card";
@@ -86,6 +88,7 @@ export default function MyCard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [showOverallBreakdown, setShowOverallBreakdown] = useState(false);
   const query = useQuery({
     queryKey: ["profile"],
     queryFn: () => apiFetch<ProfilePayload>("/api/member-profile"),
@@ -164,6 +167,7 @@ export default function MyCard() {
   const palette = palettes[tier];
   const evolution = Number(player.careerRatingAdjustment ?? 0);
   const momentum = Number(player.momentum ?? 0);
+  const ratingBreakdown = playerRatingBreakdown(player, config);
   const momentumColor = momentum > 0 ? (tier === "legendary" ? "#75F0B0" : "#155E3D") : momentum < 0 ? (tier === "legendary" ? "#FF8F82" : "#8F3028") : palette.text;
   const career = player.careerStats;
   const openPhotoMenu = () => Alert.alert("Foto do jogador", "Escolha como deseja atualizar a foto exibida no card.", [
@@ -236,9 +240,10 @@ export default function MyCard() {
         </View>
 
         <View style={styles.attributes}>
-          {playerAttributes(player).map(([label, value]) => { const help=label==="Momentum"?PLAYER_RATING_HELP.momentum:null;return <View key={label} style={[styles.attribute, { backgroundColor: palette.panel, borderColor: palette.panelBorder }]}>
-            <View style={styles.attributeHeading}><Text style={[styles.attributeLabel, { color: palette.muted }]}>{label}</Text>{help?<Pressable accessibilityRole="button" accessibilityLabel={`Ver explicação de ${label}`} hitSlop={8} onPress={()=>Alert.alert(label,help)} style={styles.attributeHelp}><Ionicons name="help-circle-outline" size={17} color={palette.muted}/></Pressable>:null}</View>
-            <Text style={[styles.attributeValue, { color: label === "Momentum" ? momentumColor : palette.text }]}>{value > 0 && label === "Momentum" ? "+" : ""}{Number(value).toFixed(1)}</Text>
+          {playerAttributes(player).map(([label, value]) => { const momentumAttribute=label==="Momentum",help=momentumAttribute?PLAYER_RATING_HELP.momentum:null;return <View key={label} style={[styles.attribute, momentumAttribute&&styles.momentumAttribute, { backgroundColor: palette.panel, borderColor: momentumAttribute?momentumColor:palette.panelBorder }]}>
+            <View style={styles.attributeHeading}><Text style={[styles.attributeLabel, { color: palette.muted }]}>{momentumAttribute?"Momentum acumulado":label}</Text>{help?<Pressable accessibilityRole="button" accessibilityLabel={`Ver explicação de ${label}`} hitSlop={8} onPress={()=>Alert.alert(label,help)} style={styles.attributeHelp}><Ionicons name="help-circle-outline" size={17} color={palette.muted}/></Pressable>:null}</View>
+            <Text style={[styles.attributeValue, { color: momentumAttribute ? momentumColor : palette.text }]}>{value > 0 && momentumAttribute ? "+" : ""}{Number(value).toFixed(1)}</Text>
+            {momentumAttribute?<Pressable accessibilityRole="button" accessibilityLabel={`${signedMobile(ratingBreakdown.momentumImpact,2)} no Overall. Ver composição`} onPress={()=>setShowOverallBreakdown(true)} style={[styles.momentumImpact,Math.abs(ratingBreakdown.accumulatedMomentum)<.0001?styles.momentumImpactNeutral:ratingBreakdown.momentumImpact<0?styles.momentumImpactNegative:null]}><Text style={styles.momentumImpactText}>{signedMobile(ratingBreakdown.momentumImpact,2)} NO OVR</Text></Pressable>:null}
           </View>})}
         </View>
 
@@ -268,7 +273,38 @@ export default function MyCard() {
       </Card>
     </ScrollView>
     {editing ? <ProfileEditor player={player} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void queryClient.invalidateQueries({ queryKey: ["profile"] }); }}/> : null}
+    <OverallBreakdownSheet visible={showOverallBreakdown} breakdown={ratingBreakdown} onClose={()=>setShowOverallBreakdown(false)}/>
   </Screen>;
+}
+
+const decimalMobile=(value:number,digits=2)=>value.toLocaleString("pt-BR",{minimumFractionDigits:digits,maximumFractionDigits:digits});
+const signedMobile=(value:number,digits=2)=>`${value>0?"+":""}${decimalMobile(value,digits)}`;
+
+function OverallBreakdownSheet({visible,breakdown,onClose}:{visible:boolean;breakdown:ReturnType<typeof playerRatingBreakdown>;onClose():void}){
+  const insets=useSafeAreaInsets();
+  const note=breakdown.limited
+    ?`O cálculo chegou a ${decimalMobile(breakdown.calculatedOverall)}, mas o Overall respeita o limite de ${breakdown.calculatedOverall>5?"5,0":"1,0"}.`
+    :breakdown.rounded
+      ?`O cálculo chegou a ${decimalMobile(breakdown.limitedOverall)}, e o Overall é exibido com uma casa decimal.`
+      :`O Momentum acumulado é ${signedMobile(breakdown.accumulatedMomentum,1)}, mas o impacto aplicado ao OVR é ${signedMobile(breakdown.momentumImpact)}.`;
+  return <Modal visible={visible} transparent animationType="slide" statusBarTranslucent navigationBarTranslucent={false} onRequestClose={onClose}>
+    <View style={styles.breakdownBackdrop}><Pressable accessibilityRole="button" accessibilityLabel="Fechar composição do Overall" style={StyleSheet.absoluteFill} onPress={onClose}/><View accessibilityViewIsModal style={[styles.breakdownSheet,{paddingBottom:Math.max(insets.bottom,20)}]}>
+      <View style={styles.breakdownHandle}/><View style={styles.breakdownHeader}><View style={{flex:1}}><Text style={styles.breakdownEyebrow}>TRANSPARÊNCIA DO CARD</Text><Text accessibilityRole="header" style={styles.breakdownTitle}>Como chegamos ao OVR</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Fechar composição do Overall" onPress={onClose} style={styles.breakdownClose}><Ionicons name="close" size={24} color="#FFFFFF"/></Pressable></View>
+      <ScrollView style={styles.breakdownScroll} contentContainerStyle={styles.breakdownScrollContent} showsVerticalScrollIndicator persistentScrollbar>
+        <Text style={styles.breakdownDescription}>Atributos, evolução e os dois saldos de Momentum formam o valor final.</Text>
+        <BreakdownRow label="OVR-base pelos atributos" value={decimalMobile(breakdown.base)}/><BreakdownRow label="Evolução permanente" value={signedMobile(breakdown.evolution)} tone={breakdown.evolution}/>
+        <BreakdownRow label="Resultados" detail={`${signedMobile(breakdown.resultMomentum,1)} × ${decimalMobile(breakdown.resultMultiplier,1)}`} chip={`${decimalMobile(breakdown.resultMultiplier,1)}×`} value={signedMobile(breakdown.resultImpact)} tone={breakdown.resultImpact}/>
+        <BreakdownRow label="Votações" detail={`${signedMobile(breakdown.votingMomentum,1)} × ${decimalMobile(breakdown.votingMultiplier,1)}`} chip={`${decimalMobile(breakdown.votingMultiplier,1)}×`} value={signedMobile(breakdown.votingImpact)} tone={breakdown.votingImpact}/>
+        <BreakdownRow label="Overall calculado" value={decimalMobile(breakdown.calculatedOverall)} strong/>
+        <View style={styles.breakdownDisplayed}><Text style={styles.breakdownDisplayedLabel}>OVERALL EXIBIDO</Text><Text style={styles.breakdownDisplayedValue}>{decimalMobile(breakdown.displayedOverall,1)}</Text></View>
+        <View style={styles.breakdownNote}><Text style={styles.breakdownNoteIcon}>i</Text><Text style={styles.breakdownNoteText}>{note}</Text></View>
+      </ScrollView>
+    </View></View>
+  </Modal>;
+}
+
+function BreakdownRow({label,detail,chip,value,tone=0,strong=false}:{label:string;detail?:string;chip?:string;value:string;tone?:number;strong?:boolean}){
+  return <View style={[styles.breakdownRow,strong&&styles.breakdownRowStrong]}><View style={styles.breakdownRowLabel}><Text style={[styles.breakdownLabel,strong&&styles.breakdownStrong]}>{label}</Text>{detail?<Text style={styles.breakdownDetail}>{detail}</Text>:null}{chip?<Text style={styles.breakdownChip}>{chip}</Text>:null}</View><Text style={[styles.breakdownValue,strong&&styles.breakdownStrong,tone>0&&styles.breakdownPositive,tone<0&&styles.breakdownNegative]}>{value}</Text></View>;
 }
 
 function MobileEngagement({ engagement, player }: { engagement: PlayerEngagement; player: Player }) {
@@ -404,10 +440,41 @@ const styles = StyleSheet.create({
   featuredRatingHelp: { width: 22, height: 22, alignItems: "center", justifyContent: "center", marginRight: -8 },
   attributes: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   attribute: { flexGrow: 1, flexBasis: "46%", borderWidth: 1, borderRadius: 14, padding: 14 },
-  attributeHeading: { flexDirection: "row", alignItems: "center", gap: 5 },
-  attributeLabel: { fontSize: 12, fontWeight: "800" },
-  attributeHelp: { minWidth: 24, minHeight: 24, alignItems: "center", justifyContent: "center", marginVertical: -4 },
+  attributeHeading: { width: "100%", flexDirection: "row", alignItems: "flex-start", gap: 5 },
+  attributeLabel: { flex: 1, minWidth: 0, fontSize: 12, lineHeight: 17, fontWeight: "800" },
+  attributeHelp: { flexShrink: 0, minWidth: 24, minHeight: 24, alignItems: "center", justifyContent: "center", marginTop: -4, marginRight: -2 },
   attributeValue: { marginTop: 5, fontSize: 24, fontWeight: "900" },
+  momentumAttribute: { borderWidth: 1.5 },
+  momentumImpact: { alignSelf: "flex-start", marginTop: 8, borderRadius: 99, backgroundColor: "#176D49", paddingHorizontal: 10, paddingVertical: 6 },
+  momentumImpactNegative: { backgroundColor: "#A53A32" },
+  momentumImpactNeutral: { backgroundColor: "#65736C" },
+  momentumImpactText: { color: "#FFFFFF", fontSize: 9, lineHeight: 11, fontWeight: "900", letterSpacing: .5 },
+  breakdownBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(3,18,13,.72)" },
+  breakdownSheet: { maxHeight: "88%", borderTopLeftRadius: 26, borderTopRightRadius: 26, borderWidth: 1, borderBottomWidth: 0, borderColor: "#9A713B", backgroundColor: "#0A3026", paddingHorizontal: 20, paddingTop: 10 },
+  breakdownHandle: { alignSelf: "center", width: 54, height: 5, marginBottom: 14, borderRadius: 99, backgroundColor: "rgba(255,255,255,.28)" },
+  breakdownHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  breakdownEyebrow: { color: "#D6A72D", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
+  breakdownTitle: { marginTop: 3, color: "#FFFFFF", fontFamily: "serif", fontSize: 25, lineHeight: 31, fontWeight: "900" },
+  breakdownClose: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: "rgba(255,255,255,.08)" },
+  breakdownScroll: { flexShrink: 1, marginTop: 8 },
+  breakdownScrollContent: { paddingBottom: 4 },
+  breakdownDescription: { marginBottom: 8, color: "#BED2C9", fontSize: 12, lineHeight: 18 },
+  breakdownRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,.16)" },
+  breakdownRowStrong: { marginTop: 3, borderTopColor: "#B8874B" },
+  breakdownRowLabel: { minWidth: 0, flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7 },
+  breakdownLabel: { color: "#F2F7F4", fontSize: 12, fontWeight: "700" },
+  breakdownDetail: { color: "#9FB7AD", fontSize: 11, fontVariant: ["tabular-nums"] },
+  breakdownChip: { overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,.18)", borderRadius: 99, backgroundColor: "rgba(255,255,255,.08)", paddingHorizontal: 7, paddingVertical: 3, color: "#E8F0EC", fontSize: 9, fontWeight: "900" },
+  breakdownValue: { color: "#FFFFFF", fontSize: 14, fontWeight: "900", fontVariant: ["tabular-nums"] },
+  breakdownStrong: { fontWeight: "900" },
+  breakdownPositive: { color: "#42E18D" },
+  breakdownNegative: { color: "#FF8F82" },
+  breakdownDisplayed: { minHeight: 58, marginTop: 3, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#9A7412", borderRadius: 12, backgroundColor: "rgba(139,105,15,.18)", paddingHorizontal: 13 },
+  breakdownDisplayedLabel: { color: "#FFD447", fontSize: 11, fontWeight: "900", letterSpacing: .8 },
+  breakdownDisplayedValue: { color: "#FFD447", fontFamily: "serif", fontSize: 25, fontWeight: "900" },
+  breakdownNote: { flexDirection: "row", alignItems: "center", gap: 11, marginTop: 14, borderWidth: 1, borderColor: "#218656", borderRadius: 12, backgroundColor: "#08281F", padding: 12 },
+  breakdownNoteIcon: { width: 25, height: 25, overflow: "hidden", borderWidth: 2, borderColor: "#F0BE32", borderRadius: 13, color: "#F0BE32", textAlign: "center", textAlignVertical: "center", fontFamily: "serif", fontSize: 14, lineHeight: 21, fontWeight: "900" },
+  breakdownNoteText: { flex: 1, color: "#D6E6DF", fontSize: 11, lineHeight: 16 },
   careerStats: { flexDirection: "row", borderWidth: 1, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 6 },
   careerStat: { flex: 1, minWidth: 0, alignItems: "center" },
   careerValue: { fontSize: 21, fontWeight: "900" },
