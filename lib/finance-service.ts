@@ -132,7 +132,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     db().prepare(`SELECT e.*,p.display_name player_name,m.title match_title,m.match_at FROM financial_expenses e LEFT JOIN players p ON p.id=e.player_id LEFT JOIN scheduled_matches m ON m.id=e.match_id WHERE e.scope_id=? AND e.competence=? ORDER BY e.due_date,e.created_at`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT m.*,p.display_name player_name FROM financial_movements m LEFT JOIN players p ON p.id=m.player_id WHERE m.scope_id=? AND substr(m.occurred_at,1,7)=? ORDER BY m.occurred_at DESC,m.created_at DESC`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT * FROM financial_recurring_expenses WHERE scope_id=? ORDER BY active DESC,description`).bind(FINANCIAL_SCOPE).all(),
-    db().prepare(`SELECT p.id,p.display_name,p.type,p.active,f.monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.deleted_at IS NULL ORDER BY p.display_name`).bind(FINANCIAL_SCOPE).all(),
+    db().prepare(`SELECT p.id,p.display_name,p.type,p.primary_position,p.active,f.monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.deleted_at IS NULL ORDER BY p.display_name`).bind(FINANCIAL_SCOPE).all(),
     db().prepare(`SELECT id,title,match_at FROM scheduled_matches WHERE status<>'CANCELLED' ORDER BY match_at DESC LIMIT 30`).all(),
     db().prepare(`SELECT id,snapshot,closed_at FROM financial_monthly_closures WHERE scope_id=? AND competence=?`).bind(FINANCIAL_SCOPE, competence).first<any>(),
   ]);
@@ -147,7 +147,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     summary, charges, expenses,
     movements: movementRows.results.map((row: any) => ({ id: row.id, direction: row.direction, category: row.category, description: row.description, amountCents: Number(row.amount_cents), occurredAt: row.occurred_at, method: row.method, playerId: row.player_id, playerName: row.player_name, chargeId: row.charge_id, paymentId: row.payment_id, expenseId: row.expense_id, status: row.status })),
     recurringExpenses: recurringRows.results.map((row: any) => ({ id: row.id, description: row.description, category: row.category, amountCents: Number(row.amount_cents), recurrence: row.recurrence, dueDay: Number(row.due_day), supplier: row.supplier, notes: row.notes, active: !!row.active })),
-    players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })).sort((left, right) => portugueseNameCollator.compare(left.displayName, right.displayName)),
+    players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, primaryPosition: row.primary_position, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })).sort((left, right) => portugueseNameCollator.compare(left.displayName, right.displayName)),
     matches: matchRows.results.map((row: any) => ({ id: row.id, title: row.title, matchAt: row.match_at })),
     closure: closure ? { id: closure.id, ...closureSnapshot, closedAt: closure.closed_at, isOutdated: closureOutdated, liveSummary: summary, liveMonthlyPlayers: monthlyPlayers } : null,
   };
@@ -428,7 +428,7 @@ export async function createExpense(payload: any, admin: any) {
     playerId = text(payload.playerId, "goleiro", 80);
     matchId = text(payload.matchId, "partida", 80);
     const [player, match] = await Promise.all([
-      db().prepare(`SELECT id,display_name FROM players WHERE id=? AND type='goalkeeper' AND active=1 AND deleted_at IS NULL`).bind(playerId).first<any>(),
+      db().prepare(`SELECT id,display_name FROM players WHERE id=? AND type='casual' AND primary_position='Goleiro' AND active=1 AND deleted_at IS NULL`).bind(playerId).first<any>(),
       db().prepare(`SELECT id,title FROM scheduled_matches WHERE id=? AND status<>'CANCELLED'`).bind(matchId).first<any>(),
     ]);
     if (!player) throw new FinanceError("Selecione um jogador cadastrado como goleiro avulso.", 404);
