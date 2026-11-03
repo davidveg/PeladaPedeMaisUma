@@ -54,6 +54,8 @@ export type InstanceConfiguration = {
   guestSelfConfirmationEnabled: boolean;
   guestSelfConfirmationLeadHours: number;
   financeEnabled: boolean;
+  automaticGuestChargeEnabled: boolean;
+  automaticGuestChargeAmountCents: number;
   delinquencyAttendanceBlockEnabled: boolean;
   allowInsecureLocalNetworkAuth: boolean;
   timezone: string;
@@ -113,6 +115,8 @@ export const DEFAULT_INSTANCE_CONFIGURATION: InstanceConfiguration = {
   guestSelfConfirmationEnabled: false,
   guestSelfConfirmationLeadHours: 48,
   financeEnabled: true,
+  automaticGuestChargeEnabled: false,
+  automaticGuestChargeAmountCents: 0,
   delinquencyAttendanceBlockEnabled: false,
   allowInsecureLocalNetworkAuth: false,
   timezone: "America/Sao_Paulo",
@@ -187,6 +191,8 @@ export function instanceConfigurationFromRow(row: InstanceConfigurationRow): Ins
     guestSelfConfirmationEnabled: Boolean(row.guest_self_confirmation_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.guestSelfConfirmationEnabled),
     guestSelfConfirmationLeadHours: Number(row.guest_self_confirmation_lead_hours ?? DEFAULT_INSTANCE_CONFIGURATION.guestSelfConfirmationLeadHours),
     financeEnabled: Boolean(row.finance_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.financeEnabled),
+    automaticGuestChargeEnabled: Boolean(row.automatic_guest_charge_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.automaticGuestChargeEnabled),
+    automaticGuestChargeAmountCents: Number(row.automatic_guest_charge_amount_cents ?? DEFAULT_INSTANCE_CONFIGURATION.automaticGuestChargeAmountCents),
     delinquencyAttendanceBlockEnabled: Boolean(row.delinquency_attendance_block_enabled ?? DEFAULT_INSTANCE_CONFIGURATION.delinquencyAttendanceBlockEnabled),
     allowInsecureLocalNetworkAuth: Boolean(row.allow_insecure_local_network_auth ?? DEFAULT_INSTANCE_CONFIGURATION.allowInsecureLocalNetworkAuth),
     timezone: value("timezone", DEFAULT_INSTANCE_CONFIGURATION.timezone),
@@ -273,6 +279,8 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
     guestSelfConfirmationEnabled: source.guestSelfConfirmationEnabled === true,
     guestSelfConfirmationLeadHours: Number(source.guestSelfConfirmationLeadHours ?? DEFAULT_INSTANCE_CONFIGURATION.guestSelfConfirmationLeadHours),
     financeEnabled: source.financeEnabled !== false,
+    automaticGuestChargeEnabled: source.automaticGuestChargeEnabled === true,
+    automaticGuestChargeAmountCents: Number(source.automaticGuestChargeAmountCents ?? DEFAULT_INSTANCE_CONFIGURATION.automaticGuestChargeAmountCents),
     delinquencyAttendanceBlockEnabled: source.delinquencyAttendanceBlockEnabled === true,
     allowInsecureLocalNetworkAuth: source.allowInsecureLocalNetworkAuth === true,
     timezone: text("timezone", 80, DEFAULT_INSTANCE_CONFIGURATION.timezone),
@@ -308,6 +316,12 @@ export function validateInstanceConfiguration(input: unknown): { config?: Instan
   if (!Number.isInteger(config.guestSelfConfirmationLeadHours) || config.guestSelfConfirmationLeadHours < 1 || config.guestSelfConfirmationLeadHours > 720) {
     return { error: "A antecedência dos convidados deve ficar entre 1 e 720 horas." };
   }
+  if (!Number.isSafeInteger(config.automaticGuestChargeAmountCents) || config.automaticGuestChargeAmountCents < 0) {
+    return { error: "Informe um valor válido para a cobrança automática de convidados." };
+  }
+  if (config.automaticGuestChargeEnabled && config.automaticGuestChargeAmountCents <= 0) {
+    return { error: "Informe um valor maior que zero para cobrar convidados automaticamente." };
+  }
   if (!tacticalFormationInputIsValid) {
     return { error: "Cadastre entre uma e seis formações únicas, usando de 0 a 10 jogadores por posição e no máximo 14 jogadores de linha." };
   }
@@ -338,7 +352,7 @@ export const INSTANCE_CONFIGURATION_COLUMNS = [
   "app_secondary_color", "app_background_color", "app_text_color", "default_match_title",
   "default_match_weekday", "default_match_time", "default_match_location", "confirmation_lead_minutes", "manual_separation_enabled",
   "separation_drafts_enabled",
-  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "guest_self_confirmation_enabled", "guest_self_confirmation_lead_hours", "finance_enabled", "delinquency_attendance_block_enabled", "allow_insecure_local_network_auth", "timezone",
+  "guest_preconfirmation_enabled", "guest_confirmation_threshold", "guest_self_confirmation_enabled", "guest_self_confirmation_lead_hours", "finance_enabled", "automatic_guest_charge_enabled", "automatic_guest_charge_amount_cents", "delinquency_attendance_block_enabled", "allow_insecure_local_network_auth", "timezone",
 ] as const;
 
 export function instanceConfigurationValues(config: InstanceConfiguration) {
@@ -351,7 +365,7 @@ export function instanceConfigurationValues(config: InstanceConfiguration) {
     config.teamBlueColor, config.teamYellowColor, config.teamBlueName, config.teamYellowName, JSON.stringify(config.tacticalFormations), config.appName, config.appTagline,
     config.appPrimaryColor, config.appSecondaryColor, config.appBackgroundColor, config.appTextColor,
     config.defaultMatchTitle, config.defaultMatchWeekday, config.defaultMatchTime, config.defaultMatchLocation, config.confirmationLeadMinutes,
-    0, Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.guestSelfConfirmationEnabled), config.guestSelfConfirmationLeadHours, Number(config.financeEnabled), Number(config.delinquencyAttendanceBlockEnabled), Number(config.allowInsecureLocalNetworkAuth),
+    0, Number(config.separationDraftsEnabled), Number(config.guestPreconfirmationEnabled), config.guestConfirmationThreshold, Number(config.guestSelfConfirmationEnabled), config.guestSelfConfirmationLeadHours, Number(config.financeEnabled), Number(config.automaticGuestChargeEnabled), config.automaticGuestChargeAmountCents, Number(config.delinquencyAttendanceBlockEnabled), Number(config.allowInsecureLocalNetworkAuth),
     config.timezone,
   ];
 }

@@ -164,6 +164,8 @@ export const instanceConfigurations = sqliteTable("instance_configuration", {
   guestSelfConfirmationEnabled: integer("guest_self_confirmation_enabled", { mode: "boolean" }).notNull().default(false),
   guestSelfConfirmationLeadHours: integer("guest_self_confirmation_lead_hours").notNull().default(48),
   financeEnabled: integer("finance_enabled", { mode: "boolean" }).notNull().default(true),
+  automaticGuestChargeEnabled: integer("automatic_guest_charge_enabled", { mode: "boolean" }).notNull().default(false),
+  automaticGuestChargeAmountCents: integer("automatic_guest_charge_amount_cents").notNull().default(0),
   delinquencyAttendanceBlockEnabled: integer("delinquency_attendance_block_enabled", { mode: "boolean" }).notNull().default(false),
   timezone: text("timezone").notNull().default("America/Sao_Paulo"),
   updatedAt: text("updated_at").notNull(),
@@ -188,12 +190,14 @@ export const financialPlayerSettings = sqliteTable("financial_player_settings", 
 export const financialCharges = sqliteTable("financial_charges", {
   id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"),
   playerId: text("player_id"), matchId: text("match_id"), type: text("type").notNull(),
+  origin: text("origin").notNull().default("MANUAL"),
   description: text("description").notNull(), category: text("category").notNull(),
   amountCents: integer("amount_cents").notNull(), competence: text("competence").notNull(), dueDate: text("due_date").notNull(),
   status: text("status").notNull().default("PENDING"), createdByAdministratorId: text("created_by_administrator_id").notNull(),
   cancelledAt: text("cancelled_at"), cancelledByAdministratorId: text("cancelled_by_administrator_id"), cancellationReason: text("cancellation_reason"), ...timestamps,
 }, table => [
   uniqueIndex("financial_charge_monthly_unique").on(table.scopeId, table.playerId, table.type, table.competence).where(sql`${table.type} = 'MONTHLY_FEE'`),
+  uniqueIndex("financial_charge_auto_guest_unique").on(table.scopeId, table.matchId, table.playerId).where(sql`${table.type} = 'SINGLE_MATCH' AND ${table.origin} = 'AUTO_GUEST_ATTENDANCE'`),
   index("financial_charge_scope_competence_idx").on(table.scopeId, table.competence),
   index("financial_charge_player_idx").on(table.playerId, table.competence),
 ]);
@@ -214,6 +218,7 @@ export const financialRecurringExpenses = sqliteTable("financial_recurring_expen
 }, table => [index("financial_recurring_expense_scope_idx").on(table.scopeId, table.active)]);
 export const financialExpenses = sqliteTable("financial_expenses", {
   id: text("id").primaryKey(), scopeId: text("scope_id").notNull().default("instance:1"), recurringExpenseId: text("recurring_expense_id"),
+  type: text("type").notNull().default("STANDARD"), playerId: text("player_id"), matchId: text("match_id"),
   description: text("description").notNull(), category: text("category").notNull(), amountCents: integer("amount_cents").notNull(),
   competence: text("competence").notNull(), dueDate: text("due_date").notNull(), paidAt: text("paid_at"), method: text("method"),
   status: text("status").notNull().default("PENDING"), supplier: text("supplier"), notes: text("notes"),
@@ -221,6 +226,7 @@ export const financialExpenses = sqliteTable("financial_expenses", {
   paymentIdempotencyKey: text("payment_idempotency_key"), cancelledAt: text("cancelled_at"), cancelledByAdministratorId: text("cancelled_by_administrator_id"), cancellationReason: text("cancellation_reason"), ...timestamps,
 }, table => [
   uniqueIndex("financial_expense_recurring_competence_unique").on(table.scopeId, table.recurringExpenseId, table.competence).where(sql`${table.recurringExpenseId} IS NOT NULL`),
+  uniqueIndex("financial_expense_goalkeeper_match_unique").on(table.scopeId, table.matchId, table.playerId).where(sql`${table.type} = 'GOALKEEPER_SINGLE_MATCH'`),
   uniqueIndex("financial_expense_payment_idempotency_unique").on(table.scopeId, table.paymentIdempotencyKey).where(sql`${table.paymentIdempotencyKey} IS NOT NULL`),
   index("financial_expense_scope_competence_idx").on(table.scopeId, table.competence),
 ]);

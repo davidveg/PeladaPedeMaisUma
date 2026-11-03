@@ -7,6 +7,8 @@ export const FINANCIAL_SCOPE = "instance:1";
 export const PAYMENT_METHODS = new Set(["PIX", "CASH", "TRANSFER", "CARD", "OTHER"]);
 export const CHARGE_TYPES = new Set(["MONTHLY_FEE", "SINGLE_MATCH", "EXTRA", "OTHER"]);
 const EXPENSE_CATEGORIES = new Set(["FIELD", "REFEREE", "WATER", "BALLS", "BIBS", "EQUIPMENT", "SOCIAL", "MAINTENANCE", "OTHER"]);
+const EXPENSE_TYPES = new Set(["STANDARD", "GOALKEEPER_SINGLE_MATCH"]);
+const TEMPORARY_MONTHLY_CANCELLATION_REASON = "Jogador voltou a ser convidado";
 const portugueseNameCollator = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
 export class FinanceError extends Error {
@@ -102,7 +104,7 @@ function rowCharge(row: any) {
   const overdue = row.status === "PENDING" && row.due_date < new Date().toISOString().slice(0, 10);
   return {
     id: row.id, playerId: row.player_id, playerName: row.player_name || null, playerType: row.player_type || null, matchId: row.match_id,
-    type: row.type, description: row.description, category: row.category, amountCents, paidCents,
+    type: row.type, origin: row.origin || "MANUAL", description: row.description, category: row.category, amountCents, paidCents,
     remainingCents: Math.max(0, amountCents - paidCents), competence: row.competence, dueDate: row.due_date,
     status: overdue ? "OVERDUE" : row.status, storedStatus: row.status, lastPaidAt: row.last_paid_at || null, createdAt: row.created_at,
   };
@@ -111,7 +113,9 @@ function rowCharge(row: any) {
 function rowExpense(row: any) {
   const overdue = row.status === "PENDING" && row.due_date < new Date().toISOString().slice(0, 10);
   return {
-    id: row.id, recurringExpenseId: row.recurring_expense_id, description: row.description, category: row.category,
+    id: row.id, recurringExpenseId: row.recurring_expense_id, type: row.type || "STANDARD", playerId: row.player_id,
+    playerName: row.player_name || null, matchId: row.match_id, matchTitle: row.match_title || null, matchAt: row.match_at || null,
+    description: row.description, category: row.category,
     amountCents: Number(row.amount_cents), competence: row.competence, dueDate: row.due_date, paidAt: row.paid_at,
     method: row.method, status: overdue ? "OVERDUE" : row.status, storedStatus: row.status, supplier: row.supplier,
     notes: row.notes, createdAt: row.created_at,
@@ -125,7 +129,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
   const [settings, chargeRows, expenseRows, movementRows, recurringRows, playerRows, matchRows, closure] = await Promise.all([
     db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first<any>(),
     db().prepare(`SELECT c.*,p.display_name player_name,p.type player_type,COALESCE(SUM(CASE WHEN fp.status='COMPLETED' THEN fp.amount_cents ELSE 0 END),0) paid_cents,MAX(CASE WHEN fp.status='COMPLETED' THEN fp.paid_at END) last_paid_at FROM financial_charges c LEFT JOIN players p ON p.id=c.player_id LEFT JOIN financial_payments fp ON fp.charge_id=c.id WHERE c.scope_id=? AND c.competence=? GROUP BY c.id ORDER BY c.due_date,c.created_at`).bind(FINANCIAL_SCOPE, competence).all(),
-    db().prepare(`SELECT * FROM financial_expenses WHERE scope_id=? AND competence=? ORDER BY due_date,created_at`).bind(FINANCIAL_SCOPE, competence).all(),
+    db().prepare(`SELECT e.*,p.display_name player_name,m.title match_title,m.match_at FROM financial_expenses e LEFT JOIN players p ON p.id=e.player_id LEFT JOIN scheduled_matches m ON m.id=e.match_id WHERE e.scope_id=? AND e.competence=? ORDER BY e.due_date,e.created_at`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT m.*,p.display_name player_name FROM financial_movements m LEFT JOIN players p ON p.id=m.player_id WHERE m.scope_id=? AND substr(m.occurred_at,1,7)=? ORDER BY m.occurred_at DESC,m.created_at DESC`).bind(FINANCIAL_SCOPE, competence).all(),
     db().prepare(`SELECT * FROM financial_recurring_expenses WHERE scope_id=? ORDER BY active DESC,description`).bind(FINANCIAL_SCOPE).all(),
     db().prepare(`SELECT p.id,p.display_name,p.type,p.active,f.monthly_enabled,f.custom_monthly_fee_cents FROM players p LEFT JOIN financial_player_settings f ON f.player_id=p.id AND f.scope_id=? WHERE p.deleted_at IS NULL ORDER BY p.display_name`).bind(FINANCIAL_SCOPE).all(),
@@ -198,6 +202,7 @@ export async function saveSettings(payload: any, admin: any) {
   }
   const statements = [db().prepare(`UPDATE financial_settings SET default_monthly_fee_cents=?,default_due_day=?,opening_balance_cents=?,initial_competence=?,pix_key=?,updated_at=? WHERE scope_id=?`).bind(defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, now, FINANCIAL_SCOPE)];
   const normalizedPlayers: any[] = [];
+  let updatedPendingCharges = 0;
   if (Array.isArray(payload.players)) for (const item of payload.players) {
     const player: any = await db().prepare(`SELECT id,type FROM players WHERE id=? AND deleted_at IS NULL`).bind(String(item.playerId || "")).first();
     if (!player) throw new FinanceError("Um dos jogadores informados não existe.");
@@ -209,10 +214,83 @@ export async function saveSettings(payload: any, admin: any) {
     const custom = item.customMonthlyFeeCents === null || item.customMonthlyFeeCents === "" || item.customMonthlyFeeCents === undefined ? null : cents(item.customMonthlyFeeCents, "valor personalizado", true);
     statements.push(db().prepare(`INSERT INTO financial_player_settings (scope_id,player_id,monthly_enabled,custom_monthly_fee_cents,created_at,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(scope_id,player_id) DO UPDATE SET monthly_enabled=excluded.monthly_enabled,custom_monthly_fee_cents=excluded.custom_monthly_fee_cents,updated_at=excluded.updated_at`).bind(FINANCIAL_SCOPE, String(item.playerId), item.monthlyEnabled ? 1 : 0, custom, now, now));
     normalizedPlayers.push({ playerId: String(item.playerId), monthlyEnabled: !!item.monthlyEnabled, customMonthlyFeeCents: custom });
+    const effectiveMonthlyFeeCents = custom === null ? defaultMonthlyFeeCents : custom;
+    if (effectiveMonthlyFeeCents > 0) {
+      const pendingCharges = await db().prepare(`SELECT c.* FROM financial_charges c WHERE c.scope_id=? AND c.player_id=? AND c.type='MONTHLY_FEE' AND c.status='PENDING' AND c.amount_cents<>? AND NOT EXISTS (SELECT 1 FROM financial_payments p WHERE p.charge_id=c.id AND p.status='COMPLETED') AND NOT EXISTS (SELECT 1 FROM financial_monthly_closures mc WHERE mc.scope_id=c.scope_id AND mc.competence=c.competence)`).bind(FINANCIAL_SCOPE, String(item.playerId), effectiveMonthlyFeeCents).all();
+      for (const charge of pendingCharges.results as any[]) {
+        statements.push(
+          db().prepare(`UPDATE financial_charges SET amount_cents=?,updated_at=? WHERE id=? AND status='PENDING' AND NOT EXISTS (SELECT 1 FROM financial_payments p WHERE p.charge_id=financial_charges.id AND p.status='COMPLETED') AND NOT EXISTS (SELECT 1 FROM financial_monthly_closures mc WHERE mc.scope_id=financial_charges.scope_id AND mc.competence=financial_charges.competence)`).bind(effectiveMonthlyFeeCents, now, charge.id),
+          auditStatement(admin.id, "FINANCIAL_MONTHLY_CHARGE_AMOUNT_UPDATED", "financial_charge", String(charge.id), { amountCents: effectiveMonthlyFeeCents, source: "player_settings" }, { amountCents: Number(charge.amount_cents), competence: charge.competence }),
+        );
+        updatedPendingCharges++;
+      }
+    }
   }
-  statements.push(auditStatement(admin.id, "FINANCIAL_SETTINGS_UPDATED", "financial_settings", FINANCIAL_SCOPE, { defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, players: normalizedPlayers }, previous));
+  statements.push(auditStatement(admin.id, "FINANCIAL_SETTINGS_UPDATED", "financial_settings", FINANCIAL_SCOPE, { defaultMonthlyFeeCents, defaultDueDay, openingBalanceCents, initialCompetence, pixKey, players: normalizedPlayers, updatedPendingCharges }, previous));
   await db().batch(statements);
-  return { message: "Configurações financeiras salvas." };
+  const updatedMessage = updatedPendingCharges === 0 ? "" : updatedPendingCharges === 1 ? " 1 mensalidade pendente foi atualizada." : ` ${updatedPendingCharges} mensalidades pendentes foram atualizadas.`;
+  return { message: `Configurações financeiras salvas.${updatedMessage}`, updatedPendingCharges };
+}
+
+export async function addMonthlyPlayerToGeneratedCompetences(playerId: string, admin: any, fromCompetenceInput: unknown = currentCompetence()) {
+  await ensureDb();
+  const fromCompetence = normalizeCompetence(fromCompetenceInput);
+  const [financeEnabled, player, settings, playerSettings] = await Promise.all([
+    db().prepare(`SELECT finance_enabled FROM instance_configuration WHERE id=1`).first<any>(),
+    db().prepare(`SELECT id,display_name,type,active FROM players WHERE id=? AND deleted_at IS NULL`).bind(playerId).first<any>(),
+    db().prepare(`SELECT default_monthly_fee_cents,default_due_day FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first<any>(),
+    db().prepare(`SELECT custom_monthly_fee_cents FROM financial_player_settings WHERE scope_id=? AND player_id=?`).bind(FINANCIAL_SCOPE, playerId).first<any>(),
+  ]);
+  if (Number(financeEnabled?.finance_enabled ?? 1) === 0 || !player || player.type !== "monthly" || !player.active) return { created: 0, competences: [] as string[] };
+
+  const amountCents = playerSettings?.custom_monthly_fee_cents === null || playerSettings?.custom_monthly_fee_cents === undefined
+    ? Number(settings?.default_monthly_fee_cents || 0)
+    : Number(playerSettings.custom_monthly_fee_cents);
+  const now = new Date().toISOString();
+  const statements = [
+    db().prepare(`INSERT INTO financial_player_settings (scope_id,player_id,monthly_enabled,custom_monthly_fee_cents,created_at,updated_at) VALUES (?,?,1,?,?,?) ON CONFLICT(scope_id,player_id) DO UPDATE SET monthly_enabled=1,updated_at=excluded.updated_at`).bind(FINANCIAL_SCOPE, playerId, playerSettings?.custom_monthly_fee_cents ?? null, now, now),
+  ];
+  const createdCompetences: string[] = [], reactivatedCompetences: string[] = [];
+  if (amountCents > 0) {
+    const generated = await db().prepare(`SELECT c.competence,(SELECT existing.id FROM financial_charges existing WHERE existing.scope_id=c.scope_id AND existing.type='MONTHLY_FEE' AND existing.competence=c.competence AND existing.player_id=? LIMIT 1) existing_id,(SELECT existing.status FROM financial_charges existing WHERE existing.scope_id=c.scope_id AND existing.type='MONTHLY_FEE' AND existing.competence=c.competence AND existing.player_id=? LIMIT 1) existing_status,(SELECT existing.cancellation_reason FROM financial_charges existing WHERE existing.scope_id=c.scope_id AND existing.type='MONTHLY_FEE' AND existing.competence=c.competence AND existing.player_id=? LIMIT 1) existing_cancellation_reason FROM financial_charges c WHERE c.scope_id=? AND c.type='MONTHLY_FEE' AND c.competence>=? AND NOT EXISTS (SELECT 1 FROM financial_monthly_closures mc WHERE mc.scope_id=c.scope_id AND mc.competence=c.competence) GROUP BY c.competence ORDER BY c.competence`).bind(playerId, playerId, playerId, FINANCIAL_SCOPE, fromCompetence).all();
+    for (const row of generated.results as any[]) {
+      const competence = String(row.competence), dueDate = dueDateFor(competence, Number(settings?.default_due_day || 10));
+      if (!row.existing_id) {
+        const chargeId = crypto.randomUUID();
+        statements.push(
+          db().prepare(`INSERT INTO financial_charges (id,scope_id,player_id,type,description,category,amount_cents,competence,due_date,status,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,'MONTHLY_FEE',?,'MONTHLY_FEE',?,?,?,'PENDING',?,?,?)`).bind(chargeId, FINANCIAL_SCOPE, playerId, `Mensalidade de ${player.display_name}`, amountCents, competence, dueDate, admin.id, now, now),
+          auditStatement(admin.id, "FINANCIAL_MONTHLY_CHARGE_ADDED_FOR_NEW_MONTHLY_PLAYER", "financial_charge", chargeId, { playerId, competence, amountCents, dueDate, source: "player_became_monthly" }),
+        );
+        createdCompetences.push(competence);
+      } else if (row.existing_status === "CANCELLED" && row.existing_cancellation_reason === TEMPORARY_MONTHLY_CANCELLATION_REASON) {
+        statements.push(
+          db().prepare(`UPDATE financial_charges SET amount_cents=?,due_date=?,status='PENDING',cancelled_at=NULL,cancelled_by_administrator_id=NULL,cancellation_reason=NULL,updated_at=? WHERE id=? AND status='CANCELLED' AND cancellation_reason=? AND NOT EXISTS (SELECT 1 FROM financial_payments p WHERE p.charge_id=financial_charges.id AND p.status='COMPLETED')`).bind(amountCents, dueDate, now, row.existing_id, TEMPORARY_MONTHLY_CANCELLATION_REASON),
+          auditStatement(admin.id, "FINANCIAL_MONTHLY_CHARGE_REACTIVATED", "financial_charge", String(row.existing_id), { status: "PENDING", playerId, competence, amountCents, dueDate, source: "player_became_monthly_again" }, { status: "CANCELLED", reason: TEMPORARY_MONTHLY_CANCELLATION_REASON }),
+        );
+        reactivatedCompetences.push(competence);
+      }
+    }
+  }
+  statements.push(auditStatement(admin.id, "FINANCIAL_MONTHLY_PLAYER_ACTIVATED", "player", playerId, { fromCompetence, amountCents, generatedCompetences: createdCompetences, reactivatedCompetences }));
+  await db().batch(statements);
+  return { created: createdCompetences.length, reactivated: reactivatedCompetences.length, competences: [...createdCompetences, ...reactivatedCompetences].sort() };
+}
+
+export async function cancelFutureMonthlyChargesForFormerMonthlyPlayer(playerId: string, admin: any, currentCompetenceInput: unknown = currentCompetence()) {
+  await ensureDb();
+  const current = normalizeCompetence(currentCompetenceInput), now = new Date().toISOString();
+  const charges = await db().prepare(`SELECT c.* FROM financial_charges c WHERE c.scope_id=? AND c.player_id=? AND c.type='MONTHLY_FEE' AND c.competence>? AND c.status='PENDING' AND NOT EXISTS (SELECT 1 FROM financial_payments p WHERE p.charge_id=c.id AND p.status='COMPLETED') AND NOT EXISTS (SELECT 1 FROM financial_monthly_closures mc WHERE mc.scope_id=c.scope_id AND mc.competence=c.competence) ORDER BY c.competence`).bind(FINANCIAL_SCOPE, playerId, current).all();
+  const statements: any[] = [], cancelledCompetences: string[] = [];
+  for (const charge of charges.results as any[]) {
+    statements.push(
+      db().prepare(`UPDATE financial_charges SET status='CANCELLED',cancelled_at=?,cancelled_by_administrator_id=?,cancellation_reason=?,updated_at=? WHERE id=? AND status='PENDING' AND NOT EXISTS (SELECT 1 FROM financial_payments p WHERE p.charge_id=financial_charges.id AND p.status='COMPLETED')`).bind(now, admin.id, TEMPORARY_MONTHLY_CANCELLATION_REASON, now, charge.id),
+      auditStatement(admin.id, "FINANCIAL_MONTHLY_CHARGE_CANCELLED_FOR_FORMER_MONTHLY_PLAYER", "financial_charge", String(charge.id), { status: "CANCELLED", reason: TEMPORARY_MONTHLY_CANCELLATION_REASON, competence: charge.competence }, { status: charge.status, amountCents: Number(charge.amount_cents) }),
+    );
+    cancelledCompetences.push(String(charge.competence));
+  }
+  statements.push(auditStatement(admin.id, "FINANCIAL_MONTHLY_PLAYER_DEACTIVATED", "player", playerId, { currentCompetence: current, cancelledCompetences }));
+  await db().batch(statements);
+  return { cancelled: cancelledCompetences.length, competences: cancelledCompetences };
 }
 
 export async function generateMonthlyFees(payload: any, admin: any) {
@@ -341,13 +419,51 @@ export async function toggleChargeExemption(payload: any, admin: any) {
 
 export async function createExpense(payload: any, admin: any) {
   await ensureDb();
+  const type = String(payload.type || "STANDARD").toUpperCase();
+  if (!EXPENSE_TYPES.has(type)) throw new FinanceError("Selecione um tipo de despesa válido.");
   const category = String(payload.category || "OTHER").toUpperCase();
   if (!EXPENSE_CATEGORIES.has(category)) throw new FinanceError("Selecione uma categoria de despesa válida.");
+  let playerId: string | null = null, matchId: string | null = null, description: string | null = null;
+  if (type === "GOALKEEPER_SINGLE_MATCH") {
+    playerId = text(payload.playerId, "goleiro", 80);
+    matchId = text(payload.matchId, "partida", 80);
+    const [player, match] = await Promise.all([
+      db().prepare(`SELECT id,display_name FROM players WHERE id=? AND type='goalkeeper' AND active=1 AND deleted_at IS NULL`).bind(playerId).first<any>(),
+      db().prepare(`SELECT id,title FROM scheduled_matches WHERE id=? AND status<>'CANCELLED'`).bind(matchId).first<any>(),
+    ]);
+    if (!player) throw new FinanceError("Selecione um jogador cadastrado como goleiro avulso.", 404);
+    if (!match) throw new FinanceError("Selecione uma partida válida e não cancelada.", 404);
+    description = `Goleiro avulso — ${player.display_name} — ${match.title}`.slice(0, 180);
+  } else description = text(payload.description, "descrição", 180);
   const id = crypto.randomUUID(), now = new Date().toISOString();
-  const data = { description: text(payload.description, "descrição", 180), category, amountCents: cents(payload.amountCents), competence: normalizeCompetence(payload.competence), dueDate: dateOnly(payload.dueDate, "data de vencimento"), supplier: text(payload.supplier, "fornecedor", 180, false), notes: text(payload.notes, "observação", 1000, false) };
+  const data = { type, playerId, matchId, description, category, amountCents: cents(payload.amountCents), competence: normalizeCompetence(payload.competence), dueDate: dateOnly(payload.dueDate, "data de vencimento"), supplier: text(payload.supplier, "fornecedor", 180, false), notes: text(payload.notes, "observação", 1000, false) };
   await assertCompetencesOpen(data.competence);
-  await db().batch([db().prepare(`INSERT INTO financial_expenses (id,scope_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(id, FINANCIAL_SCOPE, data.description, category, data.amountCents, data.competence, data.dueDate, data.supplier, data.notes, admin.id, now, now), auditStatement(admin.id, "FINANCIAL_EXPENSE_CREATED", "financial_expense", id, data)]);
+  try {
+    await db().batch([db().prepare(`INSERT INTO financial_expenses (id,scope_id,type,player_id,match_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(id, FINANCIAL_SCOPE, type, playerId, matchId, data.description, category, data.amountCents, data.competence, data.dueDate, data.supplier, data.notes, admin.id, now, now), auditStatement(admin.id, "FINANCIAL_EXPENSE_CREATED", "financial_expense", id, data)]);
+  } catch (error: any) {
+    if (type === "GOALKEEPER_SINGLE_MATCH" && /unique|constraint/i.test(String(error?.message || error))) throw new FinanceError("Este goleiro já possui uma despesa vinculada a esta partida.", 409);
+    throw error;
+  }
   return { id, message: "Despesa cadastrada." };
+}
+
+export async function cancelPendingGoalkeeperExpensesForMatch(matchId: string, admin: any) {
+  await ensureDb();
+  const rows = await db().prepare(
+    `SELECT e.*,EXISTS(SELECT 1 FROM financial_monthly_closures mc WHERE mc.scope_id=e.scope_id AND mc.competence=e.competence) closed_competence
+     FROM financial_expenses e WHERE e.scope_id=? AND e.match_id=? AND e.type='GOALKEEPER_SINGLE_MATCH'`,
+  ).bind(FINANCIAL_SCOPE, matchId).all();
+  let cancelled = 0;
+  for (const expense of rows.results as any[]) {
+    if (expense.status !== "PENDING" || expense.closed_competence) continue;
+    const now = new Date().toISOString();
+    await db().batch([
+      db().prepare(`UPDATE financial_expenses SET status='CANCELLED',cancelled_at=?,cancelled_by_administrator_id=?,cancellation_reason='Partida cancelada',updated_at=? WHERE id=? AND status='PENDING'`).bind(now, admin.id, now, expense.id),
+      auditStatement(admin.id, "FINANCIAL_EXPENSE_CANCELLED", "financial_expense", String(expense.id), { status: "CANCELLED", reason: "Partida cancelada" }, expense),
+    ]);
+    cancelled++;
+  }
+  return { cancelled };
 }
 
 export async function payExpense(payload: any, admin: any) {
@@ -363,7 +479,7 @@ export async function payExpense(payload: any, admin: any) {
   try {
     await db().batch([
       db().prepare(`UPDATE financial_expenses SET status='PAID',paid_at=?,method=?,paid_by_administrator_id=?,payment_idempotency_key=?,updated_at=? WHERE id=? AND status='PENDING'`).bind(paidAt, paymentMethod, admin.id, idempotencyKey, now, expenseId),
-      db().prepare(`INSERT INTO financial_movements (id,scope_id,direction,category,description,amount_cents,occurred_at,method,expense_id,status,created_by_administrator_id,created_at) VALUES (?,?,'OUT',?,?,?,?,?,?,'ACTIVE',?,?)`).bind(movementId, FINANCIAL_SCOPE, expense.category, expense.description, expense.amount_cents, paidAt, paymentMethod, expenseId, admin.id, now),
+      db().prepare(`INSERT INTO financial_movements (id,scope_id,direction,category,description,amount_cents,occurred_at,method,player_id,expense_id,status,created_by_administrator_id,created_at) VALUES (?,?,'OUT',?,?,?,?,?,?,?,'ACTIVE',?,?)`).bind(movementId, FINANCIAL_SCOPE, expense.category, expense.description, expense.amount_cents, paidAt, paymentMethod, expense.player_id, expenseId, admin.id, now),
       auditStatement(admin.id, "FINANCIAL_EXPENSE_PAID", "financial_expense", expenseId, { status: "PAID", paidAt, method: paymentMethod }, expense),
     ]);
   } catch (error: any) { if (/unique|constraint/i.test(String(error?.message))) return { message: "Despesa já estava paga.", idempotent: true }; throw error; }

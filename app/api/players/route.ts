@@ -6,6 +6,7 @@ import { attachHistoricalPerformance } from "../../../lib/historical-performance
 import { playerTypeValidationError } from "../../../lib/player-types";
 import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
 import { finalizeUploadAttachment, validateUploadAttachment } from "../../../lib/upload-lifecycle";
+import { addMonthlyPlayerToGeneratedCompetences, cancelFutureMonthlyChargesForFormerMonthlyPlayer } from "../../../lib/finance-service";
 
 const map = (row: any) => ({
   ...row,
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
     .bind(id, player.fullName || player.displayName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type || "guest", player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, player.photoUrl || null, player.active === false ? 0 : 1, player.notes || null, now, now).run();
   await finalizeUploadAttachment(uploadReference, null);
   await audit(admin.id, "CREATE", "player", id, { ...player, ...values });
+  if (player.type === "monthly" && player.active !== false) await addMonthlyPlayerToGeneratedCompetences(id, admin);
   return Response.json({ id }, { status: 201 });
 }
 
@@ -96,6 +98,8 @@ export async function PUT(request: Request) {
     .bind(player.fullName, player.displayName, player.nickname || null, JSON.stringify(player.aliases || []), player.type, player.primaryPosition, secondaryPosition, values.speed, values.skill, values.marking, values.tacticalIntelligence, values.competitiveness, values.goalkeeperPositioning, values.goalExit, values.goalkeeperSafety, values.goalkeeperLeadership, nextPhotoUrl, player.active ? 1 : 0, player.notes || null, new Date().toISOString(), player.id).run();
   if (photoChanged) await finalizeUploadAttachment(uploadReference, previous.photo_url);
   await audit(admin.id, "UPDATE", "player", player.id, { displayName: player.displayName, type: player.type, primaryPosition: player.primaryPosition, secondaryPosition, ...values, active: Boolean(player.active), photoUrl: player.photoUrl || null }, previous);
+  if (player.type === "monthly" && player.active && (previous.type !== "monthly" || !previous.active)) await addMonthlyPlayerToGeneratedCompetences(String(player.id), admin);
+  if (previous.type === "monthly" && (player.type !== "monthly" || !player.active)) await cancelFutureMonthlyChargesForFormerMonthlyPlayer(String(player.id), admin);
   return Response.json({ ok: true });
 }
 

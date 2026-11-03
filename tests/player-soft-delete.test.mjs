@@ -34,6 +34,14 @@ test("exclusão lógica exige jogador inativo e sem conta associada", async () =
       .bind("linked-account", "linked@example.com", await hashPassword("senha-jogador-123"), 1, now, now).run();
     await db().prepare(`INSERT INTO player_account_links (player_id,account_type,account_id,created_at) VALUES (?,?,?,?)`)
       .bind("linked-player", "member", "linked-account", now).run();
+    const historicalStanding = playerId => ({
+      player: { id: playerId, displayName: playerId === "linked-player" ? "Jogador Vinculado" : "Jogador Histórico", type: "monthly", primaryPosition: "Defesa" },
+      resultMomentum: 0.2, votingMomentum: 0.3, totalMomentum: 0.5, games: 3, wins: 2, draws: 0, losses: 1,
+    });
+    await db().prepare(`INSERT INTO monthly_career_awards (month,year,snapshot,finalized_at) VALUES (?,?,?,?)`)
+      .bind("2099-01", 2099, JSON.stringify({ month: "2099-01", matchCount: 3, formation: { goalkeepers: 0, defenders: 2, midfielders: 0, attackers: 0 }, playerOfMonth: historicalStanding("linked-player"), selection: [{ ...historicalStanding("linked-player"), role: "Defesa" }, { ...historicalStanding("eligible-player"), role: "Defesa" }] }), now).run();
+    await db().prepare(`INSERT INTO career_season_awards (season_number,year,started_at,ended_at,snapshot,finalized_by_administrator_id,finalized_at) VALUES (?,?,?,?,?,?,?)`)
+      .bind(99, 2099, "2099-01-01", "2099-12-31", JSON.stringify({ annualMvp: [{ player: historicalStanding("linked-player").player }, { player: historicalStanding("eligible-player").player }] }), adminId, now).run();
 
     const unauthenticated = await playersRoute.DELETE(deleteRequest("eligible-player"));
     assert.equal(unauthenticated.status, 401);
@@ -45,6 +53,17 @@ test("exclusão lógica exige jogador inativo e sem conta associada", async () =
     const linked = await playersRoute.DELETE(deleteRequest("linked-player", cookie));
     assert.equal(linked.status, 409);
     assert.match((await linked.json()).error, /Desassocie a conta/);
+
+    const inactiveStatistics = await statisticsRoute.GET(new Request("https://pelada.example/api/public-statistics?from=2000-01-01&to=2099-12-31", { headers: { cookie } }));
+    assert.equal(inactiveStatistics.status, 200);
+    const inactiveStatisticsPayload = await inactiveStatistics.json();
+    assert.equal(inactiveStatisticsPayload.players.some(player => player.id === "linked-player"), true, "jogador somente inativado deve continuar no histórico");
+    assert.equal(inactiveStatisticsPayload.careerHighlights.history[0].playerOfMonth.player.id, "linked-player", "destaque mensal do inativo deve ser preservado");
+    assert.equal(inactiveStatisticsPayload.careerHighlights.annualMvp.some(entry => entry.player.id === "linked-player"), true, "premiação de temporada do inativo deve ser preservada");
+
+    const inactiveAdvancedStatistics = await advancedStatisticsRoute.GET(new Request("https://pelada.example/api/public-statistics/advanced?from=2000-01-01&to=2099-12-31", { headers: { cookie } }));
+    assert.equal(inactiveAdvancedStatistics.status, 200);
+    assert.equal((await inactiveAdvancedStatistics.json()).allPlayers.some(player => player.id === "linked-player"), true, "jogador somente inativado deve continuar nas estatísticas avançadas");
 
     const deleted = await playersRoute.DELETE(deleteRequest("eligible-player", cookie));
     assert.equal(deleted.status, 200);
@@ -62,13 +81,16 @@ test("exclusão lógica exige jogador inativo e sem conta associada", async () =
     assert.equal(historicalStatistics.status, 200);
     const historicalPayload = await historicalStatistics.json();
     assert.equal(historicalPayload.players.some(player => player.id === "eligible-player"), false);
-    assert.equal(historicalPayload.players.some(player => player.id === "linked-player"), false);
+    assert.equal(historicalPayload.players.some(player => player.id === "linked-player"), true);
+    assert.equal(historicalPayload.careerHighlights.history[0].playerOfMonth.player.id, "linked-player");
+    assert.equal(historicalPayload.careerHighlights.history[0].selection.some(entry => entry.player.id === "eligible-player"), false, "exclusão deve remover o jogador do destaque mensal exibido");
+    assert.equal(historicalPayload.careerHighlights.annualMvp.some(entry => entry.player.id === "eligible-player"), false, "exclusão deve remover o jogador da premiação de temporada exibida");
 
     const advancedStatistics = await advancedStatisticsRoute.GET(new Request("https://pelada.example/api/public-statistics/advanced?from=2000-01-01&to=2099-12-31", { headers: { cookie } }));
     assert.equal(advancedStatistics.status, 200);
     const advancedPayload = await advancedStatistics.json();
     assert.equal(advancedPayload.allPlayers.some(player => player.id === "eligible-player"), false);
-    assert.equal(advancedPayload.allPlayers.some(player => player.id === "linked-player"), false);
+    assert.equal(advancedPayload.allPlayers.some(player => player.id === "linked-player"), true);
 
     const audit = await db().prepare(`SELECT action,entity_id,new_data FROM audit_logs WHERE action='DELETE' AND entity_id=?`).bind("eligible-player").first();
     assert.equal(audit.action, "DELETE");

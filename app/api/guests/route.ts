@@ -3,6 +3,7 @@ import { normalizeName } from "../../../lib/football";
 import { ensureCareerSeasonCurrent } from "../../../lib/career-season";
 import { isPlayerType, playerTypeValidationError } from "../../../lib/player-types";
 import { normalizeSecondaryPosition, secondaryPositionValidationError } from "../../../lib/player-positions";
+import { addMonthlyPlayerToGeneratedCompetences } from "../../../lib/finance-service";
 
 const map = (row: any) => ({
   ...row,
@@ -67,5 +68,6 @@ export async function POST(request: Request) {
     .bind(id, String(payload.fullName || displayName).trim(), displayName, String(payload.nickname || "").trim() || null, "[]", playerType, payload.primaryPosition, secondaryPosition, speed, skill, marking, tacticalIntelligence, competitiveness, goalkeeperPositioning, goalExit, goalkeeperSafety, goalkeeperLeadership, null, 1, String(payload.notes || "").trim() || null, now, now).run();
   const created = await db().prepare("SELECT * FROM players WHERE id=?").bind(id).first();
   await audit(admin.id, "CREATE", "player", id, { displayName, type: playerType, primaryPosition: payload.primaryPosition, secondaryPosition, speed, skill, marking, tacticalIntelligence, competitiveness, goalkeeperPositioning, goalExit, goalkeeperSafety, goalkeeperLeadership });
+  if (playerType === "monthly") await addMonthlyPlayerToGeneratedCompetences(id, admin);
   return Response.json({ player: map(created), reused: false }, { status: 201 });
 }

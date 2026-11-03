@@ -35,7 +35,7 @@ export async function PUT(request: Request) {
         matchId: String(result.match.id),
       });
     }
-    return Response.json({ ok: true, changed: result.changed, attendance: result.attendance }, { headers: noStore });
+    return Response.json({ ok: true, changed: result.changed, attendance: result.attendance, automaticGuestCharge: result.automaticGuestCharge }, { headers: noStore });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Não foi possível registrar a resposta." }, { status: Number(error?.status || 400), headers: noStore });
   }

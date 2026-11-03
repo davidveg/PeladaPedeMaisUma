@@ -30,6 +30,8 @@ test("mantém a identidade e o domingo atuais como padrão retrocompatível", ()
   assert.equal(config.guestSelfConfirmationLeadHours, 48);
   assert.equal(config.guestConfirmationThreshold, 16);
   assert.equal(config.financeEnabled, true);
+  assert.equal(config.automaticGuestChargeEnabled, false);
+  assert.equal(config.automaticGuestChargeAmountCents, 0);
   assert.equal(config.delinquencyAttendanceBlockEnabled, false);
   assert.equal(config.allowInsecureLocalNetworkAuth, false);
   assert.equal(config.shareImageUrl, null);
@@ -230,6 +232,24 @@ test("migração mantém o módulo financeiro ativo nas instalações existentes
     await bindings.DB.exec(await readFile(new URL("../drizzle/0036_finance_toggle.sql", import.meta.url), "utf8"));
     const row = await bindings.DB.prepare("SELECT finance_enabled FROM instance_configuration WHERE id=1").first();
     assert.deepEqual({ ...row }, { finance_enabled: 1 });
+  } finally {
+    bindings.DB.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("migração adiciona cobrança automática de convidados desativada e preserva receitas existentes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pelada-automatic-guest-charges-"));
+  const bindings = await createSelfhostBindings(directory);
+  try {
+    await bindings.DB.exec(`CREATE TABLE instance_configuration (id INTEGER PRIMARY KEY); INSERT INTO instance_configuration (id) VALUES (1);`);
+    await bindings.DB.exec(`CREATE TABLE financial_charges (id TEXT PRIMARY KEY,scope_id TEXT NOT NULL,player_id TEXT,match_id TEXT,type TEXT NOT NULL);`);
+    await bindings.DB.exec(`INSERT INTO financial_charges (id,scope_id,player_id,match_id,type) VALUES ('legacy','instance:1','player','match','SINGLE_MATCH');`);
+    await bindings.DB.exec(await readFile(new URL("../drizzle/0061_automatic_guest_charges.sql", import.meta.url), "utf8"));
+    const config = await bindings.DB.prepare("SELECT automatic_guest_charge_enabled,automatic_guest_charge_amount_cents FROM instance_configuration WHERE id=1").first();
+    const charge = await bindings.DB.prepare("SELECT origin FROM financial_charges WHERE id='legacy'").first();
+    assert.deepEqual({ ...config }, { automatic_guest_charge_enabled: 0, automatic_guest_charge_amount_cents: 0 });
+    assert.deepEqual({ ...charge }, { origin: "MANUAL" });
   } finally {
     bindings.DB.close();
     await rm(directory, { recursive: true, force: true });

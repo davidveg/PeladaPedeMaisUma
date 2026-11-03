@@ -22,9 +22,9 @@ export async function GET(request: Request) {
   const selectedYear = Number(to.slice(0, 4));
   const yearFrom = `${selectedYear}-01-01`, yearTo = `${selectedYear}-12-31`;
   const [playerRows, matchRows, contributionRows, yearMatchRows, careerRow] = await Promise.all([
-    // O histórico das partidas permanece nos snapshots, mas somente jogadores atuais
-    // podem aparecer em rankings, comparações e seletores.
-    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE active=1 AND deleted_at IS NULL ORDER BY display_name`).all(),
+    // Inativação afeta apenas a elegibilidade futura. Enquanto o cadastro não for
+    // excluído, o jogador continua fazendo parte de rankings e retratos históricos.
+    db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all(),
     db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?

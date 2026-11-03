@@ -8,6 +8,8 @@ import { getRuntimeBindings } from "../../../../lib/runtime-bindings";
 import { instanceConfigurationFromRow } from "../../../../lib/instance-config";
 import { refreshMatchWeather } from "../../../../lib/match-weather";
 import { refreshAutomaticAbsencesForMatch } from "../../../../lib/player-absence";
+import { cancelAutomaticGuestChargesForMatch } from "../../../../lib/guest-finance";
+import { cancelPendingGoalkeeperExpensesForMatch } from "../../../../lib/finance-service";
 
 const noStore = { "cache-control": "no-store" };
 
@@ -76,7 +78,10 @@ export async function PATCH(request: Request) {
           matchId: String(result.match.id),
         });
       }
-      return Response.json({ ok: true, changed: result.changed, message: "Presença atualizada." }, { headers: noStore });
+      const message = result.automaticGuestCharge?.reason === "closed_competence"
+        ? "Presença atualizada, mas a cobrança não foi gerada porque a competência financeira está fechada."
+        : "Presença atualizada.";
+      return Response.json({ ok: true, changed: result.changed, message, automaticGuestCharge: result.automaticGuestCharge }, { headers: noStore });
     }
     if (action === "close") {
       const result = await createSeparationFromMatch(String(payload.matchId || ""), admin, {
@@ -136,6 +141,8 @@ export async function PATCH(request: Request) {
         await audit(admin.id, "MATCH_CANCELLED", "scheduled_match", id, {
           status: "CANCELLED", cancellationType: "AFTER_TEAMS_WITHOUT_RESULT", separationId: String(previous.separation_id),
         }, previous);
+        await cancelAutomaticGuestChargesForMatch(previous, admin.id);
+        await cancelPendingGoalkeeperExpensesForMatch(id, admin);
         await broadcastAccountNotification({
           type: "MATCH_CANCELLED", title: "Partida cancelada",
           body: `${previous.title} foi cancelada após a publicação dos times.`, matchId: id,
@@ -148,6 +155,8 @@ export async function PATCH(request: Request) {
         db().prepare(`DELETE FROM match_separation_drafts WHERE match_id=?`).bind(id),
       ]);
       await audit(admin.id, "MATCH_CANCELLED", "scheduled_match", id, { status: "CANCELLED" }, previous);
+      await cancelAutomaticGuestChargesForMatch(previous, admin.id);
+      await cancelPendingGoalkeeperExpensesForMatch(id, admin);
       await broadcastAccountNotification({ type: "MATCH_CANCELLED", title: "Partida cancelada", body: `${previous.title} foi cancelada.`, matchId: id });
       return Response.json({ ok: true, message: "Partida cancelada." }, { headers: noStore });
     }

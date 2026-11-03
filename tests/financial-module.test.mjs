@@ -7,8 +7,8 @@ import test from "node:test";
 import { createSelfhostBindings } from "../server/selfhost-runtime.mjs";
 
 registerHooks({ resolve(specifier, context, nextResolve) { try { return nextResolve(specifier, context); } catch (error) { if (specifier.startsWith(".") && !/\.[a-z]+$/i.test(specifier)) return nextResolve(`${specifier}.ts`, context); throw error; } } });
-const [{ setRuntimeBindings }, database, financeRoute] = await Promise.all([
-  import("../lib/runtime-bindings.ts"), import("../lib/database.ts"), import("../app/api/finance/route.ts"),
+const [{ setRuntimeBindings }, database, financeRoute, playersRoute, financeService] = await Promise.all([
+  import("../lib/runtime-bindings.ts"), import("../lib/database.ts"), import("../app/api/finance/route.ts"), import("../app/api/players/route.ts"), import("../lib/finance-service.ts"),
 ]);
 const { db, ensureDb, hashPassword } = database;
 
@@ -50,6 +50,115 @@ test("gera mensalidades com valor personalizado e impede competência duplicada"
     assert.deepEqual(view.charges.map(item => item.playerName), ["Álvaro", "Zulu"]);
     assert.deepEqual(view.players.slice(0, 2).map(item => item.displayName), ["Álvaro", "Zulu"]);
     assert.equal((await post({ action: "generate-monthly", competence: "2026-08" })).status, 409);
+  } finally { await f.cleanup(); }
+});
+
+test("propaga novos valores somente para mensalidades abertas sem pagamento", async () => {
+  const f = await fixture();
+  try {
+    const initialSettings = {
+      action: "save-settings", defaultMonthlyFeeCents: 10000, defaultDueDay: 10, openingBalanceCents: 0, initialCompetence: "2026-08",
+      players: [{ playerId: f.playerA, monthlyEnabled: true, customMonthlyFeeCents: null }, { playerId: f.playerB, monthlyEnabled: true, customMonthlyFeeCents: 8000 }],
+    };
+    await post(initialSettings);
+    for (const competence of ["2026-08", "2026-09", "2026-10", "2026-11"]) await post({ action: "generate-monthly", competence });
+
+    const augustA = await db().prepare(`SELECT id FROM financial_charges WHERE player_id=? AND competence='2026-08'`).bind(f.playerA).first("id");
+    const septemberB = await db().prepare(`SELECT id FROM financial_charges WHERE player_id=? AND competence='2026-09'`).bind(f.playerB).first("id");
+    await post({ action: "register-payment", chargeId: augustA, amountCents: 10000, paidAt: "2026-08-10", method: "PIX", idempotencyKey: "paid-charge-history" });
+    await post({ action: "register-payment", chargeId: septemberB, amountCents: 1000, paidAt: "2026-09-10", method: "PIX", idempotencyKey: "partial-charge-history" });
+    await post({ action: "close-month", competence: "2026-10" });
+
+    const response = await post({
+      ...initialSettings, defaultMonthlyFeeCents: 9000,
+      players: [{ playerId: f.playerA, monthlyEnabled: true, customMonthlyFeeCents: null }, { playerId: f.playerB, monthlyEnabled: true, customMonthlyFeeCents: 6000 }],
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).updatedPendingCharges, 4);
+
+    const charges = await db().prepare(`SELECT player_id,competence,amount_cents,status FROM financial_charges ORDER BY competence,player_id`).all();
+    assert.deepEqual(charges.results.map(row => ({ ...row })), [
+      { player_id: f.playerA, competence: "2026-08", amount_cents: 10000, status: "PAID" },
+      { player_id: f.playerB, competence: "2026-08", amount_cents: 6000, status: "PENDING" },
+      { player_id: f.playerA, competence: "2026-09", amount_cents: 9000, status: "PENDING" },
+      { player_id: f.playerB, competence: "2026-09", amount_cents: 8000, status: "PENDING" },
+      { player_id: f.playerA, competence: "2026-10", amount_cents: 10000, status: "PENDING" },
+      { player_id: f.playerB, competence: "2026-10", amount_cents: 8000, status: "PENDING" },
+      { player_id: f.playerA, competence: "2026-11", amount_cents: 9000, status: "PENDING" },
+      { player_id: f.playerB, competence: "2026-11", amount_cents: 6000, status: "PENDING" },
+    ]);
+    assert.equal(await db().prepare(`SELECT amount_cents FROM financial_payments WHERE charge_id=? AND status='COMPLETED'`).bind(augustA).first("amount_cents"), 10000);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_MONTHLY_CHARGE_AMOUNT_UPDATED'`).first("total"), 4);
+  } finally { await f.cleanup(); }
+});
+
+test("inclui novo mensalista nas competências atual e futuras que já foram geradas", async () => {
+  const f = await fixture();
+  try {
+    const current = financeService.currentCompetence(), previous = shiftCompetence(current, -1), next = shiftCompetence(current, 1), closedFuture = shiftCompetence(current, 2), later = shiftCompetence(current, 3);
+    await db().prepare(`UPDATE players SET type='guest' WHERE id=?`).bind(f.playerB).run();
+    await post({
+      action: "save-settings", defaultMonthlyFeeCents: 7000, defaultDueDay: 10, openingBalanceCents: 0, initialCompetence: previous,
+      players: [{ playerId: f.playerA, monthlyEnabled: true }, { playerId: f.playerB, monthlyEnabled: true }],
+    });
+    for (const competence of [previous, current, next, closedFuture]) await post({ action: "generate-monthly", competence });
+    await post({ action: "close-month", competence: closedFuture });
+
+    const response = await playersRoute.PUT(new Request("https://pelada.example/api/players", {
+      method: "PUT", headers: { "content-type": "application/json", cookie: "ppm_session=finance-admin-session" },
+      body: JSON.stringify({ id: f.playerB, fullName: "Jogador B", displayName: "Jogador B", type: "monthly", primaryPosition: "Ataque", secondaryPosition: null, speed: 3, skill: 3, marking: 3, tacticalIntelligence: 3, competitiveness: 3, active: true }),
+    }));
+    assert.equal(response.status, 200);
+
+    let charges = await db().prepare(`SELECT competence,amount_cents,status FROM financial_charges WHERE player_id=? ORDER BY competence`).bind(f.playerB).all();
+    assert.deepEqual(charges.results.map(row => ({ ...row })), [
+      { competence: current, amount_cents: 7000, status: "PENDING" },
+      { competence: next, amount_cents: 7000, status: "PENDING" },
+    ]);
+    assert.equal(await db().prepare(`SELECT monthly_enabled FROM financial_player_settings WHERE player_id=?`).bind(f.playerB).first("monthly_enabled"), 1);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_MONTHLY_CHARGE_ADDED_FOR_NEW_MONTHLY_PLAYER' AND entity_type='financial_charge'`).first("total"), 2);
+
+    assert.equal((await post({ action: "generate-monthly", competence: later })).status, 200);
+    charges = await db().prepare(`SELECT competence FROM financial_charges WHERE player_id=? ORDER BY competence`).bind(f.playerB).all();
+    assert.deepEqual(charges.results.map(row => row.competence), [current, next, later]);
+  } finally { await f.cleanup(); }
+});
+
+test("preserva o histórico e cancela somente mensalidades futuras sem pagamento quando o mensalista volta a convidado", async () => {
+  const f = await fixture();
+  try {
+    const current = financeService.currentCompetence(), next = shiftCompetence(current, 1), paidFuture = shiftCompetence(current, 2), closedFuture = shiftCompetence(current, 3);
+    await db().prepare(`UPDATE players SET type='guest' WHERE id=?`).bind(f.playerB).run();
+    await post({
+      action: "save-settings", defaultMonthlyFeeCents: 7000, defaultDueDay: 10, openingBalanceCents: 0, initialCompetence: current,
+      players: [{ playerId: f.playerA, monthlyEnabled: true }, { playerId: f.playerB, monthlyEnabled: true }],
+    });
+    for (const competence of [current, next, paidFuture, closedFuture]) await post({ action: "generate-monthly", competence });
+    await post({ action: "close-month", competence: closedFuture });
+
+    assert.equal((await updatePlayerType(f.playerB, "monthly")).status, 200);
+    const paidFutureChargeId = await db().prepare(`SELECT id FROM financial_charges WHERE player_id=? AND competence=?`).bind(f.playerB, paidFuture).first("id");
+    assert.equal((await post({ action: "register-payment", chargeId: paidFutureChargeId, amountCents: 1000, paidAt: `${current}-15`, method: "PIX", idempotencyKey: "temporary-monthly-advance" })).status, 200);
+
+    assert.equal((await updatePlayerType(f.playerB, "guest")).status, 200);
+    let charges = await db().prepare(`SELECT competence,status,cancellation_reason FROM financial_charges WHERE player_id=? ORDER BY competence`).bind(f.playerB).all();
+    assert.deepEqual(charges.results.map(row => ({ ...row })), [
+      { competence: current, status: "PENDING", cancellation_reason: null },
+      { competence: next, status: "CANCELLED", cancellation_reason: "Jogador voltou a ser convidado" },
+      { competence: paidFuture, status: "PENDING", cancellation_reason: null },
+    ]);
+    assert.equal(await db().prepare(`SELECT amount_cents FROM financial_payments WHERE charge_id=? AND status='COMPLETED'`).bind(paidFutureChargeId).first("amount_cents"), 1000);
+
+    assert.equal((await updatePlayerType(f.playerB, "monthly")).status, 200);
+    charges = await db().prepare(`SELECT competence,status,cancellation_reason FROM financial_charges WHERE player_id=? ORDER BY competence`).bind(f.playerB).all();
+    assert.deepEqual(charges.results.map(row => ({ ...row })), [
+      { competence: current, status: "PENDING", cancellation_reason: null },
+      { competence: next, status: "PENDING", cancellation_reason: null },
+      { competence: paidFuture, status: "PENDING", cancellation_reason: null },
+    ]);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM financial_charges WHERE player_id=? AND competence=?`).bind(f.playerB, next).first("total"), 1);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_MONTHLY_CHARGE_CANCELLED_FOR_FORMER_MONTHLY_PLAYER'`).first("total"), 1);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_MONTHLY_CHARGE_REACTIVATED'`).first("total"), 1);
   } finally { await f.cleanup(); }
 });
 
@@ -268,3 +377,5 @@ test("cancelamento exige estorno, mantém auditoria e fechamento mensal é idemp
 function request(body, cookie = "ppm_session=finance-admin-session") { return new Request("https://pelada.example/api/finance", { method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify(body) }); }
 function post(body) { return financeRoute.POST(request(body)); }
 async function get(competence) { const response = await financeRoute.GET(new Request(`https://pelada.example/api/finance?competence=${competence}`, { headers: { cookie: "ppm_session=finance-admin-session" } })); assert.equal(response.status, 200); return response.json(); }
+function shiftCompetence(competence, delta) { const [year, month] = competence.split("-").map(Number); return new Date(Date.UTC(year, month - 1 + delta, 1)).toISOString().slice(0, 7); }
+function updatePlayerType(id, type) { return playersRoute.PUT(new Request("https://pelada.example/api/players", { method: "PUT", headers: { "content-type": "application/json", cookie: "ppm_session=finance-admin-session" }, body: JSON.stringify({ id, fullName: "Jogador B", displayName: "Jogador B", type, primaryPosition: "Ataque", secondaryPosition: null, speed: 3, skill: 3, marking: 3, tacticalIntelligence: 3, competitiveness: 3, active: true }) })); }

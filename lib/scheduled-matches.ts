@@ -6,6 +6,7 @@ import { attachHistoricalPerformance } from "./historical-performance-store";
 import { balanceTeams, defaultConfig, recalculateTeamBalance, type Config, type Player } from "./football";
 import { buildMatchAttendanceShareMessage } from "./match-attendance-sharing";
 import { instanceConfigurationFromRow } from "./instance-config";
+import { syncAutomaticGuestCharge } from "./guest-finance";
 import { refreshMatchWeather, weatherFromRow } from "./match-weather";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
@@ -188,14 +189,20 @@ export async function setAttendance(params: {
       throw error;
     }
   }
+  const financialSync = await syncAutomaticGuestCharge({
+    match, player, status, configuration: instance,
+    actorId: administratorOverride || account.accountType === "administrator" || account.role === "moderator" ? account.id : null,
+  });
   await audit(administratorOverride || account.accountType === "administrator" ? account.id : null, "MATCH_ATTENDANCE_CHANGED", "scheduled_match", matchId, {
     playerId, playerName: player.display_name, status, changeCount: nextChanges, administratorOverride,
+    automaticGuestCharge: financialSync,
   }, previous ? { status: previous.status, changeCount: previous.change_count } : undefined);
   await db().prepare(`DELETE FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`).bind(matchId, playerId).run();
   return {
     changed: true,
     playerName: String(player.display_name),
     attendance: { id, playerId, playerName: player.display_name, status, changeCount: nextChanges, maxChanges: Number(match.max_changes) },
+    automaticGuestCharge: financialSync,
     match,
   };
 }
@@ -472,6 +479,9 @@ export async function replaceClosedMatchPlayer(params: {
     db().prepare(`DELETE FROM match_guest_preconfirmations WHERE match_id=? AND player_id=?`).bind(matchId, incomingPlayerId),
     db().prepare(`UPDATE scheduled_matches SET updated_at=? WHERE id=? AND status='CLOSED' AND separation_id=?`).bind(now, matchId, match.separation_id),
   ]);
+  const instance = instanceConfigurationFromRow(await db().prepare(`SELECT * FROM instance_configuration WHERE id=1`).first());
+  await syncAutomaticGuestCharge({ match, player: outgoingPlayer, status: "ABSENT", configuration: instance, actorId: params.administratorId });
+  await syncAutomaticGuestCharge({ match, player: incomingRow, status: "PRESENT", configuration: instance, actorId: params.administratorId });
   await audit(params.administratorId, "MATCH_PLAYER_REPLACED_AFTER_TEAMS", "scheduled_match", matchId, {
     separationId: String(match.separation_id), team, outgoingPlayerId, outgoingPlayerName: String(outgoingPlayer.displayName),
     incomingPlayerId, incomingPlayerName: String(incomingPlayer.displayName), balanceClassification: recalculated.rating,
