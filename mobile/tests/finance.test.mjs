@@ -24,10 +24,12 @@ test("monta a mesma parcial financeira usada pelo site", () => {
       { id: "2", playerName: "William", type: "MONTHLY_FEE", description: "Mensalidade", amountCents: 7000, paidCents: 7000, remainingCents: 0, competence: "2026-08", dueDate: "2026-08-10", status: "PAID", storedStatus: "PAID", lastPaidAt: "2026-08-02T12:00:00.000Z" },
       { id: "1", playerName: "Antonio", type: "MONTHLY_FEE", description: "Mensalidade", amountCents: 7000, paidCents: 0, remainingCents: 7000, competence: "2026-08", dueDate: "2026-08-10", status: "PENDING", storedStatus: "PENDING" },
       { id: "3", playerName: "Cussa", type: "MONTHLY_FEE", description: "Mensalidade", amountCents: 7000, paidCents: 7000, remainingCents: 0, competence: "2026-08", dueDate: "2026-08-10", status: "PAID", storedStatus: "PAID", lastPaidAt: "2026-07-28T12:00:00.000Z" },
+      { id: "4", playerName: "Beto", type: "MONTHLY_FEE", description: "Mensalidade", amountCents: 7000, paidCents: 0, remainingCents: 0, competence: "2026-08", dueDate: "2026-08-10", status: "CANCELLED", storedStatus: "CANCELLED" },
     ],
   });
   assert.match(message, /Pagamento agosto 2026/);
   assert.match(message, /1 - Antonio:\n2 - Cussa: ✅ \(antecipou\)\n3 - William: ✅/);
+  assert.doesNotMatch(message, /Beto|CANCELADO/);
   assert.match(message, /PIX para pagamento:\* vinicius\.rego@ifrj\.edu\.br/);
   assert.ok(message.includes(`Valor: ${money(7000)}`));
 });

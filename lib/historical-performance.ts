@@ -67,7 +67,8 @@ export function calculateHistoricalPerformance(matchRows: any[], contributionRow
       const won = winner === participant.team, lost = winner === "BLUE" || winner === "YELLOW" ? !won : false;
       const result = won ? 1 : lost ? -1 : 0, goalDifference = participant.team === "BLUE" ? blueScore - yellowScore : yellowScore - blueScore;
       const resultValue = won ? number(configuration.winnerBonus, .1) : lost ? number(configuration.loserPenalty, -.1) : 0;
-      const momentum = resultValue * number(configuration.resultMomentumMultiplier, 1) + number(votingMomentum.get(playerId)) * number(configuration.momentumMultiplier, 1);
+      const attendanceBonus=number(row.attendance_bonus_value ?? row.attendanceBonusValue);
+      const momentum = resultValue * number(configuration.resultMomentumMultiplier, 1) + (number(votingMomentum.get(playerId)) + attendanceBonus) * number(configuration.momentumMultiplier, 1);
       const accumulator = accumulators[playerId] ?? { position: participant.position, entries: [] };
       if (!accumulator.position) accumulator.position = participant.position;
       accumulator.entries.push({ date, result, goalDifference, goals: goals.get(playerId) || 0, assists: assists.get(playerId) || 0, peerPoints: peer.get(playerId) || 0, peerPossible: ballots * 3, momentum });

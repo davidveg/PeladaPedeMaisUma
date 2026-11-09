@@ -260,6 +260,8 @@ export const careerConfiguration = sqliteTable("career_configuration", {
   monthlySelectionMinimumMatches: integer("monthly_selection_minimum_matches").notNull().default(2),
   resultMomentumMultiplier: real("result_momentum_multiplier").notNull().default(1),
   momentumMultiplier: real("momentum_multiplier").notNull().default(1),
+  attendanceBonusEnabled: integer("attendance_bonus_enabled", { mode: "boolean" }).notNull().default(false),
+  attendanceBonusDefaultValue: real("attendance_bonus_default_value").notNull().default(.1),
   winnerBonus: real("winner_bonus").notNull().default(.1), loserPenalty: real("loser_penalty").notNull().default(-.1),
   motmThird: real("motm_third").notNull().default(.1), motmSecond: real("motm_second").notNull().default(.2), motmFirst: real("motm_first").notNull().default(.3),
   dotmThird: real("dotm_third").notNull().default(-.1), dotmSecond: real("dotm_second").notNull().default(-.2), dotmFirst: real("dotm_first").notNull().default(-.3),
@@ -271,6 +273,7 @@ export const careerMatches = sqliteTable("career_matches", {
   id: text("id").primaryKey(), separationId: text("separation_id").notNull().unique(), blueScore: integer("blue_score").notNull(), yellowScore: integer("yellow_score").notNull(),
   winnerTeam: text("winner_team").notNull(), votingToken: text("voting_token").notNull().unique(), status: text("status").notNull().default("OPEN"), closesAt: text("closes_at").notNull(), closedAt: text("closed_at"),
   createdByAdministratorId: text("created_by_administrator_id").notNull(), configSnapshot: text("config_snapshot").notNull(), resultsSnapshot: text("results_snapshot"), participationSnapshot: text("participation_snapshot"),
+  attendanceBonusValue: real("attendance_bonus_value"), attendanceBonusReason: text("attendance_bonus_reason"), attendanceBonusAppliedAt: text("attendance_bonus_applied_at"), attendanceBonusAppliedByAdministratorId: text("attendance_bonus_applied_by_administrator_id"),
   teamMomentumApplied: integer("team_momentum_applied", { mode: "boolean" }).notNull().default(false), votesMomentumApplied: integer("votes_momentum_applied", { mode: "boolean" }).notNull().default(false), ...timestamps,
 }, table => [index("career_matches_statistics_status_idx").on(table.status, table.closedAt)]);
 

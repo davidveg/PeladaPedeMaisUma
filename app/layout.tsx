@@ -10,6 +10,7 @@ import { SiteAccessGate } from "./components/SiteAccessGate";
 import "./globals.css";
 import "./branding.css";
 import "./experimental-modern-theme.css";
+import "./attendance-bonus.css";
 
 const colorSchemeScript = `(function(){var value="dark";try{value=localStorage.getItem("pelada-pede-mais-uma:color-scheme")==="light"?"light":"dark"}catch(error){}document.documentElement.dataset.colorScheme=value;document.documentElement.style.colorScheme=value})();`;
 

@@ -15,6 +15,7 @@ export type StatisticsMatch = {
   yellowIds: string[];
   config?: { winnerBonus?: number; loserPenalty?: number } | null;
   results?: { motm?: StatisticsVoteResult[]; dotm?: StatisticsVoteResult[]; partner?: StatisticsVoteResult[]; fairPlay?: StatisticsVoteResult[]; defense?: StatisticsVoteResult[] } | null;
+  attendanceBonusValue?: number | null;
 };
 
 export function buildPublicStatistics(players: StatisticsPlayer[], matches: StatisticsMatch[], contributions: StatisticsContribution[], playerA?: string, playerB?: string) {
@@ -159,6 +160,7 @@ export function buildMonthAward(month: string, matches: StatisticsMatch[], playe
     for (const result of [...(match.results?.motm || []), ...(match.results?.dotm || []), ...(match.results?.partner || []), ...(match.results?.fairPlay || []), ...(match.results?.defense || [])]) {
       const standing = get(result.playerId); if (standing) standing.votingMomentum += finite(result.momentum, 0);
     }
+    if (finite(match.attendanceBonusValue, 0) > 0) for (const playerId of new Set([...match.blueIds, ...match.yellowIds])) { const standing = get(playerId); if (standing) standing.votingMomentum += finite(match.attendanceBonusValue, 0); }
   }
   const ranked = [...standings.values()].map(standing => ({ ...standing, resultMomentum: round(standing.resultMomentum), votingMomentum: round(standing.votingMomentum), totalMomentum: round(standing.resultMomentum + standing.votingMomentum) })).sort(byMonthlyStanding);
   if (!ranked.length) return null;

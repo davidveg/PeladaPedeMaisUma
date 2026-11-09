@@ -1,0 +1,156 @@
+.attendance-bonus-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(210px, 1fr) minmax(190px, .7fr);
+  gap: 18px;
+  align-items: center;
+  margin: 22px 0;
+  padding: 20px;
+  border: 1px solid var(--management-line, var(--line));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--management-surface, var(--white)) 88%, var(--management-text, var(--ink)) 2%);
+  color: var(--management-text, var(--ink));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--management-text, var(--ink)) 4%, transparent);
+}
+
+.attendance-bonus-setting.enabled {
+  border-color: color-mix(in srgb, var(--management-button, var(--green)) 58%, var(--management-line, var(--line)));
+  background: color-mix(in srgb, var(--management-button, var(--green)) 9%, var(--management-surface, var(--white)));
+}
+
+.attendance-bonus-setting h3 {
+  margin: 4px 0 6px;
+  color: var(--management-text, var(--ink));
+}
+
+.attendance-bonus-setting p {
+  margin: 0;
+  color: var(--management-muted, var(--muted));
+  font-size: 12px;
+}
+
+.attendance-bonus-setting > div > small {
+  color: var(--management-accent-text, var(--management-button, var(--green)));
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+}
+
+.attendance-bonus-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--control-line, var(--line));
+  border-radius: 12px;
+  background: var(--control-surface, var(--white));
+  color: var(--control-text, var(--ink));
+}
+
+.attendance-bonus-toggle input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 21px;
+  height: 21px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--management-button, var(--green));
+}
+
+.attendance-bonus-toggle span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.attendance-bonus-toggle b {
+  color: var(--control-text, var(--ink));
+}
+
+.attendance-bonus-toggle small {
+  color: color-mix(in srgb, var(--control-text, var(--ink)) 68%, transparent);
+  font-size: 10px;
+}
+
+.match-attendance-bonus {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--control-line, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--green) 7%, var(--control-surface, var(--white)));
+  color: var(--control-text, var(--ink));
+}
+
+.match-attendance-bonus > input[type="checkbox"] {
+  width: 21px;
+  height: 21px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+
+.match-attendance-bonus > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match-attendance-bonus small {
+  color: color-mix(in srgb, var(--control-text, var(--ink)) 68%, transparent);
+}
+
+.match-attendance-bonus input[type="text"],
+.attendance-bonus-actions input {
+  width: 100%;
+  border: 1px solid var(--control-line, var(--line));
+  border-radius: 9px;
+  background: var(--control-surface, var(--white));
+  color: var(--control-text, var(--ink));
+}
+
+.match-attendance-bonus input[type="text"] {
+  grid-column: 2;
+  padding: 11px;
+}
+
+.attendance-bonus-summary {
+  grid-column: 1 / -1;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--green) 42%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--green) 9%, var(--white));
+  color: var(--ink);
+}
+
+.attendance-bonus-summary b,
+.attendance-bonus-summary span {
+  display: block;
+}
+
+.attendance-bonus-summary span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.attendance-bonus-summary button {
+  margin-top: 12px;
+}
+
+.attendance-bonus-actions {
+  margin-top: 10px;
+}
+
+.attendance-bonus-actions input {
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
+@media (max-width: 760px) {
+  .attendance-bonus-setting {
+    grid-template-columns: 1fr;
+  }
+}

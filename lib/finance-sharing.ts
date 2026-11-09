@@ -21,13 +21,15 @@ export function buildMonthlyPaymentsWhatsAppMessage({
 }) {
   const month = competenceLabel(competence);
   const monthly = charges
-    .filter(charge => charge.playerName && !isExcludedGoalkeeper(charge))
+    .filter(charge => charge.playerName && charge.storedStatus !== "CANCELLED" && !isExcludedGoalkeeper(charge))
     .sort((left, right) => String(left.playerName).localeCompare(String(right.playerName), "pt-BR", { sensitivity: "base" }));
   const lines = monthly.map((charge, index) => `${index + 1} - ${charge.playerName}: ${paymentMarker(charge, competence)}`.trimEnd());
-  const activeAmounts = new Set(monthly.filter(charge => charge.storedStatus !== "CANCELLED").map(charge => charge.amountCents));
+  const activeAmounts = new Set(monthly.map(charge => charge.amountCents));
   const amountLabel = activeAmounts.size === 1
     ? `Valor: ${money([...activeAmounts][0] ?? defaultMonthlyFeeCents)}`
-    : `Valor padrão: ${money(defaultMonthlyFeeCents)}\n_Alguns mensalistas possuem valor personalizado._`;
+    : activeAmounts.size > 1
+      ? `Valor padrão: ${money(defaultMonthlyFeeCents)}\n_Alguns mensalistas possuem valor personalizado._`
+      : `Valor: ${money(defaultMonthlyFeeCents)}`;
   const paymentInstructions = String(pixKey || "").trim()
     ? `\n\n*ATENÇÃO: PIX para pagamento:* ${String(pixKey).trim()}\n\n${amountLabel}`
     : `\n\n${amountLabel}`;
@@ -35,7 +37,7 @@ export function buildMonthlyPaymentsWhatsAppMessage({
 }
 
 function isExcludedGoalkeeper(charge: MonthlyPaymentShareItem) {
-  return charge.playerType === "goalkeeper" && (charge.storedStatus === "EXEMPT" || charge.storedStatus === "CANCELLED");
+  return charge.playerType === "goalkeeper" && charge.storedStatus === "EXEMPT";
 }
 
 function paymentMarker(charge: MonthlyPaymentShareItem, competence: string) {

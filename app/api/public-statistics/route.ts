@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     // Inativação afeta apenas a elegibilidade futura. Enquanto o cadastro não for
     // excluído, o jogador continua fazendo parte de rankings e retratos históricos.
     db().prepare(`SELECT id,display_name,photo_url,type,primary_position FROM players WHERE deleted_at IS NULL ORDER BY display_name`).all(),
-    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
+    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,c.attendance_bonus_value,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
       ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)) DESC,c.created_at DESC`).bind(from, to).all(),
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       FROM career_match_contributions g JOIN career_matches c ON c.id=g.career_match_id
       JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?`).bind(from, to).all(),
-    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
+    db().prepare(`SELECT c.id,c.separation_id,c.blue_score,c.yellow_score,c.winner_team,c.config_snapshot,c.results_snapshot,c.participation_snapshot,c.attendance_bonus_value,s.match_title,s.match_date,s.snapshot,substr(c.created_at,1,10) created_date
       FROM career_matches c JOIN team_separations s ON s.id=c.separation_id
       WHERE s.deleted_at IS NULL AND COALESCE(s.match_date,substr(c.created_at,1,10)) BETWEEN ? AND ?
       ORDER BY COALESCE(s.match_date,substr(c.created_at,1,10)),c.created_at`).bind(yearFrom, yearTo).all(),
@@ -57,6 +57,7 @@ export async function GET(request: Request) {
       yellowIds: (snapshot.yellow || []).map((player: { id: unknown }) => String(player.id)),
       config: parseJson(row.config_snapshot, null),
       results: parseJson(row.results_snapshot, null),
+      attendanceBonusValue: row.attendance_bonus_value == null ? null : Number(row.attendance_bonus_value),
     };
   };
   const matches = (matchRows.results as Record<string, unknown>[]).map(mapMatch);

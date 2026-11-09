@@ -61,14 +61,16 @@ export function moveCompetence(value: string, delta: number) {
 
 export function monthlyPaymentsMessage(data: FinancePayload) {
   const charges = data.charges
-    .filter(charge => charge.type === "MONTHLY_FEE" && charge.playerName)
+    .filter(charge => charge.type === "MONTHLY_FEE" && charge.playerName && charge.storedStatus !== "CANCELLED")
     .sort((left, right) => String(left.playerName).localeCompare(String(right.playerName), "pt-BR", { sensitivity: "base" }));
   const lines = charges.map((charge, index) => `${index + 1} - ${charge.playerName}: ${paymentMarker(charge)}`.trimEnd());
-  const activeAmounts = new Set(charges.filter(charge => charge.storedStatus !== "CANCELLED").map(charge => charge.amountCents));
+  const activeAmounts = new Set(charges.map(charge => charge.amountCents));
   const standard = data.settings?.defaultMonthlyFeeCents || 0;
   const amount = activeAmounts.size === 1
     ? `Valor: ${money([...activeAmounts][0] ?? standard)}`
-    : `Valor padrão: ${money(standard)}\n_Alguns mensalistas possuem valor personalizado._`;
+    : activeAmounts.size > 1
+      ? `Valor padrão: ${money(standard)}\n_Alguns mensalistas possuem valor personalizado._`
+      : `Valor: ${money(standard)}`;
   const pix = String(data.settings?.pixKey || "").trim();
   const month = competenceLabel(data.competence).toLocaleLowerCase("pt-BR").replace(" de ", " ");
   return `*Pagamento ${month}:*\n\n${lines.join("\n")}${pix ? `\n\n*ATENÇÃO: PIX para pagamento:* ${pix}` : ""}\n\n${amount}`;

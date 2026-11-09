@@ -16,6 +16,8 @@ export type CareerConfig = {
   monthlySelectionMinimumMatches: number;
   resultMomentumMultiplier: number;
   momentumMultiplier: number;
+  attendanceBonusEnabled: boolean;
+  attendanceBonusDefaultValue: number;
   winnerBonus: number;
   loserPenalty: number;
   motmThird: number;
@@ -41,11 +43,11 @@ export type PublicCareerSeason = {
 export type MonthlyTeamFormation = { goalkeepers: number; defenders: number; midfielders: number; attackers: number };
 export const defaultMonthlyTeamFormation: MonthlyTeamFormation = { goalkeepers: 1, defenders: 2, midfielders: 2, attackers: 2 };
 
-export const defaultCareerConfig: CareerConfig = { enabled: true, trackContributions: true, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, seasonDurationMonths: 12, seasonStartedAt: "", nextSeasonResetAt: "", seasonNumber: 1, monthlyTeamGoalkeepers: 1, monthlyTeamDefenders: 2, monthlyTeamMidfielders: 2, monthlyTeamAttackers: 2, monthlySelectionMinimumMatches: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, partnerAward: .1, fairPlayAward: .1, defenseAward: .1, votingDays: 5 };
+export const defaultCareerConfig: CareerConfig = { enabled: true, trackContributions: true, cardTiersEnabled: false, cardBronzeMax: 2.4, cardSilverMax: 3.9, cardGoldMax: 4.5, seasonDurationMonths: 12, seasonStartedAt: "", nextSeasonResetAt: "", seasonNumber: 1, monthlyTeamGoalkeepers: 1, monthlyTeamDefenders: 2, monthlyTeamMidfielders: 2, monthlyTeamAttackers: 2, monthlySelectionMinimumMatches: 2, resultMomentumMultiplier: 1, momentumMultiplier: 1, attendanceBonusEnabled: false, attendanceBonusDefaultValue: .1, winnerBonus: .1, loserPenalty: -.1, motmThird: .1, motmSecond: .2, motmFirst: .3, dotmThird: -.1, dotmSecond: -.2, dotmFirst: -.3, partnerAward: .1, fairPlayAward: .1, defenseAward: .1, votingDays: 5 };
 
 export function careerConfigFromRow(row: any): CareerConfig {
   if (!row) return { ...defaultCareerConfig };
-  return { enabled: Boolean(row.enabled), trackContributions: Boolean(row.track_contributions ?? 1), cardTiersEnabled: Boolean(row.card_tiers_enabled ?? 0), cardBronzeMax: Number(row.card_bronze_max ?? 2.4), cardSilverMax: Number(row.card_silver_max ?? 3.9), cardGoldMax: Number(row.card_gold_max ?? 4.5), seasonDurationMonths: Number(row.season_duration_months ?? 12), seasonStartedAt: String(row.season_started_at ?? ""), nextSeasonResetAt: String(row.next_season_reset_at ?? ""), seasonNumber: Number(row.season_number ?? 1), monthlyTeamGoalkeepers: Number(row.monthly_team_goalkeepers ?? 1), monthlyTeamDefenders: Number(row.monthly_team_defenders ?? 2), monthlyTeamMidfielders: Number(row.monthly_team_midfielders ?? 2), monthlyTeamAttackers: Number(row.monthly_team_attackers ?? 2), monthlySelectionMinimumMatches: Number(row.monthly_selection_minimum_matches ?? 2), resultMomentumMultiplier: Number(row.result_momentum_multiplier ?? 1), momentumMultiplier: Number(row.momentum_multiplier ?? 1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), partnerAward: Number(row.partner_award ?? .1), fairPlayAward: Number(row.fair_play_award ?? .1), defenseAward: Number(row.defense_award ?? .1), votingDays: Number(row.voting_days) };
+  return { enabled: Boolean(row.enabled), trackContributions: Boolean(row.track_contributions ?? 1), cardTiersEnabled: Boolean(row.card_tiers_enabled ?? 0), cardBronzeMax: Number(row.card_bronze_max ?? 2.4), cardSilverMax: Number(row.card_silver_max ?? 3.9), cardGoldMax: Number(row.card_gold_max ?? 4.5), seasonDurationMonths: Number(row.season_duration_months ?? 12), seasonStartedAt: String(row.season_started_at ?? ""), nextSeasonResetAt: String(row.next_season_reset_at ?? ""), seasonNumber: Number(row.season_number ?? 1), monthlyTeamGoalkeepers: Number(row.monthly_team_goalkeepers ?? 1), monthlyTeamDefenders: Number(row.monthly_team_defenders ?? 2), monthlyTeamMidfielders: Number(row.monthly_team_midfielders ?? 2), monthlyTeamAttackers: Number(row.monthly_team_attackers ?? 2), monthlySelectionMinimumMatches: Number(row.monthly_selection_minimum_matches ?? 2), resultMomentumMultiplier: Number(row.result_momentum_multiplier ?? 1), momentumMultiplier: Number(row.momentum_multiplier ?? 1), attendanceBonusEnabled: Boolean(row.attendance_bonus_enabled ?? 0), attendanceBonusDefaultValue: Number(row.attendance_bonus_default_value ?? .1), winnerBonus: Number(row.winner_bonus), loserPenalty: Number(row.loser_penalty), motmThird: Number(row.motm_third), motmSecond: Number(row.motm_second), motmFirst: Number(row.motm_first), dotmThird: Number(row.dotm_third), dotmSecond: Number(row.dotm_second), dotmFirst: Number(row.dotm_first), partnerAward: Number(row.partner_award ?? .1), fairPlayAward: Number(row.fair_play_award ?? .1), defenseAward: Number(row.defense_award ?? .1), votingDays: Number(row.voting_days) };
 }
 
 export function monthlyTeamFormation(config: Pick<CareerConfig, "monthlyTeamGoalkeepers" | "monthlyTeamDefenders" | "monthlyTeamMidfielders" | "monthlyTeamAttackers">): MonthlyTeamFormation {
@@ -53,7 +55,7 @@ export function monthlyTeamFormation(config: Pick<CareerConfig, "monthlyTeamGoal
 }
 
 export function validateCareerConfig(config: CareerConfig) {
-  const positive = [config.winnerBonus, config.motmThird, config.motmSecond, config.motmFirst, config.partnerAward, config.fairPlayAward, config.defenseAward];
+  const positive = [config.winnerBonus, config.attendanceBonusDefaultValue, config.motmThird, config.motmSecond, config.motmFirst, config.partnerAward, config.fairPlayAward, config.defenseAward];
   const negative = [config.loserPenalty, config.dotmThird, config.dotmSecond, config.dotmFirst];
   const tiers = [config.cardBronzeMax, config.cardSilverMax, config.cardGoldMax];
   const validTiers = tiers.every(value => Number.isFinite(value) && value >= 1 && value < 5 && Math.abs(value * 10 - Math.round(value * 10)) < 1e-9) && config.cardBronzeMax < config.cardSilverMax && config.cardSilverMax < config.cardGoldMax;
