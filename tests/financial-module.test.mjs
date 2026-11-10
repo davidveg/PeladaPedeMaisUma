@@ -261,7 +261,9 @@ test("despesas pontuais e recorrentes preservam histórico, saldo, idempotência
     assert.equal((await post({ action: "create-expense", description: "Água", category: "WATER", amountCents: 5000, competence: "2026-08", dueDate: "2026-08-08", supplier: "Mercado" })).status, 200);
     assert.equal((await post({ action: "create-recurring-expense", description: "Campo", category: "FIELD", amountCents: 120000, dueDay: 5, supplier: "Arena" })).status, 200);
     assert.equal((await post({ action: "generate-recurring-expenses", competence: "2026-08" })).status, 200);
-    assert.equal((await post({ action: "generate-recurring-expenses", competence: "2026-08" })).status, 409);
+    const repeatedGeneration = await post({ action: "generate-recurring-expenses", competence: "2026-08" });
+    assert.equal(repeatedGeneration.status, 200);
+    assert.equal((await repeatedGeneration.json()).created, 0);
     const waterId = await db().prepare(`SELECT id FROM financial_expenses WHERE description='Água'`).first("id");
     const payBody = { action: "pay-expense", expenseId: waterId, paidAt: "2026-08-08", method: "TRANSFER", idempotencyKey: "expense-water-payment" };
     assert.equal((await post(payBody)).status, 200); assert.equal((await post(payBody)).status, 200);
@@ -269,6 +271,31 @@ test("despesas pontuais e recorrentes preservam histórico, saldo, idempotência
     assert.equal((await post({ action: "reverse-expense-payment", expenseId: waterId, reason: "Pagamento lançado na conta errada" })).status, 200);
     view = await get("2026-08"); assert.equal(view.summary.expenseCents, 0); assert.equal(view.summary.currentBalanceCents, 200000); assert.equal(view.summary.payableCents, 125000);
     assert.equal((await post(payBody)).status, 200); assert.equal((await get("2026-08")).summary.expenseCents, 0);
+  } finally { await f.cleanup(); }
+});
+
+test("gera recorrências automaticamente, completa apenas faltantes e permite cancelar a configuração", async () => {
+  const f = await fixture();
+  try {
+    const created = await post({ action: "create-recurring-expense", description: "Campo", category: "FIELD", amountCents: 120000, dueDay: 5, supplier: "Arena", competence: "2026-08" });
+    assert.equal(created.status, 200);
+    const recurringExpenseId = (await created.json()).id;
+    assert.deepEqual({ ...(await db().prepare(`SELECT description,competence,due_date,status FROM financial_expenses WHERE recurring_expense_id=?`).bind(recurringExpenseId).first()) }, {
+      description: "Campo", competence: "2026-08", due_date: "2026-08-05", status: "PENDING",
+    });
+
+    const second = await post({ action: "create-recurring-expense", description: "Arbitragem", category: "REFEREE", amountCents: 20000, dueDay: 31 });
+    assert.equal(second.status, 200);
+    const august = await get("2026-08");
+    assert.deepEqual(august.expenses.map(item => item.description).sort(), ["Arbitragem", "Campo"]);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM financial_expenses WHERE competence='2026-08' AND description='Campo'`).first("total"), 1);
+
+    const cancelled = await post({ action: "cancel-recurring-expense", recurringExpenseId });
+    assert.equal(cancelled.status, 200);
+    const september = await get("2026-09");
+    assert.deepEqual(september.expenses.map(item => item.description), ["Arbitragem"]);
+    assert.equal(september.recurringExpenses.find(item => item.id === recurringExpenseId).active, false);
+    assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_RECURRING_EXPENSE_CANCELLED'`).first("total"), 1);
   } finally { await f.cleanup(); }
 });
 

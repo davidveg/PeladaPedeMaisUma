@@ -2,7 +2,7 @@
 import { playerAccountRequired, staffRequired } from "../../../lib/database";
 import { isFinanceEnabled } from "../../../lib/finance-feature";
 import {
-  cancelCharge, cancelExpense, closeMonth, createCharge, createExpense, createRecurringExpense,
+  cancelCharge, cancelExpense, cancelRecurringExpense, closeMonth, createCharge, createExpense, createRecurringExpense,
   FinanceError, generateMonthlyFees, generateRecurringExpenses, loadFinance, payExpense,
   registerPayment, reopenMonth, reverseExpensePayment, reversePayment, saveSettings, toggleChargeExemption,
 } from "../../../lib/finance-service";
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       "create-expense": createExpense, "pay-expense": payExpense, "cancel-expense": cancelExpense,
       "reverse-expense-payment": reverseExpensePayment,
       "create-recurring-expense": createRecurringExpense, "generate-recurring-expenses": generateRecurringExpenses,
+      "cancel-recurring-expense": cancelRecurringExpense,
       "close-month": closeMonth, "reopen-month": reopenMonth,
     };
     const handler = actions[String(payload.action || "")];

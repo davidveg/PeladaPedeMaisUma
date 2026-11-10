@@ -126,6 +126,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
   await ensureDb();
   const competence = normalizeCompetence(competenceInput || currentCompetence());
   if (!canManage || selfOnly) return loadPlayerFinance(viewer, competence);
+  await syncRecurringExpenses(competence, viewer, true);
   const [settings, chargeRows, expenseRows, movementRows, recurringRows, playerRows, matchRows, closure] = await Promise.all([
     db().prepare(`SELECT * FROM financial_settings WHERE scope_id=?`).bind(FINANCIAL_SCOPE).first<any>(),
     db().prepare(`SELECT c.*,p.display_name player_name,p.type player_type,COALESCE(SUM(CASE WHEN fp.status='COMPLETED' THEN fp.amount_cents ELSE 0 END),0) paid_cents,MAX(CASE WHEN fp.status='COMPLETED' THEN fp.paid_at END) last_paid_at FROM financial_charges c LEFT JOIN players p ON p.id=c.player_id LEFT JOIN financial_payments fp ON fp.charge_id=c.id WHERE c.scope_id=? AND c.competence=? GROUP BY c.id ORDER BY c.due_date,c.created_at`).bind(FINANCIAL_SCOPE, competence).all(),
@@ -519,26 +520,67 @@ export async function createRecurringExpense(payload: any, admin: any) {
   await ensureDb();
   const category = String(payload.category || "OTHER").toUpperCase(), dueDay = Number(payload.dueDay);
   if (!EXPENSE_CATEGORIES.has(category) || !Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) throw new FinanceError("Revise a categoria e o dia de vencimento.");
-  const id = crypto.randomUUID(), now = new Date().toISOString();
+  const id = crypto.randomUUID(), now = new Date().toISOString(), competence = payload.competence ? normalizeCompetence(payload.competence) : null;
   const data = { description: text(payload.description, "descrição", 180), category, amountCents: cents(payload.amountCents), dueDay, supplier: text(payload.supplier, "fornecedor", 180, false), notes: text(payload.notes, "observação", 1000, false) };
-  await db().batch([db().prepare(`INSERT INTO financial_recurring_expenses (id,scope_id,description,category,amount_cents,recurrence,due_day,supplier,notes,active,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,'MONTHLY',?,?,?,1,?,?,?)`).bind(id, FINANCIAL_SCOPE, data.description, category, data.amountCents, dueDay, data.supplier, data.notes, admin.id, now, now), auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_CREATED", "financial_recurring_expense", id, data)]);
-  return { id, message: "Despesa recorrente configurada." };
+  if (competence) await assertCompetencesOpen(competence);
+  const statements = [db().prepare(`INSERT INTO financial_recurring_expenses (id,scope_id,description,category,amount_cents,recurrence,due_day,supplier,notes,active,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,'MONTHLY',?,?,?,1,?,?,?)`).bind(id, FINANCIAL_SCOPE, data.description, category, data.amountCents, dueDay, data.supplier, data.notes, admin.id, now, now), auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_CREATED", "financial_recurring_expense", id, data)];
+  if (competence) {
+    const expenseId = crypto.randomUUID();
+    statements.push(
+      db().prepare(`INSERT INTO financial_expenses (id,scope_id,recurring_expense_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(expenseId, FINANCIAL_SCOPE, id, data.description, category, data.amountCents, competence, dueDateFor(competence, dueDay), data.supplier, data.notes, admin.id, now, now),
+      auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_GENERATED", "financial_expense", expenseId, { competence, recurringExpenseId: id }),
+    );
+  }
+  await db().batch(statements);
+  return { id, message: competence ? "Despesa recorrente configurada e lançamento da competência gerado." : "Despesa recorrente configurada." };
 }
 
 export async function generateRecurringExpenses(payload: any, admin: any) {
   await ensureDb();
-  const competence = normalizeCompetence(payload.competence), rows = await db().prepare(`SELECT * FROM financial_recurring_expenses WHERE scope_id=? AND active=1`).bind(FINANCIAL_SCOPE).all();
-  await assertCompetencesOpen(competence);
-  if (!rows.results.length) throw new FinanceError("Nenhuma despesa recorrente ativa foi configurada.");
+  const competence = normalizeCompetence(payload.competence);
+  const created = await syncRecurringExpenses(competence, admin, false);
+  return { message: created ? `${created} despesas recorrentes geradas.` : "As despesas recorrentes desta competência já estão atualizadas.", created };
+}
+
+async function syncRecurringExpenses(competence: string, admin: any, skipClosed: boolean) {
+  const closure = await db().prepare(`SELECT id FROM financial_monthly_closures WHERE scope_id=? AND competence=?`).bind(FINANCIAL_SCOPE, competence).first();
+  if (closure) {
+    if (skipClosed) return 0;
+    await assertCompetencesOpen(competence);
+  }
+  const active = await db().prepare(`SELECT COUNT(*) total FROM financial_recurring_expenses WHERE scope_id=? AND active=1`).bind(FINANCIAL_SCOPE).first<number>("total");
+  if (!active) {
+    if (skipClosed) return 0;
+    throw new FinanceError("Nenhuma despesa recorrente ativa foi configurada.");
+  }
+  const rows = await db().prepare(
+    `SELECT r.* FROM financial_recurring_expenses r
+     LEFT JOIN financial_expenses e ON e.scope_id=r.scope_id AND e.recurring_expense_id=r.id AND e.competence=?
+     WHERE r.scope_id=? AND r.active=1 AND e.id IS NULL ORDER BY r.description`,
+  ).bind(competence, FINANCIAL_SCOPE).all();
+  if (!rows.results.length) return 0;
   const now = new Date().toISOString(), ids: string[] = [], statements: any[] = [];
   for (const row of rows.results as any[]) {
     const id = crypto.randomUUID(); ids.push(id);
     statements.push(db().prepare(`INSERT INTO financial_expenses (id,scope_id,recurring_expense_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(id, FINANCIAL_SCOPE, row.id, row.description, row.category, row.amount_cents, competence, dueDateFor(competence, Number(row.due_day)), row.supplier, row.notes, admin.id, now, now));
   }
   statements.push(auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSES_GENERATED", "financial_expense_batch", competence, { competence, expenseIds: ids }));
-  try { await db().batch(statements); }
-  catch (error: any) { if (/unique|constraint/i.test(String(error?.message))) throw new FinanceError("As despesas recorrentes desta competência já foram geradas.", 409); throw error; }
-  return { message: `${ids.length} despesas recorrentes geradas.`, created: ids.length };
+  await db().batch(statements);
+  return ids.length;
+}
+
+export async function cancelRecurringExpense(payload: any, admin: any) {
+  await ensureDb();
+  const id = String(payload.recurringExpenseId || "");
+  const recurring: any = await db().prepare(`SELECT * FROM financial_recurring_expenses WHERE id=? AND scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
+  if (!recurring) throw new FinanceError("Configuração de despesa recorrente não encontrada.", 404);
+  if (!recurring.active) return { message: "A recorrência já estava cancelada.", idempotent: true };
+  const now = new Date().toISOString();
+  await db().batch([
+    db().prepare(`UPDATE financial_recurring_expenses SET active=0,updated_at=? WHERE id=? AND scope_id=?`).bind(now, id, FINANCIAL_SCOPE),
+    auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_CANCELLED", "financial_recurring_expense", id, { active: false }, recurring),
+  ]);
+  return { message: "Configuração recorrente cancelada. Os lançamentos já gerados foram preservados." };
 }
 
 export async function closeMonth(payload: any, admin: any) {
