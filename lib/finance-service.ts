@@ -78,6 +78,12 @@ function competenceLabel(competence: string) {
   return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
+function registrationCompetence(createdAt: string) {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).formatToParts(new Date(createdAt));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value || "";
+  return `${part("year")}-${part("month")}`;
+}
+
 async function assertCompetencesOpen(...competences: string[]) {
   for (const competence of [...new Set(competences.filter(Boolean))]) {
     const closure = await db().prepare(`SELECT id FROM financial_monthly_closures WHERE scope_id=? AND competence=?`).bind(FINANCIAL_SCOPE, competence).first();
@@ -147,7 +153,7 @@ export async function loadFinance(competenceInput: unknown, viewer: any, selfOnl
     settings: { defaultMonthlyFeeCents: Number(settings?.default_monthly_fee_cents || 0), defaultDueDay: Number(settings?.default_due_day || 10), openingBalanceCents: Number(settings?.opening_balance_cents || 0), initialCompetence: settings?.initial_competence || "", pixKey: settings?.pix_key || "" },
     summary, charges, expenses,
     movements: movementRows.results.map((row: any) => ({ id: row.id, direction: row.direction, category: row.category, description: row.description, amountCents: Number(row.amount_cents), occurredAt: row.occurred_at, method: row.method, playerId: row.player_id, playerName: row.player_name, chargeId: row.charge_id, paymentId: row.payment_id, expenseId: row.expense_id, status: row.status })),
-    recurringExpenses: recurringRows.results.map((row: any) => ({ id: row.id, description: row.description, category: row.category, amountCents: Number(row.amount_cents), recurrence: row.recurrence, dueDay: Number(row.due_day), supplier: row.supplier, notes: row.notes, active: !!row.active })),
+    recurringExpenses: recurringRows.results.map((row: any) => ({ id: row.id, description: row.description, category: row.category, amountCents: Number(row.amount_cents), recurrence: row.recurrence, dueDay: Number(row.due_day), supplier: row.supplier, notes: row.notes, active: !!row.active, createdAt: row.created_at })),
     players: playerRows.results.map((row: any) => ({ id: row.id, displayName: row.display_name, type: row.type, primaryPosition: row.primary_position, active: !!row.active, monthlyEnabled: canHaveMonthlyFee(String(row.type)) && (row.monthly_enabled === null ? true : !!row.monthly_enabled), customMonthlyFeeCents: canHaveMonthlyFee(String(row.type)) && row.custom_monthly_fee_cents !== null ? Number(row.custom_monthly_fee_cents) : null })).sort((left, right) => portugueseNameCollator.compare(left.displayName, right.displayName)),
     matches: matchRows.results.map((row: any) => ({ id: row.id, title: row.title, matchAt: row.match_at })),
     closure: closure ? { id: closure.id, ...closureSnapshot, closedAt: closure.closed_at, isOutdated: closureOutdated, liveSummary: summary, liveMonthlyPlayers: monthlyPlayers } : null,
@@ -521,10 +527,11 @@ export async function createRecurringExpense(payload: any, admin: any) {
   const category = String(payload.category || "OTHER").toUpperCase(), dueDay = Number(payload.dueDay);
   if (!EXPENSE_CATEGORIES.has(category) || !Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) throw new FinanceError("Revise a categoria e o dia de vencimento.");
   const id = crypto.randomUUID(), now = new Date().toISOString(), competence = payload.competence ? normalizeCompetence(payload.competence) : null;
-  const data = { description: text(payload.description, "descrição", 180), category, amountCents: cents(payload.amountCents), dueDay, supplier: text(payload.supplier, "fornecedor", 180, false), notes: text(payload.notes, "observação", 1000, false) };
-  if (competence) await assertCompetencesOpen(competence);
+  const startsAt = registrationCompetence(now), shouldGenerate = Boolean(competence && competence >= startsAt);
+  const data = { description: text(payload.description, "descrição", 180), category, amountCents: cents(payload.amountCents), dueDay, supplier: text(payload.supplier, "fornecedor", 180, false), notes: text(payload.notes, "observação", 1000, false), startsAt };
+  if (shouldGenerate && competence) await assertCompetencesOpen(competence);
   const statements = [db().prepare(`INSERT INTO financial_recurring_expenses (id,scope_id,description,category,amount_cents,recurrence,due_day,supplier,notes,active,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,'MONTHLY',?,?,?,1,?,?,?)`).bind(id, FINANCIAL_SCOPE, data.description, category, data.amountCents, dueDay, data.supplier, data.notes, admin.id, now, now), auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_CREATED", "financial_recurring_expense", id, data)];
-  if (competence) {
+  if (shouldGenerate && competence) {
     const expenseId = crypto.randomUUID();
     statements.push(
       db().prepare(`INSERT INTO financial_expenses (id,scope_id,recurring_expense_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(expenseId, FINANCIAL_SCOPE, id, data.description, category, data.amountCents, competence, dueDateFor(competence, dueDay), data.supplier, data.notes, admin.id, now, now),
@@ -532,7 +539,7 @@ export async function createRecurringExpense(payload: any, admin: any) {
     );
   }
   await db().batch(statements);
-  return { id, message: competence ? "Despesa recorrente configurada e lançamento da competência gerado." : "Despesa recorrente configurada." };
+  return { id, message: shouldGenerate ? "Despesa recorrente configurada e lançamento da competência gerado." : `Despesa recorrente configurada. Os lançamentos começam em ${competenceLabel(startsAt)}.` };
 }
 
 export async function generateRecurringExpenses(payload: any, admin: any) {
@@ -558,9 +565,10 @@ async function syncRecurringExpenses(competence: string, admin: any, skipClosed:
      LEFT JOIN financial_expenses e ON e.scope_id=r.scope_id AND e.recurring_expense_id=r.id AND e.competence=?
      WHERE r.scope_id=? AND r.active=1 AND e.id IS NULL ORDER BY r.description`,
   ).bind(competence, FINANCIAL_SCOPE).all();
-  if (!rows.results.length) return 0;
+  const eligibleRows = rows.results.filter((row: any) => registrationCompetence(String(row.created_at)) <= competence);
+  if (!eligibleRows.length) return 0;
   const now = new Date().toISOString(), ids: string[] = [], statements: any[] = [];
-  for (const row of rows.results as any[]) {
+  for (const row of eligibleRows as any[]) {
     const id = crypto.randomUUID(); ids.push(id);
     statements.push(db().prepare(`INSERT INTO financial_expenses (id,scope_id,recurring_expense_id,description,category,amount_cents,competence,due_date,status,supplier,notes,created_by_administrator_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?)`).bind(id, FINANCIAL_SCOPE, row.id, row.description, row.category, row.amount_cents, competence, dueDateFor(competence, Number(row.due_day)), row.supplier, row.notes, admin.id, now, now));
   }
