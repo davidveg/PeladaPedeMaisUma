@@ -583,12 +583,26 @@ export async function cancelRecurringExpense(payload: any, admin: any) {
   const recurring: any = await db().prepare(`SELECT * FROM financial_recurring_expenses WHERE id=? AND scope_id=?`).bind(id, FINANCIAL_SCOPE).first();
   if (!recurring) throw new FinanceError("Configuração de despesa recorrente não encontrada.", 404);
   if (!recurring.active) return { message: "A recorrência já estava cancelada.", idempotent: true };
-  const now = new Date().toISOString();
-  await db().batch([
+  const now = new Date().toISOString(), cancelledFrom = registrationCompetence(now);
+  const futurePending = await db().prepare(
+    `SELECT e.* FROM financial_expenses e
+     LEFT JOIN financial_monthly_closures mc ON mc.scope_id=e.scope_id AND mc.competence=e.competence
+     WHERE e.scope_id=? AND e.recurring_expense_id=? AND e.status='PENDING' AND e.competence>? AND mc.id IS NULL
+     ORDER BY e.competence`,
+  ).bind(FINANCIAL_SCOPE, id, cancelledFrom).all();
+  const statements: any[] = [
     db().prepare(`UPDATE financial_recurring_expenses SET active=0,updated_at=? WHERE id=? AND scope_id=?`).bind(now, id, FINANCIAL_SCOPE),
-    auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_CANCELLED", "financial_recurring_expense", id, { active: false }, recurring),
-  ]);
-  return { message: "Configuração recorrente cancelada. Os lançamentos já gerados foram preservados." };
+  ];
+  for (const expense of futurePending.results as any[]) {
+    statements.push(
+      db().prepare(`UPDATE financial_expenses SET status='CANCELLED',cancelled_at=?,cancelled_by_administrator_id=?,cancellation_reason='Configuração recorrente cancelada',updated_at=? WHERE id=? AND status='PENDING'`).bind(now, admin.id, now, expense.id),
+      auditStatement(admin.id, "FINANCIAL_EXPENSE_CANCELLED", "financial_expense", String(expense.id), { status: "CANCELLED", reason: "Configuração recorrente cancelada" }, expense),
+    );
+  }
+  statements.push(auditStatement(admin.id, "FINANCIAL_RECURRING_EXPENSE_CANCELLED", "financial_recurring_expense", id, { active: false, cancelledFutureExpenses: futurePending.results.length }, recurring));
+  await db().batch(statements);
+  const count = futurePending.results.length;
+  return { message: count ? `Configuração recorrente cancelada e ${count} ${count === 1 ? "lançamento futuro pendente foi cancelado" : "lançamentos futuros pendentes foram cancelados"}.` : "Configuração recorrente cancelada. Não havia lançamentos futuros pendentes.", cancelledFutureExpenses: count };
 }
 
 export async function closeMonth(payload: any, admin: any) {

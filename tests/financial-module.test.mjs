@@ -278,7 +278,7 @@ test("despesas pontuais e recorrentes preservam histórico, saldo, idempotência
 test("gera recorrências automaticamente, completa apenas faltantes e permite cancelar a configuração", async () => {
   const f = await fixture();
   try {
-    const startsAt = financeService.currentCompetence(), previous = shiftCompetence(startsAt, -1), next = shiftCompetence(startsAt, 1);
+    const startsAt = financeService.currentCompetence(), previous = shiftCompetence(startsAt, -1), next = shiftCompetence(startsAt, 1), later = shiftCompetence(startsAt, 2);
     const created = await post({ action: "create-recurring-expense", description: "Campo", category: "FIELD", amountCents: 120000, dueDay: 5, supplier: "Arena", competence: previous });
     assert.equal(created.status, 200);
     const recurringExpenseId = (await created.json()).id;
@@ -291,11 +291,19 @@ test("gera recorrências automaticamente, completa apenas faltantes e permite ca
     assert.equal(current.recurringExpenses.find(item => item.id === recurringExpenseId).createdAt.length > 0, true);
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM financial_expenses WHERE competence=? AND description='Campo'`).bind(startsAt).first("total"), 1);
 
+    const generatedFuture = await get(next);
+    assert.deepEqual(generatedFuture.expenses.map(item => item.description).sort(), ["Arbitragem", "Campo"]);
     const cancelled = await post({ action: "cancel-recurring-expense", recurringExpenseId });
     assert.equal(cancelled.status, 200);
+    assert.equal((await cancelled.json()).cancelledFutureExpenses, 1);
     const future = await get(next);
-    assert.deepEqual(future.expenses.map(item => item.description), ["Arbitragem"]);
+    assert.deepEqual(future.expenses.map(item => ({ description: item.description, status: item.storedStatus })), [
+      { description: "Campo", status: "CANCELLED" }, { description: "Arbitragem", status: "PENDING" },
+    ]);
     assert.equal(future.recurringExpenses.find(item => item.id === recurringExpenseId).active, false);
+    const laterView = await get(later);
+    assert.deepEqual(laterView.expenses.map(item => item.description), ["Arbitragem"]);
+    assert.equal((await get(startsAt)).expenses.find(item => item.description === "Campo").storedStatus, "PENDING");
     assert.equal(await db().prepare(`SELECT COUNT(*) total FROM audit_logs WHERE action='FINANCIAL_RECURRING_EXPENSE_CANCELLED'`).first("total"), 1);
   } finally { await f.cleanup(); }
 });
