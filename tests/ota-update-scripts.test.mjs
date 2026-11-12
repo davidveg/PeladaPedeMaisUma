@@ -18,6 +18,10 @@ const applications = [
   },
 ];
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 for (const application of applications) test(`script Bash de ${application.script} replica a OTA preview Android do PowerShell`, async () => {
   const bashUrl = new URL(`../update-${application.script}.sh`, import.meta.url);
   const [bash, powershell] = await Promise.all([
@@ -35,8 +39,8 @@ for (const application of applications) test(`script Bash de ${application.scrip
   assert.match(bash, /--platform android/);
 
   for (const value of application.values) {
-    assert.match(bash, new RegExp(value.replaceAll(".", "\\.")));
-    assert.match(powershell, new RegExp(value.replaceAll(".", "\\.")));
+    assert.match(bash, new RegExp(escapeRegExp(value)));
+    assert.match(powershell, new RegExp(escapeRegExp(value)));
   }
 
   await access(bashUrl, constants.X_OK);

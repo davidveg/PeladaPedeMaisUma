@@ -5,6 +5,7 @@ import { runInNewContext } from "node:vm";
 import * as jsxRuntime from "react/jsx-runtime";
 import ts from "typescript";
 import * as statistics from "../src/statistics.ts";
+import { mobilePlayerPhotoUrl } from "../src/player-photo-url.ts";
 import { contrastTextColor } from "../src/team-colors.ts";
 import { buildMonthlyCareerHighlights, buildPublicStatistics } from "../../lib/public-statistics.ts";
 import { calculateAdvancedStatistics } from "../../lib/statistics-engine.ts";
@@ -65,6 +66,7 @@ function runtime(data = advanced, options = {}) {
       if (imports[path]) return imports[path];
       const basename = path.replace(/^\.\//, "").replace(/^@\//, "");
       if (basename === "statistics") return statistics;
+      if (basename === "player-photo-url") return { mobilePlayerPhotoUrl };
       if (basename === "team-colors") return { contrastTextColor };
       if (basename === "components") return components;
       if (basename === "branding") return branding;
@@ -168,6 +170,21 @@ test("campo adapta onze vagas e fontes grandes sem altura fixa", () => {
   assert.equal(tree.filter(node => node.type === "Text" && node.props.children === "Vaga disponível").length, 11);
   assert.ok(tree.some(node => style(node).width === "100%" && style(node).minWidth === 0));
   assert.ok(tree.some(node => node.type === "Button" && node.props.title === "Compartilhar seleção no WhatsApp"));
+});
+
+test("toque no jogador da seleção abre a composição mensal do momentum e a partida", () => {
+  const app = runtime();
+  let tree = app.render("statistics-awards", "MonthlyPitch", { award: highlights.focus });
+  const player = tree.find(node => node.type === "Pressable" && node.props.accessibilityLabel?.startsWith("Ver composição do momentum de"));
+  assert.ok(player);
+  player.props.onPress();
+  tree = app.render("statistics-awards", "MonthlyPitch", { award: highlights.focus });
+  assert.match(texts(tree), /COMPOSIÇÃO DO MÊS/);
+  assert.match(texts(tree), /RESULTADOS \+ .* VOTAÇÕES/);
+  const match = tree.find(node => node.type === "Pressable" && node.props.accessibilityLabel?.startsWith("Abrir Rodada"));
+  assert.ok(match);
+  match.props.onPress();
+  assert.equal(app.navigation[0].pathname, "/separations/[id]");
 });
 
 test("listas carregam mais sob demanda e ajuda abre explicação inteira", () => {

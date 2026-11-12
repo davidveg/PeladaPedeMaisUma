@@ -2,7 +2,13 @@
 export type StatsPlayer = { id: string; displayName: string; photoUrl?: string | null; type?: string | null; primaryPosition?: string | null };
 export type Period = { from: string; to: string };
 export type Streak = { length: number; players: StatsPlayer[] };
-export type MonthlyStanding = { player: StatsPlayer; resultMomentum: number; votingMomentum: number; totalMomentum: number; games: number; wins: number; draws: number; losses: number };
+export type MonthlyMomentumDetail = {
+  matchId: string; separationId: string; title: string; date: string;
+  result: "WIN" | "DRAW" | "LOSS" | "VOTE";
+  resultMomentum: number; votingMomentum: number; totalMomentum: number;
+  votes: { label: string; momentum: number }[]; attendanceBonus: number;
+};
+export type MonthlyStanding = { player: StatsPlayer; resultMomentum: number; votingMomentum: number; totalMomentum: number; games: number; wins: number; draws: number; losses: number; momentumDetails?: MonthlyMomentumDetail[] };
 export type Formation = { goalkeepers: number; defenders: number; midfielders: number; attackers: number };
 export type MonthlyAward = { month: string; matchCount: number; formation?: Formation; playerOfMonth: MonthlyStanding | null; selection: (MonthlyStanding & { role: string })[] };
 export type StatsMatch = { id: string; separationId: string; title: string; date: string; blueScore: number; yellowScore: number };

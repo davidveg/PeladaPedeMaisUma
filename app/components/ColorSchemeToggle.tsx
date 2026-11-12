@@ -7,6 +7,11 @@ function currentScheme(): SiteColorScheme {
   return document.documentElement.dataset.colorScheme === "light" ? "light" : "dark";
 }
 
+function applyScheme(next: SiteColorScheme) {
+  document.documentElement.dataset.colorScheme = next;
+  document.documentElement.style.colorScheme = next;
+}
+
 function SchemeIcon({ scheme }: { scheme: SiteColorScheme }) {
   if (scheme === "light") {
     return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>;
@@ -22,8 +27,7 @@ export function ColorSchemeToggle({ showLabels = false }: { showLabels?: boolean
     const syncStorage = (event: StorageEvent) => {
       if (event.key !== COLOR_SCHEME_STORAGE_KEY) return;
       const next = event.newValue === "light" ? "light" : "dark";
-      document.documentElement.dataset.colorScheme = next;
-      document.documentElement.style.colorScheme = next;
+      applyScheme(next);
       setScheme(next);
     };
     sync();
@@ -36,9 +40,7 @@ export function ColorSchemeToggle({ showLabels = false }: { showLabels?: boolean
   }, []);
 
   function select(next: SiteColorScheme) {
-    const root = document.documentElement;
-    root.dataset.colorScheme = next;
-    root.style.colorScheme = next;
+    applyScheme(next);
     try { window.localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, next); } catch { /* A preferência ainda vale nesta página. */ }
     setScheme(next);
     window.dispatchEvent(new Event(COLOR_SCHEME_CHANGE_EVENT));
