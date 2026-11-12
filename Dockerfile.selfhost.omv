@@ -26,6 +26,11 @@ ENV NODE_ENV=production \
 RUN --security=insecure mkdir -p /data/uploads && chown -R node:node /app /data
 
 COPY --from=build --chown=node:node /app/dist/standalone/ ./
+# Vinext 1.x keeps its Node production server in the standalone output, but
+# currently omits these non-optional peer dependencies from that output.
+COPY --from=dependencies --chown=node:node /app/node_modules/react ./node_modules/react
+COPY --from=dependencies --chown=node:node /app/node_modules/react-dom ./node_modules/react-dom
+COPY --from=dependencies --chown=node:node /app/node_modules/scheduler ./node_modules/scheduler
 COPY --from=dependencies --chown=node:node /app/node_modules/nodemailer ./node_modules/nodemailer
 COPY --from=build --chown=node:node /app/server/selfhost-runtime.mjs ./selfhost-runtime.mjs
 COPY --from=build --chown=node:node /app/server/selfhost-server.mjs ./selfhost-server.mjs

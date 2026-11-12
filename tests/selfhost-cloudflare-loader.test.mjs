@@ -27,5 +27,8 @@ test("imagem self-hosted registra a ponte antes de iniciar o servidor", async ()
   const dockerfile = await readFile(new URL("../Dockerfile.selfhost.omv", import.meta.url), "utf8");
   assert.match(dockerfile, /selfhost-cloudflare-loader\.mjs/);
   assert.match(dockerfile, /selfhost-register\.mjs/);
+  assert.match(dockerfile, /node_modules\/react \.\/node_modules\/react/);
+  assert.match(dockerfile, /node_modules\/react-dom \.\/node_modules\/react-dom/);
+  assert.match(dockerfile, /node_modules\/scheduler \.\/node_modules\/scheduler/);
   assert.match(dockerfile, /CMD \["node", "--import", "\.\/selfhost-register\.mjs", "selfhost-server\.mjs"\]/);
 });
