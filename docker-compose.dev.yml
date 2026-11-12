@@ -32,7 +32,21 @@ services:
           npm ci --ignore-scripts --no-audit --no-fund
           printf '%s\n' "$$current_lock" > node_modules/.package-lock.sha256
         fi
+        # O lock fica no bind mount e pode sobreviver ao container. Como os
+        # PIDs internos são reutilizados, o Vinext pode confundi-lo com outro
+        # servidor vivo depois de um force-recreate.
+        rm -f .vinext/dev/lock.json
         exec npm run dev -- --host 0.0.0.0 --port 3000
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(response => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 15s
     init: true
     restart: unless-stopped
 

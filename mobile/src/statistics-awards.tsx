@@ -112,18 +112,20 @@ function resultLabel(value: MonthlyMomentumDetail["result"]) {
   return value === "WIN" ? "Vitória" : value === "DRAW" ? "Empate" : value === "LOSS" ? "Derrota" : "Reconhecimento";
 }
 
-function momentumDetailText(entry: MonthlyMomentumDetail) {
+function momentumDetailItems(entry: MonthlyMomentumDetail) {
   return [
-    entry.resultMomentum ? `${resultLabel(entry.result)} ${signed(entry.resultMomentum)}` : entry.result !== "VOTE" ? resultLabel(entry.result) : "",
-    ...entry.votes.map(vote => `${vote.label} ${signed(vote.momentum)}`),
-    entry.attendanceBonus ? `Presença ${signed(entry.attendanceBonus)}` : "",
-  ].filter(Boolean).join(" · ");
+    ...(entry.resultMomentum ? [{ label: resultLabel(entry.result), momentum: entry.resultMomentum }] : entry.result !== "VOTE" ? [{ label: resultLabel(entry.result), momentum: null }] : []),
+    ...entry.votes.map(vote => ({ label: vote.label, momentum: vote.momentum })),
+    ...(entry.attendanceBonus ? [{ label: "Presença", momentum: entry.attendanceBonus }] : []),
+  ];
 }
 
 export function MomentumDetailModal({ standing, onClose, onOpenMatch }: { standing: MonthlyStanding | null; onClose(): void; onOpenMatch(separationId: string): void }) {
   if (!standing) return null;
+  const detailsAvailable = Array.isArray(standing.momentumDetails);
   const details = standing.momentumDetails || [];
   const recognitions = details.reduce((sum, entry) => sum + entry.votes.length, 0);
+  const recognitionLabel = detailsAvailable ? `${recognitions} ${recognitions === 1 ? "premiação" : "premiações"} nas votações` : "Detalhamento indisponível";
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}>
     <View style={styles.modalBackdrop}>
       <Pressable accessibilityRole="button" accessibilityLabel="Fechar detalhamento do momentum" onPress={onClose} style={StyleSheet.absoluteFill}/>
@@ -137,13 +139,13 @@ export function MomentumDetailModal({ standing, onClose, onOpenMatch }: { standi
         <Text style={styles.momentumIntro}>A pontuação reúne os resultados das partidas e os reconhecimentos recebidos nas votações do mês.</Text>
         <View style={styles.momentumSummary}>
           <View style={styles.momentumSummaryRow}><View><Text style={styles.momentumSummaryTitle}>Resultados</Text><Text style={styles.momentumSummaryNote}>{standing.wins}V · {standing.draws}E · {standing.losses}D</Text></View><Text style={[styles.momentumSummaryValue, standing.resultMomentum < 0 && styles.negative]}>{signed(standing.resultMomentum)}</Text></View>
-          <View style={styles.momentumSummaryRow}><View><Text style={styles.momentumSummaryTitle}>Votações</Text><Text style={styles.momentumSummaryNote}>{recognitions} reconhecimentos</Text></View><Text style={[styles.momentumSummaryValue, standing.votingMomentum < 0 && styles.negative]}>{signed(standing.votingMomentum)}</Text></View>
+          <View style={styles.momentumSummaryRow}><View><Text style={styles.momentumSummaryTitle}>Votações</Text><Text style={styles.momentumSummaryNote}>{recognitionLabel}</Text></View><Text style={[styles.momentumSummaryValue, standing.votingMomentum < 0 && styles.negative]}>{signed(standing.votingMomentum)}</Text></View>
         </View>
         <View style={styles.momentumListHead}><Text style={styles.momentumListTitle}>PARTIDAS E VOTOS</Text><Text style={styles.momentumListOrder}>mais recente primeiro</Text></View>
         <ScrollView style={styles.momentumList} contentContainerStyle={styles.momentumListContent} showsVerticalScrollIndicator={false}>
           {details.length ? details.map(entry => <Pressable accessibilityRole="button" accessibilityLabel={`Abrir ${entry.title}`} onPress={() => onOpenMatch(entry.separationId)} key={entry.matchId} style={({ pressed }) => [styles.momentumMatch, pressed && styles.momentumMatchPressed]}>
             <Text style={styles.momentumDate}>{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(`${entry.date}T12:00:00Z`)).replace(".", "")}</Text>
-            <View style={styles.momentumMatchCopy}><Text style={styles.momentumMatchTitle}>{resultLabel(entry.result)} · {entry.title}</Text><Text style={styles.momentumMatchNote}>{momentumDetailText(entry) || "Sem alteração no momentum"}</Text></View>
+            <View style={styles.momentumMatchCopy}><Text style={styles.momentumMatchTitle}>{resultLabel(entry.result)} · {entry.title}</Text><View style={styles.momentumDetailTags}>{momentumDetailItems(entry).length ? momentumDetailItems(entry).map((item, index) => <View key={`${item.label}-${index}`} style={styles.momentumDetailTag}><Text numberOfLines={1} style={styles.momentumDetailLabel}>{item.label}</Text>{item.momentum !== null && <Text style={[styles.momentumDetailValue, item.momentum < 0 && styles.negative]}>{signed(item.momentum)}</Text>}</View>) : <View style={styles.momentumDetailTag}><Text style={styles.momentumDetailLabel}>Sem alteração no momentum</Text></View>}</View></View>
             <Text style={[styles.momentumMatchValue, entry.totalMomentum < 0 && styles.negative]}>{signed(entry.totalMomentum)}</Text>
           </Pressable>) : <Text style={styles.momentumEmpty}>O detalhamento por partida não estava disponível quando este mês foi consolidado.</Text>}
         </ScrollView>
@@ -198,13 +200,16 @@ const styles = StyleSheet.create({
   momentumListOrder: { color: "#79988B", fontSize: 8 },
   momentumList: { flexGrow: 0, maxHeight: 250 },
   momentumListContent: { gap: 8 },
-  momentumMatch: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 12, backgroundColor: "rgba(255,255,255,.045)", borderWidth: 1, borderColor: "rgba(255,255,255,.08)" },
+  momentumMatch: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 10, borderRadius: 12, backgroundColor: "rgba(255,255,255,.045)", borderWidth: 1, borderColor: "rgba(255,255,255,.08)" },
   momentumMatchPressed: { backgroundColor: "rgba(255,255,255,.1)" },
-  momentumDate: { width: 37, color: "#AFC6BC", fontSize: 9, fontWeight: "800", textTransform: "uppercase" },
-  momentumMatchCopy: { flex: 1, minWidth: 0, gap: 3 },
+  momentumDate: { width: 37, paddingTop: 2, color: "#AFC6BC", fontSize: 9, fontWeight: "800", textTransform: "uppercase" },
+  momentumMatchCopy: { flex: 1, minWidth: 0, gap: 5 },
   momentumMatchTitle: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
-  momentumMatchNote: { color: "#9EB8AD", fontSize: 9, lineHeight: 13 },
-  momentumMatchValue: { color: "#43E69B", fontSize: 12, fontWeight: "900", fontVariant: ["tabular-nums"] },
+  momentumDetailTags: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  momentumDetailTag: { maxWidth: "100%", flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "rgba(255,255,255,.09)", backgroundColor: "rgba(255,255,255,.055)" },
+  momentumDetailLabel: { flexShrink: 1, color: "#BBD0C7", fontSize: 8, lineHeight: 10 },
+  momentumDetailValue: { color: "#59E6A0", fontSize: 8, fontWeight: "900", fontVariant: ["tabular-nums"] },
+  momentumMatchValue: { paddingTop: 2, color: "#43E69B", fontSize: 12, fontWeight: "900", fontVariant: ["tabular-nums"] },
   momentumEmpty: { color: "#AFC6BC", fontSize: 11, lineHeight: 17, paddingVertical: 16, textAlign: "center" },
   momentumFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, borderWidth: 1, borderColor: "#C99A20", borderRadius: 12, padding: 12, backgroundColor: "rgba(201,154,32,.07)" },
   momentumEquation: { flex: 1, color: "#E4B940", fontSize: 8, fontWeight: "900" },

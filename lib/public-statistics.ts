@@ -110,7 +110,10 @@ export function buildMonthlyCareerHighlights(players: StatisticsPlayer[], matche
   const awards = [...months].map(([month, monthMatches]) => buildMonthAward(month, monthMatches, playerMap, formation, monthlySelectionMinimumMatches)).filter(Boolean) as MonthlyCareerAward[];
   awards.sort((a, b) => b.month.localeCompare(a.month));
   const referenceMonth = referenceDate.slice(0, 7), selectedMonth = focusMonth.startsWith(`${year}-`) ? focusMonth : `${year}-12`;
-  const finalizedByMonth = new Map(finalizedAwards.filter(award => award.month.startsWith(`${year}-`)).map(award => [award.month, award]));
+  const calculatedByMonth = new Map(awards.map(award => [award.month, award]));
+  const finalizedByMonth = new Map(finalizedAwards
+    .filter(award => award.month.startsWith(`${year}-`))
+    .map(award => [award.month, hydrateMonthlyAwardDetails(award, calculatedByMonth.get(award.month))]));
   const isClosed = (month: string) => month < referenceMonth || finalizedByMonth.has(month);
   const currentYear = Number(referenceDate.slice(0, 4));
   const annualMvpAvailable = year < currentYear || (year === currentYear && referenceDate >= annualAwardsAvailableAt);
@@ -152,6 +155,45 @@ export type MonthlyCareerAward = {
   playerOfMonth: MonthlyCareerStanding | null;
   selection: (MonthlyCareerStanding & { role: string })[];
 };
+
+/**
+ * Legacy snapshots predate the match-by-match momentum breakdown. Keep their
+ * ranking and totals immutable, but attach a freshly reconstructed breakdown
+ * when (and only when) every aggregate still matches the finalized snapshot.
+ */
+export function hydrateMonthlyAwardDetails(finalized: MonthlyCareerAward, calculated?: MonthlyCareerAward): MonthlyCareerAward {
+  if (!calculated || finalized.month !== calculated.month) return finalized;
+  const calculatedStandings = new Map<string, MonthlyCareerStanding>();
+  if (calculated.playerOfMonth) calculatedStandings.set(calculated.playerOfMonth.player.id, calculated.playerOfMonth);
+  for (const standing of calculated.selection) calculatedStandings.set(standing.player.id, standing);
+
+  const hydrate = <T extends MonthlyCareerStanding>(standing: T): T => {
+    if (Array.isArray(standing.momentumDetails)) return standing;
+    const reconstructed = calculatedStandings.get(standing.player.id);
+    if (!reconstructed || !Array.isArray(reconstructed.momentumDetails) || !momentumDetailsMatch(standing, reconstructed)) return standing;
+    return {
+      ...standing,
+      momentumDetails: reconstructed.momentumDetails.map(detail => ({ ...detail, votes: detail.votes.map(vote => ({ ...vote })) })),
+    };
+  };
+
+  return {
+    ...finalized,
+    playerOfMonth: finalized.playerOfMonth ? hydrate(finalized.playerOfMonth) : null,
+    selection: finalized.selection.map(hydrate),
+  };
+}
+
+function momentumDetailsMatch(finalized: MonthlyCareerStanding, reconstructed: MonthlyCareerStanding) {
+  const details = reconstructed.momentumDetails || [];
+  const sum = (key: "resultMomentum" | "votingMomentum" | "totalMomentum") => round(details.reduce((total, detail) => total + detail[key], 0));
+  return round(reconstructed.resultMomentum) === round(finalized.resultMomentum)
+    && round(reconstructed.votingMomentum) === round(finalized.votingMomentum)
+    && round(reconstructed.totalMomentum) === round(finalized.totalMomentum)
+    && sum("resultMomentum") === round(finalized.resultMomentum)
+    && sum("votingMomentum") === round(finalized.votingMomentum)
+    && sum("totalMomentum") === round(finalized.totalMomentum);
+}
 
 export function buildMonthAward(month: string, matches: StatisticsMatch[], playerMap: Map<string, StatisticsPlayer>, formation: MonthlyTeamFormation, monthlySelectionMinimumMatches = 2): MonthlyCareerAward | null {
   const standings = new Map<string, MonthlyCareerStanding>();

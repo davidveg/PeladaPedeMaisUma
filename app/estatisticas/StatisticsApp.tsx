@@ -146,18 +146,20 @@ function MonthlySelection({award}:{award:MonthlyAward}) {
 }
 
 function MonthlyMomentumPanel({standing,onClose}:{standing:MonthlyStanding;onClose():void}){
-  const details=standing.momentumDetails||[];
+  const detailsAvailable=Array.isArray(standing.momentumDetails),details=standing.momentumDetails||[];
+  const recognitions=details.reduce((sum,entry)=>sum+entry.votes.length,0);
+  const recognitionLabel=detailsAvailable?`${recognitions} ${recognitions===1?"premiação":"premiações"} nas votações`:"Detalhamento indisponível";
   const resultLabel=(value:MonthlyMomentumDetail["result"])=>value==="WIN"?"Vitória":value==="DRAW"?"Empate":value==="LOSS"?"Derrota":"Reconhecimento";
-  const detailText=(entry:MonthlyMomentumDetail)=>[
-    entry.resultMomentum?`${resultLabel(entry.result)} ${signed(entry.resultMomentum)}`:entry.result!=="VOTE"?resultLabel(entry.result):"",
-    ...entry.votes.map(vote=>`${vote.label} ${signed(vote.momentum)}`),
-    entry.attendanceBonus?`Presença ${signed(entry.attendanceBonus)}`:"",
-  ].filter(Boolean).join(" · ");
+  const detailItems=(entry:MonthlyMomentumDetail)=>[
+    ...(entry.resultMomentum?[{label:resultLabel(entry.result),momentum:entry.resultMomentum}]:entry.result!=="VOTE"?[{label:resultLabel(entry.result),momentum:null}]:[]),
+    ...entry.votes.map(vote=>({label:vote.label,momentum:vote.momentum})),
+    ...(entry.attendanceBonus?[{label:"Presença",momentum:entry.attendanceBonus}]:[]),
+  ];
   return <aside className="monthly-momentum-panel" role="dialog" aria-label={`Composição do momentum de ${standing.player.displayName}`} onMouseEnter={()=>{}}>
     <header><PlayerPhoto photoUrl={standing.player.photoUrl} name={standing.player.displayName} large/><div><small>COMPOSIÇÃO DO MÊS</small><h4>{standing.player.displayName}</h4><span>{standing.player.primaryPosition||"Jogador"}</span></div><strong>{signed(standing.totalMomentum)}<small>MOMENTUM TOTAL</small></strong><button type="button" onClick={onClose} aria-label="Fechar detalhamento">×</button></header>
     <p>A pontuação reúne os resultados das partidas e os reconhecimentos recebidos nas votações do mês.</p>
-    <dl><div><dt><b>Resultados</b><span>{standing.wins}V · {standing.draws}E · {standing.losses}D</span></dt><dd className={standing.resultMomentum<0?"negative":""}>{signed(standing.resultMomentum)}</dd></div><div><dt><b>Votações</b><span>{details.reduce((sum,entry)=>sum+entry.votes.length,0)} reconhecimentos</span></dt><dd className={standing.votingMomentum<0?"negative":""}>{signed(standing.votingMomentum)}</dd></div></dl>
-    <section><h5>PARTIDAS E VOTOS <span>mais recente primeiro</span></h5>{details.length?details.map(entry=><a href={`/separacoes-salvas?separation=${encodeURIComponent(entry.separationId)}`} key={entry.matchId}><time>{new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"short"}).format(new Date(`${entry.date}T12:00:00`)).replace(".","")}</time><span><b>{resultLabel(entry.result)} · {entry.title}</b><small>{detailText(entry)||"Sem alteração no momentum"}</small></span><strong className={entry.totalMomentum<0?"negative":""}>{signed(entry.totalMomentum)}</strong></a>):<div className="monthly-momentum-empty">O detalhamento por partida não estava disponível quando este mês foi consolidado.</div>}</section>
+    <dl><div><dt><b>Resultados</b><span>{standing.wins}V · {standing.draws}E · {standing.losses}D</span></dt><dd className={standing.resultMomentum<0?"negative":""}>{signed(standing.resultMomentum)}</dd></div><div><dt><b>Votações</b><span>{recognitionLabel}</span></dt><dd className={standing.votingMomentum<0?"negative":""}>{signed(standing.votingMomentum)}</dd></div></dl>
+    <section><h5>PARTIDAS E VOTOS <span>mais recente primeiro</span></h5>{details.length?details.map(entry=><a href={`/separacoes-salvas?separation=${encodeURIComponent(entry.separationId)}`} key={entry.matchId}><time>{new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"short"}).format(new Date(`${entry.date}T12:00:00`)).replace(".","")}</time><span><b>{resultLabel(entry.result)} · {entry.title}</b><span className="momentum-detail-tags">{detailItems(entry).length?detailItems(entry).map((item,index)=><small key={`${item.label}-${index}`}><span>{item.label}</span>{item.momentum!==null&&<strong className={item.momentum<0?"negative":""}>{signed(item.momentum)}</strong>}</small>):<small><span>Sem alteração no momentum</span></small>}</span></span><strong className={entry.totalMomentum<0?"negative":""}>{signed(entry.totalMomentum)}</strong></a>):<div className="monthly-momentum-empty">O detalhamento por partida não estava disponível quando este mês foi consolidado.</div>}</section>
     <footer><span>{signed(standing.resultMomentum)} RESULTADOS&nbsp; + &nbsp;{signed(standing.votingMomentum)} VOTAÇÕES</span><b>= {signed(standing.totalMomentum)}</b></footer>
   </aside>;
 }

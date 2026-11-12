@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildMonthAward, buildMonthlyCareerHighlights, buildPublicStatistics } from "../lib/public-statistics.ts";
+import { buildMonthAward, buildMonthlyCareerHighlights, buildPublicStatistics, hydrateMonthlyAwardDetails } from "../lib/public-statistics.ts";
 
 const players = [
   { id: "a", displayName: "Ana", type: "monthly" },
@@ -99,8 +99,11 @@ test("monta jogador, seleção mensal, histórico fechado e pódio anual pelo mo
 
   const preservedJanuary = structuredClone(result.history.find(award => award.month === "2026-01"));
   preservedJanuary.playerOfMonth.player.displayName = "Destaque preservado";
+  delete preservedJanuary.playerOfMonth.momentumDetails;
+  for (const member of preservedJanuary.selection) delete member.momentumDetails;
   const withFinalizedSnapshot = buildMonthlyCareerHighlights(awardPlayers, awardMatches, 2026, "2026-03-15", "2026-01", "2026-12-31", [preservedJanuary]);
   assert.equal(withFinalizedSnapshot.focus.playerOfMonth.player.displayName, "Destaque preservado", "o retrato mensal finalizado deve prevalecer sobre recálculos posteriores");
+  assert.equal(withFinalizedSnapshot.focus.playerOfMonth.momentumDetails.length, 2, "a resposta pode enriquecer um retrato legado sem substituir seus dados consolidados");
 
   const compactFormation = buildMonthlyCareerHighlights(awardPlayers, awardMatches, 2026, "2026-03-15", "2026-02", "2026-12-31", [], { goalkeepers: 1, defenders: 1, midfielders: 1, attackers: 1 });
   assert.deepEqual(compactFormation.focus.formation, { goalkeepers: 1, defenders: 1, midfielders: 1, attackers: 1 });
@@ -124,4 +127,41 @@ test("seleção mensal exige o mínimo configurado somente quando o mês tem mai
   assert.deepEqual(normalMonth.selection.map(entry => entry.player.id), ["regular"]);
   const shortMonth = buildMonthAward("2026-04", monthlyMatches.slice(0, 2), playerMap, formation, 3);
   assert.deepEqual(shortMonth.selection.map(entry => entry.player.id), ["one-game"], "meses com até dois jogos ignoram o mínimo configurado");
+});
+
+test("reconstrói detalhes de snapshots legados sem alterar o resultado consolidado", () => {
+  const gustavo = { id: "gustavo", displayName: "Gustavo", type: "monthly", primaryPosition: "Defesa" };
+  const formation = { goalkeepers: 0, defenders: 1, midfielders: 0, attackers: 0 };
+  const octoberMatches = [
+    { id: "oct-11", separationId: "sep-11", title: "Rodada 11", date: "2026-10-11", blueScore: 2, yellowScore: 1, winnerTeam: "BLUE", blueIds: ["gustavo"], yellowIds: [], config: { winnerBonus: 0, loserPenalty: 0 }, results: { motm: [{ playerId: "gustavo", momentum: .3, place: 1 }] } },
+    { id: "oct-18", separationId: "sep-18", title: "Rodada 18", date: "2026-10-18", blueScore: 1, yellowScore: 1, winnerTeam: "DRAW", blueIds: ["gustavo"], yellowIds: [], config: { winnerBonus: 0, loserPenalty: 0 }, results: { fairPlay: [{ playerId: "gustavo", momentum: .1 }] } },
+  ];
+  const calculated = buildMonthAward("2026-10", octoberMatches, new Map([[gustavo.id, gustavo]]), formation, 2);
+  const legacy = structuredClone(calculated);
+  delete legacy.playerOfMonth.momentumDetails;
+  delete legacy.selection[0].momentumDetails;
+  legacy.playerOfMonth.player.displayName = "Gustavo consolidado";
+
+  const hydrated = hydrateMonthlyAwardDetails(legacy, calculated);
+  assert.equal(hydrated.playerOfMonth.player.displayName, "Gustavo consolidado", "os dados do snapshot devem prevalecer");
+  assert.equal(hydrated.playerOfMonth.votingMomentum, .4);
+  assert.equal(hydrated.playerOfMonth.momentumDetails.flatMap(entry => entry.votes).length, 2);
+  assert.deepEqual(hydrated.playerOfMonth.momentumDetails.flatMap(entry => entry.votes).map(vote => vote.label), ["Fair Play", "Craque da rodada · 1º lugar"]);
+  assert.equal(legacy.playerOfMonth.momentumDetails, undefined, "a hidratação não deve regravar nem mutar o snapshot");
+});
+
+test("não anexa detalhes reconstruídos quando os totais divergem do snapshot", () => {
+  const player = { id: "legacy", displayName: "Legado", type: "monthly", primaryPosition: "Ataque" };
+  const formation = { goalkeepers: 0, defenders: 0, midfielders: 0, attackers: 1 };
+  const calculated = buildMonthAward("2026-09", [{ id: "sep", separationId: "sep", title: "Jogo", date: "2026-09-01", blueScore: 1, yellowScore: 0, winnerTeam: "BLUE", blueIds: [player.id], yellowIds: [], config: { winnerBonus: .1 }, results: {} }], new Map([[player.id, player]]), formation, 1);
+  const legacy = structuredClone(calculated);
+  delete legacy.playerOfMonth.momentumDetails;
+  delete legacy.selection[0].momentumDetails;
+  legacy.playerOfMonth.totalMomentum = .2;
+  legacy.selection[0].totalMomentum = .2;
+
+  const hydrated = hydrateMonthlyAwardDetails(legacy, calculated);
+  assert.equal(hydrated.playerOfMonth.momentumDetails, undefined);
+  assert.equal(hydrated.selection[0].momentumDetails, undefined);
+  assert.equal(hydrated.playerOfMonth.totalMomentum, .2);
 });
