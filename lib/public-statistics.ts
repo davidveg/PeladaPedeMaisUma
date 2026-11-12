@@ -2,7 +2,7 @@ import { defaultMonthlyTeamFormation, type MonthlyTeamFormation } from "./career
 
 export type StatisticsPlayer = { id: string; displayName: string; photoUrl?: string | null; type?: string | null; primaryPosition?: string | null };
 export type StatisticsContribution = { matchId: string; scorerPlayerId: string; assistPlayerId?: string | null; ownGoal?: boolean };
-export type StatisticsVoteResult = { playerId: string; momentum?: number };
+export type StatisticsVoteResult = { playerId: string; momentum?: number; place?: number };
 export type StatisticsMatch = {
   id: string;
   separationId: string;
@@ -131,6 +131,19 @@ type MonthlyCareerStanding = {
   wins: number;
   draws: number;
   losses: number;
+  momentumDetails?: MonthlyMomentumDetail[];
+};
+export type MonthlyMomentumDetail = {
+  matchId: string;
+  separationId: string;
+  title: string;
+  date: string;
+  result: "WIN" | "DRAW" | "LOSS" | "VOTE";
+  resultMomentum: number;
+  votingMomentum: number;
+  totalMomentum: number;
+  votes: { label: string; momentum: number }[];
+  attendanceBonus: number;
 };
 export type MonthlyCareerAward = {
   month: string;
@@ -144,25 +157,56 @@ export function buildMonthAward(month: string, matches: StatisticsMatch[], playe
   const standings = new Map<string, MonthlyCareerStanding>();
   const get = (playerId: string) => {
     const player = playerMap.get(playerId); if (!player) return null;
-    const current = standings.get(playerId) || { player, resultMomentum: 0, votingMomentum: 0, totalMomentum: 0, games: 0, wins: 0, draws: 0, losses: 0 };
+    const current = standings.get(playerId) || { player, resultMomentum: 0, votingMomentum: 0, totalMomentum: 0, games: 0, wins: 0, draws: 0, losses: 0, momentumDetails: [] };
     standings.set(playerId, current); return current;
   };
   for (const match of matches) {
     const winnerBonus = finite(match.config?.winnerBonus, .1), loserPenalty = finite(match.config?.loserPenalty, -.1);
+    const details = new Map<string, MonthlyMomentumDetail>();
+    const detail = (playerId: string, result: MonthlyMomentumDetail["result"] = "VOTE") => {
+      const existing = details.get(playerId);
+      if (existing) return existing;
+      const entry: MonthlyMomentumDetail = { matchId: match.id, separationId: match.separationId, title: match.title, date: match.date, result, resultMomentum: 0, votingMomentum: 0, totalMomentum: 0, votes: [], attendanceBonus: 0 };
+      details.set(playerId, entry);
+      return entry;
+    };
     for (const [team, ids] of [["BLUE", match.blueIds], ["YELLOW", match.yellowIds]] as const) {
       for (const playerId of new Set(ids)) {
         const standing = get(playerId); if (!standing) continue;
         const won = match.winnerTeam === team, drew = match.winnerTeam === "DRAW";
+        const resultMomentum = drew ? 0 : won ? winnerBonus : loserPenalty;
         standing.games += 1; standing.wins += Number(won); standing.draws += Number(drew); standing.losses += Number(!won && !drew);
-        standing.resultMomentum += drew ? 0 : won ? winnerBonus : loserPenalty;
+        standing.resultMomentum += resultMomentum;
+        const entry = detail(playerId, drew ? "DRAW" : won ? "WIN" : "LOSS");
+        entry.resultMomentum += resultMomentum;
       }
     }
-    for (const result of [...(match.results?.motm || []), ...(match.results?.dotm || []), ...(match.results?.partner || []), ...(match.results?.fairPlay || []), ...(match.results?.defense || [])]) {
-      const standing = get(result.playerId); if (standing) standing.votingMomentum += finite(result.momentum, 0);
+    const voteGroups = [
+      ["motm", "Craque da rodada", match.results?.motm || []],
+      ["dotm", "Flop da rodada", match.results?.dotm || []],
+      ["partner", "Parceiro da rodada", match.results?.partner || []],
+      ["fairPlay", "Fair Play", match.results?.fairPlay || []],
+      ["defense", "Defesa da rodada", match.results?.defense || []],
+    ] as const;
+    for (const [, label, results] of voteGroups) for (const result of results) {
+      const standing = get(result.playerId), momentum = finite(result.momentum, 0); if (!standing) continue;
+      standing.votingMomentum += momentum;
+      const entry = detail(result.playerId);
+      entry.votingMomentum += momentum;
+      entry.votes.push({ label: result.place ? `${label} · ${result.place}º lugar` : label, momentum: round(momentum) });
     }
-    if (finite(match.attendanceBonusValue, 0) > 0) for (const playerId of new Set([...match.blueIds, ...match.yellowIds])) { const standing = get(playerId); if (standing) standing.votingMomentum += finite(match.attendanceBonusValue, 0); }
+    const attendanceBonus = finite(match.attendanceBonusValue, 0);
+    if (attendanceBonus > 0) for (const playerId of new Set([...match.blueIds, ...match.yellowIds])) { const standing = get(playerId); if (standing) { standing.votingMomentum += attendanceBonus; const entry = detail(playerId); entry.votingMomentum += attendanceBonus; entry.attendanceBonus += attendanceBonus; } }
+    for (const [playerId, entry] of details) {
+      const standing = get(playerId); if (!standing) continue;
+      entry.resultMomentum = round(entry.resultMomentum);
+      entry.votingMomentum = round(entry.votingMomentum);
+      entry.attendanceBonus = round(entry.attendanceBonus);
+      entry.totalMomentum = round(entry.resultMomentum + entry.votingMomentum);
+      standing.momentumDetails!.push(entry);
+    }
   }
-  const ranked = [...standings.values()].map(standing => ({ ...standing, resultMomentum: round(standing.resultMomentum), votingMomentum: round(standing.votingMomentum), totalMomentum: round(standing.resultMomentum + standing.votingMomentum) })).sort(byMonthlyStanding);
+  const ranked = [...standings.values()].map(standing => ({ ...standing, resultMomentum: round(standing.resultMomentum), votingMomentum: round(standing.votingMomentum), totalMomentum: round(standing.resultMomentum + standing.votingMomentum), momentumDetails: standing.momentumDetails?.sort((a,b)=>b.date.localeCompare(a.date)||b.matchId.localeCompare(a.matchId)) })).sort(byMonthlyStanding);
   if (!ranked.length) return null;
   const minimumMatches = Math.min(100, Math.max(1, Math.trunc(Number(monthlySelectionMinimumMatches) || 2)));
   const selectionCandidates = matches.length <= 2 ? ranked : ranked.filter(entry => entry.games >= minimumMatches);

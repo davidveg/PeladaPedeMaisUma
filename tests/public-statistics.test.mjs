@@ -69,6 +69,12 @@ test("monta jogador, seleção mensal, histórico fechado e pódio anual pelo mo
   const result = buildMonthlyCareerHighlights(awardPlayers, awardMatches, 2026, "2026-03-15", "2026-01", "2026-03-01");
   assert.equal(result.focus.playerOfMonth.player.id, "a1");
   assert.equal(result.focus.playerOfMonth.totalMomentum, .4);
+  assert.deepEqual(result.focus.playerOfMonth.momentumDetails.map(entry => ({ date: entry.date, result: entry.result, resultMomentum: entry.resultMomentum, votingMomentum: entry.votingMomentum, totalMomentum: entry.totalMomentum })), [
+    { date: "2026-01-11", result: "DRAW", resultMomentum: 0, votingMomentum: 0, totalMomentum: 0 },
+    { date: "2026-01-04", result: "WIN", resultMomentum: .1, votingMomentum: .3, totalMomentum: .4 },
+  ]);
+  assert.deepEqual(result.focus.playerOfMonth.momentumDetails[1].votes, [{ label: "Craque da rodada", momentum: .3 }]);
+  assert.equal(result.focus.playerOfMonth.momentumDetails.reduce((sum, entry) => sum + entry.totalMomentum, 0), result.focus.playerOfMonth.totalMomentum);
   assert.equal(result.focusMonthClosed, true);
   assert.ok(result.focus.selection.every(member => member.player.id !== "guest"));
   assert.deepEqual(result.focus.selection.map(member => member.role), ["Goleiro", "Defesa", "Defesa", "Meio-campo", "Meio-campo", "Ataque", "Ataque"]);
