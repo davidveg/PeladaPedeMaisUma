@@ -31,6 +31,8 @@ COPY --from=build --chown=node:node /app/server/selfhost-runtime.mjs ./selfhost-
 COPY --from=build --chown=node:node /app/server/selfhost-server.mjs ./selfhost-server.mjs
 COPY --from=build --chown=node:node /app/server/selfhost-mailer.mjs ./selfhost-mailer.mjs
 COPY --from=build --chown=node:node /app/server/selfhost-logger.mjs ./selfhost-logger.mjs
+COPY --from=build --chown=node:node /app/server/selfhost-cloudflare-loader.mjs ./selfhost-cloudflare-loader.mjs
+COPY --from=build --chown=node:node /app/server/selfhost-register.mjs ./selfhost-register.mjs
 
 USER node
 EXPOSE 3000
@@ -39,4 +41,4 @@ VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
-CMD ["node", "selfhost-server.mjs"]
+CMD ["node", "--import", "./selfhost-register.mjs", "selfhost-server.mjs"]
