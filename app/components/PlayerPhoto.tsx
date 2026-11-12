@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { playerPhotoThumbnailUrl } from "../../lib/player-photo-url";
 
 type PreviewPosition = { left: number; top: number };
 
 export function PlayerPhoto({ photoUrl, name, large = false, className = "", previewSize = 220, hoverPreview }: { photoUrl?: string | null; name: string; large?: boolean; className?: string; previewSize?: number; hoverPreview?: boolean }) {
   const [preview, setPreview] = useState<PreviewPosition | null>(null);
   const canPreview = Boolean(photoUrl) && (hoverPreview ?? !large);
+  const displayUrl = large ? photoUrl : playerPhotoThumbnailUrl(photoUrl);
 
   function showPreview(target: HTMLElement) {
     if (!canPreview) return;
@@ -21,7 +23,7 @@ export function PlayerPhoto({ photoUrl, name, large = false, className = "", pre
 
   return <span className={`player-avatar-wrap ${large ? "is-large" : ""} ${canPreview ? "has-preview" : ""}`} title={canPreview ? `Ampliar foto de ${name}` : undefined} onMouseEnter={(event) => showPreview(event.currentTarget)} onMouseLeave={() => setPreview(null)}>
     <span className={`player-photo ${large ? "large-player-photo" : ""} ${className}`}>
-      {photoUrl ? <img src={photoUrl} alt={`Foto de ${name}`} /> : <span className="player-placeholder" role="img" aria-label={`Foto padrão de ${name}`}>👤</span>}
+      {displayUrl ? <img src={displayUrl} alt={`Foto de ${name}`} loading={large ? "eager" : "lazy"} decoding="async" /> : <span className="player-placeholder" role="img" aria-label={`Foto padrão de ${name}`}>👤</span>}
     </span>
     {preview && photoUrl && typeof document !== "undefined" && createPortal(<span className="photo-hover-preview" role="tooltip" style={{ left: preview.left, top: preview.top, width: previewSize, height: previewSize }}><img src={photoUrl} alt={`Pré-visualização da foto de ${name}`} /><small>{name}</small></span>, document.body)}
   </span>;

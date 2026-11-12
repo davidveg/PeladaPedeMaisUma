@@ -54,6 +54,16 @@ test("jogador autenticado no mobile envia e associa sua foto", async () => {
       { ...(await db().prepare(`SELECT owner_account_type,owner_account_id,status,size_bytes FROM upload_objects WHERE object_key=?`).bind(firstKey).first()) },
       { owner_account_type: "member", owner_account_id: memberId, status: "pending", size_bytes: jpeg.byteLength },
     );
+    const thumbnailBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x01]);
+    const thumbnailUpload = await upload.POST(new Request("https://pelada.example/api/upload", {
+      method: "POST",
+      headers: { authorization: `Bearer ${session.accessToken}`, "content-type": "image/jpeg", "x-upload-thumbnail-for": encodeURIComponent(url) },
+      body: thumbnailBytes,
+    }));
+    assert.equal(thumbnailUpload.status, 200);
+    const thumbnailImage = await upload.GET(new Request(`https://pelada.example${url}&variant=thumbnail`));
+    assert.equal(thumbnailImage.headers.get("x-player-photo-variant"), "thumbnail");
+    assert.deepEqual([...new Uint8Array(await thumbnailImage.arrayBuffer())], [...thumbnailBytes]);
 
     const updated = await memberProfile.PUT(new Request("https://pelada.example/api/member-profile", {
       method: "PUT",
@@ -81,6 +91,7 @@ test("jogador autenticado no mobile envia e associa sua foto", async () => {
     }));
     assert.equal(replaced.status, 200);
     assert.equal((await upload.GET(new Request(`https://pelada.example${url}`))).status, 404, "a foto substituída deve sair do storage");
+    assert.equal((await bindings.UPLOADS.get(uploadLifecycle.uploadThumbnailKey(firstKey))), null, "a miniatura substituída também deve sair do storage");
     assert.equal(await db().prepare(`SELECT status FROM upload_objects WHERE object_key=?`).bind(firstKey).first("status"), "deleted");
 
     let pulls = 0;

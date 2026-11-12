@@ -11,6 +11,7 @@ import type { HallOfFame, HallPlayer } from "@/types";
 import { AchievementBadge } from "@/achievement-badge";
 import { CollectiveBadge } from "@/collective-badge";
 import { HallRecordBadge } from "@/hall-record-badge";
+import { mobilePlayerPhotoUrl } from "@/player-photo-url";
 
 export default function HallOfFameScreen() {
   const router = useRouter(), { palette } = useMobileBranding(), [season, setSeason] = useState<number | "all">("all");
@@ -43,7 +44,7 @@ function Section({eyebrow,title,description,color}:{eyebrow:string;title:string;
 function Filter({active,label,onPress,color}:{active:boolean;label:string;onPress():void;color:string}) { return <Pressable accessibilityRole="button" accessibilityState={{selected:active}} onPress={onPress} style={[styles.filter,active&&{backgroundColor:color,borderColor:color}]}><Text style={[styles.filterText,active&&styles.filterTextActive]}>{label}</Text></Pressable>; }
 function Avatar({player,size}:{player:HallPlayer;size:number}) {
   const [failedUri,setFailedUri]=useState<string|null>(null);
-  const uri=player.photoUrl?( /^https?:\/\//i.test(player.photoUrl)?player.photoUrl:`${API_BASE_URL}${player.photoUrl.startsWith("/")?"":"/"}${player.photoUrl}` ):null;
+  const uri=mobilePlayerPhotoUrl(player.photoUrl,API_BASE_URL);
   const dimensions={width:size,height:size,borderRadius:size/2};
   return uri&&uri!==failedUri?<Image source={{uri}} accessibilityLabel={`Foto de ${player.displayName}`} resizeMode="cover" onError={()=>setFailedUri(uri)} style={[styles.avatar,dimensions]}/>:<View accessible accessibilityLabel={player.displayName} style={[styles.avatar,dimensions,styles.avatarFallback]}><Ionicons name="person" size={size*.46} color={colors.muted}/></View>;
 }

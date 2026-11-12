@@ -18,6 +18,7 @@ export async function uploadBrowserImage(file: File, options: { purpose?: "brand
   const payload = await uploadResponsePayload(response);
   if (!response.ok) throw new Error(payload.error || `Não foi possível enviar a imagem (${response.status}).`);
   if (!payload.url) throw new Error("O servidor concluiu o upload, mas não retornou a URL da imagem.");
+  if (options.variant === "photo") await uploadPhotoThumbnail(file, payload.url);
   return payload.url;
 }
 
@@ -110,4 +111,40 @@ function loadBrowserImage(file: File) {
 
 function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
   return new Promise<Blob | null>(resolve => canvas.toBlob(resolve, type, quality));
+}
+
+async function uploadPhotoThumbnail(file: File, originalUrl: string) {
+  try {
+    const image = await loadBrowserImage(file);
+    let blob: Blob | null = null;
+    try {
+      const dimensions = outputThumbnailDimensions(image.naturalWidth, image.naturalHeight);
+      const canvas = document.createElement("canvas");
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      blob = await canvasBlob(canvas, "image/webp", 0.72);
+    } finally {
+      URL.revokeObjectURL(image.src);
+    }
+    if (!blob || !blob.size || blob.size > 250_000) return;
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      headers: {
+        "content-type": "image/webp",
+        "x-upload-thumbnail-for": encodeURIComponent(originalUrl),
+      },
+      body: blob,
+    });
+    if (!response.ok) console.warn("A foto foi enviada, mas a miniatura não pôde ser armazenada.");
+  } catch {
+    console.warn("A foto foi enviada, mas a miniatura não pôde ser preparada.");
+  }
+}
+
+function outputThumbnailDimensions(width: number, height: number) {
+  const scale = Math.min(1, 192 / Math.max(width, height));
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }

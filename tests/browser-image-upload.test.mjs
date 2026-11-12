@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { uploadResponsePayload } from "../lib/browser-image-upload.ts";
+import { playerPhotoThumbnailUrl } from "../lib/player-photo-url.ts";
 
 test("upload interpreta a resposta JSON da API", async () => {
   const payload = await uploadResponsePayload(Response.json({ url: "/api/upload?key=branding%2Fsocial.webp" }));
@@ -17,4 +18,13 @@ test("upload não expõe erro de JSON quando o proxy devolve outra página HTML"
   const response = new Response("<html><h1>Bad Gateway</h1></html>", { status: 502, headers: { "content-type": "text/html" } });
   const payload = await uploadResponsePayload(response);
   assert.match(payload.error, /interrompeu o upload/i);
+});
+
+test("listas usam a variante de miniatura apenas para uploads gerenciados de jogadores", () => {
+  assert.equal(
+    playerPhotoThumbnailUrl("/api/upload?key=players%2Fphoto.webp"),
+    "/api/upload?key=players%2Fphoto.webp&variant=thumbnail",
+  );
+  assert.equal(playerPhotoThumbnailUrl("/api/upload?key=branding%2Flogo.webp"), "/api/upload?key=branding%2Flogo.webp");
+  assert.equal(playerPhotoThumbnailUrl("https://cdn.example/photo.webp"), "https://cdn.example/photo.webp");
 });

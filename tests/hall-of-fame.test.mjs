@@ -54,8 +54,7 @@ test("layouts do Hall usam a paleta configurável e reduzem colunas no celular",
   assert.match(mobile, /useMobileBranding/);
   assert.match(mobile, /flexBasis:"46%"/);
   assert.match(mobile, /API_BASE_URL.*apiFetch/);
-  assert.match(mobile, /\^https\?:\\\/\\\//);
-  assert.match(mobile, /player\.photoUrl\.startsWith\("\/"\)/);
+  assert.match(mobile, /mobilePlayerPhotoUrl\(player\.photoUrl,API_BASE_URL\)/);
   assert.match(mobile, /onError=\{\(\)=>setFailedUri\(uri\)\}/);
   assert.match(site, /hall\.collectiveMilestones/);
   assert.match(mobile, /collectiveProgress/);

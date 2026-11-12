@@ -17,6 +17,10 @@ export function uploadUrl(key: string) {
   return `/api/upload?key=${encodeURIComponent(key)}`;
 }
 
+export function uploadThumbnailKey(key: string) {
+  return `${key}.thumbnail`;
+}
+
 export function uploadKey(value: unknown, purpose?: UploadPurpose) {
   if (!value) return null;
   try {
@@ -37,6 +41,7 @@ export async function cleanupExpiredUploads(limit = 20) {
   for (const row of rows.results) {
     try {
       await getRuntimeBindings().UPLOADS.delete(row.object_key);
+      await getRuntimeBindings().UPLOADS.delete(uploadThumbnailKey(row.object_key));
       await db().prepare(`UPDATE upload_objects SET status='deleted',updated_at=? WHERE object_key=? AND status IN ('uploading','pending')`).bind(now.toISOString(), row.object_key).run();
     } catch (error) {
       console.error("Expired upload cleanup failed", error);
@@ -107,6 +112,7 @@ export async function finalizeUploadAttachment(reference: UploadReference | unde
   if (!managed) return;
   try {
     await getRuntimeBindings().UPLOADS.delete(previousKey);
+    await getRuntimeBindings().UPLOADS.delete(uploadThumbnailKey(previousKey));
     await db().prepare(`UPDATE upload_objects SET status='deleted',updated_at=? WHERE object_key=?`).bind(new Date().toISOString(), previousKey).run();
   } catch (error) {
     console.error("Managed upload cleanup failed", error);

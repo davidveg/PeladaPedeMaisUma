@@ -8,6 +8,7 @@ import { Button, Card } from "./components";
 import { useMobileBranding } from "./branding";
 import { contrastTextColor } from "./team-colors";
 import { currentPeriod, dateLabel, monthLabel, monthRange, validatePeriod, type Period, type StatsMatch, type StatsPlayer, type Streak } from "./statistics";
+import { mobilePlayerPhotoUrl } from "./player-photo-url";
 
 export const s = StyleSheet.create({
   content: { padding: 16, paddingBottom: 36, gap: 16, width: "100%", maxWidth: 760, alignSelf: "center" },
@@ -42,7 +43,7 @@ export function Chips({ value, options, onChange }: { value: string; options: { 
   </ScrollView>;
 }
 export function Avatar({ player, size = 42 }: { player: StatsPlayer; size?: number }) {
-  const [failedUri, setFailedUri] = useState<string | null>(null), uri = player.photoUrl ? (/^https?:\/\//i.test(player.photoUrl) ? player.photoUrl : `${API_BASE_URL}${player.photoUrl.startsWith("/") ? "" : "/"}${player.photoUrl}`) : null;
+  const [failedUri, setFailedUri] = useState<string | null>(null), uri = mobilePlayerPhotoUrl(player.photoUrl, API_BASE_URL);
   const style = { width: size, height: size, borderRadius: size / 2, backgroundColor: "#DEEAE2", flexShrink: 0 } as const;
   return uri && uri !== failedUri ? <Image source={{ uri }} alt={`Foto de ${player.displayName}`} accessibilityLabel={`Foto de ${player.displayName}`} onError={() => setFailedUri(uri)} resizeMode="cover" style={style}/> : <View accessible accessibilityLabel={player.displayName} style={[style, { alignItems: "center", justifyContent: "center" }]}><Ionicons name="person" size={size * .48} color="#5B7566"/></View>;
 }

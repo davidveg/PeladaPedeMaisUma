@@ -1,10 +1,11 @@
-import { adminRequired, memberRequired } from "../../../lib/database";
+import { adminRequired, db, memberRequired } from "../../../lib/database";
 import { detectImageType } from "../../../lib/image-upload";
 import { BodyTooLargeError, readLimitedBody } from "../../../lib/limited-body";
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
-import { cleanupExpiredUploads, markUploadPending, rejectUpload, reserveUpload, uploadUrl } from "../../../lib/upload-lifecycle";
+import { cleanupExpiredUploads, markUploadPending, rejectUpload, reserveUpload, uploadKey, uploadThumbnailKey, uploadUrl } from "../../../lib/upload-lifecycle";
 
 const MAX_FILE_SIZE = 5_000_000;
+const MAX_THUMBNAIL_SIZE = 250_000;
 
 export async function POST(request: Request) {
   const purpose = request.headers.get("x-upload-purpose") === "branding" ? "branding" : "players";
@@ -14,6 +15,8 @@ export async function POST(request: Request) {
   if (!account) {
     return Response.json({ error: "Não autorizado" }, { status: 401 });
   }
+  const thumbnailFor = request.headers.get("x-upload-thumbnail-for");
+  if (thumbnailFor) return uploadThumbnail(request, thumbnailFor, administrator ? "administrator" : "member", String(account.id));
   const declaredHeader = request.headers.get("content-length"), declaredSize = declaredHeader === null ? 0 : Number(declaredHeader);
   if (!Number.isFinite(declaredSize) || declaredSize < 0) return Response.json({ error: "Content-Length inválido." }, { status: 400 });
   if (declaredSize > MAX_FILE_SIZE) return Response.json({ error: "A imagem deve ter no máximo 5 MB." }, { status: 413 });
@@ -51,9 +54,41 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const key = new URL(request.url).searchParams.get("key");
+  const parameters = new URL(request.url).searchParams;
+  const key = parameters.get("key"), variant = parameters.get("variant");
   if (!key || (!key.startsWith("players/") && !key.startsWith("branding/"))) return new Response("Not found", { status: 404 });
-  const object = await getRuntimeBindings().UPLOADS.get(key);
+  if (variant && variant !== "thumbnail") return new Response("Not found", { status: 404 });
+  const thumbnail = variant === "thumbnail" && key.startsWith("players/")
+    ? await getRuntimeBindings().UPLOADS.get(uploadThumbnailKey(key))
+    : null;
+  const object = thumbnail || await getRuntimeBindings().UPLOADS.get(key);
   if (!object) return new Response("Not found", { status: 404 });
-  return new Response(object.body, { headers: { "content-type": object.httpMetadata?.contentType || "application/octet-stream", "cache-control": "public,max-age=86400" } });
+  return new Response(object.body, { headers: { "content-type": object.httpMetadata?.contentType || "application/octet-stream", "cache-control": "public,max-age=86400", "x-player-photo-variant": thumbnail ? "thumbnail" : variant === "thumbnail" ? "original-fallback" : "original" } });
+}
+
+async function uploadThumbnail(request: Request, encodedOriginal: string, accountType: "administrator" | "member", accountId: string) {
+  let originalUrl = encodedOriginal;
+  try { originalUrl = decodeURIComponent(encodedOriginal); } catch { /* O valor pode já estar decodificado. */ }
+  const key = uploadKey(originalUrl, "players");
+  if (!key) return Response.json({ error: "A foto original da miniatura é inválida." }, { status: 400 });
+  const original = await dbUploadOwner(key);
+  if (!original || original.ownerAccountType !== accountType || original.ownerAccountId !== accountId || !["pending", "attached"].includes(original.status)) {
+    return Response.json({ error: "A foto original não está disponível para esta conta." }, { status: 403 });
+  }
+  try {
+    const buffer = await readLimitedBody(request, MAX_THUMBNAIL_SIZE);
+    const detected = detectImageType(buffer);
+    if (!buffer.byteLength || !detected || detected.extension === "ico") return Response.json({ error: "A miniatura deve ser uma imagem válida." }, { status: 400 });
+    await getRuntimeBindings().UPLOADS.put(uploadThumbnailKey(key), buffer, { httpMetadata: { contentType: detected.contentType } });
+    return Response.json({ url: `${uploadUrl(key)}&variant=thumbnail` });
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return Response.json({ error: "A miniatura deve ter no máximo 250 KB." }, { status: 413 });
+    console.error("Image thumbnail upload failed", error);
+    return Response.json({ error: "Não foi possível armazenar a miniatura." }, { status: 500 });
+  }
+}
+
+async function dbUploadOwner(key: string) {
+  const row = await db().prepare(`SELECT owner_account_type,owner_account_id,status FROM upload_objects WHERE object_key=?`).bind(key).first<any>();
+  return row ? { ownerAccountType: String(row.owner_account_type), ownerAccountId: String(row.owner_account_id), status: String(row.status) } : null;
 }

@@ -124,6 +124,24 @@ export default function MyCard() {
           headers: { "content-type": "image/jpeg" },
           body: blob,
         });
+        try {
+          const thumbnail = await ImageManipulator.manipulateAsync(
+            optimized.uri,
+            [{ resize: { width: 192 } }],
+            { compress: 0.72, format: ImageManipulator.SaveFormat.JPEG },
+          );
+          const thumbnailResponse = await fetch(thumbnail.uri);
+          const thumbnailBlob = await thumbnailResponse.blob();
+          if (thumbnailBlob.size && thumbnailBlob.size <= 250_000) {
+            await apiFetch("/api/upload", {
+              method: "POST",
+              headers: { "content-type": "image/jpeg", "x-upload-thumbnail-for": encodeURIComponent(uploaded.url) },
+              body: thumbnailBlob,
+            });
+          }
+        } catch {
+          console.warn("A foto foi enviada, mas a miniatura não pôde ser preparada.");
+        }
         photoUrl = uploaded.url;
       }
 
