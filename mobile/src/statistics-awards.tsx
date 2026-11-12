@@ -1,9 +1,8 @@
-import { useRef, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, BackHandler, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { captureRef, releaseCapture } from "react-native-view-shot";
 import { useMobileBranding } from "./branding";
@@ -11,7 +10,7 @@ import { Button } from "./components";
 import { Avatar, Metric, Note, Panel, Person, Select, s } from "./statistics-ui";
 import { closedAward, dateLabel, formationRows, monthLabel, momentum as signed, pitchColumns, type GeneralStatistics, type MonthlyAward, type MonthlyMomentumDetail, type MonthlyStanding } from "./statistics";
 
-export function MonthlyHonors({ highlights }: { highlights: GeneralStatistics["careerHighlights"] }) {
+export function MonthlyHonors({ highlights, onSelectStanding }: { highlights: GeneralStatistics["careerHighlights"]; onSelectStanding(standing: MonthlyStanding & { role: string }): void }) {
   const [selectedMonth, setSelectedMonth] = useState("");
   const availableMonth = highlights.history.some(entry => entry.month === selectedMonth) ? selectedMonth : "";
   const award = closedAward(highlights, availableMonth);
@@ -25,7 +24,7 @@ export function MonthlyHonors({ highlights }: { highlights: GeneralStatistics["c
         <Text style={s.title}>{monthLabel(award.month)}</Text>
         <Note>{award.matchCount} partidas consideradas · resultado mensal fechado e preservado</Note>
         <PlayerOfMonth standing={award.playerOfMonth}/>
-        <MonthlyPitch award={award}/>
+        <MonthlyPitch award={award} onSelectStanding={onSelectStanding}/>
       </> : <View style={[s.metric, { flexBasis: "auto", flexGrow: 0, gap: 8 }]}>
         <Ionicons name={highlights.focusMonthClosed ? "calendar-outline" : "hourglass-outline"} size={26} color="#174D3A"/>
         <Text style={s.title}>{highlights.focusMonthClosed ? "Sem premiação neste mês" : "Premiação em apuração"}</Text>
@@ -69,13 +68,11 @@ export function PlayerOfMonth({ standing }: { standing: MonthlyStanding | null }
   </LinearGradient></View><Button title={sharing ? "Gerando imagem…" : "Compartilhar destaque no WhatsApp"} icon="whatsapp" busy={sharing} onPress={shareHighlight}/></View>;
 }
 
-export function MonthlyPitch({ award }: { award: MonthlyAward }) {
+export function MonthlyPitch({ award, onSelectStanding }: { award: MonthlyAward; onSelectStanding(standing: MonthlyStanding & { role: string }): void }) {
   const { fontScale } = useWindowDimensions();
   const { config: brand } = useMobileBranding();
-  const router = useRouter();
   const selectionRef = useRef<View>(null);
   const [width, setWidth] = useState(0), [sharing, setSharing] = useState(false);
-  const [selected, setSelected] = useState<(MonthlyStanding & { role: string }) | null>(null);
   const rows = formationRows(award), total = rows.reduce((sum, row) => sum + row.slots, 0);
   const columns = pitchColumns(width || 270, fontScale);
   const shareSelection=async()=>{let uri="";setSharing(true);try{if(!await Sharing.isAvailableAsync())throw new Error("O compartilhamento de arquivos não está disponível neste aparelho.");uri=await captureRef(selectionRef,{format:"png",quality:1,result:"tmpfile"});await Clipboard.setStringAsync(`⚽ Seleção do mês · ${monthLabel(award.month)}\n${brand.appName}`);await Sharing.shareAsync(uri,{dialogTitle:`Seleção do mês · ${monthLabel(award.month)}`,mimeType:"image/png",UTI:"public.png"});Alert.alert("Legenda copiada","Escolha o WhatsApp e cole a legenda na conversa após anexar a imagem.")}catch(error:any){Alert.alert("Compartilhamento indisponível",error?.message||"Não foi possível gerar a imagem da seleção.")}finally{if(uri)releaseCapture(uri);setSharing(false)}};
@@ -90,7 +87,7 @@ export function MonthlyPitch({ award }: { award: MonthlyAward }) {
       {rows.map(row => <View key={row.role} style={styles.fieldRow}>
         <Text style={styles.fieldLabel}>{row.role.toLocaleUpperCase("pt-BR")}</Text>
         <View style={styles.formation}>
-          {row.players.map(entry => <Pressable accessibilityRole="button" accessibilityLabel={`Ver composição do momentum de ${entry.player.displayName}`} onPress={() => setSelected(entry)} key={entry.player.id} style={({ pressed }) => [styles.fieldPlayer, { width: `${100 / columns}%` }, pressed && styles.fieldPlayerPressed]}>
+          {row.players.map(entry => <Pressable accessibilityRole="button" accessibilityLabel={`Ver composição do momentum de ${entry.player.displayName}`} onPress={() => onSelectStanding(entry)} key={entry.player.id} style={({ pressed }) => [styles.fieldPlayer, { width: `${100 / columns}%` }, pressed && styles.fieldPlayerPressed]}>
             <View style={styles.fieldPhoto}><Avatar player={entry.player} size={52}/></View>
             <Text style={styles.fieldName}>{entry.player.displayName}</Text>
             <Text style={styles.fieldScore}>{signed(entry.totalMomentum)} momentum</Text>
@@ -104,7 +101,6 @@ export function MonthlyPitch({ award }: { award: MonthlyAward }) {
     </View>
     </View>
     <Button title={sharing ? "Gerando imagem…" : "Compartilhar seleção no WhatsApp"} icon="whatsapp" busy={sharing} onPress={shareSelection}/>
-    <MomentumDetailModal standing={selected} onClose={() => setSelected(null)} onOpenMatch={separationId => { setSelected(null); router.push({ pathname: "/separations/[id]", params: { id: separationId } } as never); }}/>
   </View>;
 }
 
@@ -120,14 +116,16 @@ function momentumDetailItems(entry: MonthlyMomentumDetail) {
   ];
 }
 
-export function MomentumDetailModal({ standing, onClose, onOpenMatch }: { standing: MonthlyStanding | null; onClose(): void; onOpenMatch(separationId: string): void }) {
-  if (!standing) return null;
+export function MomentumDetailOverlay({ standing, onClose, onOpenMatch }: { standing: MonthlyStanding; onClose(): void; onOpenMatch(separationId: string): void }) {
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => { onClose(); return true; });
+    return () => subscription.remove();
+  }, [onClose]);
   const detailsAvailable = Array.isArray(standing.momentumDetails);
   const details = standing.momentumDetails || [];
   const recognitions = details.reduce((sum, entry) => sum + entry.votes.length, 0);
   const recognitionLabel = detailsAvailable ? `${recognitions} ${recognitions === 1 ? "premiação" : "premiações"} nas votações` : "Detalhamento indisponível";
-  return <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-    <View style={styles.modalBackdrop}>
+  return <View testID="monthly-momentum-overlay" accessibilityViewIsModal style={styles.modalBackdrop}>
       <Pressable accessibilityRole="button" accessibilityLabel="Fechar detalhamento do momentum" onPress={onClose} style={StyleSheet.absoluteFill}/>
       <View style={styles.momentumPanel}>
         <View style={styles.momentumHeader}>
@@ -151,8 +149,7 @@ export function MomentumDetailModal({ standing, onClose, onOpenMatch }: { standi
         </ScrollView>
         <View style={styles.momentumFooter}><Text style={styles.momentumEquation}>{signed(standing.resultMomentum)} RESULTADOS + {signed(standing.votingMomentum)} VOTAÇÕES</Text><Text style={styles.momentumEquationTotal}>= {signed(standing.totalMomentum)}</Text></View>
       </View>
-    </View>
-  </Modal>;
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -177,7 +174,7 @@ const styles = StyleSheet.create({
   fieldName: { color: "#FFFFFF", backgroundColor: "#103F2B", borderRadius: 6, overflow: "hidden", paddingVertical: 4, paddingHorizontal: 6, textAlign: "center", fontSize: 12, fontWeight: "800", maxWidth: "100%" },
   fieldScore: { color: "#FFFFFF", fontSize: 10, lineHeight: 15, textAlign: "center" },
   vacant: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderStyle: "dashed", borderColor: "#C5DFC9", justifyContent: "center", alignItems: "center" },
-  modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(4, 18, 13, .62)" },
+  modalBackdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 20, elevation: 20, justifyContent: "flex-end", backgroundColor: "rgba(4, 18, 13, .62)" },
   momentumPanel: { maxHeight: "91%", backgroundColor: "#0C3026", borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, borderBottomWidth: 0, borderColor: "#C99A20", padding: 16, gap: 14, overflow: "hidden" },
   momentumHeader: { flexDirection: "row", alignItems: "center", gap: 11, paddingRight: 30 },
   momentumIdentity: { flex: 1, minWidth: 0, gap: 2 },

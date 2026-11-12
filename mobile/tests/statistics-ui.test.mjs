@@ -42,10 +42,11 @@ function runtime(data = advanced, options = {}) {
       if (!states.has(key)) states.set(key, typeof initial === "function" ? initial() : initial);
       return [states.get(key), value => states.set(key, typeof value === "function" ? value(states.get(key)) : value)];
     },
-    useMemo: fn => fn(), useCallback: fn => fn, useRef: value => ({ current: value }),
+    useMemo: fn => fn(), useCallback: fn => fn, useEffect() {}, useRef: value => ({ current: value }),
   };
   const native = Object.fromEntries(["View", "Text", "Image", "Pressable", "ScrollView", "Switch", "TextInput", "Modal", "KeyboardAvoidingView", "ActivityIndicator", "RefreshControl"].map(name => [name, name]));
-  Object.assign(native, { StyleSheet: { create: styles => styles, absoluteFill: { position: "absolute", top: 0, left: 0, bottom: 0, right: 0 } }, Platform: { OS: "android" }, Alert: { alert: (...args) => alerts.push(args) }, useWindowDimensions: () => ({ width: 360, height: 800, fontScale: options.fontScale || 1 }), FlatList: ({ data, renderItem, ListEmptyComponent }) => data.length ? data.map(item => renderItem({ item })) : ListEmptyComponent });
+  const absoluteFill = { position: "absolute", top: 0, left: 0, bottom: 0, right: 0 };
+  Object.assign(native, { StyleSheet: { create: styles => styles, absoluteFill, absoluteFillObject: absoluteFill }, Platform: { OS: "android" }, Alert: { alert: (...args) => alerts.push(args) }, BackHandler: { addEventListener: () => ({ remove() {} }) }, useWindowDimensions: () => ({ width: 360, height: 800, fontScale: options.fontScale || 1 }), FlatList: ({ data, renderItem, ListEmptyComponent }) => data.length ? data.map(item => renderItem({ item })) : ListEmptyComponent });
   const branding = { useMobileBranding: () => ({ config: { teamBlueName: "Vermelho", teamYellowName: "Branco" }, palette: { blue: "#FF0000", yellow: "#FFFFFF", green: "#174D3A", border: "#D5E2D9" } }) };
   const components = Object.fromEntries(["Screen", "Card", "Button", "Header", "UpdatedAt", "ErrorState"].map(name => [name, name]));
   const api = { API_BASE_URL: "https://test.invalid", apiFetch: (...args) => { calls.push(args); return data; } };
@@ -162,9 +163,9 @@ test("fotos preenchem círculos, suportam falha e não sobrepõem o nome do dest
 test("campo adapta onze vagas e fontes grandes sem altura fixa", () => {
   const app = runtime(undefined, { fontScale: 2 });
   const award = { month: "2026-07", selection: [], formation: { goalkeepers: 1, defenders: 4, midfielders: 3, attackers: 3 } };
-  let tree = app.render("statistics-awards", "MonthlyPitch", { award });
+  let tree = app.render("statistics-awards", "MonthlyPitch", { award, onSelectStanding() {} });
   tree.find(node => node.props.testID === "monthly-pitch").props.onLayout({ nativeEvent: { layout: { width: 224 } } });
-  tree = app.render("statistics-awards", "MonthlyPitch", { award });
+  tree = app.render("statistics-awards", "MonthlyPitch", { award, onSelectStanding() {} });
   const field = tree.find(node => node.props.testID === "monthly-pitch");
   assert.equal(style(field).height, undefined);
   assert.equal(tree.filter(node => node.type === "Text" && node.props.children === "Vaga disponível").length, 11);
@@ -174,13 +175,19 @@ test("campo adapta onze vagas e fontes grandes sem altura fixa", () => {
 
 test("toque no jogador da seleção abre a composição mensal do momentum e a partida", () => {
   const app = runtime();
-  let tree = app.render("statistics-awards", "MonthlyPitch", { award: highlights.focus });
+  let selected;
+  let tree = app.render("statistics-awards", "MonthlyPitch", { award: highlights.focus, onSelectStanding: standing => { selected = standing; } });
   const player = tree.find(node => node.type === "Pressable" && node.props.accessibilityLabel?.startsWith("Ver composição do momentum de"));
   assert.ok(player);
   player.props.onPress();
-  tree = app.render("statistics-awards", "MonthlyPitch", { award: highlights.focus });
+  assert.ok(selected);
+  tree = app.render("statistics-awards", "MomentumDetailOverlay", { standing: selected, onClose() {}, onOpenMatch: id => app.navigation.push({ pathname: "/separations/[id]", params: { id } }) });
   assert.match(texts(tree), /COMPOSIÇÃO DO MÊS/);
   assert.match(texts(tree), /RESULTADOS \+ .* VOTAÇÕES/);
+  const overlay = tree.find(node => node.props.testID === "monthly-momentum-overlay");
+  assert.equal(overlay.type, "View");
+  assert.equal(style(overlay).position, "absolute");
+  assert.ok(!tree.some(node => node.type === "Modal"), "o detalhe deve permanecer dentro da área da tela, acima da barra de abas");
   const match = tree.find(node => node.type === "Pressable" && node.props.accessibilityLabel?.startsWith("Abrir Rodada"));
   assert.ok(match);
   match.props.onPress();

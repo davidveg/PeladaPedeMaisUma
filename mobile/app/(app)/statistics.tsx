@@ -7,13 +7,14 @@ import { apiFetch } from "@/api";
 import { useAuth } from "@/auth";
 import { useMobileBranding } from "@/branding";
 import { Button, ErrorState, Header, Screen, UpdatedAt } from "@/components";
-import { MonthlyHonors } from "@/statistics-awards";
+import { MomentumDetailOverlay, MonthlyHonors } from "@/statistics-awards";
 import { Chips, Loading, MatchLink, Metric, MoreList, Note, Panel, PeriodFilter, Person, RecordCard, Select, playerOptions, s } from "@/statistics-ui";
-import { currentPeriod, fmt, sortAttendance, sortScorers, statisticsPath, type GeneralStatistics } from "@/statistics";
+import { currentPeriod, fmt, sortAttendance, sortScorers, statisticsPath, type GeneralStatistics, type MonthlyStanding } from "@/statistics";
 
 export default function StatisticsScreen() {
   const { account } = useAuth(), { palette } = useMobileBranding(), router = useRouter(), network = useNetInfo();
   const [period, setPeriod] = useState(() => currentPeriod("month"));
+  const [momentumStanding, setMomentumStanding] = useState<(MonthlyStanding & { role: string }) | null>(null);
   const [section, setSection] = useState("highlights"), [includeGuests, setIncludeGuests] = useState(false);
   const [playerA, setPlayerA] = useState(""), [playerB, setPlayerB] = useState("");
   const [sort, setSort] = useState<"goals" | "assists" | "participations">("participations"), [ascending, setAscending] = useState(false);
@@ -48,7 +49,7 @@ export default function StatisticsScreen() {
         {section === "highlights" && <>
           <RecordCard title="Maior sequência de vitórias" record={data.streaks.winning}/>
           <RecordCard title="Maior sequência invicta" record={data.streaks.unbeaten}/>
-          <MonthlyHonors key={`${period.from}:${period.to}`} highlights={data.careerHighlights}/>
+          <MonthlyHonors key={`${period.from}:${period.to}`} highlights={data.careerHighlights} onSelectStanding={setMomentumStanding}/>
         </>}
         {section === "rankings" && <>
           <Panel title="Jogadores nos rankings"><View style={s.row}><View style={s.grow}><Text style={s.text}>Incluir convidados</Text><Note>Não altera a elegibilidade das premiações.</Note></View><Switch accessibilityLabel="Incluir convidados nos rankings" value={includeGuests} onValueChange={setIncludeGuests} trackColor={{ true: palette.green }}/></View></Panel>
@@ -82,5 +83,6 @@ export default function StatisticsScreen() {
         </Panel>}
       </>}
     </ScrollView>
+    {momentumStanding ? <MomentumDetailOverlay standing={momentumStanding} onClose={() => setMomentumStanding(null)} onOpenMatch={separationId => { setMomentumStanding(null); router.push({ pathname: "/separations/[id]", params: { id: separationId } } as never); }}/> : null}
   </Screen>;
 }
