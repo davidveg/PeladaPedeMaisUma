@@ -16,5 +16,6 @@ coverage
 !.env.example
 *.log
 Dockerfile*
+!Dockerfile.selfhost.omv
 docker-compose*.yml
 README.md
