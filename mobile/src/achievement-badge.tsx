@@ -4,7 +4,9 @@ import { API_BASE_URL } from "@/api";
 
 function achievementBadgeKey(id: string) {
   const canonicalId = String(id || "").split(":", 1)[0];
-  return /^perfect_season_\d+$/.test(canonicalId) ? "perfect_season" : canonicalId;
+  if (/^perfect_season_\d+$/.test(canonicalId)) return "perfect_season";
+  if (/^undefeated_season_\d+$/.test(canonicalId)) return "undefeated_season";
+  return canonicalId;
 }
 
 export function AchievementBadge({ id, icon, title, size = 54 }: { id: string; icon?: string; title: string; size?: number }) {

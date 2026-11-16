@@ -1,12 +1,13 @@
 {
-  "version": 1,
+  "version": 3,
   "basePath": "/achievements",
   "format": "png",
   "width": 512,
   "height": 512,
   "background": "transparent",
   "dynamicAliases": {
-    "perfect_season_\\d+": "perfect_season"
+    "perfect_season_\\d+": "perfect_season",
+    "undefeated_season_\\d+": "undefeated_season"
   },
   "achievements": {
     "games_1": "Estreia",
@@ -63,6 +64,26 @@
     "season_mvp_1": "Bola de Ouro",
     "season_mvp_2": "Bola de Prata",
     "season_mvp_3": "Bola de Bronze",
-    "perfect_season": "Temporada perfeita"
+    "perfect_season": "Temporada perfeita",
+    "clean_sheet_win": "Portão fechado",
+    "scoring_streak_3": "Artilheiro em série",
+    "assist_streak_3": "Garçom em série",
+    "contribution_streak_5": "Sempre decisivo",
+    "trident": "Tridente",
+    "perfect_table": "Tabela perfeita",
+    "dynamic_duo": "Dupla dinâmica",
+    "gala_night": "Noite de gala",
+    "partner_5": "Parceiro de todos",
+    "defense_5": "Xerife",
+    "fair_play_5": "Exemplo da pelada",
+    "undefeated_season": "Temporada invicta",
+    "decisive_and_liked": "Decisivo e querido",
+    "goal_contributions_10": "Camisa 10",
+    "goal_contributions_50": "Motor do time",
+    "goal_contributions_100": "Centenário ofensivo",
+    "motm_10": "Constelação",
+    "attendance_25": "Onipresente",
+    "player_of_month_3": "Rei do mês",
+    "monthly_selection_5": "Figurinha carimbada"
   }
 }

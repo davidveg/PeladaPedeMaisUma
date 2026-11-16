@@ -133,3 +133,18 @@ test("a rede de entrosamento mantém altura própria e seletor separado do títu
   assert.match(styles, /\.network-section \.network-spokes\{position:absolute;inset:0;display:block/);
   assert.match(styles, /\.network-section \.network-spokes article>span\{display:block/);
 });
+
+test("o ranking explica cada coluna com controles acessíveis", async () => {
+  const [source, styles] = await Promise.all([
+    readFile(new URL("../app/estatisticas/avancadas/AdvancedStatisticsApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/estatisticas/avancadas/advanced-statistics.css", import.meta.url), "utf8"),
+  ]);
+
+  for (const key of ["rank", "player", "ipi", "confidence", "plus-minus", "utilization", "form", "consistency"]) {
+    assert.match(source, new RegExp(`key: "${key}"`));
+  }
+  assert.match(source, /className="ranking-column-help"/);
+  assert.match(source, /aria-expanded=\{activeColumn === column\.key\}/);
+  assert.match(source, /id="ranking-column-explanation" role="status"/);
+  assert.match(styles, /\.ranking-column-help:focus-visible/);
+});

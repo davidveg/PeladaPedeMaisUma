@@ -1,4 +1,4 @@
-import type { CareerAchievement, EngagementMatch, SeasonAwardSnapshot } from "./player-engagement";
+import { achievementRarityKey, type CareerAchievement, type EngagementMatch, type SeasonAwardSnapshot } from "./player-engagement.ts";
 import { buildCollectiveEngagement, type CollectiveMilestone, type CollectiveProgress } from "./collective-engagement.ts";
 
 export type HallPlayer = {
@@ -77,6 +77,8 @@ export type HallManualHonor = { id: string; playerId: string; title: string; rea
 const rareAchievements = new Set([
   "motm_in_defeat", "social_sweep", "manita", "complete_show", "owned_attack",
   "attendance_10", "unbeaten_10", "motm_5", "social_10", "perfect_season",
+  "gala_night", "trident", "perfect_table", "dynamic_duo", "undefeated_season",
+  "decisive_and_liked", "goal_contributions_100", "motm_10", "attendance_25", "player_of_month_3", "monthly_selection_5",
 ]);
 
 const recordDefinitions: Array<{ id: keyof HallTotals; icon: string; title: string; unit: string }> = [
@@ -183,7 +185,7 @@ export function buildHallOfFame(params: {
   });
 
   const moments = (params.achievements || [])
-    .filter(item => item.playerId && rareAchievements.has(item.id) && playerMap.has(item.playerId))
+    .filter(item => item.playerId && rareAchievements.has(achievementRarityKey(item.id)) && playerMap.has(item.playerId))
     .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt))
     .slice(0, 12)
     .map(item => ({ id: `${item.id}:${item.playerId}`, icon: item.icon, title: item.title, description: item.description, achievedAt: item.achievedAt, matchId: item.matchId, player: playerMap.get(item.playerId!)! }));

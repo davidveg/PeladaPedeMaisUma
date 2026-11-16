@@ -28,6 +28,8 @@ O perfil do jogador exibe uma coleção calculada sobre todo o histórico:
 - primeira seleção e primeiro prêmio de jogador do mês;
 - pódios das temporadas encerradas.
 
+A coleção também reconhece vitórias sem sofrer gols, sequências marcando, assistindo e participando de gols, assistências para três companheiros na mesma partida, tabelas de mão dupla, dez vitórias com o mesmo parceiro, hat-trick combinado com Man of the Match, atuações completas com reconhecimento social, marcos de 10, 50 e 100 participações em gols, dez eleições de Man of the Match, vinte e cinco presenças consecutivas, cinco premiações em cada reconhecimento social, três prêmios de jogador do mês, cinco aparições na seleção mensal e temporadas encerradas sem derrota com pelo menos oito participações.
+
 Os próximos objetivos de jogos, vitórias, gols e assistências mostram o progresso atual. Correções no histórico são refletidas no próximo carregamento, mantendo as conquistas coerentes com os registros oficiais.
 
 Cada conquista desbloqueada também pode ser compartilhada como um cartão vertical 4:5. A arte usa a identidade da pelada e reúne emblema, raridade, jogador, descrição, data e partida de origem. No site, o navegador abre o compartilhamento nativo quando disponível e baixa o PNG como alternativa; no aplicativo, uma prévia é exibida antes de compartilhar, com legenda e link copiados para a área de transferência.

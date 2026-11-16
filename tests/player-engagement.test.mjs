@@ -41,6 +41,7 @@ test("calcula donos distintos e normaliza conquistas equivalentes entre temporad
   assert.deepEqual(rarities.games_1, { tier: "common", holders: 4, eligiblePlayers: 4, percentage: 100 });
   assert.deepEqual(rarities.hat_trick, { tier: "legendary", holders: 1, eligiblePlayers: 4, percentage: 25 });
   assert.equal(achievementRarityKey("perfect_season_8"), "perfect_season");
+  assert.equal(achievementRarityKey("undefeated_season_8"), "undefeated_season");
   const ana = buildPlayerEngagement({ player: players.ana, matches: history, currentSeasonNumber: 2, achievementRarities: rarities });
   assert.deepEqual(ana.achievements.unlocked.find(item => item.id === "hat_trick")?.rarity, rarities.hat_trick);
 });
@@ -63,6 +64,7 @@ test("gera conquistas permanentes e progresso a partir do histórico oficial", (
   assert.ok(ids.includes("player_of_month_first"));
   assert.equal(result.achievements.unlocked.find(item => item.id === "hat_trick")?.matchTitle, "Rodada one");
   assert.equal(result.achievements.next.find(item => item.id === "games")?.target, 10);
+  assert.deepEqual(result.achievements.next.find(item => item.id === "goal_contributions"), { id: "goal_contributions", label: "Participações em gols", current: 5, target: 10, percent: 50 });
   assert.equal(result.collective.summary.officialMatches, 3);
   assert.equal(result.collective.progress.length, 3);
 });
@@ -114,7 +116,7 @@ test("libera feitos especiais de atuação, placar e votação", () => {
     ...match("complete", "2026-02-01", "BLUE", [
       { scorerPlayerId: "ana" }, { scorerPlayerId: "ana" },
       { scorerPlayerId: "bia", assistPlayerId: "ana" }, { scorerPlayerId: "bia", assistPlayerId: "ana" },
-    ]),
+    ], { partner: [{ playerId: "ana" }] }),
     blueScore: 4, yellowScore: 3,
   };
   const defeat = {
@@ -128,7 +130,7 @@ test("libera feitos especiais de atuação, placar e votação", () => {
   });
   const result = buildPlayerEngagement({ player: players.ana, matches: [complete, defeat, draw, fiveGoals, sweep], currentSeasonNumber: 2 });
   const ids = new Set(result.achievements.unlocked.map(item => item.id));
-  for (const id of ["complete_match", "complete_show", "owned_attack", "fine_margin", "perfect_connection", "fought_to_end", "motm_in_defeat", "motm_in_draw", "poker", "manita", "complete_highlight", "partner_first", "fair_play_first", "defense_first", "round_favorite", "social_sweep"]) assert.ok(ids.has(id), id);
+  for (const id of ["complete_match", "complete_show", "decisive_and_liked", "owned_attack", "fine_margin", "perfect_connection", "fought_to_end", "motm_in_defeat", "motm_in_draw", "poker", "manita", "complete_highlight", "partner_first", "fair_play_first", "defense_first", "round_favorite", "social_sweep"]) assert.ok(ids.has(id), id);
 });
 
 test("libera sequências e coleções cumulativas", () => {
@@ -138,7 +140,59 @@ test("libera sequências e coleções cumulativas", () => {
   }));
   const result = buildPlayerEngagement({ player: players.ana, matches: [...losses, ...run], currentSeasonNumber: 2 });
   const ids = new Set(result.achievements.unlocked.map(item => item.id));
-  for (const id of ["turned_the_tide", "attendance_10", "unbeaten_5", "unbeaten_10", "motm_3", "motm_5", "social_5", "social_10"]) assert.ok(ids.has(id), id);
+  for (const id of ["turned_the_tide", "attendance_10", "unbeaten_5", "unbeaten_10", "motm_3", "motm_5", "motm_10", "social_5", "social_10"]) assert.ok(ids.has(id), id);
+});
+
+test("libera marcos de participações em gols e presença prolongada", () => {
+  const matches = Array.from({ length: 100 }, (_, index) => match(`contribution-${index}`, new Date(Date.UTC(2025, 0, 1 + index * 3)).toISOString().slice(0, 10), "BLUE", [{ scorerPlayerId: "ana", assistPlayerId: "bia" }]));
+  const ids = new Set(buildPlayerEngagement({ player: players.ana, matches, currentSeasonNumber: 2 }).achievements.unlocked.map(item => item.id));
+  for (const id of ["goal_contributions_10", "goal_contributions_50", "goal_contributions_100", "attendance_25"]) assert.ok(ids.has(id), id);
+});
+
+test("libera coleções de premiações mensais na data correta", () => {
+  const monthlyAwards = Array.from({ length: 5 }, (_, index) => ({
+    month: `2026-0${index + 1}`,
+    playerOfMonth: index < 3 ? { player: players.ana } : null,
+    selection: [{ player: players.ana }],
+  }));
+  const result = buildPlayerEngagement({ player: players.ana, matches: history, currentSeasonNumber: 2, monthlyAwards });
+  assert.equal(result.achievements.unlocked.find(item => item.id === "player_of_month_3")?.achievedAt, "2026-03-28");
+  assert.equal(result.achievements.unlocked.find(item => item.id === "monthly_selection_5")?.achievedAt, "2026-05-28");
+});
+
+test("libera as novas conquistas de atuação e sequência com dados oficiais", () => {
+  const gala = {
+    ...match("gala", "2026-07-01", "BLUE", [
+      { scorerPlayerId: "ana", assistPlayerId: "bia" },
+      { scorerPlayerId: "ana" }, { scorerPlayerId: "ana" },
+      { scorerPlayerId: "bia", assistPlayerId: "ana" },
+    ], { motm: [{ playerId: "ana", place: 1 }] }),
+    blueScore: 4, yellowScore: 0,
+  };
+  const sequence = [2, 3, 4, 5].map(index => match(`sequence-${index}`, `2026-07-0${index}`, "BLUE", [{ scorerPlayerId: "ana", assistPlayerId: "bia" }]));
+  const extraPlayers = [{ id: "eva", displayName: "Eva" }, { id: "fabi", displayName: "Fabi" }];
+  const trident = {
+    ...match("trident", "2026-07-10", "BLUE", [
+      { scorerPlayerId: "bia", assistPlayerId: "ana" },
+      { scorerPlayerId: "eva", assistPlayerId: "ana" },
+      { scorerPlayerId: "fabi", assistPlayerId: "ana" },
+    ]),
+    blue: [players.ana, players.bia, ...extraPlayers], blueScore: 3,
+  };
+  const ana = new Set(buildPlayerEngagement({ player: players.ana, matches: [gala, ...sequence, trident], currentSeasonNumber: 2 }).achievements.unlocked.map(item => item.id));
+  const bia = new Set(buildPlayerEngagement({ player: players.bia, matches: [gala, ...sequence, trident], currentSeasonNumber: 2 }).achievements.unlocked.map(item => item.id));
+  for (const id of ["clean_sheet_win", "scoring_streak_3", "contribution_streak_5", "trident", "perfect_table", "gala_night"]) assert.ok(ana.has(id), id);
+  for (const id of ["assist_streak_3", "perfect_table"]) assert.ok(bia.has(id), id);
+});
+
+test("libera coleções sociais e dez vitórias com o mesmo parceiro", () => {
+  const matches = Array.from({ length: 10 }, (_, index) => match(`duo-${index}`, `2026-08-${String(index + 1).padStart(2, "0")}`, "BLUE", [], index < 5 ? {
+    partner: [{ playerId: "ana" }], fairPlay: [{ playerId: "ana" }], defense: [{ playerId: "ana" }],
+  } : null));
+  const ana = new Set(buildPlayerEngagement({ player: players.ana, matches, currentSeasonNumber: 2 }).achievements.unlocked.map(item => item.id));
+  const bia = new Set(buildPlayerEngagement({ player: players.bia, matches, currentSeasonNumber: 2 }).achievements.unlocked.map(item => item.id));
+  for (const id of ["partner_5", "fair_play_5", "defense_5", "dynamic_duo"]) assert.ok(ana.has(id), id);
+  assert.ok(bia.has("dynamic_duo"));
 });
 
 test("temporada perfeita exige pelo menos 95% de assiduidade e temporada encerrada", () => {
@@ -147,6 +201,7 @@ test("temporada perfeita exige pelo menos 95% de assiduidade e temporada encerra
   const closed = [{ seasonNumber: 4, endedAt: "2026-06-01", annualMvp: [] }];
   const qualified = buildPlayerEngagement({ player: players.ana, matches: season, currentSeasonNumber: 5, seasonAwards: closed });
   assert.match(qualified.achievements.unlocked.find(item => item.id === "perfect_season_4")?.description || "", /19 das 20.*95%/);
+  assert.ok(qualified.achievements.unlocked.some(item => item.id === "undefeated_season_4"));
 
   season[18] = { ...season[18], blue: season[18].blue.filter(player => player.id !== "ana") };
   const below = buildPlayerEngagement({ player: players.ana, matches: season, currentSeasonNumber: 5, seasonAwards: closed });

@@ -43,7 +43,7 @@ export type AchievementRarityInfo = {
 export type AchievementRarityIndex = Record<string, AchievementRarityInfo>;
 
 export type AchievementProgress = {
-  id: "games" | "wins" | "goals" | "assists";
+  id: "games" | "wins" | "goals" | "assists" | "goal_contributions";
   label: string;
   current: number;
   target: number;
@@ -74,6 +74,12 @@ type Totals = {
   attendanceStreak: number;
   motmAwards: number;
   socialAwards: number;
+  partnerAwards: number;
+  fairPlayAwards: number;
+  defenseAwards: number;
+  scoringStreak: number;
+  assistStreak: number;
+  contributionStreak: number;
 };
 
 export type PlayerEngagement = {
@@ -124,6 +130,7 @@ const gameMilestones = [1, 10, 25, 50, 100, 200];
 const winMilestones = [1, 10, 25, 50, 100];
 const goalMilestones = [1, 10, 25, 50, 100];
 const assistMilestones = [1, 10, 25, 50];
+const goalContributionMilestones = [10, 50, 100];
 
 export function buildPlayerEngagement(params: {
   player: EngagementPlayer;
@@ -186,7 +193,9 @@ export function classifyAchievementRarity(holders: number, eligiblePlayers: numb
 }
 
 export function achievementRarityKey(id: string) {
-  return /^perfect_season_\d+$/.test(id) ? "perfect_season" : id;
+  if (/^perfect_season_\d+$/.test(id)) return "perfect_season";
+  if (/^undefeated_season_\d+$/.test(id)) return "undefeated_season";
+  return id;
 }
 
 export function buildRoundRecaps(params: {
@@ -292,6 +301,7 @@ function summarizeSeason(player: EngagementPlayer, matches: EngagementMatch[], a
 
 function scanCareer(matches: EngagementMatch[]) {
   const totals = new Map<string, Totals>(), achievements = new Map<string, CareerAchievement[]>(), matchAchievements = new Map<string, CareerAchievement[]>();
+  const duoWins = new Map<string, number>();
   const add = (playerId: string, achievement: CareerAchievement) => {
     const list = achievements.get(playerId) || [];
     if (list.some(item => item.id === achievement.id)) return;
@@ -319,48 +329,84 @@ function scanCareer(matches: EngagementMatch[]) {
       else if (drew) { value.winningStreak = 0; value.unbeatenStreak += 1; value.losingStreak = 0; }
       else { value.losses += 1; value.winningStreak = 0; value.unbeatenStreak = 0; value.losingStreak += 1; }
       value.goals += matchGoals; value.assists += matchAssists;
+      value.scoringStreak = matchGoals ? value.scoringStreak + 1 : 0;
+      value.assistStreak = matchAssists ? value.assistStreak + 1 : 0;
+      value.contributionStreak = matchGoals + matchAssists ? value.contributionStreak + 1 : 0;
       const wonMotm = motm?.playerId === player.id;
       if (wonMotm) value.motmAwards += 1;
       const socialCount = [socialWinners.partner, socialWinners.fairPlay, socialWinners.defense].filter(id => id === player.id).length;
       value.socialAwards += socialCount;
+      if (socialWinners.partner === player.id) value.partnerAwards += 1;
+      if (socialWinners.fairPlay === player.id) value.fairPlayAwards += 1;
+      if (socialWinners.defense === player.id) value.defenseAwards += 1;
       totals.set(player.id, value);
       milestone(gameMilestones, before.games, value.games, "games", match, player.id, add);
       milestone(winMilestones, before.wins, value.wins, "wins", match, player.id, add);
       milestone(goalMilestones, before.goals, value.goals, "goals", match, player.id, add);
       milestone(assistMilestones, before.assists, value.assists, "assists", match, player.id, add);
+      milestone(goalContributionMilestones, before.goals + before.assists, value.goals + value.assists, "goal_contributions", match, player.id, add);
       if (matchGoals >= 3) add(player.id, achievement("hat_trick", "Hat-trick", "Marcou pelo menos três gols na mesma partida.", "🎩", match));
       if (matchGoals >= 4) add(player.id, achievement("poker", "Poker", "Marcou pelo menos quatro gols na mesma partida.", "🃏", match));
       if (matchGoals >= 5) add(player.id, achievement("manita", "Manita", "Marcou pelo menos cinco gols na mesma partida.", "✋", match));
       if (matchAssists >= 3) add(player.id, achievement("three_assists", "Maestro", "Deu pelo menos três assistências na mesma partida.", "🎯", match));
+      const assistedScorers = countBy(match.contributions.filter(item => !item.ownGoal && item.assistPlayerId === player.id), item => item.scorerPlayerId);
+      if (assistedScorers.size >= 3) add(player.id, achievement("trident", "Tridente", "Deu assistências para três companheiros diferentes na mesma partida.", "🔱", match));
       if (matchGoals >= 1 && matchAssists >= 1) add(player.id, achievement("complete_match", "Partida completa", "Marcou e deu assistência na mesma partida.", "⚽", match));
+      if (matchGoals >= 1 && matchAssists >= 1 && socialCount >= 1) add(player.id, achievement("decisive_and_liked", "Decisivo e querido", "Marcou, deu assistência e recebeu um reconhecimento social na mesma rodada.", "💚", match));
       if (matchGoals >= 2 && matchAssists >= 2) add(player.id, achievement("complete_show", "Show completo", "Marcou pelo menos dois gols e deu duas assistências na mesma partida.", "🎆", match));
       const teamScore = team === "BLUE" ? match.blueScore : match.yellowScore;
       if (teamScore >= 3 && matchGoals + matchAssists >= teamScore) add(player.id, achievement("owned_attack", "Dono do ataque", "Participou de todos os gols do time em uma partida com pelo menos três gols.", "👑", match));
       if (lost && matchGoals >= 2) add(player.id, achievement("fought_to_end", "Lutou até o fim", "Marcou pelo menos dois gols mesmo com a derrota.", "🛡️", match));
       if (won && Math.abs(match.blueScore - match.yellowScore) === 1 && matchGoals >= 1) add(player.id, achievement("fine_margin", "No detalhe", "Marcou em uma vitória por apenas um gol de diferença.", "🎯", match));
-      const assistedScorers = countBy(match.contributions.filter(item => !item.ownGoal && item.assistPlayerId === player.id), item => item.scorerPlayerId);
       if ([...assistedScorers.values()].some(count => count >= 2)) add(player.id, achievement("perfect_connection", "Conexão perfeita", "Deu pelo menos duas assistências para o mesmo companheiro na partida.", "🔗", match));
+      const opponentScore = team === "BLUE" ? match.yellowScore : match.blueScore;
+      if (won && opponentScore === 0) add(player.id, achievement("clean_sheet_win", "Portão fechado", "Venceu uma partida sem o time sofrer gols.", "🔒", match));
+      if (value.scoringStreak === 3) add(player.id, achievement("scoring_streak_3", "Artilheiro em série", "Marcou em três partidas oficiais consecutivas.", "🔥", match));
+      if (value.assistStreak === 3) add(player.id, achievement("assist_streak_3", "Garçom em série", "Deu assistência em três partidas oficiais consecutivas.", "🎯", match));
+      if (value.contributionStreak === 5) add(player.id, achievement("contribution_streak_5", "Sempre decisivo", "Participou de gol em cinco partidas oficiais consecutivas.", "⛓️", match));
       if (value.winningStreak === 3) add(player.id, achievement("winning_streak_3", "Embalado", "Venceu três partidas seguidas.", "🔥", match));
       if (value.winningStreak === 5) add(player.id, achievement("winning_streak_5", "Imparável", "Venceu cinco partidas seguidas.", "⚡", match));
       if (value.unbeatenStreak === 5) add(player.id, achievement("unbeaten_5", "Invicto", "Completou cinco partidas seguidas sem perder.", "🔥", match));
       if (value.unbeatenStreak === 10) add(player.id, achievement("unbeaten_10", "Inabalável", "Completou dez partidas seguidas sem perder.", "🧱", match));
       if (won && before.losingStreak >= 3) add(player.id, achievement("turned_the_tide", "Virada de chave", "Voltou a vencer depois de três derrotas seguidas.", "🔄", match));
       if (value.attendanceStreak === 10) add(player.id, achievement("attendance_10", "Presença garantida", "Participou de dez partidas oficiais consecutivas.", "📅", match));
+      if (value.attendanceStreak === 25) add(player.id, achievement("attendance_25", "Onipresente", "Participou de vinte e cinco partidas oficiais consecutivas.", "♾️", match));
       if (wonMotm) {
         add(player.id, achievement("motm_first", "Craque da rodada", "Conquistou o primeiro Man of the Match.", "⭐", match));
         if (lost) add(player.id, achievement("motm_in_defeat", "Craque até na derrota", "Foi eleito Man of the Match mesmo atuando pelo time derrotado.", "🦁", match));
         if (drew) add(player.id, achievement("motm_in_draw", "Craque sem vencedor", "Foi eleito Man of the Match em uma partida empatada.", "🤝", match));
         if (socialCount >= 1) add(player.id, achievement("complete_highlight", "Destaque completo", "Venceu o Man of the Match e outro reconhecimento na mesma rodada.", "🌟", match));
+        if (matchGoals >= 3) add(player.id, achievement("gala_night", "Noite de gala", "Marcou um hat-trick e foi eleito Man of the Match na mesma rodada.", "🎩", match));
       }
       if (before.motmAwards < 3 && value.motmAwards >= 3) add(player.id, achievement("motm_3", "Colecionador de estrelas", "Conquistou três títulos de Man of the Match.", "⭐", match));
       if (before.motmAwards < 5 && value.motmAwards >= 5) add(player.id, achievement("motm_5", "Lenda das rodadas", "Conquistou cinco títulos de Man of the Match.", "🌠", match));
+      if (before.motmAwards < 10 && value.motmAwards >= 10) add(player.id, achievement("motm_10", "Constelação", "Conquistou dez títulos de Man of the Match.", "✨", match));
       if (socialWinners.partner === player.id) add(player.id, achievement("partner_first", "Parceiro da rodada", "Recebeu seu primeiro reconhecimento de Parceiro da rodada.", "🤝", match));
       if (socialWinners.fairPlay === player.id) add(player.id, achievement("fair_play_first", "Espírito esportivo", "Recebeu seu primeiro reconhecimento de Fair Play.", "🟢", match));
       if (socialWinners.defense === player.id) add(player.id, achievement("defense_first", "Guardião da rodada", "Recebeu seu primeiro reconhecimento de Defesa da rodada.", "🛡️", match));
+      if (before.partnerAwards < 5 && value.partnerAwards >= 5) add(player.id, achievement("partner_5", "Parceiro de todos", "Recebeu cinco reconhecimentos de Parceiro da rodada.", "🤝", match));
+      if (before.fairPlayAwards < 5 && value.fairPlayAwards >= 5) add(player.id, achievement("fair_play_5", "Exemplo da pelada", "Recebeu cinco reconhecimentos de Fair Play.", "🟢", match));
+      if (before.defenseAwards < 5 && value.defenseAwards >= 5) add(player.id, achievement("defense_5", "Xerife", "Recebeu cinco reconhecimentos de Defesa da rodada.", "🛡️", match));
       if (socialCount >= 2) add(player.id, achievement("round_favorite", "Queridinho da rodada", "Venceu pelo menos dois reconhecimentos sociais na mesma partida.", "🏅", match));
       if (socialCount === 3) add(player.id, achievement("social_sweep", "Tríplice reconhecimento", "Venceu Parceiro, Fair Play e Defesa na mesma rodada.", "👑", match));
       if (before.socialAwards < 5 && value.socialAwards >= 5) add(player.id, achievement("social_5", "Reconhecido pela galera", "Alcançou cinco reconhecimentos sociais.", "🏆", match));
       if (before.socialAwards < 10 && value.socialAwards >= 10) add(player.id, achievement("social_10", "Ídolo da pelada", "Alcançou dez reconhecimentos sociais.", "💎", match));
+    }
+    const passingPairs = new Set(match.contributions.filter(item => !item.ownGoal && item.assistPlayerId && item.assistPlayerId !== item.scorerPlayerId).map(item => `${item.assistPlayerId}>${item.scorerPlayerId}`));
+    for (const pass of passingPairs) {
+      const [assistantId, scorerId] = pass.split(">");
+      if (!passingPairs.has(`${scorerId}>${assistantId}`) || assistantId.localeCompare(scorerId) >= 0) continue;
+      add(assistantId, achievement("perfect_table", "Tabela perfeita", `Trocou assistência e gol com ${participants.find(entry => entry.player.id === scorerId)?.player.displayName || "um companheiro"} na mesma partida.`, "🔄", match));
+      add(scorerId, achievement("perfect_table", "Tabela perfeita", `Trocou assistência e gol com ${participants.find(entry => entry.player.id === assistantId)?.player.displayName || "um companheiro"} na mesma partida.`, "🔄", match));
+    }
+    const winningPlayers = participants.filter(entry => entry.team === match.winnerTeam).map(entry => entry.player);
+    for (let left = 0; left < winningPlayers.length; left += 1) for (let right = left + 1; right < winningPlayers.length; right += 1) {
+      const first = winningPlayers[left], second = winningPlayers[right], key = [first.id, second.id].sort().join(":");
+      const wins = (duoWins.get(key) || 0) + 1; duoWins.set(key, wins);
+      if (wins === 10) {
+        add(first.id, achievement("dynamic_duo", "Dupla dinâmica", `Alcançou dez vitórias ao lado de ${second.displayName}.`, "🛡️", match));
+        add(second.id, achievement("dynamic_duo", "Dupla dinâmica", `Alcançou dez vitórias ao lado de ${first.displayName}.`, "🛡️", match));
+      }
     }
   }
   return { totals, achievements, matchAchievements };
@@ -372,23 +418,42 @@ function achievementsFromSeasonAttendance(playerId: string, matches: EngagementM
     if (!seasonMatches.length) return [];
     const appearances = seasonMatches.filter(match => participantTeam(match, playerId)).length;
     const attendance = appearances / seasonMatches.length;
-    if (attendance < .95) return [];
-    return [{
+    const achievements: CareerAchievement[] = [];
+    if (attendance >= .95) achievements.push({
       id: `perfect_season_${season.seasonNumber}`,
       title: "Temporada perfeita",
       description: `Participou de ${appearances} das ${seasonMatches.length} partidas da temporada ${season.seasonNumber} (${Math.round(attendance * 100)}% de assiduidade).`,
       icon: "💯",
       achievedAt: season.endedAt,
-    } satisfies CareerAchievement];
+    });
+    const playerMatches = seasonMatches.filter(match => participantTeam(match, playerId));
+    const losses = playerMatches.filter(match => match.winnerTeam !== "DRAW" && match.winnerTeam !== participantTeam(match, playerId)).length;
+    if (playerMatches.length >= 8 && losses === 0) achievements.push({
+      id: `undefeated_season_${season.seasonNumber}`,
+      title: "Temporada invicta",
+      description: `Terminou a temporada ${season.seasonNumber} sem derrotas em ${playerMatches.length} partidas.`,
+      icon: "🛡️",
+      achievedAt: season.endedAt,
+    });
+    return achievements;
   });
 }
 
 function achievementsFromAwards(playerId: string, monthly: MonthlyAwardSnapshot[], seasons: SeasonAwardSnapshot[]) {
   const result: CareerAchievement[] = [];
-  for (const award of monthly) {
+  let playerOfMonthAwards = 0, monthlySelections = 0;
+  for (const award of [...monthly].sort((a, b) => a.month.localeCompare(b.month))) {
     const date = `${award.month}-28`;
-    if (award.playerOfMonth?.player?.id === playerId) result.push({ id: "player_of_month_first", title: "Jogador do mês", description: "Foi eleito jogador do mês pela primeira vez.", icon: "🌟", achievedAt: date });
-    if (award.selection?.some(entry => entry.player?.id === playerId)) result.push({ id: "monthly_selection_first", title: "Seleção do mês", description: "Entrou na seleção mensal pela primeira vez.", icon: "🏅", achievedAt: date });
+    if (award.playerOfMonth?.player?.id === playerId) {
+      playerOfMonthAwards += 1;
+      result.push({ id: "player_of_month_first", title: "Jogador do mês", description: "Foi eleito jogador do mês pela primeira vez.", icon: "🌟", achievedAt: date });
+      if (playerOfMonthAwards === 3) result.push({ id: "player_of_month_3", title: "Rei do mês", description: "Foi eleito jogador do mês três vezes.", icon: "👑", achievedAt: date });
+    }
+    if (award.selection?.some(entry => entry.player?.id === playerId)) {
+      monthlySelections += 1;
+      result.push({ id: "monthly_selection_first", title: "Seleção do mês", description: "Entrou na seleção mensal pela primeira vez.", icon: "🏅", achievedAt: date });
+      if (monthlySelections === 5) result.push({ id: "monthly_selection_5", title: "Figurinha carimbada", description: "Entrou na Seleção do Mês cinco vezes.", icon: "🌟", achievedAt: date });
+    }
   }
   for (const season of seasons) {
     const placing = season.annualMvp?.find(entry => entry.player?.id === playerId);
@@ -405,19 +470,20 @@ function unlockedAchievements(playerId: string, matches: EngagementMatch[], scan
   ]);
 }
 
-function milestone(levels: number[], previous: number, current: number, kind: "games" | "wins" | "goals" | "assists", match: EngagementMatch, playerId: string, add: (playerId: string, achievement: CareerAchievement) => void) {
+function milestone(levels: number[], previous: number, current: number, kind: "games" | "wins" | "goals" | "assists" | "goal_contributions", match: EngagementMatch, playerId: string, add: (playerId: string, achievement: CareerAchievement) => void) {
   const reached = levels.filter(level => previous < level && current >= level);
   for (const level of reached) {
-  const noun = kind === "games" ? "jogos" : kind === "wins" ? "vitórias" : kind === "goals" ? "gols" : "assistências";
+  const noun = kind === "games" ? "jogos" : kind === "wins" ? "vitórias" : kind === "goals" ? "gols" : kind === "assists" ? "assistências" : "participações em gols";
   const first = level === 1;
-  const title = first ? (kind === "games" ? "Estreia" : kind === "wins" ? "Primeira vitória" : kind === "goals" ? "Primeiro gol" : "Primeira assistência") : `${level} ${noun}`;
-  const icon = kind === "games" ? "👕" : kind === "wins" ? "🏆" : kind === "goals" ? "⚽" : "🎯";
+  const contributionTitle = level === 10 ? "Camisa 10" : level === 50 ? "Motor do time" : "Centenário ofensivo";
+  const title = kind === "goal_contributions" ? contributionTitle : first ? (kind === "games" ? "Estreia" : kind === "wins" ? "Primeira vitória" : kind === "goals" ? "Primeiro gol" : "Primeira assistência") : `${level} ${noun}`;
+  const icon = kind === "games" ? "👕" : kind === "wins" ? "🏆" : kind === "goals" ? "⚽" : kind === "assists" ? "🎯" : level === 10 ? "🔟" : level === 50 ? "⚙️" : "💯";
   add(playerId, achievement(`${kind}_${level}`, title, first ? `Registrou sua primeira marca de ${noun}.` : `Alcançou a marca de ${level} ${noun}.`, icon, match));
   }
 }
 
 function achievement(id: string, title: string, description: string, icon: string, match: EngagementMatch): CareerAchievement { return { id, title, description, icon, achievedAt: match.date, matchId: match.separationId, matchTitle: match.title }; }
-function emptyTotals(): Totals { return { games: 0, wins: 0, losses: 0, goals: 0, assists: 0, winningStreak: 0, unbeatenStreak: 0, losingStreak: 0, attendanceStreak: 0, motmAwards: 0, socialAwards: 0 }; }
+function emptyTotals(): Totals { return { games: 0, wins: 0, losses: 0, goals: 0, assists: 0, winningStreak: 0, unbeatenStreak: 0, losingStreak: 0, attendanceStreak: 0, motmAwards: 0, socialAwards: 0, partnerAwards: 0, fairPlayAwards: 0, defenseAwards: 0, scoringStreak: 0, assistStreak: 0, contributionStreak: 0 }; }
 function orderMatches(matches: EngagementMatch[]) { return [...matches].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)); }
 function participantTeam(match: EngagementMatch, playerId: string) { return match.blue.some(player => player.id === playerId) ? "BLUE" as const : match.yellow.some(player => player.id === playerId) ? "YELLOW" as const : null; }
 function playerNames(match: EngagementMatch) { return Object.fromEntries([...match.blue, ...match.yellow].map(player => [player.id, player.displayName])); }
@@ -427,6 +493,6 @@ function joinNames(ids: string[], names: Record<string, string>) { const values 
 function playerIdFromAchievement(achievement: CareerAchievement) { return achievement.playerId || achievement.id.split(":").at(-1) || ""; }
 function uniqueAchievements(items: CareerAchievement[]) { const byId = new Map<string, CareerAchievement>(); for (const item of items.sort((a, b) => a.achievedAt.localeCompare(b.achievedAt))) if (!byId.has(item.id)) byId.set(item.id, item); return [...byId.values()]; }
 function nextProgress(totals: Totals): AchievementProgress[] {
-  const definitions: Array<[AchievementProgress["id"], string, number, number[]]> = [["games", "Jogos", totals.games, gameMilestones], ["wins", "Vitórias", totals.wins, winMilestones], ["goals", "Gols", totals.goals, goalMilestones], ["assists", "Assistências", totals.assists, assistMilestones]];
+  const definitions: Array<[AchievementProgress["id"], string, number, number[]]> = [["games", "Jogos", totals.games, gameMilestones], ["wins", "Vitórias", totals.wins, winMilestones], ["goals", "Gols", totals.goals, goalMilestones], ["assists", "Assistências", totals.assists, assistMilestones], ["goal_contributions", "Participações em gols", totals.goals + totals.assists, goalContributionMilestones]];
   return definitions.flatMap(([id, label, current, levels]) => { const target = levels.find(level => level > current); return target ? [{ id, label, current, target, percent: Math.min(100, Math.round((current / target) * 100)) }] : []; });
 }

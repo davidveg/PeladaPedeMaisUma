@@ -12,6 +12,8 @@ export const statisticsHelp = {
   chemistry: "Índice de entrosamento calculado com partidas juntos, aproveitamento e saldo médio. A amostra mínima filtra duplas com poucos jogos e a confiança cresce com o histórico compartilhado.",
   consistency: "Regularidade do desempenho nas partidas do período. Valores mais altos indicam menor oscilação. Quando a amostra é insuficiente, não há percentual disponível.",
   balance: "A previsão usa apenas escalações automáticas com força registrada. Ajustes manuais ficam fora da correlação entre força prevista e placar. As distribuições de placar consideram todas as partidas do período.",
+  confidence: "Indica o tamanho da amostra do IPI: Baixa com menos de 5 jogos, Média entre 5 e 14 e Alta a partir de 15 jogos.",
+  utilization: "Percentual dos pontos conquistados. Vitória vale 3 pontos, empate vale 1 e derrota vale 0, dividido pelo máximo possível.",
 };
 
 export function AdvancedOverview({ data, onPlayer }: { data: AdvancedStatistics; onPlayer(id: string): void }) {
@@ -77,9 +79,9 @@ export function PlayerRanking({ entries }: { entries: PlayerStatistics[] }) {
   return <MoreList items={entries} render={(entry, index) => <View key={entry.player.id} style={s.separator}>
     <Person rank={index + 1} player={entry.player} detail={`${entry.position} · ${entry.games} jogos`}/>
     <View style={s.grid}>
-      <Metric label="IPI" value={fmt(entry.ipi?.value)}/><Metric label="Confiança" value={entry.ipi?.confidence || "Sem dados"}/>
-      <Metric label="Saldo +/−" value={signed(entry.plusMinus)}/><Metric label="Aproveitamento" value={fmt(entry.utilization, 1, "%")}/>
-      <Metric label="Forma recente" value={signed(entry.recent.trend, " p.p.")}/><Metric label="Consistência" value={fmt(entry.consistency, 1, "%")}/>
+      <Metric label="IPI" value={fmt(entry.ipi?.value)} help={statisticsHelp.ipi}/><Metric label="Confiança" value={entry.ipi?.confidence || "Sem dados"} help={statisticsHelp.confidence}/>
+      <Metric label="Saldo +/−" value={signed(entry.plusMinus)} help={statisticsHelp.plusMinus}/><Metric label="Aproveitamento" value={fmt(entry.utilization, 1, "%")} help={statisticsHelp.utilization}/>
+      <Metric label="Forma recente" value={signed(entry.recent.trend, " p.p.")} help={statisticsHelp.form}/><Metric label="Consistência" value={fmt(entry.consistency, 1, "%")} help={statisticsHelp.consistency}/>
     </View>
   </View>}/>;
 }
