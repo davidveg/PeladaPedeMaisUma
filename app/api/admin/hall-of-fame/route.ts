@@ -3,6 +3,15 @@
 import { adminRequired, audit, db } from "../../../../lib/database";
 
 const noStore = { "cache-control": "no-store" };
+const MAX_REASON_LENGTH = 2000;
+
+function honorFields(body: any) {
+  return { title: String(body.title || "").trim(), reason: String(body.reason || "").trim(), seasonNumber: Number(body.seasonNumber) };
+}
+
+function invalidHonor({ title, reason, seasonNumber }: ReturnType<typeof honorFields>) {
+  return title.length < 3 || title.length > 80 || reason.length < 10 || reason.length > MAX_REASON_LENGTH || !Number.isInteger(seasonNumber) || seasonNumber < 1;
+}
 
 export async function GET(request: Request) {
   const admin: any = await adminRequired(request);
@@ -18,8 +27,8 @@ export async function POST(request: Request) {
   const admin: any = await adminRequired(request);
   if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
   const body: any = await request.json().catch(() => ({}));
-  const playerId = String(body.playerId || ""), title = String(body.title || "").trim(), reason = String(body.reason || "").trim(), seasonNumber = Number(body.seasonNumber);
-  if (!playerId || title.length < 3 || title.length > 80 || reason.length < 10 || reason.length > 500 || !Number.isInteger(seasonNumber) || seasonNumber < 1) return Response.json({ error: "Informe jogador, título, motivo e uma temporada válida." }, { status: 400, headers: noStore });
+  const playerId = String(body.playerId || ""), { title, reason, seasonNumber } = honorFields(body);
+  if (!playerId || invalidHonor({ title, reason, seasonNumber })) return Response.json({ error: "Informe jogador, título, motivo e uma temporada válida." }, { status: 400, headers: noStore });
   const player: any = await db().prepare(`SELECT id,display_name FROM players WHERE id=? AND deleted_at IS NULL`).bind(playerId).first();
   if (!player) return Response.json({ error: "Jogador não encontrado." }, { status: 404, headers: noStore });
   const id = crypto.randomUUID(), now = new Date().toISOString();
@@ -27,6 +36,21 @@ export async function POST(request: Request) {
   const honor = { id, playerId, playerName: String(player.display_name), title, reason, seasonNumber, createdAt: now };
   await audit(admin.id, "HALL_OF_FAME_HONOR_CREATED", "hall_of_fame_honor", id, honor);
   return Response.json({ honor, message: `${player.display_name} foi incluído no Hall da Fama.` }, { status: 201, headers: noStore });
+}
+
+export async function PUT(request: Request) {
+  const admin: any = await adminRequired(request);
+  if (!admin) return Response.json({ error: "Não autorizado." }, { status: 401, headers: noStore });
+  const body: any = await request.json().catch(() => ({}));
+  const id = String(body.id || ""), fields = honorFields(body);
+  if (!id || invalidHonor(fields)) return Response.json({ error: "Informe título, motivo e uma temporada válida." }, { status: 400, headers: noStore });
+  const previous: any = await db().prepare(`SELECT h.id,h.player_id playerId,h.title,h.reason,h.season_number seasonNumber,h.created_at createdAt,p.display_name playerName FROM hall_of_fame_honors h JOIN players p ON p.id=h.player_id WHERE h.id=?`).bind(id).first();
+  if (!previous) return Response.json({ error: "Homenagem não encontrada." }, { status: 404, headers: noStore });
+  const now = new Date().toISOString();
+  await db().prepare(`UPDATE hall_of_fame_honors SET title=?,reason=?,season_number=?,updated_at=? WHERE id=?`).bind(fields.title, fields.reason, fields.seasonNumber, now, id).run();
+  const honor = { ...previous, ...fields, updatedAt: now };
+  await audit(admin.id, "HALL_OF_FAME_HONOR_UPDATED", "hall_of_fame_honor", id, honor, previous);
+  return Response.json({ honor, message: `Homenagem de ${previous.playerName} atualizada.` }, { headers: noStore });
 }
 
 export async function DELETE(request: Request) {

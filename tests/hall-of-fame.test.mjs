@@ -64,4 +64,10 @@ test("layouts do Hall usam a paleta configurável e reduzem colunas no celular",
   assert.match(globals, /\.hall-admin-main-field input\{[^}]*min-height:58px[^}]*border:1px solid[^}]*font-size:12px[^}]*font-weight:700/);
   assert.match(globals, /\.hall-admin-reason textarea\{[^}]*border:1px solid[^}]*border-radius:10px[^}]*padding:13px/);
   assert.match(adminApi, /HALL_OF_FAME_HONOR_CREATED/);
+  assert.match(adminApi, /export async function PUT/);
+  assert.match(adminApi, /HALL_OF_FAME_HONOR_UPDATED/);
+  assert.match(adminApi, /MAX_REASON_LENGTH = 2000/);
+  assert.match(admin, /maxReasonLength=2000/);
+  assert.match(admin, />Editar<\/button>/);
+  assert.match(admin, /Salvar alterações/);
 });
