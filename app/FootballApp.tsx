@@ -25,6 +25,8 @@ import { contrastTextColor, teamColorMarker } from "../lib/team-colors";
 import { buildTacticalLineup, tacticalFormationLabel, tacticalFormationSize, type TacticalFormationOption, type TacticalLineupMember } from "../lib/tactical-lineup";
 import { renderRecapPng, shareRecapFile } from "./recap-image-client";
 import QRCode from "qrcode";
+import { PlayerDirectoryFilters } from "./components/PlayerDirectoryFilters";
+import { filterPlayerDirectory, type PlayerDirectoryFilters as PlayerFilters } from "../lib/player-directory-filters";
 
 type Stage = "result" | "history" | "players";
 type InitialStage = Extract<Stage, "history" | "players">;
@@ -331,11 +333,11 @@ export default function FootballApp({ initialStage }: { initialStage?: InitialSt
 }
 
 function PublicPlayersView({players,config,onPlayer}:{players:Player[];config:any;onPlayer:(player:Player)=>void}) {
-  const [query,setQuery]=useState("");
-  const filtered=useMemo(()=>players.filter(player=>[player.displayName,player.primaryPosition,playerTypeLabel(player.type)].some(value=>value.toLowerCase().includes(query.trim().toLowerCase()))),[players,query]);
+  const [filters,setFilters]=useState<PlayerFilters>({name:"",position:"",type:""});
+  const filtered=useMemo(()=>filterPlayerDirectory(players,filters),[players,filters]);
   const goalkeepers=filtered.filter(player=>player.type==="goalkeeper"||player.primaryPosition==="Goleiro");
   const linePlayers=filtered.filter(player=>player.type!=="goalkeeper"&&player.primaryPosition!=="Goleiro");
-  return <section className="content public-players"><div className="section-head"><div><div className="eyebrow">ELENCO DA PELADA</div><h2>Jogadores</h2><p>Consulte os atributos e clique em um jogador para abrir seu card completo.</p></div><div className="public-player-total"><b>{players.length}</b><span>jogadores ativos</span></div></div><label className="public-player-search"><span>Buscar jogador</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Nome, tipo ou posição…"/></label><PublicPlayerList title="Jogadores de linha" subtitle="Físico, técnica, marcação, inteligência tática e competitividade" players={linePlayers} config={config} onPlayer={onPlayer}/><PublicPlayerList title="Goleiros" subtitle="Defesas, posicionamento, jogo com os pés, segurança e liderança" players={goalkeepers} config={config} onPlayer={onPlayer} goalkeeper/></section>;
+  return <section className="content public-players"><div className="section-head"><div><div className="eyebrow">ELENCO DA PELADA</div><h2>Jogadores</h2><p>Consulte os atributos e clique em um jogador para abrir seu card completo.</p></div><div className="public-player-total"><b>{players.length}</b><span>jogadores ativos</span></div></div><div className="public-player-search"><PlayerDirectoryFilters filters={filters} onChange={setFilters} idPrefix="public"/></div><PublicPlayerList title="Jogadores de linha" subtitle="Físico, técnica, marcação, inteligência tática e competitividade" players={linePlayers} config={config} onPlayer={onPlayer}/><PublicPlayerList title="Goleiros" subtitle="Defesas, posicionamento, jogo com os pés, segurança e liderança" players={goalkeepers} config={config} onPlayer={onPlayer} goalkeeper/></section>;
 }
 
 type PublicPlayerSortKey="name"|"type"|"position"|"primaryRating"|"skill"|"secondaryRating"|"fourthRating"|"fifthRating"|"momentum"|"games"|"overall";

@@ -19,6 +19,7 @@ test("modo claro usa a paleta clássica e deriva os elementos sem versão clara"
   assert.equal(appearance.text, original.textColor);
   assert.equal(appearance.muted, original.mutedColor);
   assert.equal(appearance.controlSurface, mixHexColors(original.controlSurfaceColor, original.surfaceColor, .92));
+  assert.ok(contrastRatio(appearance.controlText, appearance.controlSurface) >= 4.5);
   assert.equal(appearance.adminSidebar, mixHexColors(original.adminSidebarColor, original.backgroundColor, .87));
   assert.match(appearance.background, /^#[0-9A-F]{6}$/);
   assert.notEqual(appearance.background, original.managementBackgroundColor);
@@ -60,4 +61,5 @@ test("componentes funcionais consomem a aparência efetiva do tema ativo", async
   assert.match(theme, /\.section-head h2,[\s\S]*\.member-account-head h1,[\s\S]*\.match-hub-heading h1,[\s\S]*color: var\(--management-text/);
   assert.match(theme, /\.overview-feature-copy > small,[\s\S]*color: var\(--accent-text/);
   assert.match(theme, /\.admin-shell :is\(\.stat b,[\s\S]*color: var\(--management-accent-text/);
+  assert.match(theme, /\.public-player-search input,[\s\S]*\.public-player-search select,[\s\S]*background: var\(--control-surface[\s\S]*color: var\(--control-text/);
 });

@@ -556,6 +556,7 @@ body {
 .public-player-tr > strong,
 .public-player-total,
 .public-player-search input,
+.public-player-search select,
 .match-hub-tabs button,
 .match-list-filter,
 .member-profile-actions dl > div,
@@ -567,6 +568,7 @@ body {
 }
 
 .public-player-search input,
+.public-player-search select,
 .match-hub-tabs button,
 .member-profile-actions dl > div {
   box-shadow: none;
